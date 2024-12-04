@@ -1,5 +1,6 @@
 module Juvix.Compiler.Core.Transformation.Optimize.Inlining where
 
+import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Data.IdentDependencyInfo
@@ -16,8 +17,8 @@ isInlineableLambda inlineDepth md bl node = case node of
   _ ->
     False
 
-convertNode :: Int -> HashSet Symbol -> Module -> Node -> Node
-convertNode inlineDepth nonRecSyms md = dmapL go
+convertNode :: Int -> HashSet Symbol -> HashMap Symbol Int -> Module -> Node -> Node
+convertNode inlineDepth nonRecSyms symOcc md = dmapL go
   where
     go :: BinderList Binder -> Node -> Node
     go bl node = case node of
@@ -39,7 +40,9 @@ convertNode inlineDepth nonRecSyms md = dmapL go
                   _
                     | HashSet.member _identSymbol nonRecSyms
                         && length args >= argsNum
-                        && isInlineableLambda inlineDepth md bl def ->
+                        && ( HashMap.lookup _identSymbol symOcc == Just 1
+                               || isInlineableLambda inlineDepth md bl def
+                           ) ->
                         mkApps def args
                   _ ->
                     node
@@ -58,7 +61,10 @@ convertNode inlineDepth nonRecSyms md = dmapL go
           Just InlineNever -> node
           _
             | HashSet.member _identSymbol nonRecSyms
-                && isImmediate md def ->
+                && argsNum == 0
+                && ( HashMap.lookup _identSymbol symOcc == Just 1
+                       || isImmediate md def
+                   ) ->
                 def
             | otherwise ->
                 node
@@ -98,10 +104,10 @@ convertNode inlineDepth nonRecSyms md = dmapL go
       where
         (lamsNum, body) = unfoldLambdas' node
 
-inlining' :: Int -> HashSet Symbol -> Module -> Module
-inlining' inliningDepth nonRecSyms md = mapT (const (convertNode inliningDepth nonRecSyms md)) md
+inlining' :: Int -> HashSet Symbol -> HashMap Symbol Int -> Module -> Module
+inlining' inliningDepth nonRecSyms symOcc md = mapT (const (convertNode inliningDepth nonRecSyms symOcc md)) md
 
 inlining :: (Member (Reader CoreOptions) r) => Module -> Sem r Module
 inlining md = do
   d <- asks (^. optInliningDepth)
-  return $ inlining' d (nonRecursiveIdents md) md
+  return $ inlining' d (nonRecursiveIdents md) (getModuleSymbolsMap md) md

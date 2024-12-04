@@ -5,6 +5,14 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Transformation.Base
 
+computeNodeType' :: Module -> BinderList Binder -> Node -> Type
+computeNodeType' md bl node = rePis argtys' ty'
+  where
+    ty = computeNodeType md (mkLambdas'' (reverse (toList bl)) node)
+    (argtys, ty') = unfoldPi ty
+    argtys' = drop (length bl) argtys
+
+-- | Computes the type of a closed well-typed node.
 computeNodeType :: Module -> Node -> Type
 computeNodeType md = Info.getNodeType . computeNodeTypeInfo md
 

@@ -515,5 +515,10 @@ tests =
         "Test088: Record update pun"
         $(mkRelDir ".")
         $(mkRelFile "test088.juvix")
-        $(mkRelFile "out/test088.out")
+        $(mkRelFile "out/test088.out"),
+      posTest
+        "Test089: Loop invariant code motion"
+        $(mkRelDir ".")
+        $(mkRelFile "test089.juvix")
+        $(mkRelFile "out/test089.out")
     ]

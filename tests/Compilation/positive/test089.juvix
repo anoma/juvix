@@ -1,0 +1,22 @@
+-- Loop-invariant code motion
+module test089;
+
+import Stdlib.Prelude open;
+
+g (lst : List Nat) : Nat :=
+  for (acc := 0) (x in lst) {acc + x + x * x + 176};
+
+f (lst : List Nat) : Bool :=
+  all (x in lst) {
+    x + g lst + g [0; 1] > 2000
+  };
+
+main : Nat :=
+  if
+    | f [1; 2; 3; 4; 5; 6; 7; 8; 9; 10] :=
+      for (acc := 0) (x in [1; 2; 3; 4; 5]) {
+        if
+          | f [1; 2; 3; 4; 5; 6; 7; 8] := acc + x
+          | else := 0
+      }
+    | else := 0;

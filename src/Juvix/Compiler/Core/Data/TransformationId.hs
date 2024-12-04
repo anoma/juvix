@@ -32,6 +32,7 @@ data TransformationId
   | LetFolding
   | LambdaFolding
   | LetHoisting
+  | LoopHoisting
   | Inlining
   | MandatoryInlining
   | FoldTypeSynonyms
@@ -47,6 +48,7 @@ data TransformationId
   | OptPhaseExec
   | OptPhaseVampIR
   | OptPhaseMain
+  | OptPhasePreLifting
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -77,7 +79,7 @@ toVampIRTransformations =
 
 toStrippedTransformations :: TransformationId -> [TransformationId]
 toStrippedTransformations checkId =
-  combineInfoTablesTransformations ++ [checkId, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs, DisambiguateNames]
+  combineInfoTablesTransformations ++ [checkId, OptPhasePreLifting, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs, DisambiguateNames]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
@@ -109,6 +111,7 @@ instance TransformationId' TransformationId where
     LetFolding -> strLetFolding
     LambdaFolding -> strLambdaFolding
     LetHoisting -> strLetHoisting
+    LoopHoisting -> strLoopHoisting
     Inlining -> strInlining
     MandatoryInlining -> strMandatoryInlining
     FoldTypeSynonyms -> strFoldTypeSynonyms
@@ -124,6 +127,7 @@ instance TransformationId' TransformationId where
     OptPhaseExec -> strOptPhaseExec
     OptPhaseVampIR -> strOptPhaseVampIR
     OptPhaseMain -> strOptPhaseMain
+    OptPhasePreLifting -> strOptPhasePreLifting
 
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text

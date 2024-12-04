@@ -1,6 +1,7 @@
 module Juvix.Compiler.Core.Transformation.Optimize.Phase.Main where
 
 import Juvix.Compiler.Core.Data.IdentDependencyInfo
+import Juvix.Compiler.Core.Extra.Utils (getTableSymbolsMap)
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Optimize.CaseFolding
@@ -19,7 +20,7 @@ optimize' :: CoreOptions -> Module -> Module
 optimize' opts@CoreOptions {..} md =
   filterUnreachable
     . compose
-      (6 * _optOptimizationLevel)
+      (4 * _optOptimizationLevel)
       ( doConstantFolding
           . doSimplification 1
           . specializeArgs
@@ -39,6 +40,9 @@ optimize' opts@CoreOptions {..} md =
     nonRecsReachable :: HashSet Symbol
     nonRecsReachable = nonRecursiveReachableIdents' tab
 
+    symOcc :: HashMap Symbol Int
+    symOcc = getTableSymbolsMap tab
+
     doConstantFolding :: Module -> Module
     doConstantFolding md' = constantFolding' opts nonRecs' tab' md'
       where
@@ -48,7 +52,7 @@ optimize' opts@CoreOptions {..} md =
           | otherwise = nonRecsReachable
 
     doInlining :: Module -> Module
-    doInlining md' = inlining' _optInliningDepth nonRecs' md'
+    doInlining md' = inlining' _optInliningDepth nonRecs' symOcc md'
       where
         nonRecs' =
           if

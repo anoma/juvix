@@ -117,7 +117,6 @@ runIOEitherPipeline' entry a = do
     . runJuvixError
     . runFilesIO
     . runReader entry
-    . runLogIO
     . runProcessIO
     . mapError (JuvixError @GitProcessError)
     . runGitProcess
@@ -223,7 +222,6 @@ runReplPipelineIOEither' lockMode entry = do
       . runFilesIO
       . runReader entry
       . runTaggedLock lockMode
-      . runLogIO
       . mapError (JuvixError @GitProcessError)
       . runProcessIO
       . runGitProcess

@@ -5,6 +5,9 @@ import Juvix.Prelude
 strLetHoisting :: Text
 strLetHoisting = "let-hoisting"
 
+strLoopHoisting :: Text
+strLoopHoisting = "loop-hoisting"
+
 strStoredPipeline :: Text
 strStoredPipeline = "pipeline-stored"
 
@@ -142,3 +145,6 @@ strOptPhaseVampIR = "opt-phase-vampir"
 
 strOptPhaseMain :: Text
 strOptPhaseMain = "opt-phase-main"
+
+strOptPhasePreLifting :: Text
+strOptPhasePreLifting = "opt-phase-pre-lifting"

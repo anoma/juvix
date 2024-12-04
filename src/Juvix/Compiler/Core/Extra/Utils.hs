@@ -155,6 +155,9 @@ isImmediate md = \case
 isImmediate' :: Node -> Bool
 isImmediate' = isImmediate emptyModule
 
+isImmediateOrLambda :: Module -> Node -> Bool
+isImmediateOrLambda md node = isImmediate md node || isLambda node
+
 -- | True if the argument is fully evaluated first-order data
 isDataValue :: Node -> Bool
 isDataValue = \case
@@ -162,9 +165,30 @@ isDataValue = \case
   NCtr Constr {..} -> all isDataValue _constrArgs
   _ -> False
 
+isFullyApplied :: Module -> BinderList Binder -> Node -> Bool
+isFullyApplied md bl node = case h of
+  NIdt Ident {..}
+    | Just ii <- lookupIdentifierInfo' md _identSymbol ->
+        length args == ii ^. identifierArgsNum
+  NVar Var {..} ->
+    case BL.lookupMay _varIndex bl of
+      Just Binder {..} ->
+        length args == length (typeArgs _binderType)
+      Nothing ->
+        False
+  _ ->
+    False
+  where
+    (h, args) = unfoldApps' node
+
 isFailNode :: Node -> Bool
 isFailNode = \case
   NBlt (BuiltinApp {..}) | _builtinAppOp == OpFail -> True
+  _ -> False
+
+isLambda :: Node -> Bool
+isLambda = \case
+  NLam {} -> True
   _ -> False
 
 isTrueConstr :: Node -> Bool
@@ -576,3 +600,72 @@ checkInfoTable tab =
   all isClosed (tab ^. identContext)
     && all (isClosed . (^. identifierType)) (tab ^. infoIdentifiers)
     && all (isClosed . (^. constructorType)) (tab ^. infoConstructors)
+
+-- | Checks if the `n`th argument (zero-based) is passed without modification to
+-- direct recursive calls.
+isArgRecursiveInvariant :: Module -> Symbol -> Int -> Bool
+isArgRecursiveInvariant tab sym argNum = run $ execState True $ dmapNRM go body
+  where
+    nodeSym = lookupIdentifierNode tab sym
+    (lams, body) = unfoldLambdas nodeSym
+    n = length lams
+
+    go :: (Member (State Bool) r) => Level -> Node -> Sem r Recur
+    go lvl node = case node of
+      NApp {} ->
+        let (h, args) = unfoldApps' node
+         in case h of
+              NIdt Ident {..}
+                | _identSymbol == sym ->
+                    let b =
+                          argNum < length args
+                            && case args !! argNum of
+                              NVar Var {..} | _varIndex == lvl + n - argNum - 1 -> True
+                              _ -> False
+                     in do
+                          modify' (&& b)
+                          mapM_ (dmapNRM' (lvl, go)) args
+                          return $ End node
+              _ -> return $ Recur node
+      NIdt Ident {..}
+        | _identSymbol == sym -> do
+            put False
+            return $ End node
+      _ -> return $ Recur node
+
+isDirectlyRecursive :: Module -> Symbol -> Bool
+isDirectlyRecursive md sym = ufold (\x xs -> or (x : xs)) go (lookupIdentifierNode md sym)
+  where
+    go :: Node -> Bool
+    go = \case
+      NIdt Ident {..} -> _identSymbol == sym
+      _ -> False
+
+-- Returns a map from symbols to their number of occurrences in the given node.
+getSymbolsMap :: Module -> Node -> HashMap Symbol Int
+getSymbolsMap md = gather go mempty
+  where
+    go :: HashMap Symbol Int -> Node -> HashMap Symbol Int
+    go acc = \case
+      NTyp TypeConstr {..} -> mapInc _typeConstrSymbol acc
+      NIdt Ident {..} -> mapInc _identSymbol acc
+      NCase Case {..} -> mapInc _caseInductive acc
+      NCtr Constr {..}
+        | Just ci <- lookupConstructorInfo' md _constrTag ->
+            mapInc (ci ^. constructorInductive) acc
+      _ -> acc
+
+    mapInc :: Symbol -> HashMap Symbol Int -> HashMap Symbol Int
+    mapInc k = HashMap.insertWith (+) k 1
+
+getTableSymbolsMap :: InfoTable -> HashMap Symbol Int
+getTableSymbolsMap tab =
+  foldr
+    (HashMap.unionWith (+))
+    mempty
+    (map (getSymbolsMap md) (HashMap.elems $ tab ^. identContext))
+  where
+    md = emptyModule {_moduleInfoTable = tab}
+
+getModuleSymbolsMap :: Module -> HashMap Symbol Int
+getModuleSymbolsMap = getTableSymbolsMap . computeCombinedInfoTable

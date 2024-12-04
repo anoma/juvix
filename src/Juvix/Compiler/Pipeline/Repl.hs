@@ -169,7 +169,6 @@ compileReplInputIO fp txt = do
     . evalInternet hasInternet
     . ignoreHighlightBuilder
     . runTaggedLockPermissive
-    . runLogIO
     . runFilesIO
     . mapError (JuvixError @GitProcessError)
     . runProcessIO
