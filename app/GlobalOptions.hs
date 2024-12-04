@@ -133,11 +133,6 @@ parseGlobalFlags = do
       ( long "no-stdlib"
           <> help "Do not use the standard library"
       )
-  _globalNoCheck <-
-    switch
-      ( long "no-check"
-          <> help "Disable input sanity check in Core"
-      )
   _globalFieldSize <-
     option
       fieldSizeOpt
@@ -168,6 +163,11 @@ parseGlobalFlags = do
             ( "Determines how much log the compiler produces."
                 <> intercalate " < " [show l | l <- allElements @LogLevel]
             )
+      )
+  _globalNoCheck <-
+    switch
+      ( long "dev-no-check"
+          <> help "[DEV] Disable input sanity check in Core"
       )
   _globalShowNameIds <-
     switch
