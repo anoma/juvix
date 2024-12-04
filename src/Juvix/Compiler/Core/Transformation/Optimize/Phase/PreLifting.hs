@@ -1,6 +1,7 @@
 module Juvix.Compiler.Core.Transformation.Optimize.Phase.PreLifting where
 
 import Juvix.Compiler.Core.Data.IdentDependencyInfo
+import Juvix.Compiler.Core.Extra.Utils
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Optimize.CaseFolding
@@ -23,8 +24,9 @@ optimize md = do
         2
         ( compose 2 (letFolding' (isInlineableLambda _optInliningDepth))
             . lambdaFolding
-            . inlining' _optInliningDepth nonRecSyms
+            . inlining' _optInliningDepth nonRecSyms symOcc
         )
       . letFolding
   where
     nonRecSyms = nonRecursiveIdents md
+    symOcc = getModuleSymbolsMap md
