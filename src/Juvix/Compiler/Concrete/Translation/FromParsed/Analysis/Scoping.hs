@@ -2911,22 +2911,22 @@ checkExpressionAtom e = case e of
   AtomLiteral l -> return (pure (AtomLiteral l))
   AtomList l -> pure . AtomList <$> checkList l
   AtomIterator i -> pure . AtomIterator <$> checkIterator i
-  AtomNamedApplicationNew i -> pure . AtomNamedApplicationNew <$> checkNamedApplicationNew i
+  AtomNamedApplication i -> pure . AtomNamedApplication <$> checkNamedApplication i
   AtomRecordUpdate i -> pure . AtomRecordUpdate <$> checkRecordUpdate i
 
-reserveNamedArgumentName :: (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) => NamedArgumentNew 'Parsed -> Sem r ()
+reserveNamedArgumentName :: (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) => NamedArgument 'Parsed -> Sem r ()
 reserveNamedArgumentName a = case a of
-  NamedArgumentNewFunction f -> reserveFunctionLikeSymbol (f ^. namedArgumentFunctionDef)
+  NamedArgumentFunction f -> reserveFunctionLikeSymbol (f ^. namedArgumentFunctionDef)
   NamedArgumentItemPun {} -> return ()
 
-checkNamedApplicationNew ::
+checkNamedApplication ::
   forall r.
   (Members '[HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId] r) =>
-  NamedApplicationNew 'Parsed ->
-  Sem r (NamedApplicationNew 'Scoped)
-checkNamedApplicationNew napp = do
-  let nargs = napp ^. namedApplicationNewArguments
-  aname <- checkScopedIden (napp ^. namedApplicationNewName)
+  NamedApplication 'Parsed ->
+  Sem r (NamedApplication 'Scoped)
+checkNamedApplication napp = do
+  let nargs = napp ^. namedApplicationArguments
+  aname <- checkScopedIden (napp ^. namedApplicationName)
   sig :: NameSignature 'Parsed <-
     if
         | null nargs -> return (NameSignature [])
@@ -2937,25 +2937,25 @@ checkNamedApplicationNew napp = do
             ^.. nameSignatureArgs
               . each
               . nameBlockSymbols
-  forM_ nargs (checkNameInSignature namesInSignature . (^. namedArgumentNewSymbol))
-  puns <- scopePuns (napp ^.. namedApplicationNewArguments . each . _NamedArgumentItemPun)
+  forM_ nargs (checkNameInSignature namesInSignature . (^. namedArgumentSymbol))
+  puns <- scopePuns (napp ^.. namedApplicationArguments . each . _NamedArgumentItemPun)
   args' <- withLocalScope . localBindings . ignoreSyntax $ do
     mapM_ reserveNamedArgumentName nargs
-    mapM (checkNamedArgumentNew puns) nargs
+    mapM (checkNamedArgument puns) nargs
   let signatureExplicitNames =
         hashSet
           . concatMap (^.. nameBlockSymbols)
           . filter (not . isImplicitOrInstance . (^. nameBlockImplicit))
           $ sig ^. nameSignatureArgs
-      givenNames :: HashSet Symbol = hashSet (map (^. namedArgumentNewSymbol) nargs)
+      givenNames :: HashSet Symbol = hashSet (map (^. namedArgumentSymbol) nargs)
       missingArgs = HashSet.difference signatureExplicitNames givenNames
-  unless (null missingArgs || not (napp ^. namedApplicationNewExhaustive . isExhaustive)) $
+  unless (null missingArgs) $
     throw (ErrMissingArgs (MissingArgs (aname ^. scopedIdenFinal . nameConcrete) missingArgs))
   return
-    NamedApplicationNew
-      { _namedApplicationNewName = aname,
-        _namedApplicationNewArguments = args',
-        _namedApplicationNewExhaustive = napp ^. namedApplicationNewExhaustive
+    NamedApplication
+      { _namedApplicationName = aname,
+        _namedApplicationArguments = args',
+        _namedApplicationAtKw = napp ^. namedApplicationAtKw
       }
   where
     checkNameInSignature :: HashSet Symbol -> Symbol -> Sem r ()
@@ -2969,13 +2969,13 @@ checkNamedApplicationNew napp = do
         scopePun :: Symbol -> Sem r ScopedIden
         scopePun = checkScopedIden . NameUnqualified
 
-checkNamedArgumentNew ::
+checkNamedArgument ::
   (Members '[HighlightBuilder, Error ScoperError, State Scope, State ScoperState, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId] r) =>
   HashMap Symbol ScopedIden ->
-  NamedArgumentNew 'Parsed ->
-  Sem r (NamedArgumentNew 'Scoped)
-checkNamedArgumentNew puns = \case
-  NamedArgumentNewFunction f -> NamedArgumentNewFunction <$> checkNamedArgumentFunctionDef f
+  NamedArgument 'Parsed ->
+  Sem r (NamedArgument 'Scoped)
+checkNamedArgument puns = \case
+  NamedArgumentFunction f -> NamedArgumentFunction <$> checkNamedArgumentFunctionDef f
   NamedArgumentItemPun f -> return (NamedArgumentItemPun (checkNamedArgumentItemPun puns f))
 
 checkNamedArgumentItemPun ::
@@ -3599,11 +3599,11 @@ parseTerm =
           _ -> Nothing
 
     parseNamedApplicationNew :: Parse Expression
-    parseNamedApplicationNew = ExpressionNamedApplicationNew <$> P.token namedApp mempty
+    parseNamedApplicationNew = ExpressionNamedApplication <$> P.token namedApp mempty
       where
-        namedApp :: ExpressionAtom 'Scoped -> Maybe (NamedApplicationNew 'Scoped)
+        namedApp :: ExpressionAtom 'Scoped -> Maybe (NamedApplication 'Scoped)
         namedApp s = case s of
-          AtomNamedApplicationNew u -> Just u
+          AtomNamedApplication u -> Just u
           _ -> Nothing
 
     parseLet :: Parse Expression

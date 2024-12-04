@@ -22,7 +22,7 @@ axiom fun1 : (a : Type) -> (b : Type) -> {c : Type} -> Type;
 
 -- all provided by name
 t1 : Type :=
-  fun1@?{
+  fun1@{
     a := A;
     b := B;
     c := C
@@ -30,7 +30,7 @@ t1 : Type :=
 
 -- skip implicit at the end
 t1' : {_ : Type} -> Type :=
-  fun1@?{
+  fun1@{
     b := B;
     a := A
   };
@@ -43,7 +43,7 @@ axiom fun2 : (a : Type)
 
 -- skip implicit in implicit group
 t2 : {_ : Type} -> Type :=
-  fun2@?{
+  fun2@{
     a := A;
     b := B;
     c := D
@@ -57,7 +57,7 @@ axiom fun3 : (a : Type)
 
 -- skip implicit in the middle
 t3 : Type :=
-  fun3@?{
+  fun3@{
     a := A;
     b := B;
     d := unit
@@ -71,7 +71,7 @@ axiom fun4 : (a : Type)
 
 -- skip implicit in the middle
 t4 : Type :=
-  fun4@?{
+  fun4@{
     a := A;
     b := B;
     d := unit
@@ -85,7 +85,7 @@ axiom fun5 : (a : Type)
   -> Type;
 
 t5 : Type :=
-  fun5@?{
+  fun5@{
     a := A;
     b := B;
     d' := unit;
@@ -93,7 +93,7 @@ t5 : Type :=
   };
 
 t5' : Type :=
-  fun5@?{
+  fun5@{
     a := A;
     b := B;
     d' := unit;
@@ -109,7 +109,7 @@ axiom fun6 : {a : Type}
   -> Type;
 
 t6 : Type :=
-  fun6@?{
+  fun6@{
     b := B;
     d' := unit;
     d := unit;
@@ -117,7 +117,7 @@ t6 : Type :=
   };
 
 t6' : Type :=
-  fun6@?{
+  fun6@{
     d' := unit;
     d := unit;
     a' := unit;
@@ -129,18 +129,18 @@ module FakeRecord;
     mkPair : (fst : A) -> (snd : B) -> Pair A B;
 
   pp
-    : Pair@?{
+    : Pair@{
       B := Unit;
       A := Type
     } :=
-    mkPair@?{
+    mkPair@{
       snd := unit;
       fst := Type
     };
 
   pp2
-    : Pair@?{
+    : Pair@{
       B := Unit;
       A := Type
-    } := mkPair@?{fst := Type} (unit);
+    } := \{snd := mkPair@{fst := Type; snd}} (unit);
 end;

@@ -1309,7 +1309,7 @@ goListPattern l = localBuiltins $ do
   where
     loc = getLoc l
 
-createArgumentBlocks :: NonEmpty (NamedArgumentNew 'Scoped) -> [NameBlock 'Scoped] -> NonEmpty (ArgumentBlock 'Scoped)
+createArgumentBlocks :: NonEmpty (NamedArgument 'Scoped) -> [NameBlock 'Scoped] -> NonEmpty (ArgumentBlock 'Scoped)
 createArgumentBlocks appargs =
   nonEmpty'
     . run
@@ -1317,9 +1317,9 @@ createArgumentBlocks appargs =
     . evalState args0
     . mapM_ goBlock
   where
-    namedArgumentRefSymbol :: NamedArgumentNew 'Scoped -> S.Symbol
+    namedArgumentRefSymbol :: NamedArgument 'Scoped -> S.Symbol
     namedArgumentRefSymbol = \case
-      NamedArgumentNewFunction p -> p ^. namedArgumentFunctionDef . functionDefName . functionDefNameScoped
+      NamedArgumentFunction p -> p ^. namedArgumentFunctionDef . functionDefName . functionDefNameScoped
       NamedArgumentItemPun p -> over S.nameConcrete fromUnqualified' (p ^. namedArgumentReferencedSymbol . scopedIdenFinal)
     args0 :: HashSet S.Symbol = hashSet (namedArgumentRefSymbol <$> appargs)
     goBlock ::
@@ -1387,7 +1387,7 @@ goExpression = \case
   ExpressionHole h -> return (Internal.ExpressionHole h)
   ExpressionInstanceHole h -> return (Internal.ExpressionInstanceHole (fromHole h))
   ExpressionIterator i -> goIterator i
-  ExpressionNamedApplicationNew i -> goNamedApplicationNew i []
+  ExpressionNamedApplication i -> goNamedApplication i []
   ExpressionRecordUpdate i -> goRecordUpdateApp i
   ExpressionParensRecordUpdate i -> Internal.ExpressionLambda <$> goRecordUpdate (i ^. parensRecordUpdate)
   where
@@ -1396,19 +1396,19 @@ goExpression = \case
       s <- asks (^. S.infoNameSigs)
       runReader s (runNamedArguments fun blocks extraArgs) >>= goDesugaredNamedApplication
 
-    goNamedApplicationNew ::
-      Concrete.NamedApplicationNew 'Scoped ->
+    goNamedApplication ::
+      Concrete.NamedApplication 'Scoped ->
       [Internal.ApplicationArg] ->
       Sem r Internal.Expression
-    goNamedApplicationNew napp extraArgs = case nonEmpty (napp ^. namedApplicationNewArguments) of
-      Nothing -> return (goIden (napp ^. namedApplicationNewName))
+    goNamedApplication napp extraArgs = case nonEmpty (napp ^. namedApplicationArguments) of
+      Nothing -> return (goIden (napp ^. namedApplicationName))
       Just appargs -> do
-        let name = napp ^. namedApplicationNewName . scopedIdenFinal
+        let name = napp ^. namedApplicationName . scopedIdenFinal
         sig <- fromJust <$> asks (^. S.infoNameSigs . at (name ^. S.nameId))
-        let fun = napp ^. namedApplicationNewName
+        let fun = napp ^. namedApplicationName
             blocks = createArgumentBlocks appargs (sig ^. nameSignatureArgs)
         compiledNameApp <- goNamedApplication' fun blocks extraArgs
-        case nonEmpty (appargs ^.. each . _NamedArgumentNewFunction) of
+        case nonEmpty (appargs ^.. each . _NamedArgumentFunction) of
           Nothing -> return compiledNameApp
           Just funs -> do
             cls <- funDefsToClauses funs
@@ -1650,7 +1650,7 @@ goExpression = \case
       let (f, args) = unfoldApp a
       args' <- toList <$> mapM goApplicationArg args
       case f of
-        ExpressionNamedApplicationNew n -> goNamedApplicationNew n args'
+        ExpressionNamedApplication n -> goNamedApplication n args'
         _ -> do
           f' <- goExpression f
           return (Internal.foldApplication f' args')

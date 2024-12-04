@@ -12,7 +12,7 @@ Bool' : Type := Bool;
 
 instance
 showStringI : Show String :=
-  mkShow@?{
+  mkShow@{
     show := id
   };
 
@@ -24,7 +24,7 @@ showBoolI : Show' Bool' :=
 
 instance
 showNatI : Show Nat :=
-  mkShow@?{
+  mkShow@{
     show := natToString
   };
 
@@ -97,7 +97,7 @@ main : IO :=
     >>> printStringLn (f'4 [just [1]; nothing; just [2; 3]])
     >>> printStringLn (f'3 "abba")
     >>> printStringLn
-      (f'3@?{
+      (f'3@{
           M := mkShow λ {x := x ++str "!"}
         }
         "abba")

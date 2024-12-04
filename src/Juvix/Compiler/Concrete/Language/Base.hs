@@ -1635,7 +1635,7 @@ data Expression
   | ExpressionBraces (WithLoc Expression)
   | ExpressionDoubleBraces (DoubleBracesExpression 'Scoped)
   | ExpressionIterator (Iterator 'Scoped)
-  | ExpressionNamedApplicationNew (NamedApplicationNew 'Scoped)
+  | ExpressionNamedApplication (NamedApplication 'Scoped)
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Serialize Expression
@@ -2537,67 +2537,57 @@ deriving stock instance Ord (NamedArgumentPun 'Parsed)
 
 deriving stock instance Ord (NamedArgumentPun 'Scoped)
 
-data NamedArgumentNew (s :: Stage)
-  = NamedArgumentNewFunction (NamedArgumentFunctionDef s)
+data NamedArgument (s :: Stage)
+  = NamedArgumentFunction (NamedArgumentFunctionDef s)
   | NamedArgumentItemPun (NamedArgumentPun s)
   deriving stock (Generic)
 
-instance Serialize (NamedArgumentNew 'Scoped)
+instance Serialize (NamedArgument 'Scoped)
 
-instance NFData (NamedArgumentNew 'Scoped)
+instance NFData (NamedArgument 'Scoped)
 
-instance Serialize (NamedArgumentNew 'Parsed)
+instance Serialize (NamedArgument 'Parsed)
 
-instance NFData (NamedArgumentNew 'Parsed)
+instance NFData (NamedArgument 'Parsed)
 
-deriving stock instance Show (NamedArgumentNew 'Parsed)
+deriving stock instance Show (NamedArgument 'Parsed)
 
-deriving stock instance Show (NamedArgumentNew 'Scoped)
+deriving stock instance Show (NamedArgument 'Scoped)
 
-deriving stock instance Eq (NamedArgumentNew 'Parsed)
+deriving stock instance Eq (NamedArgument 'Parsed)
 
-deriving stock instance Eq (NamedArgumentNew 'Scoped)
+deriving stock instance Eq (NamedArgument 'Scoped)
 
-deriving stock instance Ord (NamedArgumentNew 'Parsed)
+deriving stock instance Ord (NamedArgument 'Parsed)
 
-deriving stock instance Ord (NamedArgumentNew 'Scoped)
+deriving stock instance Ord (NamedArgument 'Scoped)
 
-data IsExhaustive = IsExhaustive
-  { _isExhaustive :: Bool,
-    _isExhaustiveKw :: Irrelevant KeywordRef
-  }
-  deriving stock (Eq, Show, Ord, Generic)
-
-instance Serialize IsExhaustive
-
-instance NFData IsExhaustive
-
-data NamedApplicationNew (s :: Stage) = NamedApplicationNew
-  { _namedApplicationNewName :: IdentifierType s,
-    _namedApplicationNewExhaustive :: IsExhaustive,
-    _namedApplicationNewArguments :: [NamedArgumentNew s]
+data NamedApplication (s :: Stage) = NamedApplication
+  { _namedApplicationName :: IdentifierType s,
+    _namedApplicationAtKw :: Irrelevant KeywordRef,
+    _namedApplicationArguments :: [NamedArgument s]
   }
   deriving stock (Generic)
 
-instance Serialize (NamedApplicationNew 'Scoped)
+instance Serialize (NamedApplication 'Scoped)
 
-instance NFData (NamedApplicationNew 'Scoped)
+instance NFData (NamedApplication 'Scoped)
 
-instance Serialize (NamedApplicationNew 'Parsed)
+instance Serialize (NamedApplication 'Parsed)
 
-instance NFData (NamedApplicationNew 'Parsed)
+instance NFData (NamedApplication 'Parsed)
 
-deriving stock instance Show (NamedApplicationNew 'Parsed)
+deriving stock instance Show (NamedApplication 'Parsed)
 
-deriving stock instance Show (NamedApplicationNew 'Scoped)
+deriving stock instance Show (NamedApplication 'Scoped)
 
-deriving stock instance Eq (NamedApplicationNew 'Parsed)
+deriving stock instance Eq (NamedApplication 'Parsed)
 
-deriving stock instance Eq (NamedApplicationNew 'Scoped)
+deriving stock instance Eq (NamedApplication 'Scoped)
 
-deriving stock instance Ord (NamedApplicationNew 'Parsed)
+deriving stock instance Ord (NamedApplication 'Parsed)
 
-deriving stock instance Ord (NamedApplicationNew 'Scoped)
+deriving stock instance Ord (NamedApplication 'Scoped)
 
 data RecordSyntaxDef (s :: Stage)
   = RecordSyntaxOperator (OperatorSyntaxDef s)
@@ -2741,7 +2731,7 @@ data ExpressionAtom (s :: Stage)
   | AtomLiteral LiteralLoc
   | AtomParens (ExpressionType s)
   | AtomIterator (Iterator s)
-  | AtomNamedApplicationNew (NamedApplicationNew s)
+  | AtomNamedApplication (NamedApplication s)
   deriving stock (Generic)
 
 instance Serialize (ExpressionAtom 'Parsed)
@@ -3000,7 +2990,6 @@ makeLenses ''FunctionLhs
 makeLenses ''Statements
 makeLenses ''NamedArgumentFunctionDef
 makeLenses ''NamedArgumentPun
-makeLenses ''IsExhaustive
 makeLenses ''SideIfBranch
 makeLenses ''RhsExpression
 makeLenses ''PatternArg
@@ -3069,8 +3058,8 @@ makeLenses ''Initializer
 makeLenses ''Range
 makeLenses ''ArgumentBlock
 makeLenses ''NamedArgumentAssign
-makeLenses ''NamedArgumentNew
-makeLenses ''NamedApplicationNew
+makeLenses ''NamedArgument
+makeLenses ''NamedApplication
 makeLenses ''AliasDef
 makeLenses ''FixitySyntaxDef
 makeLenses ''ParsedFixityInfo
@@ -3083,7 +3072,7 @@ makeLenses ''RecordInfo
 makeLenses ''MarkdownInfo
 makeLenses ''Deriving
 
-makePrisms ''NamedArgumentNew
+makePrisms ''NamedArgument
 makePrisms ''ConstructorRhs
 makePrisms ''FunctionDefNameParsed
 
@@ -3176,7 +3165,7 @@ instance (SingI s) => HasLoc (ArgumentBlock s) where
 instance HasAtomicity (ArgumentBlock s) where
   atomicity = const Atom
 
-instance HasAtomicity (NamedApplicationNew s) where
+instance HasAtomicity (NamedApplication s) where
   atomicity = const (Aggregate updateFixity)
 
 instance HasAtomicity (Do s) where
@@ -3203,7 +3192,7 @@ instance HasAtomicity Expression where
     ExpressionCase c -> atomicity c
     ExpressionIf x -> atomicity x
     ExpressionIterator i -> atomicity i
-    ExpressionNamedApplicationNew i -> atomicity i
+    ExpressionNamedApplication i -> atomicity i
     ExpressionRecordUpdate {} -> Aggregate updateFixity
     ExpressionParensRecordUpdate {} -> Atom
 
@@ -3414,9 +3403,9 @@ instance HasLoc (List s) where
 instance (SingI s) => HasLoc (NamedArgumentFunctionDef s) where
   getLoc (NamedArgumentFunctionDef f) = getLoc f
 
-instance (SingI s) => HasLoc (NamedArgumentNew s) where
+instance (SingI s) => HasLoc (NamedArgument s) where
   getLoc = \case
-    NamedArgumentNewFunction f -> getLoc f
+    NamedArgumentFunction f -> getLoc f
     NamedArgumentItemPun f -> getLoc f
 
 instance HasLoc (RecordUpdatePun s) where
@@ -3425,8 +3414,8 @@ instance HasLoc (RecordUpdatePun s) where
 instance HasLoc (NamedArgumentPun s) where
   getLoc NamedArgumentPun {..} = getLocSymbolType _namedArgumentPunSymbol
 
-instance (SingI s) => HasLoc (NamedApplicationNew s) where
-  getLoc NamedApplicationNew {..} = getLocIdentifierType _namedApplicationNewName
+instance (SingI s) => HasLoc (NamedApplication s) where
+  getLoc NamedApplication {..} = getLocIdentifierType _namedApplicationName
 
 instance (SingI s) => HasLoc (RecordUpdateField s) where
   getLoc = \case
@@ -3478,7 +3467,7 @@ instance HasLoc Expression where
     ExpressionBraces i -> getLoc i
     ExpressionDoubleBraces i -> getLoc i
     ExpressionIterator i -> getLoc i
-    ExpressionNamedApplicationNew i -> getLoc i
+    ExpressionNamedApplication i -> getLoc i
     ExpressionRecordUpdate i -> getLoc i
     ExpressionParensRecordUpdate i -> getLoc i
 
@@ -3707,7 +3696,7 @@ instance (SingI s) => HasLoc (ExpressionAtom s) where
     AtomLiteral x -> getLoc x
     AtomParens x -> getLocExpressionType x
     AtomIterator x -> getLoc x
-    AtomNamedApplicationNew x -> getLoc x
+    AtomNamedApplication x -> getLoc x
 
 instance HasLoc (ExpressionAtoms s) where
   getLoc = getLoc . (^. expressionAtomsLoc)
@@ -3769,17 +3758,17 @@ withFunctionSymbol a f sym = case sing :: SStage s of
   SParsed -> maybe a f (sym ^? _FunctionDefName)
   SScoped -> f (sym ^. functionDefNameScoped)
 
-namedArgumentNewSymbolParsed :: (SingI s) => SimpleGetter (NamedArgumentNew s) Symbol
-namedArgumentNewSymbolParsed = to $ \case
+namedArgumentSymbolParsed :: (SingI s) => SimpleGetter (NamedArgument s) Symbol
+namedArgumentSymbolParsed = to $ \case
   NamedArgumentItemPun a -> a ^. namedArgumentPunSymbol
-  NamedArgumentNewFunction a -> symbolParsed (getFunctionSymbol (a ^. namedArgumentFunctionDef . functionDefName))
+  NamedArgumentFunction a -> symbolParsed (getFunctionSymbol (a ^. namedArgumentFunctionDef . functionDefName))
 
-namedArgumentNewSymbol :: Lens' (NamedArgumentNew 'Parsed) Symbol
-namedArgumentNewSymbol f = \case
+namedArgumentSymbol :: Lens' (NamedArgument 'Parsed) Symbol
+namedArgumentSymbol f = \case
   NamedArgumentItemPun a -> NamedArgumentItemPun <$> (namedArgumentPunSymbol f a)
-  NamedArgumentNewFunction a -> do
+  NamedArgumentFunction a -> do
     a' <- f (a ^?! namedArgumentFunctionDef . functionDefName . _FunctionDefName)
-    return $ NamedArgumentNewFunction (over namedArgumentFunctionDef (set functionDefName (FunctionDefName a')) a)
+    return $ NamedArgumentFunction (over namedArgumentFunctionDef (set functionDefName (FunctionDefName a')) a)
 
 scopedIdenSrcName :: Lens' ScopedIden S.Name
 scopedIdenSrcName f n = case n ^. scopedIdenAlias of

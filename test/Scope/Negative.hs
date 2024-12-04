@@ -223,7 +223,7 @@ scoperErrorTests =
       "Missing argument"
       $(mkRelDir ".")
       $(mkRelFile "MissingArgument.juvix")
-      $ wantsError ErrNamedArgumentsError,
+      $ wantsError ErrMissingArgs,
     negTest
       "Repeated name in name signature"
       $(mkRelDir ".")

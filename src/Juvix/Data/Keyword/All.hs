@@ -61,9 +61,6 @@ kwExclamation = asciiKw Str.exclamation
 kwAt :: Keyword
 kwAt = asciiKw Str.at_
 
-kwAtQuestion :: Keyword
-kwAtQuestion = asciiKw Str.atQuestion
-
 kwAxiom :: Keyword
 kwAxiom = asciiKw Str.axiom
 

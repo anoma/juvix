@@ -31,7 +31,7 @@ type EnumRecord :=
 p2 : Pair EnumRecord EnumRecord :=
   mkPair@{
     fst :=
-      C1@?{
+      C1@{
         c1a := constructT;
         c1b := constructT
       };

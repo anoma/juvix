@@ -116,9 +116,9 @@ v1v2FromPackage p = run . runReader l $ do
       Sem r (NonEmpty (ExpressionAtom 'Parsed))
     defaultPackageWithArgs as = do
       defaultPackageName' <- NameUnqualified <$> symbol defaultPackageStr
-      exhaustive <- mkIsExhaustive False
-      let args = fmap (NamedArgumentNewFunction . NamedArgumentFunctionDef) as
-          defaultPackageArg = namedApplication defaultPackageName' exhaustive (toList args)
+      kwd <- kw kwAt
+      let args = fmap (NamedArgumentFunction . NamedArgumentFunctionDef) as
+          defaultPackageArg = namedApplication defaultPackageName' (Irrelevant kwd) (toList args)
       return (defaultPackageArg :| [])
 
     l :: Interval
