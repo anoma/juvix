@@ -44,7 +44,7 @@ buildProperties HighlightInput {..} =
           <> mapMaybe goFaceName _highlightNames
           <> map goFaceError _highlightErrors,
       _propertiesGoto = map goGotoProperty _highlightNames,
-      _propertiesTopDef = mapMaybe goDefProperty _highlightNames,
+      _propertiesTopDef = nubHashable (mapMaybe goDefProperty _highlightNames),
       _propertiesInfo = mapMaybe (goDocProperty _highlightDocTable _highlightTypes) _highlightNames
     }
 

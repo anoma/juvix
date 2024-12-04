@@ -92,6 +92,9 @@ data PropertyGoto = PropertyGoto
 newtype PropertyTopDef = PropertyTopDef
   { _topDef :: Text
   }
+  deriving stock (Eq, Generic)
+
+instance Hashable PropertyTopDef
 
 newtype PropertyFace = PropertyFace
   { _faceFace :: Face
