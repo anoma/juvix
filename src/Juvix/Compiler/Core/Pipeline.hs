@@ -7,7 +7,7 @@ where
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation
-import Juvix.Compiler.Pipeline.EntryPoint (EntryPoint)
+import Juvix.Compiler.Pipeline.EntryPoint (EntryPoint, entryPointNoCheck)
 
 toTypechecked :: (Members '[Error JuvixError, Reader EntryPoint] r) => Module -> Sem r Module
 toTypechecked = mapReader fromEntryPoint . applyTransformations toTypecheckTransformations
@@ -19,7 +19,11 @@ toStored = mapReader fromEntryPoint . applyTransformations toStoredTransformatio
 -- | Perform transformations on stored Core necessary before the translation to
 -- Core.Stripped
 toStripped :: (Members '[Error JuvixError, Reader EntryPoint] r) => TransformationId -> Module -> Sem r Module
-toStripped checkId = mapReader fromEntryPoint . applyTransformations (toStrippedTransformations checkId)
+toStripped checkId md = do
+  noCheck <- asks (^. entryPointNoCheck)
+  let checkId' = if noCheck then IdentityTrans else checkId
+  mapReader fromEntryPoint $
+    applyTransformations (toStrippedTransformations checkId') md
 
 -- | Perform transformations on stored Core necessary before the translation to VampIR
 toVampIR :: (Members '[Error JuvixError, Reader EntryPoint] r) => Module -> Sem r Module

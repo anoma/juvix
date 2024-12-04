@@ -33,6 +33,8 @@ data EntryPoint = EntryPoint
     _entryPointTarget :: Maybe Target,
     _entryPointDebug :: Bool,
     _entryPointUnsafe :: Bool,
+    -- | Skip the correctness check in the Core pipeline part.
+    _entryPointNoCheck :: Bool,
     _entryPointUnrollLimit :: Int,
     _entryPointOptimizationLevel :: Int,
     _entryPointInliningDepth :: Int,
@@ -76,6 +78,7 @@ defaultEntryPointNoFile pkg root =
       _entryPointTarget = Nothing,
       _entryPointDebug = False,
       _entryPointUnsafe = False,
+      _entryPointNoCheck = False,
       _entryPointUnrollLimit = defaultUnrollLimit,
       _entryPointOptimizationLevel = defaultOptimizationLevel,
       _entryPointInliningDepth = defaultInliningDepth,

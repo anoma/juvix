@@ -24,6 +24,7 @@ data GlobalOptions = GlobalOptions
     _globalNoPositivity :: Bool,
     _globalNoCoverage :: Bool,
     _globalNoStdlib :: Bool,
+    _globalNoCheck :: Bool,
     _globalUnrollLimit :: Int,
     _globalNumThreads :: NumThreads,
     _globalFieldSize :: Maybe Natural,
@@ -72,6 +73,7 @@ defaultGlobalOptions =
       _globalLogLevel = LogLevelProgress,
       _globalNoCoverage = False,
       _globalNoStdlib = False,
+      _globalNoCheck = False,
       _globalUnrollLimit = defaultUnrollLimit,
       _globalFieldSize = Nothing,
       _globalDevShowThreadIds = False,
@@ -130,6 +132,11 @@ parseGlobalFlags = do
     switch
       ( long "no-stdlib"
           <> help "Do not use the standard library"
+      )
+  _globalNoCheck <-
+    switch
+      ( long "no-check"
+          <> help "Disable input sanity check in Core"
       )
   _globalFieldSize <-
     option
@@ -211,6 +218,7 @@ entryPointFromGlobalOptions root mainFile opts = do
         _entryPointNoPositivity = opts ^. globalNoPositivity,
         _entryPointNoCoverage = opts ^. globalNoCoverage,
         _entryPointNoStdlib = opts ^. globalNoStdlib,
+        _entryPointNoCheck = opts ^. globalNoCheck,
         _entryPointUnrollLimit = opts ^. globalUnrollLimit,
         _entryPointGenericOptions = project opts,
         _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
@@ -232,6 +240,7 @@ entryPointFromGlobalOptionsNoFile root opts = do
         _entryPointNoPositivity = opts ^. globalNoPositivity,
         _entryPointNoCoverage = opts ^. globalNoCoverage,
         _entryPointNoStdlib = opts ^. globalNoStdlib,
+        _entryPointNoCheck = opts ^. globalNoCheck,
         _entryPointUnrollLimit = opts ^. globalUnrollLimit,
         _entryPointGenericOptions = project opts,
         _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
