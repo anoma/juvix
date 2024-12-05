@@ -223,11 +223,13 @@ jobs:
         with:
           cache-on-failure: false
 
+      # cargo-risczero version needs to be updated to the latest version if the
+      # CI reports a version inconsistency error
       - name: Install RISC0 VM
         shell: bash
         run: |
           cargo install cargo-binstall@1.6.9 --force
-          cargo binstall cargo-risczero@1.1.1 --no-confirm --force
+          cargo binstall cargo-risczero@1.2.0 --no-confirm --force
           cargo risczero install
 
       - name: Checkout CairoVM
