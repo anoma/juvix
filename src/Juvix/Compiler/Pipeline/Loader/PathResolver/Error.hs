@@ -94,7 +94,8 @@ data PathResolverError
   = ErrDependencyConflict DependencyConflict
   | ErrMissingModule MissingModule
   | ErrPackageInvalidImport PackageInvalidImport
-  | -- | This error is unused at the moment
+  | -- | The ErrAmbiguousPackageId error is unused at the moment. We append the
+    -- hash of all project files to the pre-release tag of the package version.
     ErrAmbiguousPackageId AmbiguousPackageId
   deriving stock (Show)
 
