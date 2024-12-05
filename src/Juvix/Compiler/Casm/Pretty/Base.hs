@@ -23,6 +23,11 @@ ppIncAp = \case
   True -> return $ Str.semicolon <+> Str.apPlusPlus
   False -> mempty
 
+ppComment :: Maybe Text -> Sem r (Doc Ann)
+ppComment = \case
+  Just c -> return $ Str.commentLineStart <+> pretty c <> hardline
+  Nothing -> return mempty
+
 instance PrettyCode Reg where
   ppCode = \case
     Ap -> return Str.ap
@@ -121,19 +126,21 @@ instance PrettyCode Hint where
 
 instance PrettyCode InstrAssign where
   ppCode InstrAssign {..} = do
+    comment <- ppComment _instrAssignComment
     v <- ppCode _instrAssignValue
     r <- ppCode _instrAssignResult
     incAp <- ppIncAp _instrAssignIncAp
-    return $ r <+> Str.equal <+> v <> incAp
+    return $ comment <> r <+> Str.equal <+> v <> incAp
 
 instance PrettyCode InstrExtraBinop where
   ppCode InstrExtraBinop {..} = do
+    comment <- ppComment _instrExtraBinopComment
     v1 <- ppCode _instrExtraBinopArg1
     v2 <- ppCode _instrExtraBinopArg2
     op <- ppCode _instrExtraBinopOpcode
     r <- ppCode _instrExtraBinopResult
     incAp <- ppIncAp _instrExtraBinopIncAp
-    return $ r <+> Str.equal <+> v1 <+> op <+> v2 <> incAp
+    return $ comment <> r <+> Str.equal <+> v1 <+> op <+> v2 <> incAp
 
 ppRel :: Bool -> RValue -> Sem r (Doc Ann)
 ppRel isRel tgt
@@ -148,23 +155,26 @@ ppRel isRel tgt
 
 instance PrettyCode InstrJump where
   ppCode InstrJump {..} = do
+    comment <- ppComment _instrJumpComment
     tgt <- ppCode _instrJumpTarget
     incAp <- ppIncAp _instrJumpIncAp
     rel <- ppRel _instrJumpRel _instrJumpTarget
-    return $ Str.jmp <+> rel <> tgt <> incAp
+    return $ comment <> Str.jmp <+> rel <> tgt <> incAp
 
 instance PrettyCode InstrJumpIf where
   ppCode InstrJumpIf {..} = do
+    comment <- ppComment _instrJumpIfComment
     tgt <- ppCode _instrJumpIfTarget
     v <- ppCode _instrJumpIfValue
     incAp <- ppIncAp _instrJumpIfIncAp
-    return $ Str.jmp <+> tgt <+> Str.if_ <+> v <+> Str.notequal <+> annotate AnnLiteralInteger "0" <> incAp
+    return $ comment <> Str.jmp <+> tgt <+> Str.if_ <+> v <+> Str.notequal <+> annotate AnnLiteralInteger "0" <> incAp
 
 instance PrettyCode InstrCall where
   ppCode InstrCall {..} = do
+    comment <- ppComment _instrCallComment
     tgt <- ppCode _instrCallTarget
     rel <- ppRel _instrCallRel (Val _instrCallTarget)
-    return $ Str.call <+> rel <> tgt
+    return $ comment <> Str.call <+> rel <> tgt
 
 instance PrettyCode InstrAlloc where
   ppCode InstrAlloc {..} = do

@@ -14,6 +14,7 @@ import Juvix.Compiler.Casm.Translation.FromReg.CasmBuilder
 import Juvix.Compiler.Reg.Data.Blocks.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Extra.Blocks.Info qualified as Reg
 import Juvix.Compiler.Reg.Language.Blocks qualified as Reg
+import Juvix.Compiler.Reg.Pretty qualified as Reg
 import Juvix.Compiler.Tree.Evaluator.Builtins qualified as Reg
 import Juvix.Compiler.Tree.Extra.Rep qualified as Reg
 import Juvix.Data.Field
@@ -141,6 +142,9 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
     argsOffset :: Int
     argsOffset = 3
 
+    ppVarComment :: Reg.VarRef -> Int -> Text
+    ppVarComment var off = Reg.ppPrint tab var <> " is [fp + " <> show off <> "]"
+
     goFun :: forall r. (Member LabelInfoBuilder r) => StdlibBuiltins -> LabelRef -> (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
     goFun blts failLab (addr0, acc) funInfo = do
       let sym = funInfo ^. Reg.functionSymbol
@@ -218,7 +222,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
                     ++ zipWithExact (\var k -> (var, -argsOffset - k)) liveVars' [0 .. n - 1]
           unless updatedBuiltins $
             goAssignApBuiltins
-          mapM_ (mkMemRef >=> goAssignAp . Val . Ref) (reverse liveVars')
+          mapM_ saveLiveVar (reverse liveVars')
           output'' (mkCallRel $ Imm 3)
           output'' Return
           -- we need the Nop instruction to ensure that the relative call offset
@@ -228,6 +232,12 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           setAP 0
           setVars vars
           setBuiltinOffset bltOff
+          where
+            saveLiveVar :: Reg.VarRef -> Sem r ()
+            saveLiveVar var = do
+              ref <- mkMemRef var
+              let comment = Reg.ppPrint tab var
+              goAssignAp' (Just comment) (Val (Ref ref))
 
         goLocalBlock :: Int -> HashMap Reg.VarRef Int -> Int -> HashSet Reg.VarRef -> Maybe Reg.VarRef -> Reg.Block -> Sem r ()
         goLocalBlock ap0 vars bltOff liveVars mout' block = do
@@ -295,11 +305,15 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goAssignVar vr val = do
           off <- getAP
           insertVar vr off
-          goAssignAp val
+          let comment = ppVarComment vr off
+          goAssignAp' (Just comment) val
+
+        goAssignAp' :: Maybe Text -> RValue -> Sem r ()
+        goAssignAp' comment val = do
+          output' 1 (mkAssignAp' comment val)
 
         goAssignAp :: RValue -> Sem r ()
-        goAssignAp val = do
-          output' 1 (mkAssignAp val)
+        goAssignAp = goAssignAp' Nothing
 
         goAssignValue :: Reg.VarRef -> Reg.Value -> Sem r ()
         goAssignValue vr v = mkRValue v >>= goAssignVar vr
@@ -308,7 +322,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goAssignApValue v = mkRValue v >>= goAssignAp
 
         goAssignApBuiltins :: Sem r ()
-        goAssignApBuiltins = mkBuiltinRef >>= goAssignAp . Val . Ref
+        goAssignApBuiltins = mkBuiltinRef >>= goAssignAp' (Just "builtins pointer") . Val . Ref
 
         -- Warning: the result may depend on Ap. Use adjustAp when changing Ap
         -- afterwards.
@@ -334,7 +348,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
                   _instrExtraBinopResult = MemRef Ap 0,
                   _instrExtraBinopArg1 = arg1,
                   _instrExtraBinopArg2 = arg2,
-                  _instrExtraBinopIncAp = True
+                  _instrExtraBinopIncAp = True,
+                  _instrExtraBinopComment = Just (ppVarComment res off)
                 }
 
         goNativeBinop :: Opcode -> Reg.VarRef -> MemRef -> Value -> Sem r ()
@@ -370,7 +385,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
                               _binopValueArg2 = Imm 1,
                               _binopValueOpcode = FieldAdd
                             },
-                      _instrAssignIncAp = True
+                      _instrAssignIncAp = True,
+                      _instrAssignComment = Nothing
                     }
           Lab {} -> impossible
 
