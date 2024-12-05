@@ -28,7 +28,7 @@ env:
   RISC0_VM_VERSION: v1.0.1
   # This is the top commit hash in the branch lukasz/juvix-integration-tracking
   # of the anoma repository.
-  ANOMA_VERSION: 1213cd83b6b0912c98a12e88a40f93ce9b6da094
+  ANOMA_VERSION: caad6f0bd088d3df0663459b5242b6eca1b7a1f3
   JUST_ARGS: runtimeCcArg=$CC runtimeLibtoolArg=$LIBTOOL
   STACK_BUILD_ARGS: --pedantic -j4 --ghc-options=-j
 
