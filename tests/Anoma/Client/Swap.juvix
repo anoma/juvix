@@ -14,7 +14,7 @@ open Private-Inputs;
 
 createdMagic : Nat := 200;
 
-nullifiedMagic : Nat := 100;
+consumedMagic : Nat := 100;
 
 mylogic (pub : Public-Inputs) (priv : Private-Inputs) : Bool :=
   -- DANGER we assume that the list of commitments and committed-resources come in the same order. This is NOT the case in the specs. Same for the nullifiers
@@ -35,12 +35,14 @@ mylogic (pub : Public-Inputs) (priv : Private-Inputs) : Bool :=
        | just createdResource :=
          Resource.quantity createdResource == 1
            && other-public pub == createdMagic
+           && other-private priv == createdMagic
        | nothing :=
          case findNullifier of
            | nothing := false
            | just consumedResource :=
              Resource.quantity consumedResource == 1
-               && other-public pub == nullifiedMagic;
+               && other-public pub == consumedMagic
+               && other-private priv == consumedMagic;
 
 myResourceEph : Resource :=
   mkResource@{
@@ -85,13 +87,13 @@ myResourceEphProof : Proof :=
         commitments := mycommitments;
         nullifiers := mynullifiers;
         self-tag := myResourceEphNullifier;
-        other-public := nullifiedMagic;
+        other-public := consumedMagic;
       };
     privateInputs : Private-Inputs :=
       mkPrivate-Inputs@{
         committed-resources := mycommitted-resources;
         nullified-resources := mynullified-resources;
-        other-private := 0;
+        other-private := consumedMagic;
       };
   in mkProofLogic myResourceEph publicInputs privateInputs;
 
@@ -108,7 +110,7 @@ myResourceProof : Proof :=
       mkPrivate-Inputs@{
         committed-resources := mycommitted-resources;
         nullified-resources := mynullified-resources;
-        other-private := 0;
+        other-private := createdMagic;
       };
   in mkProofLogic myResource publicInputs privateInputs;
 
