@@ -12,6 +12,10 @@ axiom undefined {A} : A;
 open Public-Inputs;
 open Private-Inputs;
 
+createdMagic : Nat := 200;
+
+nullifiedMagic : Nat := 100;
+
 mylogic (pub : Public-Inputs) (priv : Private-Inputs) : Bool :=
   -- DANGER we assume that the list of commitments and committed-resources come in the same order. This is NOT the case in the specs. Same for the nullifiers
   let
@@ -29,12 +33,14 @@ mylogic (pub : Public-Inputs) (priv : Private-Inputs) : Bool :=
 
   in case findCommit of
        | just createdResource :=
-         Resource.quantity createdResource == 1 && other-public pub == 200
+         Resource.quantity createdResource == 1
+           && other-public pub == createdMagic
        | nothing :=
          case findNullifier of
            | nothing := false
            | just consumedResource :=
-             Resource.quantity consumedResource == 1 && other-public pub == 100;
+             Resource.quantity consumedResource == 1
+               && other-public pub == nullifiedMagic;
 
 myResourceEph : Resource :=
   mkResource@{
@@ -64,19 +70,27 @@ myResource : Resource :=
 
 myResourceCommitment : Nat := commitment myResource;
 
+mycommitments : List Nat := [myResourceCommitment];
+
+mynullifiers : List Nat := [myResourceEphNullifier];
+
+mycommitted-resources : List Resource := [myResource];
+
+mynullified-resources : List Resource := [myResourceEph];
+
 myResourceEphProof : Proof :=
   let
     publicInputs : Public-Inputs :=
       mkPublic-Inputs@{
-        commitments := [myResourceCommitment];
-        nullifiers := [myResourceEphNullifier];
+        commitments := mycommitments;
+        nullifiers := mynullifiers;
         self-tag := myResourceEphNullifier;
-        other-public := 100;
+        other-public := nullifiedMagic;
       };
     privateInputs : Private-Inputs :=
       mkPrivate-Inputs@{
-        committed-resources := [myResource];
-        nullified-resources := [myResourceEph];
+        committed-resources := mycommitted-resources;
+        nullified-resources := mynullified-resources;
         other-private := 0;
       };
   in mkProofLogic myResourceEph publicInputs privateInputs;
@@ -85,23 +99,23 @@ myResourceProof : Proof :=
   let
     publicInputs : Public-Inputs :=
       mkPublic-Inputs@{
-        commitments := [myResourceCommitment];
-        nullifiers := [myResourceEphNullifier];
+        commitments := mycommitments;
+        nullifiers := mynullifiers;
         self-tag := myResourceCommitment;
-        other-public := 200;
+        other-public := createdMagic;
       };
     privateInputs : Private-Inputs :=
       mkPrivate-Inputs@{
-        committed-resources := [myResource];
-        nullified-resources := [myResourceEph];
+        committed-resources := mycommitted-resources;
+        nullified-resources := mynullified-resources;
         other-private := 0;
       };
   in mkProofLogic myResource publicInputs privateInputs;
 
 tx-action : Action :=
   mkAction@{
-    commitments := [myResourceCommitment];
-    nullifiers := [myResourceEphNullifier];
+    commitments := mycommitments;
+    nullifiers := mynullifiers;
     proofs := [myResourceProof; myResourceEphProof];
     app-data := 0;
   };
