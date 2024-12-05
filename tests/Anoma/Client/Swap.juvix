@@ -9,10 +9,38 @@ import ByteArray open;
 
 axiom undefined {A} : A;
 
+open Public-Inputs;
+open Private-Inputs;
+
+mylogic (pub : Public-Inputs) (priv : Private-Inputs) : Bool :=
+  -- DANGER we assume that the list of commitments and committed-resources come in the same order. This is NOT the case in the specs. Same for the nullifiers
+  let
+    coms : List (Pair Nat Resource) :=
+      zip (commitments pub) (committed-resources priv);
+    nulls : List (Pair Nat Resource) :=
+      zip (nullifiers pub) (nullified-resources priv);
+    st : Nat := self-tag pub;
+
+    isCommit (r : Resource) : Bool := commitment r == st;
+    isNullifier (r : Resource) : Bool := nullifier r == st;
+    findCommit : Maybe Resource := find isCommit (committed-resources priv);
+    findNullifier : Maybe Resource :=
+      find isNullifier (nullified-resources priv);
+
+  in case findCommit of
+       | just createdResource :=
+         Resource.quantity createdResource == 1 && other-public pub == 200
+       | nothing :=
+         case findNullifier of
+           | nothing := false
+           | just consumedResource :=
+             Resource.quantity consumedResource == 1
+               &&  other-public pub == 100;
+
 trivial_true_resource_eph : Resource :=
   mkResource@{
     label := 0;
-    logic := \{_ _ := true};
+    logic := mylogic;
     ephemeral := true;
     quantity := 1;
     data := 0;
@@ -30,7 +58,7 @@ trivial_true_eph_nullifier : Proof :=
         commitments := [];
         nullifiers := [trivial_true_nullifier_eph];
         self-tag := trivial_true_nullifier_eph;
-        other-public := 0;
+        other-public := 100;
       };
     privateInputs : Private-Inputs :=
       mkPrivate-Inputs@{
@@ -59,7 +87,7 @@ nullify_intent_eph : Transaction :=
 trivial_true_resource : Resource :=
   mkResource@{
     label := 0;
-    logic := \{_ _ := true};
+    logic := mylogic;
     ephemeral := true;
     quantity := 1;
     data := 0;
@@ -76,7 +104,7 @@ trivial_true_commitment : Proof :=
         commitments := [true_commitment];
         nullifiers := [];
         self-tag := true_commitment;
-        other-public := 0;
+        other-public := 200;
       };
     privateInputs : Private-Inputs :=
       mkPrivate-Inputs@{
