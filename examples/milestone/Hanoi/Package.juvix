@@ -6,5 +6,5 @@ package : Package :=
   defaultPackage@{
     name := "Hanoi";
     version := mkVersion 0 1 0;
-    main := just "Hanoi.juvix"
+    main := just "Hanoi.juvix";
   };
