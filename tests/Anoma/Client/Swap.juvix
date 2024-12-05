@@ -56,8 +56,6 @@ myResourceEph : Resource :=
     nonce := replicate 32 0x0 |> mkByteArray |> toAnomaContents;
   };
 
-myResourceEphNullifier : Nat := nullifier myResourceEph;
-
 myResource : Resource :=
   mkResource@{
     label := 0;
@@ -70,15 +68,25 @@ myResource : Resource :=
     nonce := 2;
   };
 
+myResource' : Resource := myResource@Resource{nonce := 222};
+
+myResourceEph' : Resource := myResourceEph@Resource{nonce := 333};
+
+myResourceCommitment' : Nat := commitment myResource';
+
 myResourceCommitment : Nat := commitment myResource;
 
-mycommitments : List Nat := [myResourceCommitment];
+mycommitments : List Nat := [myResourceCommitment; myResourceCommitment'];
 
-mynullifiers : List Nat := [myResourceEphNullifier];
+myResourceEphNullifier : Nat := nullifier myResourceEph;
 
-mycommitted-resources : List Resource := [myResource];
+myResourceEphNullifier' : Nat := nullifier myResourceEph';
 
-mynullified-resources : List Resource := [myResourceEph];
+mynullifiers : List Nat := [myResourceEphNullifier'; myResourceEphNullifier];
+
+mycommitted-resources : List Resource := [myResource; myResourceEph'];
+
+mynullified-resources : List Resource := [myResourceEph; myResource'];
 
 myResourceEphProof : Proof :=
   let
@@ -97,6 +105,23 @@ myResourceEphProof : Proof :=
       };
   in mkProofLogic myResourceEph publicInputs privateInputs;
 
+myResourceEphProof' : Proof :=
+  let
+    publicInputs : Public-Inputs :=
+      mkPublic-Inputs@{
+        commitments := mycommitments;
+        nullifiers := mynullifiers;
+        self-tag := myResourceEphNullifier';
+        other-public := consumedMagic;
+      };
+    privateInputs : Private-Inputs :=
+      mkPrivate-Inputs@{
+        committed-resources := mycommitted-resources;
+        nullified-resources := mynullified-resources;
+        other-private := consumedMagic;
+      };
+  in mkProofLogic myResourceEph' publicInputs privateInputs;
+
 myResourceProof : Proof :=
   let
     publicInputs : Public-Inputs :=
@@ -114,11 +139,28 @@ myResourceProof : Proof :=
       };
   in mkProofLogic myResource publicInputs privateInputs;
 
+myResourceProof' : Proof :=
+  let
+    publicInputs : Public-Inputs :=
+      mkPublic-Inputs@{
+        commitments := mycommitments;
+        nullifiers := mynullifiers;
+        self-tag := myResourceCommitment';
+        other-public := createdMagic;
+      };
+    privateInputs : Private-Inputs :=
+      mkPrivate-Inputs@{
+        committed-resources := mycommitted-resources;
+        nullified-resources := mynullified-resources;
+        other-private := createdMagic;
+      };
+  in mkProofLogic myResource' publicInputs privateInputs;
+
 tx-action : Action :=
   mkAction@{
     commitments := mycommitments;
     nullifiers := mynullifiers;
-    proofs := [myResourceProof; myResourceEphProof];
+    proofs := [myResourceProof; myResourceEphProof'; myResourceEphProof; myResourceProof';];
     app-data := 0;
   };
 
