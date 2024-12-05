@@ -765,6 +765,10 @@ hashMapFromHashSetM s fun =
 hashMapFromHashSet :: (Hashable k) => HashSet k -> (k -> v) -> HashMap k v
 hashMapFromHashSet s fun = hashMap [(x, fun x) | x <- toList s]
 
+-- | Sorts and removes duplicates
+ordNubSort :: (Foldable f, Ord k) => f k -> [k]
+ordNubSort = toList . ordSet
+
 ordMap :: (Foldable f, Ord k) => f (k, v) -> Map k v
 ordMap = Map.fromList . toList
 

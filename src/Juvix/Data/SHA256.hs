@@ -50,6 +50,12 @@ ignoreSHA256Builder = interpret $ \case
 execSHA256Builder :: (Members '[Files] r) => Sem (SHA256Builder ': r) a -> Sem r Text
 execSHA256Builder = fmap fst . runSHA256Builder
 
--- | Create a HEX encoded, SHA256 digest of the contents of some files
+-- | Create a HEX encoded, SHA256 digest of the contents of some files in the
+-- given order. Note that the order of the paths is relevant
+digestFilesList :: (Members '[Files] r, Foldable l) => l (Path Abs File) -> Sem r Text
+digestFilesList = execSHA256Builder . builderDigestFiles
+
+-- | Create a HEX encoded, SHA256 digest of the contents of the files. Order of
+-- paths and repeated elements do not affect the result.
 digestFiles :: (Members '[Files] r, Foldable l) => l (Path Abs File) -> Sem r Text
-digestFiles = execSHA256Builder . builderDigestFiles
+digestFiles = digestFilesList . ordNubSort
