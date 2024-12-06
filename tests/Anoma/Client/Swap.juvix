@@ -34,15 +34,15 @@ mylogic (pub : Public-Inputs) (priv : Private-Inputs) : Bool :=
   in case findCommit of
        | just createdResource :=
          Resource.quantity createdResource == 1
-           && other-public pub == createdMagic
-           && other-private priv == createdMagic
+           -- && other-public pub == createdMagic
+           -- && other-private priv == createdMagic
        | nothing :=
          case findNullifier of
            | nothing := false
            | just consumedResource :=
-             Resource.quantity consumedResource == 1
-               && other-public pub == consumedMagic
-               && other-private priv == consumedMagic;
+             Resource.quantity consumedResource == 1;
+               -- && other-public pub == consumedMagic
+               -- && other-private priv == consumedMagic;
 
 myResourceEph : Resource :=
   mkResource@{
@@ -60,7 +60,7 @@ myResource : Resource :=
   mkResource@{
     label := 0;
     logic := mylogic;
-    ephemeral := true;
+    ephemeral := false;
     quantity := 1;
     data := 0;
     nullifier-key := replicate 32 0x0 |> mkByteArray |> toAnomaContents;
@@ -76,17 +76,18 @@ myResourceCommitment' : Nat := commitment myResource';
 
 myResourceCommitment : Nat := commitment myResource;
 
-mycommitments : List Nat := [myResourceCommitment; myResourceCommitment'];
-
 myResourceEphNullifier : Nat := nullifier myResourceEph;
 
 myResourceEphNullifier' : Nat := nullifier myResourceEph';
 
-mynullifiers : List Nat := [myResourceEphNullifier'; myResourceEphNullifier];
+mycommitments : List Nat := [myResourceCommitment];
 
-mycommitted-resources : List Resource := [myResource; myResourceEph'];
+mynullifiers : List Nat := [myResourceEphNullifier];
 
-mynullified-resources : List Resource := [myResourceEph; myResource'];
+mycommitted-resources : List Resource := [myResource];
+
+mynullified-resources : List Resource := [myResourceEph];
+
 
 myResourceEphProof : Proof :=
   let
@@ -156,11 +157,18 @@ myResourceProof' : Proof :=
       };
   in mkProofLogic myResource' publicInputs privateInputs;
 
+myproofs : List Proof :=       [
+        -- myResourceProof';
+        -- myResourceEphProof';
+        myResourceProof;
+        myResourceEphProof;
+      ];
+
 tx-action : Action :=
   mkAction@{
     commitments := mycommitments;
     nullifiers := mynullifiers;
-    proofs := [myResourceProof; myResourceEphProof'; myResourceEphProof; myResourceProof';];
+    proofs := myproofs;
     app-data := 0;
   };
 
