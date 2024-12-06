@@ -111,10 +111,10 @@ anomaLibPath = \case
     RmProveLogic -> [nock| [9 342 0 1] |]
     RmProveAction -> [nock| [9 22 0 1] |]
     RmDeltaAdd -> [nock| [9 92 0 1] |]
-    RmDeltaSub -> [nock| [9 763 0 1] |]
+    RmDeltaSub -> [nock| [9 1.527 0 1] |]
     RmResourceDelta -> [nock| [9 343 0 1] |]
     RmActionDelta -> [nock| [9 4 0 1] |]
-    RmMakeDelta -> [nock| [9 372 0 1] |]
+    RmMakeDelta -> [nock| [9 1.494 0 1] |]
     RmProveDelta -> [nock| [9 1.535 0 1] |]
   AnomaLibValue (AnomaRmValue v) -> case v of
     RmZeroDelta -> [nock| [9 20 0 1] |]
