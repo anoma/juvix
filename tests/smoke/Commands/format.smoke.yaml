@@ -168,6 +168,22 @@ tests:
     stderr: ''
     exit-status: 1
 
+  - name: format-project-package-dot-juvix
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cd $temp
+        juvix init
+        echo "" >> Package.juvix
+        juvix format
+    stderr: ''
+    stdout:
+      contains: 'Package.juvix'
+    exit-status: 1
+
   - name: format-project-containing-unformatted-from-subdir
     command:
       shell:

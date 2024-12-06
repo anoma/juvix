@@ -6,5 +6,5 @@ package : Package :=
   defaultPackage@{
     name := "HelloWorld";
     version := mkVersion 0 1 0;
-    main := just "HelloWorld.juvix"
+    main := just "HelloWorld.juvix";
   };
