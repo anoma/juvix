@@ -1,10 +1,12 @@
 module Juvix.Data.Comment where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.Text qualified as Text
+import Juvix.Data.CodeAnn (CodeAnn (..), PrettyCodeAnn, ppCodeAnn)
 import Juvix.Data.Loc
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude.Base
-import Prettyprinter
+import Prettyprinter hiding (concatWith)
 
 newtype Comments = Comments
   { _commentsByFile :: HashMap (Path Abs File) FileComments
@@ -99,14 +101,48 @@ instance HasLoc SpaceSection where
 instance HasLoc Comment where
   getLoc = (^. commentInterval)
 
+instance PrettyCodeAnn Comment where
+  ppCodeAnn = annotate AnnComment . pretty
+
 instance Pretty Comment where
   pretty :: Comment -> Doc ann
-  pretty c = delim (pretty (c ^. commentText))
+  pretty c = delim (c ^. commentText)
     where
-      delim :: Doc ann -> Doc ann
+      delim :: Text -> Doc ann
       delim = case c ^. commentType of
-        CommentOneLine -> (Str.commentLineStart <>)
-        CommentBlock -> enclose Str.commentBlockStart Str.commentBlockEnd
+        CommentOneLine -> (Str.commentLineStart <>) . pretty
+        CommentBlock ->
+          enclose Str.commentBlockStart Str.commentBlockEnd
+            . pretty
+            . trimPrefixSpace
+
+      trimPrefixSpace :: Text -> Text
+      trimPrefixSpace txt = case Text.unsnoc txt of
+        Nothing -> ""
+        Just (_, l) ->
+          appendNl
+            . striplines
+            $ txt
+          where
+            striplines :: Text -> Text
+            striplines =
+              concatWith (\a b -> a <> "\n" <> b)
+                . run
+                . execOutputList
+                . go True
+                . Text.lines
+            go :: (Members '[Output Text] r) => Bool -> [Text] -> Sem r ()
+            go isFirst = \case
+              [] -> return ()
+              a : as
+                | isFirst && isLast -> output a
+                | isFirst -> output (Text.stripEnd a) >> go False as
+                | isLast -> output (Text.stripStart a)
+                | otherwise -> output (Text.strip a) >> go False as
+                where
+                  isLast = null as
+            lastnl = '\n' == l
+            appendNl = if lastnl then (<> "\n") else id
 
 allComments :: Comments -> [Comment]
 allComments c =
