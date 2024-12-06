@@ -696,6 +696,37 @@ getModuleExportInfo m = fromMaybeM err (gets (^? scoperModules . at (m ^. module
             <> ppTrace ms
         )
 
+lookupLocalSymbolAux ::
+  forall r.
+  (Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output PreSymbolEntry, Output FixitySymbolEntry] r) =>
+  (S.WhyInScope -> Bool) ->
+  [Symbol] ->
+  Symbol ->
+  Sem r ()
+lookupLocalSymbolAux whyInScope modules final =
+  case modules of
+    [] ->
+      lookHere
+    p : ps -> do
+      entries <- gets (^.. scopeModuleSymbols . at p . _Just . symbolInfo . each)
+      let entries' = filter (whyInScope . (^. moduleEntry . S.nameWhyInScope)) entries
+      mapM_ (getModuleExportInfo >=> lookInExport final ps) entries'
+  where
+    lookHere :: Sem r ()
+    lookHere = do
+      let helper ::
+            forall ns r'.
+            (SingI ns, Members '[Output (NameSpaceEntryType ns), State Scope] r') =>
+            Proxy ns ->
+            Sem r' ()
+          helper Proxy = do
+            entries <- gets (^.. scopeNameSpace @ns . at final . _Just . symbolInfo . each)
+            let entries' = filter (whyInScope . (^. entryName . S.nameWhyInScope)) entries
+            mapM_ output entries'
+      helper (Proxy @'NameSpaceSymbols)
+      helper (Proxy @'NameSpaceModules)
+      helper (Proxy @'NameSpaceFixities)
+
 -- | Do not call directly. Looks for a symbol in (possibly) nested local modules
 lookupSymbolAux ::
   forall r.
@@ -707,22 +738,33 @@ lookupSymbolAux modules final = do
   hereOrInLocalModule
   importedTopModule
   where
-    hereOrInLocalModule :: Sem r () =
-      case modules of
-        [] -> do
-          let helper ::
-                forall ns r'.
-                (SingI ns, Members '[Output (NameSpaceEntryType ns), State Scope] r') =>
-                Proxy ns ->
-                Sem r' ()
-              helper Proxy =
-                gets (^.. scopeNameSpace @ns . at final . _Just . symbolInfo . each) >>= mapM_ output
-          helper (Proxy @'NameSpaceSymbols)
-          helper (Proxy @'NameSpaceModules)
-          helper (Proxy @'NameSpaceFixities)
-        p : ps ->
-          gets (^.. scopeModuleSymbols . at p . _Just . symbolInfo . each)
-            >>= mapM_ (getModuleExportInfo >=> lookInExport final ps)
+    hereOrInLocalModule :: Sem r ()
+    hereOrInLocalModule = do
+      path0 <- gets (^. scopePath)
+      let topPath = path0 ^. S.absTopModulePath
+          path1 = topPath ^. modulePathDir ++ [topPath ^. modulePathName]
+          path2 = path0 ^. S.absLocalPath
+          pref = commonPrefix path2 modules
+      if
+          | isPrefixOf path1 modules -> do
+              let modules' = drop (length path1) modules
+                  pref' = commonPrefix path2 modules'
+              lookPrefix pref' path2 modules'
+          | not (null pref) ->
+              lookPrefix pref path2 modules
+          | otherwise ->
+              lookupLocalSymbolAux (const True) modules final
+
+    lookPrefix :: [Symbol] -> [Symbol] -> [Symbol] -> Sem r ()
+    lookPrefix pref path modules' = do
+      let prefLen = length pref
+          inheritDepth = length path - prefLen
+          modules'' = drop prefLen modules'
+      lookupLocalSymbolAux
+        (== iterate S.BecauseInherited S.BecauseDefined !! inheritDepth)
+        modules''
+        final
+
     importedTopModule :: Sem r ()
     importedTopModule = do
       tbl <- gets (^. scopeTopModules)

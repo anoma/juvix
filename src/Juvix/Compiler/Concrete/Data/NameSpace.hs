@@ -36,6 +36,14 @@ type family NameSpaceEntryType s = res | res -> s where
   NameSpaceEntryType 'NameSpaceModules = ModuleSymbolEntry
   NameSpaceEntryType 'NameSpaceFixities = FixitySymbolEntry
 
+entryName :: forall ns. (SingI ns) => Lens' (NameSpaceEntryType ns) S.Name
+entryName = case sing :: SNameSpace ns of
+  SNameSpaceSymbols -> \f -> \case
+    PreSymbolAlias (Alias n) -> PreSymbolAlias . Alias <$> f n
+    PreSymbolFinal (SymbolEntry n) -> PreSymbolFinal . SymbolEntry <$> f n
+  SNameSpaceModules -> moduleEntry
+  SNameSpaceFixities -> fixityEntry
+
 exportNameSpace :: forall ns. (SingI ns) => Lens' ExportInfo (HashMap C.Symbol (NameSpaceEntryType ns))
 exportNameSpace = case sing :: SNameSpace ns of
   SNameSpaceSymbols -> exportSymbols
