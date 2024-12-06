@@ -49,8 +49,7 @@ instance Eq VarRef where
       && vr1 ^. varRefIndex == vr2 ^. varRefIndex
 
 instance Ord VarRef where
-  compare vr1 vr2 =
-    compare (vr1 ^. varRefGroup, vr1 ^. varRefIndex) (vr2 ^. varRefGroup, vr2 ^. varRefIndex)
+  compare = compare `on` (vr -> vr ^. varRefGroup, vr ^. varRefIndex)
 
 deriving stock instance (Eq ConstrField)
 
