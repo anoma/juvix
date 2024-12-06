@@ -1,6 +1,6 @@
 module Anoma.Compilation.Negative where
 
-import Base
+import Base hiding (compileMain)
 import Juvix.Compiler.Backend (Target (TargetAnoma))
 import Juvix.Compiler.Core.Error
 import Juvix.Prelude qualified as Prelude
