@@ -130,6 +130,8 @@ instrUnop ::
 instrUnop vref =
   parseUnaryOp kwShow OpShow vref
     <|> parseUnaryOp kwAtoi OpStrToInt vref
+    <|> parseUnaryOp kwIntToField OpIntToField vref
+    <|> parseUnaryOp kwFieldToInt OpFieldToInt vref
     <|> parseUnaryOp kwArgsNum OpArgsNum vref
 
 parseUnaryOp ::

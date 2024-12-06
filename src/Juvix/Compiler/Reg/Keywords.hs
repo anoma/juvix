@@ -32,7 +32,9 @@ import Juvix.Data.Keyword.All
     kwFieldDiv,
     kwFieldMul,
     kwFieldSub,
+    kwFieldToInt,
     kwIf,
+    kwIntToField,
     kwLe_,
     kwLive,
     kwLt_,
@@ -93,5 +95,7 @@ allKeywords =
          kwFail,
          kwArgsNum,
          kwPoseidon,
-         kwRandomEcPoint
+         kwRandomEcPoint,
+         kwIntToField,
+         kwFieldToInt
        ]

@@ -75,7 +75,8 @@ fromCairo elems0 =
               Call
                 InstrCall
                   { _instrCallRel = _instrPcUpdate == Cairo.PcUpdateJumpRel,
-                    _instrCallTarget = val
+                    _instrCallTarget = val,
+                    _instrCallComment = Nothing
                   }
             (rval, delta) = decodeRes i elems
             val = case rval of
@@ -110,7 +111,8 @@ fromCairo elems0 =
                 InstrAssign
                   { _instrAssignResult = dst,
                     _instrAssignValue = rval,
-                    _instrAssignIncAp = _instrApUpdate == Cairo.ApUpdateInc
+                    _instrAssignIncAp = _instrApUpdate == Cairo.ApUpdateInc,
+                    _instrAssignComment = Nothing
                   }
 
         goNop :: Cairo.Instruction -> [Cairo.Element] -> (Instruction, Int)
@@ -136,7 +138,8 @@ fromCairo elems0 =
                 InstrJump
                   { _instrJumpTarget = res,
                     _instrJumpRel = isRel,
-                    _instrJumpIncAp = _instrApUpdate == Cairo.ApUpdateInc
+                    _instrJumpIncAp = _instrApUpdate == Cairo.ApUpdateInc,
+                    _instrJumpComment = Nothing
                   }
 
         goJumpIf :: Cairo.Instruction -> [Cairo.Element] -> (Instruction, Int)
@@ -159,7 +162,8 @@ fromCairo elems0 =
                 InstrJumpIf
                   { _instrJumpIfTarget = tgt,
                     _instrJumpIfValue = dst,
-                    _instrJumpIfIncAp = _instrApUpdate == Cairo.ApUpdateInc
+                    _instrJumpIfIncAp = _instrApUpdate == Cairo.ApUpdateInc,
+                    _instrJumpIfComment = Nothing
                   }
 
         goAlloc :: Cairo.Instruction -> [Cairo.Element] -> (Instruction, Int)

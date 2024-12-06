@@ -222,7 +222,8 @@ parseJump = do
           InstrJumpIf
             { _instrJumpIfTarget = tgt,
               _instrJumpIfValue = v,
-              _instrJumpIfIncAp = incAp
+              _instrJumpIfIncAp = incAp,
+              _instrJumpIfComment = Nothing
             }
 
     jmp :: ParsecS r Instruction
@@ -235,7 +236,8 @@ parseJump = do
           InstrJump
             { _instrJumpTarget = tgt,
               _instrJumpRel = isRel,
-              _instrJumpIncAp = incAp
+              _instrJumpIncAp = incAp,
+              _instrJumpComment = Nothing
             }
 
 parseCall :: (Member LabelInfoBuilder r) => ParsecS r Instruction
@@ -243,7 +245,13 @@ parseCall = do
   kw kwCall
   isRel <- parseRel
   v <- parseValue
-  return $ Call $ InstrCall {_instrCallTarget = v, _instrCallRel = isRel}
+  return $
+    Call $
+      InstrCall
+        { _instrCallTarget = v,
+          _instrCallRel = isRel,
+          _instrCallComment = Nothing
+        }
 
 parseReturn :: ParsecS r Instruction
 parseReturn = do
@@ -277,7 +285,8 @@ parseAssign = do
           InstrAssign
             { _instrAssignValue = v,
               _instrAssignResult = res,
-              _instrAssignIncAp = incAp
+              _instrAssignIncAp = incAp,
+              _instrAssignComment = Nothing
             }
 
     extraBinop :: MemRef -> ParsecS r Instruction
@@ -293,7 +302,8 @@ parseAssign = do
               _instrExtraBinopArg2 = arg2,
               _instrExtraBinopOpcode = op,
               _instrExtraBinopResult = res,
-              _instrExtraBinopIncAp = incAp
+              _instrExtraBinopIncAp = incAp,
+              _instrExtraBinopComment = Nothing
             }
 
     parseExtraValue :: ExtraOpcode -> ParsecS r Value
