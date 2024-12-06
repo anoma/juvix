@@ -34,15 +34,15 @@ mylogic (pub : Public-Inputs) (priv : Private-Inputs) : Bool :=
   in case findCommit of
        | just createdResource :=
          Resource.quantity createdResource == 1
-           -- && other-public pub == createdMagic
-           -- && other-private priv == createdMagic
+           && other-public pub == createdMagic
+           && other-private priv == createdMagic
        | nothing :=
          case findNullifier of
            | nothing := false
            | just consumedResource :=
-             Resource.quantity consumedResource == 1;
-               -- && other-public pub == consumedMagic
-               -- && other-private priv == consumedMagic;
+             Resource.quantity consumedResource == 1
+               && other-public pub == consumedMagic
+               && other-private priv == consumedMagic;
 
 myResourceEph : Resource :=
   mkResource@{
@@ -80,14 +80,13 @@ myResourceEphNullifier : Nat := nullifier myResourceEph;
 
 myResourceEphNullifier' : Nat := nullifier myResourceEph';
 
-mycommitments : List Nat := [myResourceCommitment];
+mycommitments : List Nat := [myResourceCommitment; myResourceCommitment'];
 
-mynullifiers : List Nat := [myResourceEphNullifier];
+mynullifiers : List Nat := [myResourceEphNullifier; myResourceEphNullifier'];
 
-mycommitted-resources : List Resource := [myResource];
+mycommitted-resources : List Resource := [myResource; myResource'];
 
-mynullified-resources : List Resource := [myResourceEph];
-
+mynullified-resources : List Resource := [myResourceEph; myResourceEph'];
 
 myResourceEphProof : Proof :=
   let
@@ -157,19 +156,20 @@ myResourceProof' : Proof :=
       };
   in mkProofLogic myResource' publicInputs privateInputs;
 
-myproofs : List Proof :=       [
-        -- myResourceProof';
-        -- myResourceEphProof';
-        myResourceProof;
-        myResourceEphProof;
-      ];
+myproofs : List Proof :=
+  [
+    myResourceProof';
+    myResourceEphProof';
+    myResourceProof;
+    myResourceEphProof;
+  ];
 
 tx-action : Action :=
   mkAction@{
     commitments := mycommitments;
     nullifiers := mynullifiers;
     proofs := myproofs;
-    app-data := 0;
+    app-data := 0; -- Ask Yulia why this app-data does not correspond to other-public
   };
 
 tx : Transaction :=
