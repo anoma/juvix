@@ -191,8 +191,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
             massert (isJust mout)
             massert (HashSet.member (fromJust mout) liveVars0)
             goAssignApBuiltins
-            whenJust mout $
-              saveLiveVar
+            whenJust mout saveLiveVar
             goCallBlock mout liveVars0
       where
         output'' :: Instruction -> Sem r ()
