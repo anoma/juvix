@@ -194,7 +194,9 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           Nothing -> do
             massert (isJust mout)
             massert (HashSet.member (fromJust mout) liveVars0)
-            goCallBlock False Nothing liveVars0
+            goAssignApBuiltins
+            whenJust mout saveLiveVar
+            goCallBlock mout liveVars0
       where
         output'' :: Instruction -> Sem r ()
         output'' i = do
@@ -206,22 +208,24 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           output'' i
           incAP apOff
 
-        goCallBlock :: Bool -> Maybe Reg.VarRef -> HashSet Reg.VarRef -> Sem r ()
-        goCallBlock updatedBuiltins outVar liveVars = do
-          let liveVars' = toList (maybe liveVars (`HashSet.delete` liveVars) outVar)
+        saveLiveVar :: Reg.VarRef -> Sem r ()
+        saveLiveVar var = do
+          ref <- mkMemRef var
+          let comment = Reg.ppPrint tab var
+          goAssignAp' (Just comment) (Val (Ref ref))
+
+        -- The `goCallBlock` function is used to switch to a new basic block.
+        -- Assumes that the builtins pointer and outVar (if present) were
+        -- already saved (in this order).
+        goCallBlock :: Maybe Reg.VarRef -> HashSet Reg.VarRef -> Sem r ()
+        goCallBlock outVar liveVars = do
+          let liveVars' = sort $ toList (maybe liveVars (`HashSet.delete` liveVars) outVar)
               n = length liveVars'
-              bltOff =
-                if
-                    | updatedBuiltins ->
-                        -argsOffset - n - fromEnum (isJust outVar)
-                    | otherwise ->
-                        -argsOffset - n
+              bltOff = -argsOffset - n - fromEnum (isJust outVar)
               vars =
                 HashMap.fromList $
-                  maybe [] (\var -> [(var, -argsOffset - n - if updatedBuiltins then 0 else 1)]) outVar
+                  maybe [] (\var -> [(var, -argsOffset - n)]) outVar
                     ++ zipWithExact (\var k -> (var, -argsOffset - k)) liveVars' [0 .. n - 1]
-          unless updatedBuiltins $
-            goAssignApBuiltins
           mapM_ saveLiveVar (reverse liveVars')
           output'' (mkCallRel $ Imm 3)
           output'' Return
@@ -232,12 +236,6 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           setAP 0
           setVars vars
           setBuiltinOffset bltOff
-          where
-            saveLiveVar :: Reg.VarRef -> Sem r ()
-            saveLiveVar var = do
-              ref <- mkMemRef var
-              let comment = Reg.ppPrint tab var
-              goAssignAp' (Just comment) (Val (Ref ref))
 
         goLocalBlock :: Int -> HashMap Reg.VarRef Int -> Int -> HashSet Reg.VarRef -> Maybe Reg.VarRef -> Reg.Block -> Sem r ()
         goLocalBlock ap0 vars bltOff liveVars mout' block = do
@@ -573,7 +571,11 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           val <- mkMemRef _instrExtendClosureValue
           goAssignAp (Val $ Ref val)
           output'' $ mkCallRel $ Lab $ LabelRef (blts ^. stdlibExtendClosure) (Just (blts ^. stdlibExtendClosureName))
-          goCallBlock False (Just _instrExtendClosureResult) liveVars
+          -- the `juvix_extend_closure` runtime function does not accept or
+          -- return the builtins pointer
+          goAssignApBuiltins
+          goAssignAp (Val $ Ref $ MemRef Ap (-2))
+          goCallBlock (Just _instrExtendClosureResult) liveVars
 
         goCall' :: Reg.CallType -> [Reg.Value] -> Sem r ()
         goCall' ct args = case ct of
@@ -593,7 +595,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goCall :: HashSet Reg.VarRef -> Reg.InstrCall -> Sem r ()
         goCall liveVars Reg.InstrCall {..} = do
           goCall' _instrCallType _instrCallArgs
-          goCallBlock True (Just _instrCallResult) liveVars
+          goCallBlock (Just _instrCallResult) liveVars
 
         -- There is no way to make "proper" tail calls in Cairo, because
         -- the only way to set the `fp` register is via the `call` instruction.

@@ -1,0 +1,116 @@
+-- Mock resource logic
+
+type Pair {
+  __comma__ : (*, *) -> Pair;
+}
+
+type List {
+  nil : List;
+  __colon____colon__ : (*, List) -> List;
+}
+
+type Resource {
+  mkResource : (field, field, field, field, bool, field, field, field) -> Resource;
+}
+
+type LogicResult {
+  mkResult : field -> LogicResult;
+}
+
+function poseidonHashList'(List) : field;
+function poseidonHash2'(field, field) : field;
+function main(Resource, field, List) : LogicResult;
+
+function poseidonHashList'(_X : List) : field {
+  tmp[1] = _X;
+  case[List] tmp[1] {
+    __colon____colon__: {
+      {
+        tmp[0] = tmp[1];
+        tmp[1] = tmp[0].__colon____colon__[1];
+        tmp[1] = call poseidonHashList' (tmp[1]);
+        tmp[2] = tmp[0].__colon____colon__[0];
+        tmp[1] = fadd tmp[2] tmp[1];
+        ret tmp[1];
+      };
+    };
+    nil: {
+      nop;
+      tmp[1] = 0F;
+      ret tmp[1];
+    };
+  };
+}
+
+function poseidonHash2'(x : field, y : field) : field {
+  tmp[0] = y;
+  tmp[1] = x;
+  tmp[0] = fadd tmp[1] tmp[0];
+  ret tmp[0];
+}
+
+function main(self_resource : Resource, resource_nf_key : field, merkle_path : List) : LogicResult {
+  tmp[2] = alloc nil ();
+  tmp[3] = alloc nil ();
+  tmp[4] = self_resource;
+  case[Resource] tmp[4], out: tmp[4] {
+    mkResource: {
+      tmp[0] = tmp[4];
+      tmp[4] = tmp[0].mkResource[2];
+    };
+  };
+  tmp[3] = alloc __colon____colon__ (tmp[4], tmp[3]);
+  tmp[4] = self_resource;
+  case[Resource] tmp[4], out: tmp[4] {
+    mkResource: {
+      tmp[0] = tmp[4];
+      tmp[4] = tmp[0].mkResource[5];
+    };
+  };
+  tmp[3] = alloc __colon____colon__ (tmp[4], tmp[3]);
+  tmp[4] = merkle_path;
+  case[List] tmp[4], out: tmp[4] {
+    __colon____colon__: {
+      {
+        tmp[0] = tmp[4];
+        tmp[4] = tmp[0].__colon____colon__[0];
+        case[Pair] tmp[4], out: tmp[4] {
+          __comma__: {
+            {
+              tmp[1] = tmp[4];
+              tmp[4] = tmp[1].__comma__[1];
+            };
+          };
+        };
+      };
+    };
+    nil: {
+      nop;
+      tmp[4] = true;
+    };
+  };
+  br tmp[4], out: tmp[4] {
+    true: {
+      tmp[4] = self_resource;
+      case[Resource] tmp[4], out: tmp[4] {
+        mkResource: {
+          tmp[0] = tmp[4];
+          tmp[4] = tmp[0].mkResource[6];
+        };
+      };
+    };
+    false: {
+      tmp[4] = 0F;
+      tmp[5] = resource_nf_key;
+      tmp[4] = call poseidonHash2' (tmp[5], tmp[4]);
+    };
+  };
+  tmp[3] = alloc __colon____colon__ (tmp[4], tmp[3]);
+  tmp[3] = call poseidonHashList' (tmp[3]);
+  tmp[2] = alloc __colon____colon__ (tmp[3], tmp[2]);
+  tmp[3] = resource_nf_key;
+  tmp[2] = alloc __colon____colon__ (tmp[3], tmp[2]);
+  tmp[2] = call poseidonHashList' (tmp[2]);
+  tmp[2] = alloc mkResult (tmp[2]);
+  ret tmp[2];
+}
