@@ -13,6 +13,8 @@ import Juvix.Prelude.Aeson qualified as Aeson
 newtype ListUnrevealedCommitsResult = ListUnrevealedCommitsResult
   {_listUnrevealedCommitsResultCommits :: [Nockma.Term Natural]}
 
+makeLenses ''ListUnrevealedCommitsResult
+
 listUnrevealedCommits ::
   forall r.
   (Members '[Anoma, Error SimpleError, Logger] r) =>
@@ -35,5 +37,3 @@ listUnrevealedCommits = do
     decodeCommit t = case (Base64.decode (encodeUtf8 t)) of
       Left e -> throw (SimpleError (mkAnsiText ("Failed to decode commitment: " <> pack e)))
       Right bs -> return bs
-
-makeLenses ''ListUnrevealedCommitsResult

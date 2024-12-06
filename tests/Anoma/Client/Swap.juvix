@@ -66,14 +66,15 @@ trivial_true_resource : Resource :=
     nonce := 2;
   };
 
-trivial_true_commitment : Proof :=
+trivial_true_commitment : Nat := commitment trivial_true_resource;
+
+trivial_true_proof : Proof :=
   let
-    true_commitment : Nat := commitment trivial_true_resource;
     publicInputs : Public-Inputs :=
       mkPublic-Inputs@{
-        commitments := [true_commitment];
+        commitments := [trivial_true_commitment];
         nullifiers := [];
-        self-tag := true_commitment;
+        self-tag := trivial_true_commitment;
         other-public := 0;
       };
     privateInputs : Private-Inputs :=
@@ -86,9 +87,9 @@ trivial_true_commitment : Proof :=
 
 trivial_true_commit_action : Action :=
   mkAction@{
-    commitments := [commitment trivial_true_resource];
+    commitments := [trivial_true_commitment];
     nullifiers := [];
-    proofs := [trivial_true_commitment];
+    proofs := [trivial_true_proof];
     app-data := 0;
   };
 
@@ -101,5 +102,6 @@ commit_intent : Transaction :=
   };
 
 main : TransactionRequest :=
+  trace trivial_true_commitment >->
   TransactionRequest.fromTransaction
     (Transaction.compose nullify_intent_eph commit_intent);
