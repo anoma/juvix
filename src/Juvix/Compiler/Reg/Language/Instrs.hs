@@ -26,7 +26,7 @@ data ConstrField = ConstrField
 data VarGroup
   = VarGroupArgs
   | VarGroupLocal
-  deriving stock (Eq, Generic, Show)
+  deriving stock (Eq, Ord, Generic, Show)
 
 instance Hashable VarGroup
 
@@ -47,6 +47,10 @@ instance Eq VarRef where
   vr1 == vr2 =
     vr1 ^. varRefGroup == vr2 ^. varRefGroup
       && vr1 ^. varRefIndex == vr2 ^. varRefIndex
+
+instance Ord VarRef where
+  compare vr1 vr2 =
+    compare (vr1 ^. varRefGroup, vr1 ^. varRefIndex) (vr2 ^. varRefGroup, vr2 ^. varRefIndex)
 
 deriving stock instance (Eq ConstrField)
 
