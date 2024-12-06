@@ -745,15 +745,13 @@ lookupSymbolAux modules final = do
           path1 = topPath ^. modulePathDir ++ [topPath ^. modulePathName]
           path2 = path0 ^. S.absLocalPath
           pref = commonPrefix path2 modules
-      if
-          | isPrefixOf path1 modules -> do
-              let modules' = drop (length path1) modules
-                  pref' = commonPrefix path2 modules'
-              lookPrefix pref' path2 modules'
-          | not (null pref) ->
-              lookPrefix pref path2 modules
-          | otherwise ->
-              lookupLocalSymbolAux (const True) modules final
+      when (isPrefixOf path1 modules) $ do
+        let modules' = drop (length path1) modules
+            pref' = commonPrefix path2 modules'
+        lookPrefix pref' path2 modules'
+      when (not (null pref)) $
+        lookPrefix pref path2 modules
+      lookupLocalSymbolAux (const True) modules final
 
     lookPrefix :: [Symbol] -> [Symbol] -> [Symbol] -> Sem r ()
     lookPrefix pref path modules' = do
