@@ -1,7 +1,7 @@
 # how to run:
 # 1. make run-client
 # 2. make run-node # keep this running in a separate terminal
-# 333make add-transaction
+# 3. make add-transaction
 base = Swap
 
 juvix = $(base).juvix

@@ -30,7 +30,6 @@ type Public-Inputs :=
     other-public : Nat;
   };
 
-
 positive
 type Private-Inputs :=
   mkPrivate-Inputs@{
@@ -74,8 +73,8 @@ mkProofCompliance (_ : Compliance-Proof) : Proof := proofCompliance;
 mkProofLogic
   (resource : Resource)
   (publicInputs : Public-Inputs)
-  (privateInputs : Private-Inputs): Proof :=
-  proofLogic resource (publicInputs, privateInputs);
+  (privateInputs : Private-Inputs)
+  : Proof := proofLogic resource (publicInputs, privateInputs);
 
 builtin anoma-action
 type Action :=
