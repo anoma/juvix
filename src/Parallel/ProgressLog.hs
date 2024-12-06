@@ -104,8 +104,8 @@ runProgressLogOptions opts m = do
     wait logHandler
     return x
   where
-    getPackageTag :: Path Abs Dir -> Doc CodeAnn
-    getPackageTag pkgRoot = opts ^. progressLogOptionsPackages . at pkgRoot . _Just . packagePackage . packageLikeNameAndVersion
+    packageTag :: Path Abs Dir -> Doc CodeAnn
+    packageTag pkgRoot = packageInfoNameAndVersion (opts ^?! progressLogOptionsPackages . at pkgRoot . _Just)
 
     tree :: ImportTree
     tree = opts ^. progressLogOptionsImportTree
@@ -160,12 +160,13 @@ runProgressLogOptions opts m = do
 
     handler :: TVar ProgressLogState -> LogQueue -> EffectHandlerFO ProgressLog r
     handler st logs = \case
-      ProgressLog i ->
+      ProgressLog i -> do
+        let tag = packageTag fromPackage
         atomically $ do
           n <- getNextNumber
           let k
                 | fromMainPackage = LogMainPackage
-                | otherwise = LogDependency (getPackageTag fromPackage)
+                | otherwise = LogDependency tag
               d =
                 LogItemDetails
                   { _logItemDetailsKind = k,

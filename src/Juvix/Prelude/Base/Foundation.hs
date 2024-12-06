@@ -1,9 +1,11 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Juvix.Prelude.Base.Foundation
   ( module Juvix.Prelude.Base.Foundation,
     module Control.Applicative,
     module Data.Tree,
+    module Data.Versions,
     module Data.Graph,
     module Text.Show.Unicode,
     module Data.Map.Strict,
@@ -66,6 +68,7 @@ module Juvix.Prelude.Base.Foundation
     module Control.Monad.Catch,
     module Control.Monad.Zip,
     module Data.String.Interpolate,
+    module Data.Serialize,
     Data,
     Text,
     pack,
@@ -174,6 +177,8 @@ import Data.Maybe
 import Data.Monoid
 import Data.Ord
 import Data.Semigroup (Semigroup, sconcat, (<>))
+import Data.Serialize (Serialize)
+import Data.Serialize as Serial
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Singletons hiding ((@@))
@@ -196,6 +201,8 @@ import Data.Tree hiding (levels)
 import Data.Tuple.Extra hiding (both)
 import Data.Type.Equality (type (~))
 import Data.Typeable hiding (TyCon)
+import Data.Versions (SemVer (..), Versioning (..))
+import Data.Versions qualified as Versions
 import Data.Void
 import Data.Word
 import GHC.Base (assert)
@@ -339,18 +346,6 @@ replaceText texts txt = fromMaybe txt (HashMap.lookup txt (HashMap.fromList text
 -- Foldable
 --------------------------------------------------------------------------------
 
--- | Returns the repeated elements
-findRepeated :: forall a. (Ord a) => [a] -> [a]
-findRepeated = mapMaybe rep . groupSortOn' id
-  where
-    rep :: [a] -> Maybe a
-    rep = \case
-      a : _ : _ -> Just a
-      _ -> Nothing
-
-allDifferent :: forall a. (Ord a) => [a] -> Bool
-allDifferent = null . findRepeated
-
 allSame :: forall t a. (Eq a, Foldable t) => t a -> Bool
 allSame t = case nonEmpty t of
   Nothing -> True
@@ -466,6 +461,11 @@ zip4Exact [] [] [] [] = []
 zip4Exact (x1 : t1) (x2 : t2) (x3 : t3) (x4 : t4) = (x1, x2, x3, x4) : zip4Exact t1 t2 t3 t4
 zip4Exact _ _ _ _ = error "zip4Exact"
 
+findJustM :: forall a b m. (Monad m) => (a -> m (Maybe b)) -> [a] -> m (Maybe b)
+findJustM f = \case
+  [] -> return Nothing
+  x : xs -> f x >>= maybe (findJustM f xs) (return . Just)
+
 -- | Returns the first element that returns Just and the list with the remaining elements
 findJustAndRemove :: forall a b. (a -> Maybe b) -> [a] -> Maybe (b, [a])
 findJustAndRemove p = go []
@@ -502,12 +502,6 @@ nonEmpty' = fromJust . nonEmpty
 
 _nonEmpty :: Lens' [a] (Maybe (NonEmpty a))
 _nonEmpty f x = maybe [] toList <$> f (nonEmpty x)
-
-groupSortOn :: (Ord b) => (a -> b) -> [a] -> [NonEmpty a]
-groupSortOn f = map nonEmpty' . List.groupSortOn f
-
-groupSortOn' :: (Ord b) => (a -> b) -> [a] -> [[a]]
-groupSortOn' = List.groupSortOn
 
 --------------------------------------------------------------------------------
 -- Errors
@@ -771,6 +765,10 @@ hashMapFromHashSetM s fun =
 hashMapFromHashSet :: (Hashable k) => HashSet k -> (k -> v) -> HashMap k v
 hashMapFromHashSet s fun = hashMap [(x, fun x) | x <- toList s]
 
+-- | Sorts and removes duplicates
+ordNubSort :: (Foldable f, Ord k) => f k -> [k]
+ordNubSort = toList . ordSet
+
 ordMap :: (Foldable f, Ord k) => f (k, v) -> Map k v
 ordMap = Map.fromList . toList
 
@@ -912,3 +910,16 @@ allFiniteSequences elems = build 0 []
           seq <- ofLength (n - 1)
           e <- elems
           return (pure e <> seq)
+
+instance Serialize Text where
+  put txt = Serial.put (unpack txt)
+
+  get = pack <$> Serial.get
+
+instance (Serialize a) => Serialize (NonEmpty a)
+
+instance Serialize Versions.Chunk
+
+instance Serialize Versions.Release
+
+instance Serialize SemVer

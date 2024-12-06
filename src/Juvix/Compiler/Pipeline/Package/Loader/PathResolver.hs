@@ -30,7 +30,7 @@ makeLenses ''RootInfoFiles
 -- package and global standard library (currently under global-package/.juvix-build)
 runPackagePathResolver ::
   forall r a.
-  (Members '[TaggedLock, Error JuvixError, Files, EvalFileEff] r) =>
+  (Members '[Error JuvixError, TaggedLock, Files, EvalFileEff] r) =>
   Path Abs Dir ->
   Sem (PathResolver ': r) a ->
   Sem r a
@@ -73,12 +73,12 @@ runPackagePathResolver rootPath sem = do
       Sem r (HashMap (Path Abs Dir) PackageInfo)
     mkPackageInfos ds fs = do
       pkgBase <- mkPkgBase
-      gstdlib <- mkPkgGlobalStdlib
+      globalPkg <- mkPkgStdlibInGlobal
       pkgDotJuvix <- mkPackageDotJuvix
       pkgType <- mkPkgPackageType
       return
         . hashMap
-        $ mkAssoc <$> [pkgBase, pkgType, gstdlib, pkgDotJuvix]
+        $ mkAssoc <$> [pkgBase, pkgType, globalPkg, pkgDotJuvix]
       where
         mkAssoc :: PackageInfo -> (Path Abs Dir, PackageInfo)
         mkAssoc pkg = (pkg ^. packageRoot, pkg)
@@ -86,23 +86,30 @@ runPackagePathResolver rootPath sem = do
         mkPkgBase :: Sem r PackageInfo
         mkPkgBase = do
           let rfiles = fs ^. rootInfoFilesPackageBase
+              root = ds ^. rootInfoArgPackageBaseDir
+              pkgTy = PackageBase
+          pkgId <- mkPackageInfoPackageId root (toList rfiles) pkgTy
           return
             PackageInfo
-              { _packageRoot = ds ^. rootInfoArgPackageBaseDir,
+              { _packageRoot = root,
                 _packageAvailableRoots = hashSet [ds ^. rootInfoArgPackageBaseDir],
                 _packageJuvixRelativeFiles = rfiles,
-                _packagePackage = PackageBase
+                _packagePackage = pkgTy,
+                _packageInfoPackageId = pkgId
               }
 
         mkPkgPackageType :: Sem r PackageInfo
         mkPkgPackageType = do
           let rfiles = fs ^. rootInfoFilesPackage
               root = ds ^. rootInfoArgPackageDir
+              pkgTy = PackageType
+          pkgId <- mkPackageInfoPackageId root (toList rfiles) pkgTy
           return
             PackageInfo
               { _packageRoot = root,
                 _packageJuvixRelativeFiles = rfiles,
-                _packagePackage = PackageType,
+                _packagePackage = pkgTy,
+                _packageInfoPackageId = pkgId,
                 _packageAvailableRoots =
                   hashSet
                     [ ds ^. rootInfoArgPackageDir,
@@ -111,26 +118,31 @@ runPackagePathResolver rootPath sem = do
                     ]
               }
 
-        mkPkgGlobalStdlib :: Sem r PackageInfo
-        mkPkgGlobalStdlib = do
+        mkPkgStdlibInGlobal :: Sem r PackageInfo
+        mkPkgStdlibInGlobal = do
           let root = ds ^. rootInfoArgGlobalStdlibDir
           jufiles <- findPackageJuvixFiles root
           let rfiles = hashSet jufiles
+              pkgTy = PackageStdlibInGlobalPackage
+          pkgId <- mkPackageInfoPackageId root (toList rfiles) pkgTy
           return
             PackageInfo
               { _packageRoot = root,
                 _packageJuvixRelativeFiles = rfiles,
+                _packageInfoPackageId = pkgId,
                 _packageAvailableRoots =
                   hashSet
                     [ ds ^. rootInfoArgPackageBaseDir,
                       ds ^. rootInfoArgGlobalStdlibDir
                     ],
-                _packagePackage = PackageGlobalStdlib
+                _packagePackage = pkgTy
               }
 
         mkPackageDotJuvix :: Sem r PackageInfo
         mkPackageDotJuvix = do
           let rfiles = hashSet [packageFilePath]
+              pkgTy = PackageDotJuvix
+          pkgId <- mkPackageInfoPackageId rootPath (toList rfiles) pkgTy
           return
             PackageInfo
               { _packageRoot = rootPath,
@@ -142,7 +154,8 @@ runPackagePathResolver rootPath sem = do
                       ds ^. rootInfoArgGlobalStdlibDir,
                       rootPath
                     ],
-                _packagePackage = PackageDotJuvix
+                _packagePackage = pkgTy,
+                _packageInfoPackageId = pkgId
               }
 
     rootInfoDirs :: Sem r RootInfoDirs

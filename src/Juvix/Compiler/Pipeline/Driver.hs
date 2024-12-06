@@ -274,7 +274,7 @@ processModuleCacheMiss entryIx = do
       return r
     ProcessModuleRecompile recomp -> recomp ^. recompileDo
 
-processProject :: (Members '[ModuleInfoCache, Reader EntryPoint, Reader ImportTree] r) => Sem r [(ImportNode, PipelineResult ModuleInfo)]
+processProject :: (Members '[PathResolver, ModuleInfoCache, Reader EntryPoint, Reader ImportTree] r) => Sem r [(ImportNode, PipelineResult ModuleInfo)]
 processProject = do
   rootDir <- asks (^. entryPointRoot)
   nodes <- toList <$> asks (importTreeProjectNodes rootDir)
@@ -312,10 +312,13 @@ processRecursiveUpToTyped = do
   where
     goImport :: ImportNode -> Sem r InternalTypedResult
     goImport node = do
+      pkgInfo <- fromJust . HashMap.lookup (node ^. importNodePackageRoot) <$> getPackageInfos
+      let pid = pkgInfo ^. packageInfoPackageId
       entry <- ask
       let entry' =
             entry
               { _entryPointStdin = Nothing,
+                _entryPointPackageId = pid,
                 _entryPointModulePath = Just (node ^. importNodeAbsFile)
               }
       (^. pipelineResult) <$> runReader entry' (processFileUpTo upToInternalTyped)

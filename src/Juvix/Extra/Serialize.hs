@@ -19,13 +19,6 @@ import Juvix.Prelude.Path
 
 instance Serialize (Path Abs File)
 
-instance Serialize Text where
-  put txt = Serial.put (unpack txt)
-
-  get = pack <$> Serial.get
-
-instance (Serialize a) => Serialize (NonEmpty a)
-
 instance (Hashable k, Serialize k, Serialize a) => Serialize (HashMap k a) where
   put m = Serial.put (HashMap.toList m)
 

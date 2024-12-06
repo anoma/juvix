@@ -24,7 +24,6 @@ import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parser
-import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Scoped.Language as Store
 import Juvix.Data.FixityInfo qualified as FI
 import Juvix.Prelude
@@ -956,12 +955,11 @@ checkFixityInfo ParsedFixityInfo {..} = do
 
 getModuleId :: forall r. (Member (Reader PackageId) r) => TopModulePathKey -> Sem r ModuleId
 getModuleId path = do
-  pkg <- ask
+  pkgId <- ask
   return
     ModuleId
       { _moduleIdPath = path,
-        _moduleIdPackage = pkg ^. packageIdName,
-        _moduleIdPackageVersion = show (pkg ^. packageIdVersion)
+        _moduleIdPackageId = pkgId
       }
 
 checkFixitySyntaxDef ::

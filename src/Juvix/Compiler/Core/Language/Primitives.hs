@@ -7,7 +7,6 @@ represented by booleans, any type isomorphic to unary natural numbers may be
 represented by integers with minimum value 0. -}
 
 import Juvix.Compiler.Core.Language.Base
-import Juvix.Extra.Serialize
 
 -- | Primitive type representation.
 data Primitive

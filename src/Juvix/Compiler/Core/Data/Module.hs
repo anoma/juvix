@@ -6,6 +6,7 @@ where
 
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Pretty
 
 data Module = Module
   { _moduleId :: ModuleId,
@@ -64,17 +65,20 @@ lookupSpecialisationInfo Module {..} sym =
     lookupTabSpecialisationInfo' _moduleInfoTable sym
       <|> lookupTabSpecialisationInfo' _moduleImportsTable sym
 
+impossibleSymbolNotFound :: Symbol -> a
+impossibleSymbolNotFound sym = impossibleError ("Could not find symbol " <> ppTrace sym)
+
 lookupInductiveInfo :: Module -> Symbol -> InductiveInfo
-lookupInductiveInfo m sym = fromJust $ lookupInductiveInfo' m sym
+lookupInductiveInfo m sym = fromMaybe (impossibleSymbolNotFound sym) (lookupInductiveInfo' m sym)
 
 lookupConstructorInfo :: Module -> Tag -> ConstructorInfo
-lookupConstructorInfo m tag = fromJust $ lookupConstructorInfo' m tag
+lookupConstructorInfo m tag = fromJust (lookupConstructorInfo' m tag)
 
 lookupIdentifierInfo :: Module -> Symbol -> IdentifierInfo
-lookupIdentifierInfo m sym = fromJust $ lookupIdentifierInfo' m sym
+lookupIdentifierInfo m sym = fromMaybe (impossibleSymbolNotFound sym) (lookupIdentifierInfo' m sym)
 
 lookupIdentifierNode :: Module -> Symbol -> Node
-lookupIdentifierNode m sym = fromJust $ lookupIdentifierNode' m sym
+lookupIdentifierNode m sym = fromMaybe (impossibleSymbolNotFound sym) (lookupIdentifierNode' m sym)
 
 lookupBuiltinInductive :: Module -> BuiltinInductive -> Maybe InductiveInfo
 lookupBuiltinInductive Module {..} b =
