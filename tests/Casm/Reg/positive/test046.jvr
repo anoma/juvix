@@ -1,0 +1,20 @@
+-- Call in true branch
+
+function f(x : field) : field {
+  tmp[0] = fadd x 1F;
+  ret tmp[0];
+}
+
+function main(val : field) : field {
+  tmp[0] = fadd val 1F;
+  br val, out: tmp[1] {
+    true: {
+      tmp[1] = call f (val);
+    };
+    false: {
+      tmp[1] = 1;
+    };
+  };
+  tmp[2] = fadd tmp[1] tmp[0];
+  ret tmp[2];
+}

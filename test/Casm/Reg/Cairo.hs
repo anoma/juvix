@@ -53,5 +53,11 @@ cairoTests =
       $(mkRelDir ".")
       $(mkRelFile "test042.jvr")
       $(mkRelFile "out/test042.out")
-      Nothing
+      Nothing,
+    P.PosTest
+      "Test048: Mock resource logic"
+      $(mkRelDir ".")
+      $(mkRelFile "test048.jvr")
+      $(mkRelFile "out/test048.out")
+      (Just $(mkRelFile "in/test048.json"))
   ]
