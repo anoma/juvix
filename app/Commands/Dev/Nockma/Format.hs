@@ -10,7 +10,7 @@ runCommand opts = do
   afile <- fromAppPathFile file
   parsedTerm <-
     runAppError @JuvixError
-      . Nockma.ignoreHighlightBuilder
+      . Nockma.evalHighlightBuilder
       $ Nockma.parseTermFile afile
   putStrLn (ppPrint parsedTerm)
   where

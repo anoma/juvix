@@ -1,6 +1,7 @@
 module Juvix.Data
   ( module Juvix.Data.Effect,
     module Juvix.Data.Error,
+    module Juvix.Data.PackageId,
     module Juvix.Data.ProjectionKind,
     module Juvix.Data.NumThreads,
     module Juvix.Data.Fixity,
@@ -41,6 +42,7 @@ import Juvix.Data.Keyword
 import Juvix.Data.Loc
 import Juvix.Data.NameId qualified
 import Juvix.Data.NumThreads
+import Juvix.Data.PackageId
 import Juvix.Data.ParsedItem
 import Juvix.Data.Polarity
 import Juvix.Data.Pragmas

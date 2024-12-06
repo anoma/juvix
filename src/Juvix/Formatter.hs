@@ -2,7 +2,7 @@
 
 module Juvix.Formatter where
 
-import Juvix.Compiler.Concrete.Data.Highlight.Builder (ignoreHighlightBuilder)
+import Juvix.Compiler.Concrete.Data.Highlight.Builder (evalHighlightBuilder)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (ppOutDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (ScoperResult, getModuleId, scopeCheck)
@@ -94,7 +94,7 @@ format p = do
 -- contents of a file) for every processed file.
 --
 -- NB: This function does not traverse into Juvix sub-projects, i.e into
--- subdirectories that contain a juvix.yaml file.
+-- subdirectories that contain a Package.juvix file.
 formatProjectSourceCode ::
   forall r.
   (Members '[Output FormattedFileInfo] r) =>
@@ -118,7 +118,7 @@ formatModuleInfo ::
   Sem r SourceCode
 formatModuleInfo node moduleInfo =
   withResolverRoot (node ^. importNodePackageRoot)
-    . ignoreHighlightBuilder
+    . evalHighlightBuilder
     $ do
       pkg :: PackageId <- ask
       parseRes :: ParserResult <-
@@ -178,12 +178,11 @@ formatResultSourceCode filepath src = do
     mkResult :: FormatResult -> Sem r FormatResult
     mkResult res = do
       output
-        ( FormattedFileInfo
-            { _formattedFileInfoPath = filepath,
-              _formattedFileInfoContents = src ^. sourceCodeFormatted,
-              _formattedFileInfoContentsModified = res == FormatResultNotFormatted
-            }
-        )
+        FormattedFileInfo
+          { _formattedFileInfoPath = filepath,
+            _formattedFileInfoContents = src ^. sourceCodeFormatted,
+            _formattedFileInfoContentsModified = res == FormatResultNotFormatted
+          }
       return res
 
 formatScoperResult' ::

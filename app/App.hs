@@ -188,6 +188,9 @@ getEntryPointStdin' RunAppIOArgs {..} = do
         | otherwise -> return Nothing
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsNoFile root opts
 
+askPackageDotJuvixPath :: (Members '[App] r) => Sem r (Path Abs File)
+askPackageDotJuvixPath = mkPackagePath . (^. rootRootDir) <$> askRoot
+
 fromRightGenericError :: (Members '[App] r, ToGenericError err, Typeable err) => Either err a -> Sem r a
 fromRightGenericError = fromRightJuvixError . mapLeft JuvixError
 

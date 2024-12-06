@@ -24,7 +24,6 @@ import Juvix.Compiler.Concrete.Pretty (ppTrace)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context qualified as Parser
-import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Store.Scoped.Language as Store
 import Juvix.Data.FixityInfo qualified as FI
 import Juvix.Prelude
@@ -106,7 +105,7 @@ scopeCheckRepl ::
   Sem r b
 scopeCheckRepl check importTab tab a =
   mapError (JuvixError @ScoperError)
-    . ignoreHighlightBuilder
+    . evalHighlightBuilder
     . evalInfoTableBuilder tab
     . runReader iniScopeParameters
     . runReader tab'
@@ -284,7 +283,10 @@ reserveSymbolOfNameSpace ns kind kindPretty nameSig builtin s = do
   whenJust nameSig (modify' . set (scoperNameSignatures . at (s' ^. S.nameId)) . Just)
   whenJust nameSig (registerParsedNameSig (s' ^. S.nameId))
   modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
-  registerName s'
+  let isTop = case strat of
+        BindingLocal -> False
+        BindingTop -> True
+  registerName isTop s'
   let u = S.unqualifiedSymbol s'
       entry :: NameSpaceEntryType ns
       entry =
@@ -644,8 +646,8 @@ checkImportNoPublic import_@Import {..} = do
       qual' = do
         asName <- _importAsName
         return (set S.nameConcrete asName sname')
-  registerName importName
-  whenJust synonymName registerName
+  registerName False importName
+  whenJust synonymName (registerName False)
   registerScoperModules scopedModule
   importOpen' <- mapM (checkOpenModuleShort scopedModule) _importOpen
   usingHiding' <- mapM (checkUsingHiding importName exportInfoOriginal) _importUsingHiding
@@ -852,7 +854,7 @@ entryToScopedIden name e = do
           { _scopedIdenAlias = Just scopedName',
             _scopedIdenFinal = helper (e' ^. symbolEntry)
           }
-  registerScopedIden si
+  registerScopedIden False si
   return si
 
 -- | We gather all symbols which have been defined or marked to be public in the given scope.
@@ -956,12 +958,11 @@ checkFixityInfo ParsedFixityInfo {..} = do
 
 getModuleId :: forall r. (Member (Reader PackageId) r) => TopModulePathKey -> Sem r ModuleId
 getModuleId path = do
-  pkg <- ask
+  pkgId <- ask
   return
     ModuleId
       { _moduleIdPath = path,
-        _moduleIdPackage = pkg ^. packageIdName,
-        _moduleIdPackageVersion = show (pkg ^. packageIdVersion)
+        _moduleIdPackageId = pkgId
       }
 
 checkFixitySyntaxDef ::
@@ -1492,7 +1493,7 @@ checkTopModule m@Module {..} = checkedModule
           _nameIterator :: Maybe IteratorInfo
           _nameIterator = Nothing
           moduleName = S.Name' {..}
-      registerName moduleName
+      registerName True moduleName
       return moduleName
 
     iniScope :: Scope
@@ -2007,7 +2008,7 @@ checkLocalModule md@Module {..} = do
           }
   modify (over scoperModules (HashMap.insert mid smod))
   registerLocalModule smod
-  registerName _modulePath'
+  registerName True _modulePath'
   return m
   where
     inheritScope :: (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, Reader BindingStrategy] r') => Sem r' ()
@@ -2111,7 +2112,7 @@ checkUsingHiding modulepath exportInfo = \case
                 }
       entry <- maybe err return mentry
       let scopedSym = entryToSymbol entry s
-      registerName scopedSym
+      registerName False scopedSym
       return scopedSym
 
     checkHidingList :: HidingList 'Parsed -> Sem r (HidingList 'Scoped)
@@ -2157,7 +2158,7 @@ checkUsingHiding modulepath exportInfo = \case
       let scopedAs = do
             c <- i ^. usingAs
             return (set S.nameConcrete c scopedSym)
-      mapM_ registerName scopedAs
+      mapM_ (registerName False) scopedAs
       return
         UsingItem
           { _usingSymbol = scopedSym,
@@ -2174,7 +2175,7 @@ checkOpenModuleHelper ::
   Sem r (OpenModule 'Scoped short)
 checkOpenModuleHelper openedModule OpenModule {..} = do
   let exportInfo = openedModule ^. scopedModuleExportInfo
-  registerName (openedModule ^. scopedModuleName)
+  registerName False (openedModule ^. scopedModuleName)
   usingHiding' <- mapM (checkUsingHiding (openedModule ^. scopedModulePath) exportInfo) _openModuleUsingHiding
   mergeScope (filterExportInfo _openModulePublic usingHiding' exportInfo)
   let openName :: OpenModuleNameType 'Scoped short = case sing :: SIsOpenShort short of
@@ -2711,7 +2712,7 @@ checkFixitySymbol s = do
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
     [x] -> do
       let res = entryToSymbol x s
-      registerName res
+      registerName False res
       return res
     es -> throw (ErrAmbiguousSym (AmbiguousSym n (map (PreSymbolFinal . SymbolEntry . (^. fixityEntry)) es)))
   where
@@ -3214,7 +3215,7 @@ checkJudoc ::
   Judoc 'Parsed ->
   Sem r (Judoc 'Scoped)
 checkJudoc (Judoc groups) =
-  ignoreHighlightBuilder
+  evalHighlightBuilder
     . ignoreInfoTableBuilder
     $ Judoc <$> mapM checkJudocGroup groups
 

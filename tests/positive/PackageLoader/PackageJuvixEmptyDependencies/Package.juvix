@@ -6,5 +6,5 @@ import PackageDescription.V1 open;
 package : Package :=
   defaultPackage@{
     name := "package-juvix";
-    dependencies := []
+    dependencies := [];
   };

@@ -14,6 +14,7 @@ import Juvix.Compiler.Casm.Translation.FromReg.CasmBuilder
 import Juvix.Compiler.Reg.Data.Blocks.InfoTable qualified as Reg
 import Juvix.Compiler.Reg.Extra.Blocks.Info qualified as Reg
 import Juvix.Compiler.Reg.Language.Blocks qualified as Reg
+import Juvix.Compiler.Reg.Pretty qualified as Reg
 import Juvix.Compiler.Tree.Evaluator.Builtins qualified as Reg
 import Juvix.Compiler.Tree.Extra.Rep qualified as Reg
 import Juvix.Data.Field
@@ -141,6 +142,9 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
     argsOffset :: Int
     argsOffset = 3
 
+    ppVarComment :: Reg.VarRef -> Int -> Text
+    ppVarComment var off = Reg.ppPrint tab var <> " is [fp + " <> show off <> "]"
+
     goFun :: forall r. (Member LabelInfoBuilder r) => StdlibBuiltins -> LabelRef -> (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
     goFun blts failLab (addr0, acc) funInfo = do
       let sym = funInfo ^. Reg.functionSymbol
@@ -190,7 +194,9 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           Nothing -> do
             massert (isJust mout)
             massert (HashSet.member (fromJust mout) liveVars0)
-            goCallBlock False Nothing liveVars0
+            goAssignApBuiltins
+            whenJust mout saveLiveVar
+            goCallBlock mout liveVars0
       where
         output'' :: Instruction -> Sem r ()
         output'' i = do
@@ -202,23 +208,25 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           output'' i
           incAP apOff
 
-        goCallBlock :: Bool -> Maybe Reg.VarRef -> HashSet Reg.VarRef -> Sem r ()
-        goCallBlock updatedBuiltins outVar liveVars = do
-          let liveVars' = toList (maybe liveVars (`HashSet.delete` liveVars) outVar)
+        saveLiveVar :: Reg.VarRef -> Sem r ()
+        saveLiveVar var = do
+          ref <- mkMemRef var
+          let comment = Reg.ppPrint tab var
+          goAssignAp' (Just comment) (Val (Ref ref))
+
+        -- The `goCallBlock` function is used to switch to a new basic block.
+        -- Assumes that the builtins pointer and outVar (if present) were
+        -- already saved (in this order).
+        goCallBlock :: Maybe Reg.VarRef -> HashSet Reg.VarRef -> Sem r ()
+        goCallBlock outVar liveVars = do
+          let liveVars' = sort $ toList (maybe liveVars (`HashSet.delete` liveVars) outVar)
               n = length liveVars'
-              bltOff =
-                if
-                    | updatedBuiltins ->
-                        -argsOffset - n - fromEnum (isJust outVar)
-                    | otherwise ->
-                        -argsOffset - n
+              bltOff = -argsOffset - n - fromEnum (isJust outVar)
               vars =
                 HashMap.fromList $
-                  maybe [] (\var -> [(var, -argsOffset - n - if updatedBuiltins then 0 else 1)]) outVar
+                  maybe [] (\var -> [(var, -argsOffset - n)]) outVar
                     ++ zipWithExact (\var k -> (var, -argsOffset - k)) liveVars' [0 .. n - 1]
-          unless updatedBuiltins $
-            goAssignApBuiltins
-          mapM_ (mkMemRef >=> goAssignAp . Val . Ref) (reverse liveVars')
+          mapM_ saveLiveVar (reverse liveVars')
           output'' (mkCallRel $ Imm 3)
           output'' Return
           -- we need the Nop instruction to ensure that the relative call offset
@@ -295,11 +303,15 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goAssignVar vr val = do
           off <- getAP
           insertVar vr off
-          goAssignAp val
+          let comment = ppVarComment vr off
+          goAssignAp' (Just comment) val
+
+        goAssignAp' :: Maybe Text -> RValue -> Sem r ()
+        goAssignAp' comment val = do
+          output' 1 (mkAssignAp' comment val)
 
         goAssignAp :: RValue -> Sem r ()
-        goAssignAp val = do
-          output' 1 (mkAssignAp val)
+        goAssignAp = goAssignAp' Nothing
 
         goAssignValue :: Reg.VarRef -> Reg.Value -> Sem r ()
         goAssignValue vr v = mkRValue v >>= goAssignVar vr
@@ -308,7 +320,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goAssignApValue v = mkRValue v >>= goAssignAp
 
         goAssignApBuiltins :: Sem r ()
-        goAssignApBuiltins = mkBuiltinRef >>= goAssignAp . Val . Ref
+        goAssignApBuiltins = mkBuiltinRef >>= goAssignAp' (Just "builtins pointer") . Val . Ref
 
         -- Warning: the result may depend on Ap. Use adjustAp when changing Ap
         -- afterwards.
@@ -334,7 +346,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
                   _instrExtraBinopResult = MemRef Ap 0,
                   _instrExtraBinopArg1 = arg1,
                   _instrExtraBinopArg2 = arg2,
-                  _instrExtraBinopIncAp = True
+                  _instrExtraBinopIncAp = True,
+                  _instrExtraBinopComment = Just (ppVarComment res off)
                 }
 
         goNativeBinop :: Opcode -> Reg.VarRef -> MemRef -> Value -> Sem r ()
@@ -370,7 +383,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
                               _binopValueArg2 = Imm 1,
                               _binopValueOpcode = FieldAdd
                             },
-                      _instrAssignIncAp = True
+                      _instrAssignIncAp = True,
+                      _instrAssignComment = Nothing
                     }
           Lab {} -> impossible
 
@@ -557,7 +571,11 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           val <- mkMemRef _instrExtendClosureValue
           goAssignAp (Val $ Ref val)
           output'' $ mkCallRel $ Lab $ LabelRef (blts ^. stdlibExtendClosure) (Just (blts ^. stdlibExtendClosureName))
-          goCallBlock False (Just _instrExtendClosureResult) liveVars
+          -- the `juvix_extend_closure` runtime function does not accept or
+          -- return the builtins pointer
+          goAssignApBuiltins
+          goAssignAp (Val $ Ref $ MemRef Ap (-2))
+          goCallBlock (Just _instrExtendClosureResult) liveVars
 
         goCall' :: Reg.CallType -> [Reg.Value] -> Sem r ()
         goCall' ct args = case ct of
@@ -577,7 +595,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goCall :: HashSet Reg.VarRef -> Reg.InstrCall -> Sem r ()
         goCall liveVars Reg.InstrCall {..} = do
           goCall' _instrCallType _instrCallArgs
-          goCallBlock True (Just _instrCallResult) liveVars
+          goCallBlock (Just _instrCallResult) liveVars
 
         -- There is no way to make "proper" tail calls in Cairo, because
         -- the only way to set the `fp` register is via the `call` instruction.

@@ -25,6 +25,7 @@ buildProperties HighlightInput {..} =
         mapMaybe goFaceSemanticItem _highlightSemanticItems
           <> map goFaceError _highlightErrors,
       _propertiesGoto = [],
+      _propertiesTopDef = [],
       _propertiesInfo = map goInfoNockOp _highlightNockOps <> map goInfoPath _highlightPaths
     }
 

@@ -21,7 +21,7 @@ scanBSImports ::
   Sem r ScanResult
 scanBSImports fp inputBS = do
   st <-
-    ignoreHighlightBuilder
+    evalHighlightBuilder
       . execParserResultBuilder mempty
       . ignoreTopModuleNameChecker
       $ runModuleParser fp (decodeUtf8 inputBS)

@@ -106,6 +106,7 @@ data AName = AName
   { _anameLoc :: Interval,
     _anameDefinedLoc :: Interval,
     _anameKindPretty :: NameKind,
+    _anameIsTop :: Bool,
     _anameDocId :: NameId,
     _anameVerbatim :: Text
   }
@@ -118,13 +119,14 @@ instance NFData AName
 makeLenses ''Name'
 makeLenses ''AName
 
-anameFromName :: (HasLoc c) => Name' c -> AName
-anameFromName n =
+anameFromName :: (HasLoc c) => Bool -> Name' c -> AName
+anameFromName isTop n =
   AName
     { _anameLoc = getLoc n,
       _anameDefinedLoc = n ^. nameDefined,
       _anameKindPretty = getNameKindPretty n,
       _anameDocId = n ^. nameId,
+      _anameIsTop = isTop,
       _anameVerbatim = n ^. nameVerbatim
     }
 

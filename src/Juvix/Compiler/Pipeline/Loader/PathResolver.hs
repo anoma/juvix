@@ -10,11 +10,16 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver
     runPathResolverPipe',
     evalPathResolverPipe,
     findPackageJuvixFiles,
+    importNodePackageId,
+    mkPackageInfoPackageId,
+    checkConflicts,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Data.List.NonEmpty.Extra qualified as NonEmpty
+import Data.Versions qualified as Ver
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error
 import Juvix.Compiler.Concrete.Translation.ImportScanner
@@ -36,6 +41,23 @@ import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
 
+checkConflicts :: forall r'. (Members '[Error JuvixError] r') => [PackageInfo] -> Sem r' ()
+checkConflicts pkgs = do
+  let reps = findRepeatedOn (^. packageInfoPackageId) pkgs
+  case nonEmpty reps of
+    Just (rep :| _) -> errRep rep
+    Nothing -> return ()
+  where
+    errRep :: (NonEmpty PackageInfo, PackageId) -> Sem r' ()
+    errRep (l, pid) =
+      throw
+        . JuvixError
+        $ ErrAmbiguousPackageId
+          AmbiguousPackageId
+            { _ambiguousPackageId = pid,
+              _ambiguousPackageIdPackages = l
+            }
+
 mkPackage ::
   forall r.
   (Members '[Files, Error JuvixError, Reader ResolverEnv, DependencyResolver, EvalFileEff] r) =>
@@ -54,6 +76,35 @@ findPackageJuvixFiles pkgRoot = map (fromJust . stripProperPrefix pkgRoot) <$> w
       where
         newJuvixFiles :: [Path Abs File]
         newJuvixFiles = [cd <//> f | f <- files, isJuvixOrJuvixMdFile f, not (isPackageFile f)]
+
+-- | Append the hash of all files in the project to the pre-release
+mkPackageInfoPackageId :: (Members '[Files] r) => Path Abs Dir -> [Path Rel File] -> PackageLike -> Sem r PackageId
+mkPackageInfoPackageId root pkgRelFiles pkgLike = do
+  let pkgDotJuvix = mkPackageFilePath root
+  pkgDotJuvixExists <- fileExists' pkgDotJuvix
+  let pkgJuvixFiles = [root <//> rFile | rFile <- pkgRelFiles]
+  let baseVersion = packageLikeVersion pkgLike
+      allFiles
+        | pkgDotJuvixExists = pkgDotJuvix : pkgJuvixFiles
+        | otherwise = pkgJuvixFiles
+  filesHash <- SHA256.digestFiles allFiles
+  let version = case Ver._svPreRel baseVersion of
+        Nothing ->
+          baseVersion {_svPreRel = Just (Ver.Release (pure (Ver.Alphanum filesHash)))}
+        Just (Ver.Release r) -> baseVersion {_svPreRel = Just (Ver.Release (NonEmpty.snoc r (Ver.Alphanum filesHash)))}
+  return
+    PackageId
+      { _packageIdName = pkgLike ^. packageLikeName,
+        _packageIdVersion = version
+      }
+  where
+    packageLikeVersion :: PackageLike -> SemVer
+    packageLikeVersion = \case
+      PackageReal pkg -> pkg ^. packageVersion
+      PackageStdlibInGlobalPackage -> defaultVersion
+      PackageBase {} -> defaultVersion
+      PackageType {} -> defaultVersion
+      PackageDotJuvix {} -> defaultVersion
 
 mkPackageInfo ::
   forall r.
@@ -78,6 +129,7 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
             : globalPackageBaseAbsDir
             : _packageRoot
             : depsPaths
+  _packageInfoPackageId <- mkPackageInfoPackageId _packageRoot (toList _packageJuvixRelativeFiles) _packagePackage
   return PackageInfo {..}
   where
     pkgFile :: Path Abs File
@@ -117,17 +169,16 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
             checkDep d =
               unless
                 (mkName d `HashSet.member` lockfileDepNames)
-                ( throw
-                    DependencyError
-                      { _dependencyErrorPackageFile = pkgFile,
-                        _dependencyErrorCause =
-                          MissingLockfileDependencyError
-                            MissingLockfileDependency
-                              { _missingLockfileDependencyDependency = d,
-                                _missingLockfileDependencyPath = lf ^. lockfileInfoPath
-                              }
-                      }
-                )
+                $ throw
+                  DependencyError
+                    { _dependencyErrorPackageFile = pkgFile,
+                      _dependencyErrorCause =
+                        MissingLockfileDependencyError
+                          MissingLockfileDependency
+                            { _missingLockfileDependencyDependency = d,
+                              _missingLockfileDependencyPath = lf ^. lockfileInfoPath
+                            }
+                    }
 
 lookupCachedDependency :: (Members '[State ResolverState, Reader ResolverEnv, Files, DependencyResolver] r) => Path Abs Dir -> Sem r (Maybe LockfileDependency)
 lookupCachedDependency p = fmap (^. resolverCacheItemDependency) . HashMap.lookup p <$> gets (^. resolverCache)
@@ -140,12 +191,14 @@ registerPackageBase = do
   packageBaseAbsDir <- globalPackageBaseRoot
   runReader packageBaseAbsDir updatePackageBaseFiles
   packageBaseRelFiles <- relFiles packageBaseAbsDir
+  _packageInfoPackageId <- mkPackageInfoPackageId packageBaseAbsDir (toList packageBaseRelFiles) PackageBase
   let pkgInfo =
         PackageInfo
           { _packageRoot = packageBaseAbsDir,
             _packageJuvixRelativeFiles = packageBaseRelFiles,
             _packagePackage = PackageBase,
-            _packageAvailableRoots = HashSet.singleton packageBaseAbsDir
+            _packageAvailableRoots = HashSet.singleton packageBaseAbsDir,
+            _packageInfoPackageId
           }
       dep =
         LockfileDependency
@@ -169,27 +222,30 @@ registerDependencies' conf = do
   initialized <- gets (^. resolverInitialized)
   unless initialized $ do
     modify (set resolverInitialized True)
-    e <- ask @EntryPoint
+    registerDepsFromRoot
     mapError (JuvixError @ParserError) registerPackageBase
-    case e ^. entryPointPackageType of
-      GlobalStdlib -> do
-        glob <- globalRoot
-        void (addRootDependency conf e glob)
-      GlobalPackageBase -> return ()
-      GlobalPackageDescription -> void (addRootDependency conf e (e ^. entryPointRoot))
-      LocalPackage -> do
-        lockfile <- addRootDependency conf e (e ^. entryPointRoot)
-        whenM shouldWriteLockfile $ do
-          let root :: Path Abs Dir = e ^. entryPointSomeRoot . someRootDir
-          packagePath :: Path Abs File <- do
-            let packageDotJuvix = mkPackagePath root
-                juvixDotYaml = mkPackageFilePath root
-            x <- findM fileExists' [packageDotJuvix, juvixDotYaml]
-            return (fromMaybe (error ("No package file found in " <> show root)) x)
-          packageFileChecksum <- SHA256.digestFile packagePath
-          lockfilePath' <- lockfilePath
-          writeLockfile lockfilePath' packageFileChecksum lockfile
   where
+    registerDepsFromRoot = do
+      e <- ask
+      case e ^. entryPointPackageType of
+        GlobalStdlib -> do
+          glob <- globalRoot
+          void (addRootDependency conf e glob)
+        GlobalPackageBase -> return ()
+        GlobalPackageDescription -> void (addRootDependency conf e (e ^. entryPointRoot))
+        LocalPackage -> do
+          lockfile <- addRootDependency conf e (e ^. entryPointRoot)
+          whenM shouldWriteLockfile $ do
+            let root :: Path Abs Dir = e ^. entryPointSomeRoot . someRootDir
+            packagePath :: Path Abs File <- do
+              let packageDotJuvix = mkPackagePath root
+                  juvixDotYaml = mkPackageFilePath root
+              x <- findM fileExists' [packageDotJuvix, juvixDotYaml]
+              return (fromMaybe (error ("No package file found in " <> show root)) x)
+            packageFileChecksum <- SHA256.digestFile packagePath
+            lockfilePath' <- lockfilePath
+            writeLockfile lockfilePath' packageFileChecksum lockfile
+
     shouldWriteLockfile :: Sem r Bool
     shouldWriteLockfile = do
       lockfileExists <- lockfilePath >>= fileExists'
@@ -268,7 +324,7 @@ addDependency' pkg me resolvedDependency = do
   selectPackageLockfile pkg $ do
     pkgInfo <- mkPackageInfo me (resolvedDependency ^. resolvedDependencyPath) pkg
     addPackageRelativeFiles pkgInfo
-    let packagePath = pkgInfo ^. packagePackage . packageLikeFile
+    let packagePath = packageLikeFile (pkgInfo ^. packagePackage)
     subDeps <-
       forM
         (pkgInfo ^. packagePackage . packageLikeDependencies)
@@ -365,6 +421,10 @@ isModuleOrphan topJuvixPath = do
         && not (pathPackageBase `isProperPrefixOf` actualPath)
     )
 
+importNodePackageId :: (Members '[PathResolver] r) => ImportNode -> Sem r PackageId
+importNodePackageId n =
+  (^?! at (n ^. importNodePackageRoot) . _Just . packageInfoPackageId) <$> getPackageInfos
+
 expectedPath' ::
   (Members '[Reader ResolverEnv, Files] r) =>
   TopModulePath ->
@@ -409,7 +469,11 @@ runPathResolver2 st topEnv arg = do
       )
       handler
     )
-    arg
+    $ do
+      _pkgs <- toList <$> getPackageInfos
+      -- I think we should not check for conflicts
+      -- checkConflicts pkgs
+      arg
   where
     handler ::
       forall t localEs x.

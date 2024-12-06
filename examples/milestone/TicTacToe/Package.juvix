@@ -6,5 +6,5 @@ package : Package :=
   defaultPackage@{
     name := "TicTacToe";
     version := mkVersion 0 1 0;
-    main := just "CLI/TicTacToe.juvix"
+    main := just "CLI/TicTacToe.juvix";
   };

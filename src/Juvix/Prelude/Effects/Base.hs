@@ -234,6 +234,14 @@ reinterpretH ::
   Sem r b
 reinterpretH = E.reinterpret
 
+reinterpret' ::
+  (DispatchOf e ~ 'Dynamic) =>
+  Sem (e ': r) a ->
+  (Sem handlerEs a -> Sem r b) ->
+  EffectHandlerFO e handlerEs ->
+  Sem r b
+reinterpret' m re i = reinterpret re i m
+
 reinterpret ::
   (DispatchOf e ~ 'Dynamic) =>
   (Sem handlerEs a -> Sem r b) ->

@@ -117,6 +117,9 @@ makeLenses ''FileLoc
 makeLenses ''Loc
 makeLenses ''Pos
 
+intervalFromFile :: Path Abs File -> Interval
+intervalFromFile = singletonInterval . mkInitialLoc
+
 singletonInterval :: Loc -> Interval
 singletonInterval l =
   Interval

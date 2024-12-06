@@ -6,5 +6,5 @@ package : Package :=
   defaultPackage@{
     name := "Collatz";
     version := mkVersion 0 1 0;
-    main := just "Collatz.juvix"
+    main := just "Collatz.juvix";
   };

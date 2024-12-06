@@ -17,7 +17,7 @@ import Data.Text qualified as Text
 import Juvix.Compiler.Backend.Markdown.Data.Types (Mk (..))
 import Juvix.Compiler.Backend.Markdown.Data.Types qualified as MK
 import Juvix.Compiler.Backend.Markdown.Error
-import Juvix.Compiler.Concrete (HighlightBuilder, ignoreHighlightBuilder)
+import Juvix.Compiler.Concrete (HighlightBuilder, evalHighlightBuilder)
 import Juvix.Compiler.Concrete.Extra (takeWhile1P)
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Gen qualified as Gen
@@ -294,7 +294,7 @@ runExpressionParser ::
   Sem r (Either ParserError (ExpressionAtoms 'Parsed))
 runExpressionParser fpath input_ = do
   m <-
-    ignoreHighlightBuilder
+    evalHighlightBuilder
       . evalParserResultBuilder mempty
       . evalState (Nothing @ParsedPragmas)
       . evalState (Nothing @(Judoc 'Parsed))
