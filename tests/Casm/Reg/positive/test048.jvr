@@ -50,7 +50,6 @@ function poseidonHash2'(x : field, y : field) : field {
 }
 
 function main(self_resource : Resource, resource_nf_key : field, merkle_path : List) : LogicResult {
-  prealloc 2, live: (arg[0], arg[1], arg[2]);
   tmp[2] = alloc nil ();
   tmp[3] = alloc nil ();
   tmp[4] = self_resource;
