@@ -40,7 +40,7 @@ cueJammedFileOrPretty ::
   Prelude.Path Abs File ->
   Sem r (Term Natural)
 cueJammedFileOrPretty f
-  | f `hasExtensions` nockmaDebugFileExts = ignoreHighlightBuilder (parseTermFile f)
+  | f `hasExtensions` nockmaDebugFileExts = evalHighlightBuilder (parseTermFile f)
   | otherwise = cueJammedFile f
 
 -- | If the file ends in .debug.nockma it parses an annotated unjammed program. Otherwise
@@ -114,7 +114,7 @@ runParserForSem p f txt = do
     Right t -> return t
 
 runParserFor :: Parser a -> Prelude.Path Abs File -> Text -> Either MegaparsecError a
-runParserFor p f = run . ignoreHighlightBuilder . runError . runParserForSem p f
+runParserFor p f = run . evalHighlightBuilder . runError . runParserForSem p f
 
 runParser :: Prelude.Path Abs File -> Text -> Either MegaparsecError (Term Natural)
 runParser = runParserFor term

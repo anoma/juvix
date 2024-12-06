@@ -215,7 +215,7 @@ runReplPipelineIOEither' lockMode entry = do
       . runConcurrent
       . runReader defaultNumThreads
       . evalInternet hasInternet
-      . ignoreHighlightBuilder
+      . evalHighlightBuilder
       . runError
       . runState initialArtifacts
       . runNameIdGenArtifacts
