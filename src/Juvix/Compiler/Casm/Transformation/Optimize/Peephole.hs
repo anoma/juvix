@@ -41,7 +41,8 @@ peephole = mapT go
             let call =
                   InstrCall
                     { _instrCallTarget = tgt,
-                      _instrCallRel = _instrJumpRel
+                      _instrCallRel = _instrJumpRel,
+                      _instrCallComment
                     }
              in Call call : Return : is
       is -> is
