@@ -520,5 +520,10 @@ tests =
         "Test089: Loop invariant code motion"
         $(mkRelDir ".")
         $(mkRelFile "test089.juvix")
-        $(mkRelFile "out/test089.out")
+        $(mkRelFile "out/test089.out"),
+      posTest
+        "Test090: Module self-reference"
+        $(mkRelDir ".")
+        $(mkRelFile "test090.juvix")
+        $(mkRelFile "out/test090.out")
     ]
