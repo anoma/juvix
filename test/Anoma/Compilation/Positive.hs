@@ -3,7 +3,6 @@ module Anoma.Compilation.Positive (allTests) where
 import Anoma.Effect.Base
 import Anoma.Effect.RunNockma
 import Base
-import Juvix.Compiler.Backend (Target (TargetAnoma))
 import Juvix.Compiler.Nockma.Anoma
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
@@ -87,9 +86,6 @@ mkAnomaTest' _anomaTestMode _anomaProgramStorage _anomaTestNum _anomaTestTag _an
     { ..
     }
 
-envAnomaPath :: (MonadIO m) => m AnomaPath
-envAnomaPath = AnomaPath <$> getAnomaPathAbs
-
 mkAnomaNodeTest :: AnomaTest -> TestTree
 mkAnomaNodeTest a@AnomaTest {..} =
   testCase (anomaTestName a <> " - node") assertion
@@ -115,22 +111,7 @@ mkAnomaNodeTest a@AnomaTest {..} =
             $ _anomaCheck
 
 withRootCopy :: (Prelude.Path Abs Dir -> IO a) -> IO a
-withRootCopy action = withSystemTempDir "test" $ \tmpRootDir -> do
-  copyDirRecur root tmpRootDir
-  action tmpRootDir
-
-compileMain :: Bool -> Prelude.Path Rel Dir -> Prelude.Path Rel File -> Prelude.Path Abs Dir -> IO AnomaResult
-compileMain enableDebug relRoot mainFile rootCopyDir = do
-  let testRootDir = rootCopyDir <//> relRoot
-  entryPoint <-
-    set entryPointTarget (Just TargetAnoma) . set entryPointDebug enableDebug
-      <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
-  (over anomaClosure removeInfoUnlessDebug) . (^. pipelineResult) . snd <$> testRunIO entryPoint upToAnoma
-  where
-    removeInfoUnlessDebug :: Term Natural -> Term Natural
-    removeInfoUnlessDebug
-      | enableDebug = id
-      | otherwise = removeInfoRec
+withRootCopy = withRootTmpCopy root
 
 mkAnomaTest ::
   Int ->

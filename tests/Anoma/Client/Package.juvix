@@ -1,0 +1,9 @@
+module Package;
+
+import PackageDescription.V2 open;
+
+package : Package :=
+  defaultPackage@{
+    name := "client-test";
+    dependencies := [defaultStdlib; path "library/"];
+  };

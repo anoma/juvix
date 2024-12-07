@@ -1,6 +1,8 @@
 module Commands.Dev.Anoma.Options where
 
 import Commands.Dev.Anoma.AddTransaction.Options
+import Commands.Dev.Anoma.Indexer.Options
+import Commands.Dev.Anoma.Intents.Options
 import Commands.Dev.Anoma.Prove.Options
 import Commands.Dev.Anoma.Start.Options
 import CommonOptions
@@ -11,6 +13,8 @@ data AnomaCommand
   | AnomaCommandStop
   | AnomaCommandProve ProveOptions
   | AnomaCommandAddTransaction AddTransactionOptions
+  | AnomaCommandIndexer AnomaIndexerCommand
+  | AnomaCommandIntents AnomaIntentsCommand
   deriving stock (Data)
 
 data AnomaCommandGlobal = AnomaCommandGlobal
@@ -31,7 +35,9 @@ parseAnomaCommand =
             commandStatus,
             commandStop,
             commandProve,
-            commandAddTransaction
+            commandAddTransaction,
+            commandIndexer,
+            commandIntents
           ]
       )
   where
@@ -93,3 +99,17 @@ parseAnomaCommand =
           info
             (AnomaCommandAddTransaction <$> parseAddTransactionOptions)
             (progDesc "Submit a Nockma transaction candidate to Anoma.Protobuf.Mempool.AddTransaction")
+
+    commandIndexer :: Mod CommandFields AnomaCommand
+    commandIndexer =
+      command "indexer" $
+        info
+          (AnomaCommandIndexer <$> parseAnomaIndexerCommand)
+          (progDesc "Subcommands related to the Anoma indexer")
+
+    commandIntents :: Mod CommandFields AnomaCommand
+    commandIntents =
+      command "intents" $
+        info
+          (AnomaCommandIntents <$> parseAnomaIntentsCommand)
+          (progDesc "Subcommands related to the Anoma indexer")

@@ -10,12 +10,16 @@ module Base
   )
 where
 
+import Anoma.Effect.Base
 import Control.Exception qualified as E
 import Control.Monad.Extra as Monad
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
 import GHC.Generics qualified as GHC
+import Juvix.Compiler.Backend (Target (TargetAnoma))
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
+import Juvix.Compiler.Nockma.Language hiding (Path)
+import Juvix.Compiler.Nockma.Translation.FromTree (anomaClosure)
 import Juvix.Compiler.Pipeline.EntryPoint.IO
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Run
@@ -26,7 +30,7 @@ import Juvix.Prelude.Env
 import Juvix.Prelude.Pretty
 import System.Process qualified as P
 import Test.Tasty
-import Test.Tasty.HUnit hiding (assertFailure, testCase)
+import Test.Tasty.HUnit hiding (assertFailure, testCase, testCaseSteps)
 import Test.Tasty.HUnit qualified as HUnit
 
 data AssertionDescr
@@ -58,7 +62,7 @@ data CompileMode
 mkTest :: TestDescr -> TestTree
 mkTest TestDescr {..} = case _testAssertion of
   Single assertion -> testCase _testName (withCurrentDir _testRoot assertion)
-  Steps steps -> testCaseSteps _testName (withCurrentDir _testRoot . steps)
+  Steps steps -> HUnit.testCaseSteps _testName (withCurrentDir _testRoot . steps)
 
 withPrecondition :: Assertion -> IO TestTree -> IO TestTree
 withPrecondition assertion ifSuccess = do
@@ -211,3 +215,27 @@ numberedTestName i str = "Test" <> to3DigitString i <> ": " <> str
 
 testCase :: (HasTextBackend str) => str -> Assertion -> TestTree
 testCase name = HUnit.testCase (toPlainString name)
+
+testCaseSteps :: (HasTextBackend str) => str -> ((Text -> IO ()) -> Assertion) -> TestTree
+testCaseSteps name f = HUnit.testCaseSteps (toPlainString name) (\sf -> f (sf . unpack))
+
+withRootTmpCopy :: Path Abs Dir -> (Path Abs Dir -> IO a) -> IO a
+withRootTmpCopy root action = withSystemTempDir "test" $ \tmpRootDir -> do
+  copyDirRecur root tmpRootDir
+  action tmpRootDir
+
+compileMain :: Bool -> Path Rel Dir -> Path Rel File -> Path Abs Dir -> IO AnomaResult
+compileMain enableDebug relRoot mainFile rootCopyDir = do
+  let testRootDir = rootCopyDir <//> relRoot
+  entryPoint <-
+    set entryPointTarget (Just TargetAnoma) . set entryPointDebug enableDebug
+      <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
+  (over anomaClosure removeInfoUnlessDebug) . (^. pipelineResult) . snd <$> testRunIO entryPoint upToAnoma
+  where
+    removeInfoUnlessDebug :: Term Natural -> Term Natural
+    removeInfoUnlessDebug
+      | enableDebug = id
+      | otherwise = removeInfoRec
+
+envAnomaPath :: (MonadIO m) => m AnomaPath
+envAnomaPath = AnomaPath <$> getAnomaPathAbs

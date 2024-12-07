@@ -1,0 +1,18 @@
+module ByteArray;
+
+import Stdlib.Prelude open;
+
+builtin bytearray
+axiom ByteArray : Type;
+
+builtin bytearray-from-list-byte
+axiom mkByteArray : List Byte -> ByteArray;
+
+builtin bytearray-length
+axiom size : ByteArray -> Nat;
+
+builtin anoma-bytearray-to-anoma-contents
+axiom toAnomaContents : ByteArray -> Nat;
+
+builtin anoma-bytearray-from-anoma-contents
+axiom fromAnomaContents : Nat -> Nat -> ByteArray;
