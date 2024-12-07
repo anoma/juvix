@@ -170,6 +170,8 @@ parseAnoma =
     <|> parseAnoma' kwAnomaRandomGeneratorInit OpAnomaRandomGeneratorInit
     <|> parseAnoma' kwAnomaRandomNextBytes OpAnomaRandomNextBytes
     <|> parseAnoma' kwAnomaRandomSplit OpAnomaRandomSplit
+    <|> parseAnoma' kwAnomaIsCommitment OpAnomaIsCommitment
+    <|> parseAnoma' kwAnomaIsNullifier OpAnomaIsNullifier
 
 parseAnoma' ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

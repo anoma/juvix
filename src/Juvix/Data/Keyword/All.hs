@@ -574,6 +574,12 @@ kwAnomaRandomNextBytes = asciiKw Str.anomaRandomNextBytes
 kwAnomaRandomSplit :: Keyword
 kwAnomaRandomSplit = asciiKw Str.anomaRandomSplit
 
+kwAnomaIsCommitment :: Keyword
+kwAnomaIsCommitment = asciiKw Str.anomaIsCommitment
+
+kwAnomaIsNullifier :: Keyword
+kwAnomaIsNullifier = asciiKw Str.anomaIsNullifier
+
 delimBraceL :: Keyword
 delimBraceL = mkDelim Str.braceL
 

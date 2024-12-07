@@ -251,3 +251,19 @@ checkAnomaRandomSplit f = do
   pair_ <- getBuiltinNameScoper l BuiltinPair
   unless (f ^. axiomType === (gen --> pair_ @@ gen @@ gen)) $
     builtinsErrorText l "randomSplit must be of type AnomaRandomGenerator -> Pair AnomaRandomGenerator AnomaRandomGenerator"
+
+checkAnomaIsCommitment :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkAnomaIsCommitment f = do
+  let l = getLoc f
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  bool_ <- getBuiltinNameScoper l BuiltinBool
+  unless (f ^. axiomType == (nat_ --> bool_)) $
+    builtinsErrorText l "isCommitment must be of type Nat -> Bool"
+
+checkAnomaIsNullifier :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkAnomaIsNullifier f = do
+  let l = getLoc f
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  bool_ <- getBuiltinNameScoper l BuiltinBool
+  unless (f ^. axiomType == (nat_ --> bool_)) $
+    builtinsErrorText l "isNullifier must be of type Nat -> Bool"

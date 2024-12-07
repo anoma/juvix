@@ -1027,6 +1027,10 @@ allTests =
             [ [nock| 0 |],
               [nock| 0 |],
               [nock| 0 |],
+              [nock| true |],
+              [nock| true |],
+              [nock| false |],
+              [nock| false |],
               [nock| 0 |]
             ],
         mkAnomaTest

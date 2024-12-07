@@ -24,12 +24,11 @@ main : Delta :=
         proofs := [];
         app-data := 1;
       };
+    resCommitment : Nat := commitment resource;
+    resNullifier : Nat := nullifier resource;
   in -- Most of these call return large nouns that are not appropritate for testing.
       -- This test checks that these functions do not crash.
-      commitment
-      resource
-    >-> nullifier resource
-    >-> kind resource
+    kind resource
     >-> addDelta (resource-delta resource) (resource-delta resource)
     >-> addDelta (resource-delta resource) (resource-delta resource)
     >-> proveDelta zeroDelta
@@ -37,4 +36,8 @@ main : Delta :=
     >-> trace (addDelta zeroDelta zeroDelta)
     >-> proveAction action
     >-> trace (actionDelta action)
+    >-> trace (isCommitment resCommitment)
+    >-> trace (isNullifier resNullifier)
+    >-> trace (isCommitment resNullifier)
+    >-> trace (isNullifier resCommitment)
     >-> actionsDelta [action];

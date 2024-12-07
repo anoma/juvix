@@ -130,4 +130,8 @@ data AnomaOp
     OpAnomaRandomNextBytes
   | -- | Split a pseudorandom number generator into two uncorrelated generators
     OpAnomaRandomSplit
+  | -- | Returns true if its argument is a commitment
+    OpAnomaIsCommitment
+  | -- | Returns true if its argument is a nullifier
+    OpAnomaIsNullifier
   deriving stock (Eq, Show)

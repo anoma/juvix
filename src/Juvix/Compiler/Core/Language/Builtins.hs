@@ -54,6 +54,8 @@ data BuiltinOp
   | OpAnomaRandomGeneratorInit
   | OpAnomaRandomNextBytes
   | OpAnomaRandomSplit
+  | OpAnomaIsCommitment
+  | OpAnomaIsNullifier
   | OpPoseidonHash
   | OpEc
   | OpRandomEcPoint
@@ -142,6 +144,8 @@ builtinOpArgsNum = \case
   OpAnomaRandomGeneratorInit -> 1
   OpAnomaRandomNextBytes -> 2
   OpAnomaRandomSplit -> 1
+  OpAnomaIsCommitment -> 1
+  OpAnomaIsNullifier -> 1
   OpPoseidonHash -> 1
   OpEc -> 3
   OpRandomEcPoint -> 0
@@ -207,6 +211,8 @@ builtinIsFoldable = \case
   OpAnomaRandomGeneratorInit -> False
   OpAnomaRandomNextBytes -> False
   OpAnomaRandomSplit -> False
+  OpAnomaIsCommitment -> False
+  OpAnomaIsNullifier -> False
   OpPoseidonHash -> False
   OpEc -> False
   OpRandomEcPoint -> False
