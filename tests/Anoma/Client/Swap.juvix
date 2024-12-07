@@ -1,0 +1,107 @@
+--- translated from https://github.com/anoma/anoma/blob/61413dfc6460b7bf96e9207ce3b9d22b9c678f09/apps/anoma_node/lib/examples/e_transaction.ex#L309
+module Swap;
+
+import Stdlib.Prelude open;
+import ResourceMachine open;
+import TransactionRequest open;
+import Stdlib.Debug.Trace open;
+import ByteArray open;
+
+trivial_true_resource_eph : Resource :=
+  mkResource@{
+    label := 0;
+    logic := \{_ _ := true};
+    ephemeral := true;
+    quantity := 1;
+    data := 0;
+    nullifier-key := replicate 32 0x0 |> mkByteArray |> toAnomaContents;
+    rseed := 0;
+    nonce := 0;
+  };
+
+trivial_true_nullifier_eph : Nat := nullifier trivial_true_resource_eph;
+
+trivial_true_eph_nullifier : Proof :=
+  let
+    publicInputs : Public-Inputs :=
+      mkPublic-Inputs@{
+        commitments := [];
+        nullifiers := [trivial_true_nullifier_eph];
+        self-tag := trivial_true_nullifier_eph;
+        other-public := 0;
+      };
+    privateInputs : Private-Inputs :=
+      mkPrivate-Inputs@{
+        committed-resources := [];
+        nullified-resources := [trivial_true_resource_eph];
+        other-private := 0;
+      };
+  in mkProofLogic trivial_true_resource_eph publicInputs privateInputs;
+
+trivial_true_eph_nullifier_action : Action :=
+  mkAction@{
+    commitments := [];
+    nullifiers := [trivial_true_nullifier_eph];
+    proofs := [trivial_true_eph_nullifier];
+    app-data := 0;
+  };
+
+nullify_intent_eph : Transaction :=
+  mkTransaction@{
+    roots := [];
+    delta := actionDelta trivial_true_eph_nullifier_action;
+    actions := [trivial_true_eph_nullifier_action];
+    delta-proof := 0;
+  };
+
+trivial_true_resource : Resource :=
+  mkResource@{
+    label := 0;
+    logic := \{_ _ := true};
+    ephemeral := true;
+    quantity := 1;
+    data := 0;
+    nullifier-key := replicate 32 0x0 |> mkByteArray |> toAnomaContents;
+    rseed := 0;
+    nonce := 2;
+  };
+
+trivial_true_commitment : Nat := commitment trivial_true_resource;
+
+trivial_true_proof : Proof :=
+  let
+    publicInputs : Public-Inputs :=
+      mkPublic-Inputs@{
+        commitments := [trivial_true_commitment];
+        nullifiers := [];
+        self-tag := trivial_true_commitment;
+        other-public := 0;
+      };
+    privateInputs : Private-Inputs :=
+      mkPrivate-Inputs@{
+        committed-resources := [trivial_true_resource];
+        nullified-resources := [];
+        other-private := 0;
+      };
+  in mkProofLogic trivial_true_resource publicInputs privateInputs;
+
+trivial_true_commit_action : Action :=
+  mkAction@{
+    commitments := [trivial_true_commitment];
+    nullifiers := [];
+    proofs := [trivial_true_proof];
+    app-data := 0;
+  };
+
+commit_intent : Transaction :=
+  mkTransaction@{
+    roots := [];
+    delta := actionDelta trivial_true_commit_action;
+    actions := [trivial_true_commit_action];
+    delta-proof := 0;
+  };
+
+main : TransactionRequest :=
+  trace trivial_true_commitment >->
+  TransactionRequest.fromTransaction
+    (Transaction.compose nullify_intent_eph commit_intent);

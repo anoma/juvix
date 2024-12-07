@@ -11,6 +11,7 @@ import Commands.Base
 import Commands.Dev.Anoma.AddTransaction.Options
 import Commands.Dev.Anoma.Base
 import Commands.Dev.Anoma.Client
+import Commands.Dev.Anoma.Indexer qualified as Indexer
 import Commands.Dev.Anoma.Options
 import Commands.Dev.Anoma.Prove qualified as Prove
 import Commands.Dev.Anoma.Start qualified as Start
@@ -29,6 +30,7 @@ runCommand g =
     AnomaCommandAddTransaction opts ->
       runAnomaWithHostConfig
         (addTransaction (opts ^. addTransactionFile))
+    AnomaCommandIndexer opts -> runAnomaWithHostConfig (Indexer.runCommand opts)
   where
     runAnomaWithHostConfig :: (Members (Error SimpleError ': AppEffects) x) => Sem (Anoma ': x) () -> Sem x ()
     runAnomaWithHostConfig eff = do
