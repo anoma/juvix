@@ -136,6 +136,8 @@ fromCore fsize tab =
         BuiltinAnomaRandomGeneratorInit -> False
         BuiltinAnomaRandomNextBytes -> False
         BuiltinAnomaRandomSplit -> False
+        BuiltinAnomaIsCommitment -> False
+        BuiltinAnomaIsNullifier -> False
         BuiltinPoseidon -> False
         BuiltinEcOp -> False
         BuiltinRandomEcPoint -> False

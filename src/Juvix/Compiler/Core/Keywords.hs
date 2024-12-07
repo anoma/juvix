@@ -13,6 +13,8 @@ import Juvix.Data.Keyword.All
     kwAnomaAddDelta,
     kwAnomaDecode,
     kwAnomaEncode,
+    kwAnomaIsCommitment,
+    kwAnomaIsNullifier,
     kwAnomaProveAction,
     kwAnomaProveDelta,
     kwAnomaRandomGeneratorInit,

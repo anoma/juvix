@@ -303,6 +303,8 @@ instance PrettyCode AnomaOp where
     OpAnomaRandomGeneratorInit -> Str.anomaRandomGeneratorInit
     OpAnomaRandomNextBytes -> Str.anomaRandomNextBytes
     OpAnomaRandomSplit -> Str.anomaRandomSplit
+    OpAnomaIsCommitment -> Str.anomaIsCommitment
+    OpAnomaIsNullifier -> Str.anomaIsNullifier
 
 instance PrettyCode UnaryOpcode where
   ppCode = \case

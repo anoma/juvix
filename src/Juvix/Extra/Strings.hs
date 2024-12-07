@@ -446,6 +446,12 @@ anomaRandomNextBytes = "anoma-random-next-bytes"
 anomaRandomSplit :: (IsString s) => s
 anomaRandomSplit = "anoma-random-generator-split"
 
+anomaIsCommitment :: (IsString s) => s
+anomaIsCommitment = "anoma-is-commitment"
+
+anomaIsNullifier :: (IsString s) => s
+anomaIsNullifier = "anoma-is-nullifier"
+
 builtinSeq :: (IsString s) => s
 builtinSeq = "seq"
 

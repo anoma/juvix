@@ -233,6 +233,8 @@ isDebugOp = \case
       OpAnomaRandomGeneratorInit -> False
       OpAnomaRandomNextBytes -> False
       OpAnomaRandomSplit -> False
+      OpAnomaIsCommitment -> False
+      OpAnomaIsNullifier -> False
       OpEc -> False
       OpFieldAdd -> False
       OpFieldDiv -> False
@@ -534,6 +536,8 @@ builtinOpArgTypes = \case
   OpAnomaRandomGeneratorInit -> [mkTypeInteger']
   OpAnomaRandomNextBytes -> [mkTypeInteger', mkTypeRandomGenerator']
   OpAnomaRandomSplit -> [mkTypeRandomGenerator']
+  OpAnomaIsCommitment -> [mkTypeInteger']
+  OpAnomaIsNullifier -> [mkTypeInteger']
   OpPoseidonHash -> [mkDynamic']
   OpEc -> [mkDynamic', mkTypeField', mkDynamic']
   OpRandomEcPoint -> []
