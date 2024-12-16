@@ -749,7 +749,7 @@ lookupSymbolAux modules final = do
         let modules' = drop (length path1) modules
             pref' = commonPrefix path2 modules'
         lookPrefix pref' path2 modules'
-      when (not (null pref)) $
+      when (notNull pref) $
         lookPrefix pref path2 modules
       lookupLocalSymbolAux (const True) modules final
 
