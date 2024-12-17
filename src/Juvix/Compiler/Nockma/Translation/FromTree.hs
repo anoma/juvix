@@ -585,6 +585,8 @@ compile = \case
         Tree.OpAnomaRandomGeneratorInit -> callStdlib StdlibRandomInitGen args
         Tree.OpAnomaRandomNextBytes -> goAnomaRandomNextBytes args
         Tree.OpAnomaRandomSplit -> callStdlib StdlibRandomSplit args
+        Tree.OpAnomaIsCommitment -> callRm RmIsCommitment args
+        Tree.OpAnomaIsNullifier -> callRm RmIsNullifier args
 
     goByteArrayOp :: Tree.NodeByteArray -> Sem r (Term Natural)
     goByteArrayOp Tree.NodeByteArray {..} = do

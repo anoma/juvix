@@ -672,6 +672,8 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinAnomaRandomGeneratorInit -> return ()
       Internal.BuiltinAnomaRandomNextBytes -> return ()
       Internal.BuiltinAnomaRandomSplit -> return ()
+      Internal.BuiltinAnomaIsCommitment -> return ()
+      Internal.BuiltinAnomaIsNullifier -> return ()
       Internal.BuiltinPoseidon -> return ()
       Internal.BuiltinEcOp -> return ()
       Internal.BuiltinRandomEcPoint -> return ()
@@ -985,6 +987,20 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
           ( mkLambda'
               mkDynamic'
               (mkBuiltinApp' OpAnomaRandomSplit [mkVar' 0])
+          )
+      Internal.BuiltinAnomaIsCommitment -> do
+        natType <- getNatType
+        registerAxiomDef
+          ( mkLambda'
+              natType
+              (mkBuiltinApp' OpAnomaIsCommitment [mkVar' 0])
+          )
+      Internal.BuiltinAnomaIsNullifier -> do
+        natType <- getNatType
+        registerAxiomDef
+          ( mkLambda'
+              natType
+              (mkBuiltinApp' OpAnomaIsNullifier [mkVar' 0])
           )
       Internal.BuiltinPoseidon -> do
         psName <- getPoseidonStateName
@@ -1447,6 +1463,8 @@ goApplication a = do
         Just Internal.BuiltinAnomaRandomGeneratorInit -> app
         Just Internal.BuiltinAnomaRandomNextBytes -> app
         Just Internal.BuiltinAnomaRandomSplit -> app
+        Just Internal.BuiltinAnomaIsCommitment -> app
+        Just Internal.BuiltinAnomaIsNullifier -> app
         Just Internal.BuiltinPoseidon -> app
         Just Internal.BuiltinEcOp -> app
         Just Internal.BuiltinRandomEcPoint -> app

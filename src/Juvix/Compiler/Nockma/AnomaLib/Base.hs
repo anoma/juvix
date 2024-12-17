@@ -56,6 +56,8 @@ data RmFunction
   | RmActionDelta
   | RmMakeDelta
   | RmProveDelta
+  | RmIsCommitment
+  | RmIsNullifier
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable RmFunction
@@ -128,6 +130,8 @@ instance Pretty RmFunction where
     RmActionDelta -> "action-delta"
     RmMakeDelta -> "make-delta"
     RmProveDelta -> "prove-delta"
+    RmIsCommitment -> "is-commitment"
+    RmIsNullifier -> "is-nullifier"
 
 instance Pretty RmValue where
   pretty = \case

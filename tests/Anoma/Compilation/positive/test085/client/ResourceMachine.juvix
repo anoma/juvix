@@ -118,6 +118,12 @@ axiom addDelta : Delta -> Delta -> Delta;
 builtin anoma-sub-delta
 axiom subDelta : Delta -> Delta -> Delta;
 
+builtin anoma-is-commitment
+axiom isCommitment : Nat -> Bool;
+
+builtin anoma-is-nullifier
+axiom isNullifier : Nat -> Bool;
+
 Commitment-Root : Type := Nat;
 
 type Transaction :=

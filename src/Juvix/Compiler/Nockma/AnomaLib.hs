@@ -116,5 +116,7 @@ anomaLibPath = \case
     RmActionDelta -> [nock| [9 4 0 1] |]
     RmMakeDelta -> [nock| [9 1.494 0 1] |]
     RmProveDelta -> [nock| [9 1.535 0 1] |]
+    RmIsCommitment -> [nock| [9 1.526 0 1] |]
+    RmIsNullifier -> [nock| [9 372 0 1] |]
   AnomaLibValue (AnomaRmValue v) -> case v of
     RmZeroDelta -> [nock| [9 20 0 1] |]

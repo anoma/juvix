@@ -1142,6 +1142,8 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinAnomaRandomGeneratorInit -> checkAnomaRandomGeneratorInit d
   BuiltinAnomaRandomNextBytes -> checkAnomaRandomNextBytes d
   BuiltinAnomaRandomSplit -> checkAnomaRandomSplit d
+  BuiltinAnomaIsCommitment -> checkAnomaIsCommitment d
+  BuiltinAnomaIsNullifier -> checkAnomaIsNullifier d
   BuiltinPoseidon -> checkPoseidon d
   BuiltinEcOp -> checkEcOp d
   BuiltinRandomEcPoint -> checkRandomEcPoint d

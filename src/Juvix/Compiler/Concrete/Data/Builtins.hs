@@ -278,6 +278,8 @@ data BuiltinAxiom
   | BuiltinAnomaRandomGeneratorInit
   | BuiltinAnomaRandomNextBytes
   | BuiltinAnomaRandomSplit
+  | BuiltinAnomaIsCommitment
+  | BuiltinAnomaIsNullifier
   | BuiltinPoseidon
   | BuiltinEcOp
   | BuiltinRandomEcPoint
@@ -342,6 +344,8 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaRandomGeneratorInit -> KNameFunction
     BuiltinAnomaRandomNextBytes -> KNameFunction
     BuiltinAnomaRandomSplit -> KNameFunction
+    BuiltinAnomaIsCommitment -> KNameFunction
+    BuiltinAnomaIsNullifier -> KNameFunction
     BuiltinPoseidon -> KNameFunction
     BuiltinEcOp -> KNameFunction
     BuiltinRandomEcPoint -> KNameFunction
@@ -413,6 +417,8 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaRandomGeneratorInit -> Str.anomaRandomGeneratorInit
     BuiltinAnomaRandomNextBytes -> Str.anomaRandomNextBytes
     BuiltinAnomaRandomSplit -> Str.anomaRandomSplit
+    BuiltinAnomaIsCommitment -> Str.anomaIsCommitment
+    BuiltinAnomaIsNullifier -> Str.anomaIsNullifier
     BuiltinPoseidon -> Str.cairoPoseidon
     BuiltinEcOp -> Str.cairoEcOp
     BuiltinRandomEcPoint -> Str.cairoRandomEcPoint
