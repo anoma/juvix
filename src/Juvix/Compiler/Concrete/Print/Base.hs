@@ -1331,6 +1331,12 @@ instance PrettyPrint ImportTree where
     header "============"
     hardline
 
+    header ("Packages (" <> show (length importsTable) <> "):")
+    header "========="
+    itemize . map (noLoc . pretty) $ Map.keys importsTable
+    hardline
+
+    hardline
     forM_ (Map.toList importsTable) $ \(pkgRoot, tbl :: Map (Path Rel File) (Set ImportNode)) -> do
       annotated AnnImportant (noLoc ("* Package at " <> pretty pkgRoot))
       hardline
