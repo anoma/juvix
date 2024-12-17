@@ -24,7 +24,7 @@ concurrency:
 
 env:
   SKIP: ormolu,format-juvix-files,typecheck-juvix-examples
-  CAIRO_VM_VERSION: e0c926825607b658d429f1096ec70b959096ee3f
+  CAIRO_VM_VERSION: eb4256d992cd32beac6bf36e5fc852eda955efa7
   RISC0_VM_VERSION: v1.0.1
   # This is the top commit hash in the branch lukasz/juvix-integration-tracking
   # of the anoma repository.
