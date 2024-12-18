@@ -10,6 +10,8 @@ module Juvix.Compiler.Concrete.Extra
     isBodyExpression,
     isFunctionLike,
     isLhsFunctionLike,
+    isFunctionRecursive,
+    isLhsFunctionRecursive,
     symbolParsed,
   )
 where
@@ -116,3 +118,15 @@ isLhsFunctionLike FunctionLhs {..} = notNull (_funLhsTypeSig ^. typeSigArgs)
 isFunctionLike :: FunctionDef 'Parsed -> Bool
 isFunctionLike d@FunctionDef {..} =
   isLhsFunctionLike (d ^. functionDefLhs) || (not . isBodyExpression) _functionDefBody
+
+isFunctionRecursive :: FunctionDef 'Parsed -> Bool
+isFunctionRecursive d = case d ^. functionDefLhs . funLhsIsTop of
+  FunctionTop -> isLhsFunctionRecursive (d ^. functionDefLhs)
+  FunctionNotTop -> isFunctionLike d
+
+isLhsFunctionRecursive :: FunctionLhs 'Parsed -> Bool
+isLhsFunctionRecursive d = case d ^. funLhsIsTop of
+  FunctionTop -> case d ^. funLhsName of
+    FunctionDefNamePattern {} -> False
+    FunctionDefName {} -> True
+  FunctionNotTop -> isLhsFunctionLike d

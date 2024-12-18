@@ -760,6 +760,15 @@ instance Serialize FunctionDefNameScoped
 
 instance NFData FunctionDefNameScoped
 
+data FunctionIsTop
+  = FunctionTop
+  | FunctionNotTop
+  deriving stock (Eq, Ord, Show, Generic)
+
+instance Serialize FunctionIsTop
+
+instance NFData FunctionIsTop
+
 data FunctionDef (s :: Stage) = FunctionDef
   { _functionDefDoc :: Maybe (Judoc s),
     _functionDefPragmas :: Maybe ParsedPragmas,
@@ -2957,7 +2966,8 @@ data FunctionLhs (s :: Stage) = FunctionLhs
     _funLhsInstance :: Maybe KeywordRef,
     _funLhsCoercion :: Maybe KeywordRef,
     _funLhsName :: FunctionSymbolType s,
-    _funLhsTypeSig :: TypeSig s
+    _funLhsTypeSig :: TypeSig s,
+    _funLhsIsTop :: FunctionIsTop
   }
   deriving stock (Generic)
 

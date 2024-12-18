@@ -40,7 +40,8 @@ import Juvix.Prelude.Pretty
 
 data FunctionSyntaxOptions = FunctionSyntaxOptions
   { _funAllowOmitType :: Bool,
-    _funAllowInstance :: Bool
+    _funAllowInstance :: Bool,
+    _funIsTop :: FunctionIsTop
   }
 
 data SigOptions = SigOptions
@@ -475,7 +476,8 @@ derivingInstance = do
   let opts =
         FunctionSyntaxOptions
           { _funAllowOmitType = False,
-            _funAllowInstance = True
+            _funAllowInstance = True,
+            _funIsTop = FunctionTop
           }
   off <- P.getOffset
   _derivingFunLhs <- functionDefinitionLhs opts Nothing
@@ -492,7 +494,8 @@ statement = P.label "<top level statement>" $ do
   let funSyntax =
         FunctionSyntaxOptions
           { _funAllowInstance = True,
-            _funAllowOmitType = False
+            _funAllowOmitType = False,
+            _funIsTop = FunctionTop
           }
   ms <-
     optional
@@ -678,7 +681,8 @@ builtinFunctionDef = functionDefinition funSyntax . Just
     funSyntax =
       FunctionSyntaxOptions
         { _funAllowInstance = True,
-          _funAllowOmitType = False
+          _funAllowOmitType = False,
+          _funIsTop = FunctionTop
         }
 
 builtinStatement :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (Statement 'Parsed)
@@ -1019,7 +1023,8 @@ pnamedArgumentFunctionDef = do
   let funSyntax =
         FunctionSyntaxOptions
           { _funAllowOmitType = True,
-            _funAllowInstance = False
+            _funAllowInstance = False,
+            _funIsTop = FunctionNotTop
           }
   fun <- functionDefinition funSyntax Nothing
   return
@@ -1130,7 +1135,8 @@ letFunDef = do
     funSyntax =
       FunctionSyntaxOptions
         { _funAllowOmitType = True,
-          _funAllowInstance = False
+          _funAllowInstance = False,
+          _funIsTop = FunctionNotTop
         }
 
 letStatement :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (LetStatement 'Parsed)
@@ -1368,7 +1374,8 @@ functionDefinitionLhs opts _funLhsBuiltin = P.label "<function definition>" $ do
         _funLhsCoercion,
         _funLhsName,
         _funLhsTypeSig,
-        _funLhsTerminating
+        _funLhsTerminating,
+        _funLhsIsTop = opts ^. funIsTop
       }
 
 parseArg :: forall r. (Members '[ParserResultBuilder, JudocStash, PragmasStash, Error ParserError] r) => SigOptions -> ParsecS r (SigArg 'Parsed)
@@ -1674,7 +1681,8 @@ checkNoNamedApplicationMissingAt = recoverStashes $ do
   let funSyntax =
         FunctionSyntaxOptions
           { _funAllowOmitType = True,
-            _funAllowInstance = False
+            _funAllowInstance = False,
+            _funIsTop = FunctionNotTop
           }
   x <-
     P.observing

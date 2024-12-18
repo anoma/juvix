@@ -432,7 +432,7 @@ reserveDerivingSymbol ::
   Sem r ()
 reserveDerivingSymbol f = do
   let lhs = f ^. derivingFunLhs
-  when (P.isLhsFunctionLike lhs) $
+  when (P.isLhsFunctionRecursive lhs) $
     void (reserveFunctionSymbol lhs)
 
 reserveFunctionLikeSymbol ::
@@ -440,7 +440,7 @@ reserveFunctionLikeSymbol ::
   FunctionDef 'Parsed ->
   Sem r ()
 reserveFunctionLikeSymbol f =
-  when (P.isFunctionLike f) $
+  when (P.isFunctionRecursive f) $
     void (reserveFunctionSymbol (f ^. functionDefLhs))
 
 bindFixitySymbol ::
@@ -1198,7 +1198,7 @@ checkDeriving Deriving {..} = do
   typeSig' <- withLocalScope (checkTypeSig _funLhsTypeSig)
   name' <-
     if
-        | P.isLhsFunctionLike lhs -> getReservedDefinitionSymbol name
+        | P.isLhsFunctionRecursive lhs -> getReservedDefinitionSymbol name
         | otherwise -> reserveFunctionSymbol lhs
   let defname' =
         FunctionDefNameScoped
@@ -1262,10 +1262,9 @@ checkTypeSig TypeSig {..} = do
 checkFunctionDef ::
   forall r.
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax, Reader BindingStrategy] r) =>
-  Bool ->
   FunctionDef 'Parsed ->
   Sem r (FunctionDef 'Scoped)
-checkFunctionDef isTop fdef@FunctionDef {..} = do
+checkFunctionDef fdef@FunctionDef {..} = do
   let FunctionLhs {..} = _functionDefLhs
   sigDoc' <- mapM checkJudoc _functionDefDoc
   (sig', sigBody') <- withLocalScope $ do
@@ -1277,7 +1276,7 @@ checkFunctionDef isTop fdef@FunctionDef {..} = do
     FunctionDefName name -> do
       name' <-
         if
-            | isTop || P.isFunctionLike fdef -> getReservedDefinitionSymbol name
+            | P.isFunctionRecursive fdef -> getReservedDefinitionSymbol name
             | otherwise -> reserveFunctionSymbol (fdef ^. functionDefLhs)
       return
         FunctionDefNameScoped
@@ -1635,7 +1634,7 @@ checkModuleBody body = do
   body' <-
     fmap flattenSections
       . syntaxBlock
-      $ checkSections True (mkSections body)
+      $ checkSections (mkSections body)
   exported <- get >>= exportScope
   return (exported, body')
   where
@@ -1673,10 +1672,9 @@ checkModuleBody body = do
 checkSections ::
   forall r.
   (Members '[HighlightBuilder, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax, Reader PackageId] r) =>
-  Bool ->
   StatementSections 'Parsed ->
   Sem r (StatementSections 'Scoped)
-checkSections isTop sec = topBindings helper
+checkSections sec = topBindings helper
   where
     helper ::
       forall r'.
@@ -1782,9 +1780,7 @@ checkSections isTop sec = topBindings helper
             reserveDefinition :: Definition 'Parsed -> Sem r' (Maybe (Module 'Parsed 'ModuleLocal))
             reserveDefinition = \case
               DefinitionSyntax s -> resolveSyntaxDef s $> Nothing
-              DefinitionFunctionDef d
-                | isTop -> reserveFunctionSymbol (d ^. functionDefLhs) >> return Nothing
-                | otherwise -> reserveFunctionLikeSymbol d >> return Nothing
+              DefinitionFunctionDef d -> reserveFunctionLikeSymbol d >> return Nothing
               DefinitionDeriving d -> reserveDerivingSymbol d >> return Nothing
               DefinitionAxiom d -> reserveAxiomSymbol d >> return Nothing
               DefinitionProjectionDef d -> reserveProjectionSymbol d >> return Nothing
@@ -1840,7 +1836,7 @@ checkSections isTop sec = topBindings helper
             goDefinition :: Definition 'Parsed -> Sem r' (Definition 'Scoped)
             goDefinition = \case
               DefinitionSyntax s -> DefinitionSyntax <$> checkSyntaxDef s
-              DefinitionFunctionDef d -> DefinitionFunctionDef <$> checkFunctionDef isTop d
+              DefinitionFunctionDef d -> DefinitionFunctionDef <$> checkFunctionDef d
               DefinitionDeriving d -> DefinitionDeriving <$> checkDeriving d
               DefinitionAxiom d -> DefinitionAxiom <$> checkAxiomDef d
               DefinitionInductive d -> DefinitionInductive <$> checkInductiveDef d
@@ -2348,7 +2344,7 @@ checkLetStatements ::
 checkLetStatements =
   ignoreSyntax
     . fmap fromSections
-    . checkSections False
+    . checkSections
     . mkLetSections
     . toList
   where
@@ -3038,7 +3034,7 @@ checkNamedArgumentFunctionDef ::
   NamedArgumentFunctionDef 'Parsed ->
   Sem r (NamedArgumentFunctionDef 'Scoped)
 checkNamedArgumentFunctionDef NamedArgumentFunctionDef {..} = do
-  def <- localBindings . ignoreSyntax $ checkFunctionDef False _namedArgumentFunctionDef
+  def <- localBindings . ignoreSyntax $ checkFunctionDef _namedArgumentFunctionDef
   return
     NamedArgumentFunctionDef
       { _namedArgumentFunctionDef = def
