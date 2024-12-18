@@ -1341,9 +1341,14 @@ instance PrettyPrint ImportTree where
       annotated AnnImportant (noLoc ("* Package at " <> pretty pkgRoot))
       hardline
       let pkgNodes :: HashSet ImportNode = fromJust (nodesByRoot ^. at pkgRoot)
-      header ("Nodes (" <> show (length pkgNodes) <> ")")
+      header ("Nodes Relative paths (" <> show (length pkgNodes) <> ")")
       forM_ pkgNodes $ \node -> do
         noLoc (pMod (node ^. importNodeFile))
+        hardline
+      hardline
+      header ("Nodes Absolute paths (" <> show (length pkgNodes) <> ")")
+      forM_ pkgNodes $ \node -> do
+        noLoc (pMod (node ^. importNodeAbsFile))
         hardline
       hardline
       let numEdges = sum (map length (toList tbl))
