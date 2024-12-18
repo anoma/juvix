@@ -1354,7 +1354,12 @@ instance PrettyPrint ImportTree where
       let numEdges = sum (map length (toList tbl))
       header ("Edges (" <> show numEdges <> ")")
       forM_ (Map.toList tbl) $ \(fromFile, toFiles) -> do
-        noLoc (pMod fromFile P.<+> annotate AnnKeyword "imports" P.<+> "(" <> pretty (length toFiles) <> "):")
+        let fromNode :: ImportNode =
+              ImportNode
+                { _importNodePackageRoot = pkgRoot,
+                  _importNodeFile = fromFile
+                }
+        noLoc (pMod fromFile P.<+> "at" P.<+> pMod (fromNode ^. importNodeAbsFile) P.<+> annotate AnnKeyword "imports" P.<+> "(" <> pretty (length toFiles) <> "):")
         hardline
         indent . itemize . (`map` (toList toFiles)) $ \toFile -> do
           let toMod
