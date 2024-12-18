@@ -230,7 +230,7 @@ processModuleCacheMissDecide entryIx = do
     unless (info ^. Store.moduleInfoSHA256 == sha256) (throw RecompileSourceChanged)
     unless (info ^. Store.moduleInfoOptions == opts) (throw RecompileSourceChanged)
     unless (info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize) (throw RecompileFieldSizeChanged)
-    CompileResult {..} <- runReader entry (processImports (info ^. Store.moduleInfoImports))
+    CompileResult {..} <- runReader entry (processImports (entryIx ^. entryIxImportNode . importNodeAbsFile) (info ^. Store.moduleInfoImports))
     if
         | _compileResultChanged -> throw RecompileImportsChanged
         | otherwise ->
@@ -326,9 +326,10 @@ processRecursiveUpToTyped = do
 processImport ::
   forall r.
   (Members '[ModuleInfoCache, Reader EntryPoint, Error JuvixError, Files, PathResolver] r) =>
+  Path Abs File ->
   TopModulePath ->
   Sem r (PipelineResult Store.ModuleInfo)
-processImport p = withPathFile p getCachedImport
+processImport importingModule p = withPathFile p getCachedImport
   where
     getCachedImport :: ImportNode -> Sem r (PipelineResult Store.ModuleInfo)
     getCachedImport node = do
@@ -336,9 +337,19 @@ processImport p = withPathFile p getCachedImport
       eix <- mkEntryIndex node
       if
           | hasParallelSupport -> do
-              res <- cacheGetResult eix
-              return (res ^. cacheResult)
+              res <- cacheLookup eix
+              return $ fromMaybe err res
           | otherwise -> processModule eix
+      where
+        err :: forall a. a
+        err =
+          impossibleError
+            ( "While compiling\n"
+                <> prettyText importingModule
+                <> "\nexpected the module:\n"
+                <> prettyText (node ^. importNodeAbsFile)
+                <> "\nto be already compiled"
+            )
 
 processFileUpToParsing ::
   forall r.
@@ -348,7 +359,7 @@ processFileUpToParsing ::
 processFileUpToParsing entry = do
   res <- runReader entry upToParsing
   let imports :: [Import 'Parsed] = res ^. Parser.resultParserState . Parser.parserStateImports
-  mtab <- (^. compileResultModuleTable) <$> processImports (map (^. importModulePath) imports)
+  mtab <- (^. compileResultModuleTable) <$> processImports (fromJust (entry ^. entryPointModulePath)) (map (^. importModulePath) imports)
   return
     PipelineResult
       { _pipelineResult = res,
@@ -376,10 +387,11 @@ processFileUpTo a = do
 processImports ::
   forall r.
   (Members '[Reader EntryPoint, ModuleInfoCache, Error JuvixError, Files, PathResolver] r) =>
+  Path Abs File ->
   [TopModulePath] ->
   Sem r CompileResult
-processImports imports = do
-  ms :: [PipelineResult Store.ModuleInfo] <- forM imports processImport
+processImports importingModule imports = do
+  ms :: [PipelineResult Store.ModuleInfo] <- forM imports (processImport importingModule)
   let mtab =
         Store.mkModuleTable (map (^. pipelineResult) ms)
           <> mconcatMap (^. pipelineResultImports) ms
