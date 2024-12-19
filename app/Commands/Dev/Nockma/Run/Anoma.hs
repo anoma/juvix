@@ -14,7 +14,7 @@ makeLenses ''RunCommandArgs
 
 runInAnoma :: forall r. (Members '[Error SimpleError, Anoma] r, Members AppEffects r) => RunCommandArgs -> Sem r ()
 runInAnoma runArgs = do
-  res <- runNock (runArgs ^. runCommandProgramFile) (runArgs ^. runCommandArgsFile)
+  res <- runNock ParsedArgsModeJammedOrPretty (runArgs ^. runCommandProgramFile) (runArgs ^. runCommandArgsFile)
   let traces = res ^. runNockmaTraces
   renderStdOutLn (annotate AnnImportant $ "Traces (" <> show (length traces) <> "):")
   forM_ traces $ \tr ->

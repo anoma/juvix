@@ -16,17 +16,28 @@ cellOrFail term f = case term of
   TermAtom {} -> exitFailMsg "Expected nockma input to be a cell"
   t@(TermCell {}) -> inject (f t)
 
+data ParsedArgsMode
+  = -- | The args file is a pretty nockma term
+    ParsedArgsModePretty
+  | -- | The args file is either a pretty nockma term or a jammed nockma term
+    ParsedArgsModeJammedOrPretty
+
 -- | Calls Anoma.Protobuf.NockService.Prove
 runNock ::
   forall r.
   (Members '[Error SimpleError, Anoma] r, Members AppEffects r) =>
+  ParsedArgsMode ->
   AppPath File ->
   Maybe (AppPath File) ->
   Sem r Anoma.RunNockmaResult
-runNock programFile margsFile = do
+runNock argsMode programFile margsFile = do
   afile <- fromAppPathFile programFile
   argsFile <- mapM fromAppPathFile margsFile
-  parsedArgs <- runAppError @JuvixError (mapM Nockma.cueJammedFileOrPretty argsFile)
+  parsedArgs <- runAppError @JuvixError $ do
+    let argsParser = case argsMode of
+          ParsedArgsModeJammedOrPretty -> Nockma.cueJammedFileOrPretty
+          ParsedArgsModePretty -> Nockma.parsePrettyTerm
+    mapM argsParser argsFile
   parsedTerm <- runAppError @JuvixError (Nockma.cueJammedFileOrPretty afile)
   cellOrFail parsedTerm (go (maybe [] unfoldList parsedArgs))
   where
