@@ -20,10 +20,11 @@ import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
+import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Compiler.Store.Scoped.Language (Alias, ModuleSymbolEntry, PreSymbolEntry (..), ScopedModule, SymbolEntry, aliasName, moduleEntry, scopedModuleName, symbolEntry)
 import Juvix.Data.Ape.Base
 import Juvix.Data.Ape.Print
-import Juvix.Data.CodeAnn (Ann, CodeAnn (..), CodeAnnReference (..), ppStringLit)
+import Juvix.Data.CodeAnn (Ann, CodeAnn (..), CodeAnnReference (..), ppCodeAnn, ppStringLit)
 import Juvix.Data.CodeAnn qualified as C
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All qualified as Kw
@@ -1314,6 +1315,19 @@ instance (SingI s) => PrettyPrint (UsingItem s) where
         kwmodule = ppCode <$> (ui ^. usingModuleKw)
     kwmodule <?+> (sym' <+?> kwAs' <+?> alias')
 
+instance PrettyPrint PackageInfo where
+  ppCode PackageInfo {..} = do
+    header ("Package name: " <> (_packagePackage ^. packageLikeName))
+    noLoc ("root:" P.<+> pretty _packageRoot)
+    let roots = case nonEmpty _packageAvailableRoots of
+          Nothing -> return ()
+          Just roots1 -> hardline <> indent (itemize (fmap (noLoc . pretty) roots1))
+    hardline
+    noLoc ("available roots:") <> roots
+    hardline
+    noLoc ("package id:" P.<+> ppCodeAnn _packageInfoPackageId)
+    hardline
+
 instance PrettyPrint ImportTreeStats where
   ppCode ImportTreeStats {..} = do
     header "Import Tree Statistics:"
@@ -1353,7 +1367,7 @@ instance PrettyPrint ImportTree where
       hardline
       let numEdges = sum (map length (toList tbl))
       header ("Edges (" <> show numEdges <> ")")
-      forM_ (Map.toList tbl) $ \(fromFile, toFiles) -> do
+      forM_ (Map.toList tbl) $ \(fromFile, toFiles :: Set ImportNode) -> do
         let fromNode :: ImportNode =
               ImportNode
                 { _importNodePackageRoot = pkgRoot,
