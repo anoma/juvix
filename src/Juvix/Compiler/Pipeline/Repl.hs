@@ -122,7 +122,7 @@ registerImport ::
   Import 'Parsed ->
   Sem r ()
 registerImport i = do
-  PipelineResult {..} <- processImport $(mkAbsFile "/<repl>") (i ^. importModulePath)
+  PipelineResult {..} <- processImport (i ^. importModulePath)
   let mtab' = Store.insertModule (i ^. importModulePath) _pipelineResult _pipelineResultImports
   modify' (appendArtifactsModuleTable mtab')
   scopeTable <- gets (^. artifactScopeTable)
