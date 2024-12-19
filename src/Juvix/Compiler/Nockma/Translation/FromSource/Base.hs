@@ -32,6 +32,14 @@ parseText = runParser noFile
 parseReplText :: Text -> Either MegaparsecError (ReplTerm Natural)
 parseReplText = runParserFor replTerm noFile
 
+-- | Parse the file as an annotated unjammed term.
+parsePrettyTerm ::
+  forall r.
+  (Members '[Files, Error JuvixError] r) =>
+  Prelude.Path Abs File ->
+  Sem r (Term Natural)
+parsePrettyTerm f = evalHighlightBuilder (parseTermFile f)
+
 -- | If the file ends in .debug.nockma it parses an annotated unjammed term. Otherwise
 -- it is equivalent to cueJammedFile
 cueJammedFileOrPretty ::
@@ -40,7 +48,7 @@ cueJammedFileOrPretty ::
   Prelude.Path Abs File ->
   Sem r (Term Natural)
 cueJammedFileOrPretty f
-  | f `hasExtensions` nockmaDebugFileExts = evalHighlightBuilder (parseTermFile f)
+  | f `hasExtensions` nockmaDebugFileExts = parsePrettyTerm f
   | otherwise = cueJammedFile f
 
 -- | If the file ends in .debug.nockma it parses an annotated unjammed program. Otherwise
