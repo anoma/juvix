@@ -78,12 +78,12 @@ mkImportTree mentrypointModulePath =
       ) =>
       ImportNode ->
       Sem r' ()
-    scanNode fromNode = withImportNode fromNode $ do
+    scanNode fromNode = withResolverRoot (fromNode ^. importNodePackageRoot) . withImportNode fromNode $ do
       scans <- toList <$> getNodeImports fromNode
       imports :: [ImportNode] <- mapM resolveImportScan scans
       forM_ (zipExact scans imports) $ \(importscan, toNode) -> do
         importTreeAddEdge importscan toNode
-        withResolverRoot (toNode ^. importNodePackageRoot) (visit toNode)
+        visit toNode
 
     resolveImportScan :: forall r'. (Members '[PathResolver] r') => ImportScan -> Sem r' ImportNode
     resolveImportScan s = do

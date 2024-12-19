@@ -335,9 +335,7 @@ processImport p = withPathFile p getCachedImport
       hasParallelSupport <- supportsParallel
       eix <- mkEntryIndex node
       if
-          | hasParallelSupport -> do
-              res <- cacheGetResult eix
-              return (res ^. cacheResult)
+          | hasParallelSupport -> cacheGet eix
           | otherwise -> processModule eix
 
 processFileUpToParsing ::
