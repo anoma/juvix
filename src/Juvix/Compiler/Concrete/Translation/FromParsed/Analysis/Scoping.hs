@@ -432,7 +432,7 @@ reserveDerivingSymbol ::
   Sem r ()
 reserveDerivingSymbol f = do
   let lhs = f ^. derivingFunLhs
-  when (P.isLhsFunctionLike lhs) $
+  when (P.isLhsFunctionRecursive lhs) $
     void (reserveFunctionSymbol lhs)
 
 reserveFunctionLikeSymbol ::
@@ -440,7 +440,7 @@ reserveFunctionLikeSymbol ::
   FunctionDef 'Parsed ->
   Sem r ()
 reserveFunctionLikeSymbol f =
-  when (P.isFunctionLike f) $
+  when (P.isFunctionRecursive f) $
     void (reserveFunctionSymbol (f ^. functionDefLhs))
 
 bindFixitySymbol ::
@@ -1198,7 +1198,7 @@ checkDeriving Deriving {..} = do
   typeSig' <- withLocalScope (checkTypeSig _funLhsTypeSig)
   name' <-
     if
-        | P.isLhsFunctionLike lhs -> getReservedDefinitionSymbol name
+        | P.isLhsFunctionRecursive lhs -> getReservedDefinitionSymbol name
         | otherwise -> reserveFunctionSymbol lhs
   let defname' =
         FunctionDefNameScoped
@@ -1276,7 +1276,7 @@ checkFunctionDef fdef@FunctionDef {..} = do
     FunctionDefName name -> do
       name' <-
         if
-            | P.isFunctionLike fdef -> getReservedDefinitionSymbol name
+            | P.isFunctionRecursive fdef -> getReservedDefinitionSymbol name
             | otherwise -> reserveFunctionSymbol (fdef ^. functionDefLhs)
       return
         FunctionDefNameScoped

@@ -97,7 +97,8 @@ toConcrete t p = run . runReader l $ do
                 _funLhsBuiltin = Nothing,
                 _funLhsName = FunctionDefName name',
                 _funLhsInstance = Nothing,
-                _funLhsTypeSig
+                _funLhsTypeSig,
+                _funLhsIsTop = FunctionTop
               }
       return
         ( StatementFunctionDef

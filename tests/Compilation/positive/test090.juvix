@@ -21,12 +21,13 @@ module Resource;
 
     x : Delta.Nat := Resource.x + Resource0.x;
     a : Delta.Nat := x * Resource.Gamma.x + test090.x;
+    b : Delta.Nat := 1900;
   end;
 
   open Resource.Delta;
 
-  a : Delta.Nat := a;
+  b : Delta.Nat := a;
 end;
 
 -- result: 31
-main : Delta.Nat := Resource.a;
+main : Delta.Nat := Resource.b;

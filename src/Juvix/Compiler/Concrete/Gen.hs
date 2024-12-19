@@ -38,7 +38,8 @@ simplestFunctionDef funName funBody =
             _funLhsBuiltin = Nothing,
             _funLhsTerminating = Nothing,
             _funLhsInstance = Nothing,
-            _funLhsCoercion = Nothing
+            _funLhsCoercion = Nothing,
+            _funLhsIsTop = FunctionNotTop
           }
    in FunctionDef
         { _functionDefBody = SigBodyExpression funBody,
