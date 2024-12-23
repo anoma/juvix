@@ -47,8 +47,7 @@ proveArgToTerm = \case
   ProveArgNat n -> return (toNock n)
   ProveArgBytes n -> fromAppPathFile n >>= readFileBS' >>= fromBytes
   ProveArgBase64 n -> do
-    res <- Base64.decode <$> (fromAppPathFile n >>= readFileBS')
-    bs <- asSimpleError (mkAnsiText @Text) (either (throw . pack) return res)
+    bs <- Base64.decodeLenient <$> (fromAppPathFile n >>= readFileBS')
     fromBytes bs
   where
     fromBytes :: ByteString -> Sem r (Term Natural)
