@@ -23,7 +23,7 @@ atomToByteStringLen len = fmap (padByteString len) . atomToByteString
 sha256Atom :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r ByteString
 sha256Atom = fmap sha256Natural . nockNatural
 
-byteStringToAtom :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => ByteString -> Sem r (Atom a)
+byteStringToAtom :: forall a r. (NockNatural a, Member (Error (ErrNockNatural a)) r) => ByteString -> Sem r (Atom a)
 byteStringToAtom = fmap mkEmptyAtom . fromNatural . byteStringToNatural
 
 byteStringToNatural :: ByteString -> Natural

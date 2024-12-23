@@ -20,5 +20,5 @@ runCommand opts =
     runArgs =
       RunCommandArgs
         { _runCommandProgramFile = opts ^. nockmaRunWithClientFile,
-          _runCommandArgsFile = opts ^. nockmaRunWithClientArgs
+          _runCommandArgs = opts ^. nockmaRunWithClientArgs
         }

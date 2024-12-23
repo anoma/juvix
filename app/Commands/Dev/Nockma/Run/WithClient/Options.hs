@@ -1,5 +1,6 @@
 module Commands.Dev.Nockma.Run.WithClient.Options where
 
+import Commands.Dev.Anoma.Prove.Options.ProveArg
 import CommonOptions
 
 data NockmaRunWithClientOptions = NockmaRunWithClientOptions
@@ -7,7 +8,7 @@ data NockmaRunWithClientOptions = NockmaRunWithClientOptions
     _nockmaRunWithClientGrpcPort :: Int,
     _nockmaRunWithClientNodeId :: Text,
     _nockmaRunWithClientUrl :: String,
-    _nockmaRunWithClientArgs :: Maybe (AppPath File)
+    _nockmaRunWithClientArgs :: [ProveArg]
   }
   deriving stock (Data)
 
@@ -16,7 +17,7 @@ makeLenses ''NockmaRunWithClientOptions
 parseNockmaRunWithClientOptions :: Parser NockmaRunWithClientOptions
 parseNockmaRunWithClientOptions = do
   _nockmaRunWithClientFile <- parseInputFile FileExtNockma
-  _nockmaRunWithClientArgs <- optional anomaArgsOpt
+  _nockmaRunWithClientArgs <- many parseProveArg
   _nockmaRunWithClientGrpcPort <-
     option
       (fromIntegral <$> naturalNumberOpt)
