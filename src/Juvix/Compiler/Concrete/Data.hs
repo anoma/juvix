@@ -14,6 +14,7 @@ module Juvix.Compiler.Concrete.Data
     module Juvix.Compiler.Concrete.Data.IsOpenShort,
     module Juvix.Compiler.Concrete.Data.LocalModuleOrigin,
     module Juvix.Data.NameId,
+    module Juvix.Data.IntegerWithBase,
   )
 where
 
@@ -30,5 +31,6 @@ import Juvix.Compiler.Concrete.Data.PublicAnn
 import Juvix.Compiler.Concrete.Data.ScopedName qualified
 import Juvix.Compiler.Concrete.Data.VisibilityAnn
 import Juvix.Compiler.Store.Scoped.Data.InfoTable
+import Juvix.Data.IntegerWithBase
 import Juvix.Data.NameId
 import Juvix.Data.NameKind

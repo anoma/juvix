@@ -17,7 +17,7 @@ import Juvix.Prelude
 import Juvix.Prelude.Parsing as P hiding (hspace, space, space1)
 import Text.Megaparsec.Char.Lexer qualified as L
 
-parseFailure :: Int -> String -> ParsecS r a
+parseFailure :: Int -> String -> ParsecT Void Text m a
 parseFailure off str = P.parseError $ P.FancyError off (Set.singleton (P.ErrorFail str))
 
 whiteSpace1 :: (MonadParsec e s m, Token s ~ Char) => m ()
@@ -118,7 +118,7 @@ space' special =
                   | n > 1 -> go (n - 1) (acc <> pack txt <> en)
                   | otherwise -> return (acc <> pack txt)
 
-integerWithBase' :: ParsecS r (WithLoc IntegerWithBase)
+integerWithBase' :: ParsecT Void Text m (WithLoc IntegerWithBase)
 integerWithBase' = P.try $ withLoc $ do
   minus <- optional (char '-')
   b <- integerBase'
@@ -139,14 +139,14 @@ integerWithBase' = P.try $ withLoc $ do
 integer' :: ParsecS r (WithLoc Integer)
 integer' = fmap (^. integerWithBaseValue) <$> integerWithBase'
 
-integerBase' :: ParsecS r IntegerBase
+integerBase' :: ParsecT Void Text m IntegerBase
 integerBase' =
   baseprefix IntegerBaseBinary
     <|> baseprefix IntegerBaseOctal
     <|> baseprefix IntegerBaseHexadecimal
     <|> return IntegerBaseDecimal
   where
-    baseprefix :: IntegerBase -> ParsecS r IntegerBase
+    baseprefix :: IntegerBase -> ParsecT Void Text m IntegerBase
     baseprefix x = P.chunk (integerBasePrefix x) $> x
 
 number' :: ParsecS r (WithLoc Integer) -> Int -> Int -> ParsecS r (WithLoc Int)
