@@ -36,7 +36,7 @@ parseProveArg' =
   option
     pp
     ( long "arg"
-        <> completer (enumCompleter (Proxy @ProveArgTag))
+        <> completer (listCompleter [show a <> ":" | a <- allElements @ProveArgTag])
         <> metavar "ARG_TYPE:ARG"
     )
   where
