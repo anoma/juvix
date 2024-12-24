@@ -30,6 +30,9 @@ newtype SimpleError = SimpleError
   { _simpleErrorMessage :: AnsiText
   }
 
+instance IsString SimpleError where
+  fromString = SimpleError . mkAnsiText
+
 makeLenses ''GenericError
 makeLenses ''GenericOptions
 makeLenses ''SimpleError

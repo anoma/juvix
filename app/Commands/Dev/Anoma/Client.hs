@@ -1,4 +1,8 @@
-module Commands.Dev.Anoma.Client where
+module Commands.Dev.Anoma.Client
+  ( module Commands.Dev.Anoma.Client,
+    module Anoma.Client.Config,
+  )
+where
 
 import Anoma.Client.Config
 import Anoma.Effect.Base
@@ -16,6 +20,11 @@ checkClientRunning :: (Members '[Logger, Files, EmbedIO, Error SimpleError] r) =
 checkClientRunning = do
   mconfig <- readConfig
   E.findM isClientRunning mconfig
+
+getClientConfig ::
+  (Members '[Logger, Files, EmbedIO, Error SimpleError] r) =>
+  Sem r ClientConfig
+getClientConfig = fromMaybeM (throw @SimpleError "The Anoma client is not running") checkClientRunning
 
 stopClient :: (Members '[Files, EmbedIO] r) => ClientConfig -> Sem r ()
 stopClient = terminateProcessPid . (^. clientConfigPid)
