@@ -9,6 +9,6 @@ data Stage
   deriving stock (Eq, Show)
 
 type AnyStage (k :: Stage -> GHC.Type) =
-  Σ Stage (TyCon1 k)
+  Sigma Stage (TyCon1 k)
 
 $(genSingletons [''Stage])

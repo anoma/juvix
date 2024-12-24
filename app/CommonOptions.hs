@@ -226,9 +226,7 @@ fieldSizeOpt = eitherReader aux
       "cairo" -> Right $ Just cairoFieldSize
       "small" -> Right $ Just smallFieldSize
       _ ->
-        mapRight Just
-          . either Left checkAllowed
-          $ maybe (Left $ s <> " is not a valid field size") Right (readMaybe s :: Maybe Natural)
+        mapRight Just (checkAllowed =<< maybe (Left $ s <> " is not a valid field size") Right (readMaybe s :: Maybe Natural))
 
     checkAllowed :: Natural -> Either String Natural
     checkAllowed n
@@ -236,7 +234,7 @@ fieldSizeOpt = eitherReader aux
       | otherwise = Left $ Prelude.show n <> " is not a recognized field size"
 
 enumHelp :: forall a. (Bounded a, Enum a, Show a) => (a -> AnsiDoc) -> AnsiDoc
-enumHelp showHelp = vsep ["• " <> annotate bold (show x) <> ": " <> showHelp x | x <- allElements]
+enumHelp showHelp = itemize [annotate bold (show x) <> ": " <> showHelp x | x <- allElements]
 
 enumReader :: forall a. (Bounded a, Enum a, Show a) => Proxy a -> ReadM a
 enumReader _ = eitherReader $ \val ->

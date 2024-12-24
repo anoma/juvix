@@ -183,7 +183,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Singletons hiding ((@@))
 import Data.Singletons.Sigma
-import Data.Singletons.TH (genSingletons, promoteOrdInstances, singOrdInstances)
+import Data.Singletons.TH (genDefunSymbols, genSingletons, promoteOrdInstances, singOrdInstances)
 import Data.Stream (Stream)
 import Data.Stream qualified as Stream
 import Data.String

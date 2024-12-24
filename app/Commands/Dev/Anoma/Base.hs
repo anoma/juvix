@@ -3,6 +3,9 @@ module Commands.Dev.Anoma.Base where
 import Anoma.Effect (Anoma)
 import Anoma.Effect qualified as Anoma
 import Commands.Base hiding (Atom)
+import Commands.Dev.Anoma.Prove.Options.ProveArg
+import Data.ByteString.Base64 qualified as Base64
+import Juvix.Compiler.Nockma.Encoding.ByteString
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromSource qualified as Nockma
 
@@ -26,28 +29,29 @@ data ParsedArgsMode
 runNock ::
   forall r.
   (Members '[Error SimpleError, Anoma] r, Members AppEffects r) =>
-  ParsedArgsMode ->
   AppPath File ->
-  Maybe (AppPath File) ->
+  [ProveArg] ->
   Sem r Anoma.RunNockmaResult
-runNock argsMode programFile margsFile = do
-  afile <- fromAppPathFile programFile
-  argsFile <- mapM fromAppPathFile margsFile
-  parsedArgs <- runAppError @JuvixError $ do
-    let argsParser = case argsMode of
-          ParsedArgsModeJammedOrPretty -> Nockma.cueJammedFileOrPretty
-          ParsedArgsModePretty -> Nockma.parsePrettyTerm
-    mapM argsParser argsFile
-  parsedTerm <- runAppError @JuvixError (Nockma.cueJammedFileOrPretty afile)
-  cellOrFail parsedTerm (go (maybe [] unfoldList parsedArgs))
+runNock programFile pargs = do
+  argsfile <- fromAppPathFile programFile
+  parsedTerm <- runAppError @JuvixError (Nockma.cueJammedFileOrPretty argsfile)
+  args <- mapM proveArgToTerm pargs
+  Anoma.runNockma
+    Anoma.RunNockmaInput
+      { _runNockmaProgram = parsedTerm,
+        _runNockmaArgs = args
+      }
+
+proveArgToTerm :: forall r. (Members '[Error SimpleError, Files, App] r) => ProveArg -> Sem r (Term Natural)
+proveArgToTerm = \case
+  ProveArgNat n -> return (toNock n)
+  ProveArgBytes n -> fromAppPathFile n >>= readFileBS' >>= fromBytes
+  ProveArgBase64 n -> do
+    bs <- Base64.decodeLenient <$> (fromAppPathFile n >>= readFileBS')
+    fromBytes bs
   where
-    go :: [Term Natural] -> Term Natural -> Sem r Anoma.RunNockmaResult
-    go args t =
-      Anoma.runNockma
-        Anoma.RunNockmaInput
-          { _runNockmaProgram = t,
-            _runNockmaArgs = args
-          }
+    fromBytes :: ByteString -> Sem r (Term Natural)
+    fromBytes b = TermAtom <$> asSimpleErrorShow @NockNaturalNaturalError (byteStringToAtom @Natural b)
 
 -- | Calls Anoma.Protobuf.Mempool.AddTransaction
 addTransaction ::
