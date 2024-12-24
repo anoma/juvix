@@ -26,8 +26,17 @@ type family ProveArgType s = res where
 $(genDefunSymbols [''ProveArgType])
 $(genSingletons [''ProveArgTag])
 
-proveArgTagHelp :: ProveArgTag -> AnsiDoc
-proveArgTagHelp = \case
-  ProveArgTagNat -> "A natural number that is passed verbatim as a nockma atom"
-  ProveArgTagBase64 -> "A path to a file with a base64 encoded nockma atom"
-  ProveArgTagBytes -> "A path to a file with a byte encoded nockma atom"
+proveArgTagHelp :: AnsiDoc
+proveArgTagHelp = itemize (tagHelp <$> allElements)
+  where
+    tagHelp :: ProveArgTag -> AnsiDoc
+    tagHelp t =
+      let mvar, explain :: AnsiDoc
+          (mvar, explain) = first sty $ case t of
+            ProveArgTagNat -> ("NATURAL", "is passed verbatim as a nockma atom")
+            ProveArgTagBase64 -> ("FILE", "is a file with a base64 encoded nockma atom")
+            ProveArgTagBytes -> ("FILE", "is a file with a byte encoded nockma atom")
+          sty = annotate (bold <> colorDull Blue)
+          tagvar :: AnsiDoc
+          tagvar = sty (show t <> ":" <> mvar)
+       in tagvar <+> "where" <+> mvar <+> explain
