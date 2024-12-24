@@ -48,7 +48,7 @@ parseAnomaCommand =
         runInfo =
           info
             (AnomaCommandPrintConfig <$> parsePrintConfigOptions)
-            (progDesc "Prints the yaml configuration to stdout")
+            (progDesc "Prints the yaml configuration of the Anoma client to stdout")
 
     commandStart :: Mod CommandFields AnomaCommand
     commandStart = command "start" runInfo
