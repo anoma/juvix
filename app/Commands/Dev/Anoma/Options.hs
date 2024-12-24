@@ -2,6 +2,7 @@ module Commands.Dev.Anoma.Options where
 
 import Commands.Dev.Anoma.AddTransaction.Options
 import Commands.Dev.Anoma.Indexer.Options
+import Commands.Dev.Anoma.PrintConfig.Options
 import Commands.Dev.Anoma.Prove.Options
 import Commands.Dev.Anoma.Start.Options
 import CommonOptions
@@ -9,6 +10,7 @@ import CommonOptions
 data AnomaCommand
   = AnomaCommandStart StartOptions
   | AnomaCommandStatus
+  | AnomaCommandPrintConfig PrintConfigOptions
   | AnomaCommandStop
   | AnomaCommandProve ProveOptions
   | AnomaCommandAddTransaction AddTransactionOptions
@@ -33,11 +35,21 @@ parseAnomaCommand =
             commandStatus,
             commandStop,
             commandProve,
+            commandPrintConfig,
             commandAddTransaction,
             commandIndexer
           ]
       )
   where
+    commandPrintConfig :: Mod CommandFields AnomaCommand
+    commandPrintConfig = command "print-config" runInfo
+      where
+        runInfo :: ParserInfo AnomaCommand
+        runInfo =
+          info
+            (AnomaCommandPrintConfig <$> parsePrintConfigOptions)
+            (progDesc "Prints the yaml configuration of the Anoma client to stdout")
+
     commandStart :: Mod CommandFields AnomaCommand
     commandStart = command "start" runInfo
       where

@@ -13,6 +13,7 @@ import Commands.Dev.Anoma.Base
 import Commands.Dev.Anoma.Client
 import Commands.Dev.Anoma.Indexer qualified as Indexer
 import Commands.Dev.Anoma.Options
+import Commands.Dev.Anoma.PrintConfig qualified as PrintConfig
 import Commands.Dev.Anoma.Prove qualified as Prove
 import Commands.Dev.Anoma.Start qualified as Start
 import Juvix.Data.CodeAnn
@@ -22,8 +23,9 @@ runCommand :: forall r. (Members AppEffects r) => AnomaCommandGlobal -> Sem r ()
 runCommand g =
   runAppError @SimpleError $ case (g ^. anomaCommandGlobalCommand) of
     AnomaCommandStart opts -> Start.runCommand opts
-    AnomaCommandStatus -> checkRunning >>= renderStdOutLn . ppCodeAnn
-    AnomaCommandStop -> checkRunning >>= stopClient >> removeConfig
+    AnomaCommandStatus -> getClientConfig >>= renderStdOutLn . ppCodeAnn
+    AnomaCommandStop -> getClientConfig >>= stopClient >> removeConfig
+    AnomaCommandPrintConfig opts -> PrintConfig.runCommand opts
     AnomaCommandProve opts ->
       runAnomaWithHostConfig
         (Prove.runCommand opts)
@@ -37,13 +39,10 @@ runCommand g =
       host <- getHostConfig
       runAnomaWithClient host eff
 
-    checkRunning :: (Members (Error SimpleError ': AppEffects) x) => Sem x ClientConfig
-    checkRunning = fromMaybeM (logInfo "The Anoma client is not running" >> exitFailure) checkClientRunning
-
     getHostConfig :: (Members (Error SimpleError ': AppEffects) x) => Sem x AnomaClientInfo
     getHostConfig = case g ^. anomaCommandGlobalClientConfig of
       Just p -> fromAppFile p >>= readClientInfo
-      Nothing -> (^. clientConfigHost) <$> checkRunning
+      Nothing -> (^. clientConfigHost) <$> getClientConfig
 
     readClientInfo :: (Members '[Files, Error SimpleError] x) => Path Abs File -> Sem x AnomaClientInfo
     readClientInfo fp = do

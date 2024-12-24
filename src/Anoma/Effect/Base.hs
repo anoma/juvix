@@ -111,7 +111,7 @@ runAnomaEphemeral anomapath body = runEnvironment . runReader anomapath . runPro
         AnomaListMethods -> anomaListMethods'
         GetNodeInfo -> return NodeInfo {_nodeInfoId = grpcInfo ^. anomaClientInfoNodeId}
 
-runAnomaWithClient :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaClientInfo -> Sem (Anoma ': r) a -> Sem r a
+runAnomaWithClient :: forall r a. (Members '[EmbedIO, Error SimpleError] r) => AnomaClientInfo -> Sem (Anoma ': r) a -> Sem r a
 runAnomaWithClient grpcInfo body = do
   let grpcInfo' = hardcodeNodeId grpcInfo
   runProcess
@@ -122,7 +122,7 @@ runAnomaWithClient grpcInfo body = do
       AnomaListMethods -> anomaListMethods'
       GetNodeInfo -> return NodeInfo {_nodeInfoId = grpcInfo' ^. anomaClientInfoNodeId}
 
-fromJSONErr :: (Members '[Error SimpleError, Logger] r) => (Aeson.FromJSON a) => Value -> Sem r a
+fromJSONErr :: (Members '[Error SimpleError] r) => (Aeson.FromJSON a) => Value -> Sem r a
 fromJSONErr v = case Aeson.fromJSON v of
   Aeson.Success r -> return r
   Aeson.Error err -> throw (SimpleError (mkAnsiText err))
