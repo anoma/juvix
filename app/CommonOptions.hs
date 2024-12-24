@@ -226,9 +226,7 @@ fieldSizeOpt = eitherReader aux
       "cairo" -> Right $ Just cairoFieldSize
       "small" -> Right $ Just smallFieldSize
       _ ->
-        mapRight Just
-          . either Left checkAllowed
-          $ maybe (Left $ s <> " is not a valid field size") Right (readMaybe s :: Maybe Natural)
+        mapRight Just (checkAllowed =<< maybe (Left $ s <> " is not a valid field size") Right (readMaybe s :: Maybe Natural))
 
     checkAllowed :: Natural -> Either String Natural
     checkAllowed n

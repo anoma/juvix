@@ -38,6 +38,7 @@ parseProveArg' =
     ( long "arg"
         <> completer (listCompleter [show a <> ":" | a <- allElements @ProveArgTag])
         <> metavar "ARG_TYPE:ARG"
+        <> helpDoc ("An argument to the program." <> line <> enumHelp @ProveArgTag proveArgTagHelp)
     )
   where
     pProveArgTag :: Parse ProveArgTag

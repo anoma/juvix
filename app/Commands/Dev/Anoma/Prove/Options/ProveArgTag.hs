@@ -25,3 +25,9 @@ type family ProveArgType s = res where
 
 $(genDefunSymbols [''ProveArgType])
 $(genSingletons [''ProveArgTag])
+
+proveArgTagHelp :: ProveArgTag -> AnsiDoc
+proveArgTagHelp = \case
+  ProveArgTagNat -> "A natural number that is passed verbatim as a nockma atom"
+  ProveArgTagBase64 -> "A path to a file with a base64 encoded nockma atom"
+  ProveArgTagBytes -> "A path to a file with a byte encoded nockma atom"
