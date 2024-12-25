@@ -12,41 +12,41 @@ ENV BOOTSTRAP_HASKELL_INSTALL_HLS=1
 
 # OS packages for ghcup and juvix runtime
 RUN apt-get update && \
-      apt-get -y install --no-install-recommends \
-      curl \
-      sudo \
-      wget \
-      unzip \
-      git \
-      jq \
-      bc \
-      make \
-      cmake \
-      clang \
-      lldb \
-      lld \
-      llvm \
-      automake \
-      rsync \
-      htop \
-      build-essential \
-      lsb-release \
-      pkg-config \
-      libffi-dev \
-      libgmp-dev \
-      libgmp10 \
-      software-properties-common \
-      libssl-dev \
-      libicu-dev \
-      libtinfo-dev \
-      libsystemd-dev \
-      zlib1g-dev \
-      g++ \
-      libncurses-dev \
-      libncursesw5 \
-      libtinfo5 \
-      libtool \
-      autoconf && apt-get clean
+      RUN apt-get -y install --no-install-recommends \
+    autoconf \
+    automake \
+    bc \
+    build-essential \
+    clang \
+    curl \
+    git \
+    libbz2-dev \
+    libc6-dev \
+    libffi-dev \
+    libgdbm-dev \
+    libncurses-dev \
+    libncursesw5 \
+    libnss3-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    libssl-dev \
+    libtinfo5 \
+    libtool \
+    libxml2-dev \
+    libxmlsec1-dev \
+    lld \
+    lzma \
+    make \
+    pkg-config \
+    python3 \
+    software-properties-common \
+    sudo \
+    tzdata \
+    unzip \
+    wget \
+    xz-utils \
+    && apt-get clean
+
 
 RUN sudo bash -c 'curl -sSL https://get.haskellstack.org/ | sh'
 
