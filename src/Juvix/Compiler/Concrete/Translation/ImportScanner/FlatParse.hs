@@ -44,7 +44,7 @@ scanner fp bs = do
     spansToLocs imports = run . runInputList allFileLocs $ do
       _scanResultImports <- fmap hashSet . forM imports $ \(imp :: ImportScanParsed) -> do
         loc <- getInterval
-        return (set importLoc loc imp)
+        return (set importScanLoc loc imp)
       return ScanResult {..}
       where
         allFileLocs :: [FileLoc]
@@ -61,7 +61,7 @@ scanner fp bs = do
         importsPositions = concatMap spanToPos importsSpans
           where
             importsSpans :: [Span]
-            importsSpans = map (^. importLoc) imports
+            importsSpans = map (^. importScanLoc) imports
 
     spanToPos :: Span -> [FP.Pos]
     spanToPos (Span l r) = [l, r]
@@ -73,13 +73,13 @@ pPreScanResult = do
   eof
   return imports
 
-bareIdentifier :: ParserT st e String
+bareIdentifier :: ParserT st e Text
 bareIdentifier = do
   h <- satisfy L.validFirstChar
   t <- many (satisfy L.validTailChar)
-  return (h : t)
+  return (pack (h : t))
 
-dottedIdentifier :: Parser e (NonEmpty String)
+dottedIdentifier :: Parser e (NonEmpty Text)
 dottedIdentifier = lexeme (nonEmpty' <$> sepBy1 bareIdentifier dot)
   where
     dot :: Parser e ()
@@ -87,10 +87,14 @@ dottedIdentifier = lexeme (nonEmpty' <$> sepBy1 bareIdentifier dot)
 
 pImport :: Parser e ImportScanParsed
 pImport = do
-  withSpan helper $ \_importNames _importLoc ->
-    return ImportScan {..}
+  withSpan helper $ \names _importScanLoc ->
+    return
+      ImportScan
+        { _importScanLoc,
+          _importScanKey = nonEmptyToTopModulePathKey names
+        }
   where
-    helper :: Parser e (NonEmpty String)
+    helper :: Parser e (NonEmpty Text)
     helper = do
       iden <- lexeme bareIdentifier
       guard (iden == Str.import_)

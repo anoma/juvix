@@ -25,6 +25,7 @@ module Juvix.Data
     module Juvix.Data.Keyword,
     module Juvix.Data.Polarity,
     module Juvix.Data.ParsedItem,
+    module Juvix.Data.ImportScan,
   )
 where
 
@@ -35,6 +36,7 @@ import Juvix.Data.Error
 import Juvix.Data.FileExt
 import Juvix.Data.Fixity
 import Juvix.Data.Hole
+import Juvix.Data.ImportScan
 import Juvix.Data.InstanceHole
 import Juvix.Data.Irrelevant
 import Juvix.Data.IsImplicit

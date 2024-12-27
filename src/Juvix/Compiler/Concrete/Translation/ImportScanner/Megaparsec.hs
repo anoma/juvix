@@ -12,7 +12,6 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState
 import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
 import Juvix.Prelude
 
 scanBSImports ::
@@ -34,4 +33,8 @@ parserStateToScanResult st =
     }
   where
     fromImport :: Import 'Parsed -> ImportScan
-    fromImport i = topModulePathToImportScan (i ^. importModulePath)
+    fromImport i =
+      ImportScan
+        { _importScanLoc = getLoc i,
+          _importScanKey = topModulePathKey (i ^. importModulePath)
+        }

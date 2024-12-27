@@ -26,7 +26,6 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.ImportNode
-import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Prelude
 
 data ImportTreeStats = ImportTreeStats
