@@ -52,3 +52,5 @@ data Token
   | TokenImport ImportScanParsed
   | TokenReserved
   | TokenCode
+
+makePrisms ''Token

@@ -16,4 +16,7 @@ runCommand ScanFileOptions {..} =
       forM_ (scanRes ^. scanResultImports) $ \impor -> do
         opts <- askGenericOptions
         renderStdOut (ppOutNoComments opts impor)
+        when _scanFilePrintLoc $ do
+          renderStdOut @Text " "
+          renderStdOut (ppOutNoComments opts (getLoc impor))
         newline
