@@ -4,7 +4,6 @@ module Juvix.Compiler.Concrete.Translation.ImportScanner
   )
 where
 
-import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse qualified as FlatParse
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Megaparsec qualified as Megaparsec
 import Juvix.Parser.Error

@@ -4,7 +4,6 @@ import Commands.Base
 import Commands.Dev.ImportTree.ScanFile.Options
 import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Concrete.Translation.ImportScanner
-import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 
 runCommand :: (Members AppEffects r) => ScanFileOptions -> Sem r ()
 runCommand ScanFileOptions {..} =

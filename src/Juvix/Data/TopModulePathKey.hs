@@ -24,6 +24,10 @@ instance Pretty TopModulePathKey where
   pretty (TopModulePathKey path name) =
     mconcat (punctuate Pretty.dot (map pretty (snoc path name)))
 
+topModulePathKeyToRelativePathNoExt :: TopModulePathKey -> Path Rel File
+topModulePathKeyToRelativePathNoExt TopModulePathKey {..} =
+  relFile (joinFilePaths (map unpack (_modulePathKeyDir ++ [_modulePathKeyName])))
+
 nonEmptyToTopModulePathKey :: NonEmpty Text -> TopModulePathKey
 nonEmptyToTopModulePathKey l =
   TopModulePathKey
