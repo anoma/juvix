@@ -35,6 +35,6 @@ parserStateToScanResult st =
     fromImport :: Import 'Parsed -> ImportScan
     fromImport i =
       ImportScan
-        { _importScanLoc = getLoc i,
+        { _importScanLoc = getLoc (i ^. importModulePath),
           _importScanKey = topModulePathKey (i ^. importModulePath)
         }

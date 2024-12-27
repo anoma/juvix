@@ -10,6 +10,8 @@ import Juvix.Prelude.Base
 
 data ImportScan' a = ImportScan
   { _importScanKey :: TopModulePathKey,
+    -- The loc corresponds only to the module name. So it does not include the
+    -- import keyword
     _importScanLoc :: a
   }
   deriving stock (Show, Eq, Generic)

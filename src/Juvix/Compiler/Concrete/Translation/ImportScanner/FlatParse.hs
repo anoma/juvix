@@ -79,26 +79,22 @@ bareIdentifier = do
   t <- many (satisfy L.validTailChar)
   return (pack (h : t))
 
-dottedIdentifier :: Parser e (NonEmpty Text)
-dottedIdentifier = lexeme (nonEmpty' <$> sepBy1 bareIdentifier dot)
+bareDottedIdentifier :: Parser e (NonEmpty Text)
+bareDottedIdentifier = nonEmpty' <$> sepBy1 bareIdentifier dot
   where
     dot :: Parser e ()
     dot = $(char '.')
 
 pImport :: Parser e ImportScanParsed
-pImport = do
-  withSpan helper $ \names _importScanLoc ->
+pImport = lexeme $ do
+  iden <- lexeme bareIdentifier
+  guard (iden == Str.import_)
+  withSpan bareDottedIdentifier $ \names _importScanLoc ->
     return
       ImportScan
         { _importScanLoc,
           _importScanKey = nonEmptyToTopModulePathKey names
         }
-  where
-    helper :: Parser e (NonEmpty Text)
-    helper = do
-      iden <- lexeme bareIdentifier
-      guard (iden == Str.import_)
-      dottedIdentifier
 
 pToken :: Parser e Token
 pToken =
