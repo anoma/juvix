@@ -69,14 +69,9 @@ scanner fp bs = do
 pPreScanResult :: Parser e [ImportScanParsed]
 pPreScanResult = do
   whiteSpaceAndComments
-  imports <- mapMaybe getImport <$> many pToken
+  imports <- (^.. each . _TokenImport) <$> many pToken
   eof
   return imports
-  where
-    getImport :: Token -> Maybe ImportScanParsed
-    getImport = \case
-      TokenImport i -> Just i
-      _ -> Nothing
 
 bareIdentifier :: ParserT st e String
 bareIdentifier = do
