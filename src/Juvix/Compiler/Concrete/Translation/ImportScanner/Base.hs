@@ -18,6 +18,7 @@ type ImportScan = ImportScan' Interval
 newtype ScanResult = ScanResult
   { _scanResultImports :: HashSet ImportScan
   }
+  deriving stock (Eq)
 
 makeLenses ''ImportScan'
 makeLenses ''ScanResult
