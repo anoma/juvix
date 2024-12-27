@@ -25,7 +25,6 @@ data GlobalOptions = GlobalOptions
     _globalNoCoverage :: Bool,
     _globalNoStdlib :: Bool,
     _globalNoCheck :: Bool,
-    _globalUnrollLimit :: Int,
     _globalNumThreads :: NumThreads,
     _globalFieldSize :: Maybe Natural,
     _globalOffline :: Bool,
@@ -52,7 +51,7 @@ instance CanonicalProjection GlobalOptions Core.CoreOptions where
   project GlobalOptions {..} =
     Core.CoreOptions
       { Core._optCheckCoverage = not _globalNoCoverage,
-        Core._optUnrollLimit = _globalUnrollLimit,
+        Core._optUnrollLimit = defaultUnrollLimit,
         Core._optFieldSize = fromMaybe defaultFieldSize _globalFieldSize,
         Core._optOptimizationLevel = defaultOptimizationLevel,
         Core._optInliningDepth = defaultInliningDepth
@@ -74,7 +73,6 @@ defaultGlobalOptions =
       _globalNoCoverage = False,
       _globalNoStdlib = False,
       _globalNoCheck = False,
-      _globalUnrollLimit = defaultUnrollLimit,
       _globalFieldSize = Nothing,
       _globalDevShowThreadIds = False,
       _globalOffline = False
@@ -139,13 +137,6 @@ parseGlobalFlags = do
       ( long "field-size"
           <> value Nothing
           <> help "Field type size [cairo,small,11] (default: small)"
-      )
-  _globalUnrollLimit <-
-    option
-      (fromIntegral <$> naturalNumberOpt)
-      ( long "unroll"
-          <> value defaultUnrollLimit
-          <> help ("Recursion unrolling limit (default: " <> show defaultUnrollLimit <> ")")
       )
   _globalOffline <-
     switch
@@ -219,7 +210,6 @@ entryPointFromGlobalOptions root mainFile opts = do
         _entryPointNoCoverage = opts ^. globalNoCoverage,
         _entryPointNoStdlib = opts ^. globalNoStdlib,
         _entryPointNoCheck = opts ^. globalNoCheck,
-        _entryPointUnrollLimit = opts ^. globalUnrollLimit,
         _entryPointGenericOptions = project opts,
         _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
         _entryPointOffline = opts ^. globalOffline,
@@ -241,7 +231,6 @@ entryPointFromGlobalOptionsNoFile root opts = do
         _entryPointNoCoverage = opts ^. globalNoCoverage,
         _entryPointNoStdlib = opts ^. globalNoStdlib,
         _entryPointNoCheck = opts ^. globalNoCheck,
-        _entryPointUnrollLimit = opts ^. globalUnrollLimit,
         _entryPointGenericOptions = project opts,
         _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
         _entryPointOffline = opts ^. globalOffline,
