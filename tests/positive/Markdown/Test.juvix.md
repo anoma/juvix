@@ -6,7 +6,7 @@ A Juvix Markdown file name ends with `.juvix.md`. This kind of file must contain
 a module declaration at the top, as shown below ---in the first code block.
 
 ```juvix
-module Test;
+module Markdown.Test;
 ```
 
 Certain blocks can be hidden from the output by adding the `hide` attribute, as shown below.
