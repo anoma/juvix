@@ -7,6 +7,7 @@ module Juvix.Data.Effect.Logger
     LogLevel (..),
     logMessage,
     logError,
+    logErrorWithTag,
     logVerbose,
     logProgress,
     logInfo,
@@ -21,10 +22,10 @@ module Juvix.Data.Effect.Logger
   )
 where
 
+import Juvix.Data.CodeAnn
 import Juvix.Prelude.Base.Foundation
 import Juvix.Prelude.Effects.Base
 import Juvix.Prelude.Effects.Output
-import Juvix.Prelude.Pretty
 import Prelude (show)
 
 data LogLevel
@@ -76,6 +77,18 @@ defaultLoggerOptions =
 
 makeSem ''Logger
 makeLenses ''LoggerOptions
+
+logTag :: LogLevel -> Doc CodeAnn
+logTag = \case
+  LogLevelError -> annotate AnnError "[Error]"
+  LogLevelWarn -> "[Warn]"
+  LogLevelInfo -> "[Info]"
+  LogLevelProgress -> "[Progress]"
+  LogLevelVerbose -> "[Verbose]"
+  LogLevelDebug -> "[Debug]"
+
+logErrorWithTag :: (Members '[Logger] r) => AnsiText -> Sem r ()
+logErrorWithTag msg = logError (mkAnsiText (logTag LogLevelError <> " ") <> msg)
 
 logError :: (Members '[Logger] r) => AnsiText -> Sem r ()
 logError = logMessage LogLevelError

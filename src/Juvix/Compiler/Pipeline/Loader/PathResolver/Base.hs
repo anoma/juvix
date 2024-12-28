@@ -32,7 +32,7 @@ data PathResolver :: Effect where
   RegisterDependencies :: DependenciesConfig -> PathResolver m ()
   GetPackageInfos :: PathResolver m (HashMap (Path Abs Dir) PackageInfo)
   ExpectedPathInfoTopModule :: TopModulePath -> PathResolver m PathInfoTopModule
-  -- | Given a relative file *with no extension*, returns the list of packages
+  -- | Given top module path, returns the list of packages
   -- that contain that file. The file extension is also returned since it can be
   -- FileExtJuvix or FileExtJuvixMarkdown.
   ResolvePath :: ImportScan -> PathResolver m (PackageInfo, FileExt)
@@ -63,9 +63,8 @@ resolveTopModulePath ::
   TopModulePath ->
   Sem r ImportNode
 resolveTopModulePath mp = do
-  let scan = topModulePathToImportScan mp
-      relpath = topModulePathToRelativePathNoExt mp
-  (pkg, ext) <- resolvePath scan
+  let relpath = topModulePathToRelativePathNoExt mp
+  (pkg, ext) <- resolvePath (topModulePathImportScan mp)
   let node =
         ImportNode
           { _importNodeFile = addFileExt ext relpath,

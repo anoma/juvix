@@ -382,7 +382,7 @@ resolvePath' scan = do
       packagesWithExt =
         [ (pkg, ext)
           | ext <- possibleExtensions,
-            let file = addFileExt ext (importScanToRelPath scan),
+            let file = addFileExt ext (topModulePathKeyToRelativePathNoExt (scan ^. importScanKey)),
             pkg <- maybe [] toList (HashMap.lookup file filesToPackage),
             visible pkg
         ]
