@@ -18,6 +18,9 @@ data ImportScanStrategy
   | ImportScanStrategyMegaparsec
   deriving stock (Eq, Data, Ord, Enum, Bounded)
 
+instance Pretty ImportScanStrategy where
+  pretty = Juvix.Prelude.show
+
 instance Show ImportScanStrategy where
   show :: ImportScanStrategy -> String
   show = \case

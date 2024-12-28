@@ -38,6 +38,7 @@ data CodeAnn
   | AnnJudoc
   | AnnImportant
   | AnnDelimiter
+  | AnnError
   | AnnLiteralString
   | AnnLiteralInteger
   | AnnUnkindedSym
@@ -70,6 +71,7 @@ stylize a = case a of
   AnnJudoc -> colorDull Cyan
   AnnDelimiter -> colorDull White
   AnnLiteralString -> colorDull Red
+  AnnError -> colorDull Red
   AnnLiteralInteger -> colorDull Green
   AnnDef {} -> mempty
   AnnRef {} -> mempty

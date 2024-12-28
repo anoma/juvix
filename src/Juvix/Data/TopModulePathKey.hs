@@ -2,6 +2,7 @@ module Juvix.Data.TopModulePathKey where
 
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Extra.Serialize
+import Juvix.Prelude.Aeson qualified as Aeson
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
 import Juvix.Prelude.Pretty as Pretty
@@ -19,6 +20,8 @@ instance NFData TopModulePathKey
 instance Hashable TopModulePathKey
 
 makeLenses ''TopModulePathKey
+
+$(Aeson.deriveToJSON Aeson.defaultOptions ''TopModulePathKey)
 
 instance Pretty TopModulePathKey where
   pretty (TopModulePathKey path name) =

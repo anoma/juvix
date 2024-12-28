@@ -1,11 +1,13 @@
 module Juvix.Data.ImportScan where
 
+import Data.HashSet qualified as HashSet
 import FlatParse.Basic
 import Juvix.Compiler.Concrete.Data.Name
 import Juvix.Data.CodeAnn
 import Juvix.Data.Loc
 import Juvix.Data.TopModulePathKey
 import Juvix.Extra.Strings qualified as Str
+import Juvix.Prelude.Aeson qualified as Aeson
 import Juvix.Prelude.Base
 
 data ImportScan' a = ImportScan
@@ -25,10 +27,18 @@ type ImportScan = ImportScan' Interval
 newtype ScanResult = ScanResult
   { _scanResultImports :: HashSet ImportScan
   }
-  deriving stock (Eq)
+
+$(Aeson.deriveToJSON Aeson.defaultOptions ''ImportScan')
+$(Aeson.deriveToJSON Aeson.defaultOptions ''ScanResult)
 
 makeLenses ''ImportScan'
 makeLenses ''ScanResult
+
+instance Eq ScanResult where
+  (==) = (==) `on` f
+    where
+      f :: ScanResult -> [ImportScan]
+      f = sortOn (^. importScanLoc) . HashSet.toList . (^. scanResultImports)
 
 instance (Hashable a) => Hashable (ImportScan' a)
 

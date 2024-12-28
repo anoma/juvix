@@ -1,6 +1,7 @@
 module Juvix.Data.Loc where
 
 import Juvix.Extra.Serialize
+import Juvix.Prelude.Aeson qualified as Aeson
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
 import Prettyprinter
@@ -111,6 +112,10 @@ getLocSpan' gl l = gl (head l) <> gl (last l)
 -- | Assumes the file is the same
 instance Semigroup Interval where
   Interval f s e <> Interval _f s' e' = Interval f (min s s') (max e e')
+
+$(Aeson.deriveToJSON Aeson.defaultOptions ''Pos)
+$(Aeson.deriveToJSON Aeson.defaultOptions ''FileLoc)
+$(Aeson.deriveToJSON Aeson.defaultOptions ''Interval)
 
 makeLenses ''Interval
 makeLenses ''FileLoc
