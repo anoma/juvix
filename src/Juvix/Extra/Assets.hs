@@ -37,13 +37,13 @@ assetsWithAbsPathAndContent baseDir =
       let absPath = absDirAssetsByKind baseDir kind <//> relPart
   ]
 
-writeAssets :: Path Abs Dir -> IO ()
+writeAssets :: forall m. (MonadIO m) => Path Abs Dir -> m ()
 writeAssets baseDir = do
   putStrLn $ "Copying assets files to " <> pack (toFilePath baseDir)
   mapM_ writeAssetFile (assetsWithAbsPathAndContent baseDir)
   where
-    writeAssetFile :: (Path Abs File, ByteString) -> IO ()
+    writeAssetFile :: (Path Abs File, ByteString) -> m ()
     writeAssetFile (p, content) = do
       let dirFile = parent p
       createDirIfMissing True dirFile
-      BS.writeFile (toFilePath p) content
+      liftIO (BS.writeFile (toFilePath p) content)

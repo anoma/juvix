@@ -3,6 +3,7 @@ module App where
 import CommonOptions
 import Data.ByteString qualified as ByteString
 import GlobalOptions
+import Juvix.Compiler.Backend.Markdown.Error
 import Juvix.Compiler.Internal.Translation (InternalTypedResult)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
 import Juvix.Compiler.Pipeline.Loader.PathResolver
@@ -317,6 +318,9 @@ getRight = either appError return
 
 runAppError :: forall e r a. (AppError e, Members '[App] r) => Sem (Error e ': r) a -> Sem r a
 runAppError = runErrorNoCallStackWith appError
+
+instance AppError MarkdownBackendError where
+  appError = appError . JuvixError
 
 instance AppError ParserError where
   appError = appError . JuvixError
