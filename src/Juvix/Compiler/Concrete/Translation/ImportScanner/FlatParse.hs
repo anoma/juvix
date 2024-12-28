@@ -48,14 +48,7 @@ scanner fp bs = do
       return ScanResult {..}
       where
         allFileLocs :: [FileLoc]
-        allFileLocs =
-          [ FileLoc
-              { _locLine = Pos (1 + fromIntegral l),
-                _locCol = Pos (1 + fromIntegral c),
-                _locOffset = Pos (fromIntegral p)
-              }
-            | (FP.Pos p, (l, c)) <- zipExact importsPositions (posLineCols bs importsPositions)
-          ]
+        allFileLocs = fileLocs bs importsPositions
 
         importsPositions :: [FP.Pos]
         importsPositions = concatMap spanToPos importsSpans
