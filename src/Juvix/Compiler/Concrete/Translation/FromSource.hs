@@ -175,7 +175,7 @@ runModuleParser fileName input_
         Right r -> return $ Right r
 
 runMarkdownModuleParser ::
-  (Members '[ParserResultBuilder] r) =>
+  (Members '[TopModuleNameChecker, ParserResultBuilder] r) =>
   Path Abs File ->
   Mk ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
@@ -183,12 +183,11 @@ runMarkdownModuleParser fpath mk =
   runError $ case nonEmpty (MK.extractJuvixCodeBlock mk) of
     Nothing ->
       throw
-        ( ErrMarkdownBackend $
-            ErrNoJuvixCodeBlocks
-              NoJuvixCodeBlocksError
-                { _noJuvixCodeBlocksErrorFilepath = fpath
-                }
-        )
+        . ErrMarkdownBackend
+        $ ErrNoJuvixCodeBlocks
+          NoJuvixCodeBlocksError
+            { _noJuvixCodeBlocksErrorFilepath = fpath
+            }
     Just (firstBlock :| restBlocks) -> do
       m0 <- parseFirstBlock firstBlock
       let iniBuilder =
@@ -261,10 +260,10 @@ runMarkdownModuleParser fpath mk =
         Right m -> return m
 
     parseFirstBlock ::
-      (Members '[ParserResultBuilder, Error ParserError] r') =>
+      (Members '[TopModuleNameChecker, ParserResultBuilder, Error ParserError] r') =>
       MK.JuvixCodeBlock ->
       Sem r' (Module 'Parsed 'ModuleTop)
-    parseFirstBlock x = parseHelper topMarkdownModuleDef x
+    parseFirstBlock x = parseHelper topModuleDef x
 
     parseRestBlocks ::
       forall r'.
@@ -378,14 +377,6 @@ juvixCodeBlockParser = do
           info
           (t ^. withLocParam)
           (Just $ t ^. withLocInt)
-
-topMarkdownModuleDef ::
-  (Members '[ParserResultBuilder, Error ParserError, PragmasStash, Error ParserError, JudocStash] r) =>
-  ParsecS r (Module 'Parsed 'ModuleTop)
-topMarkdownModuleDef = do
-  optional_ stashJudoc
-  optional_ stashPragmas
-  top moduleDef
 
 parseTopStatements ::
   forall r.

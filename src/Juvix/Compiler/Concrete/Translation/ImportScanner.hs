@@ -4,7 +4,6 @@ module Juvix.Compiler.Concrete.Translation.ImportScanner
   )
 where
 
-import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse qualified as FlatParse
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Megaparsec qualified as Megaparsec
 import Juvix.Parser.Error
@@ -18,6 +17,9 @@ data ImportScanStrategy
   | ImportScanStrategyFlatParse
   | ImportScanStrategyMegaparsec
   deriving stock (Eq, Data, Ord, Enum, Bounded)
+
+instance Pretty ImportScanStrategy where
+  pretty = Juvix.Prelude.show
 
 instance Show ImportScanStrategy where
   show :: ImportScanStrategy -> String
@@ -50,13 +52,13 @@ scanBSImports fp inputBS = do
           logWarn (mkAnsiText ("The FlatParse parser failed to scan the file " <> toFilePath @Text fp <> ". Falling back to MegaParsec."))
           Megaparsec.scanBSImports fp inputBS
     ImportScanStrategyFlatParse -> case FlatParse.scanBSImports fp inputBS of
+      Just r -> return r
       Nothing ->
         throw $
           ErrFlatParseError
             FlatParseError
               { _flatParseErrorLoc = fileLoc
               }
-      Just r -> return r
     ImportScanStrategyMegaparsec -> Megaparsec.scanBSImports fp inputBS
   where
     adaptStrategy :: ImportScanStrategy -> ImportScanStrategy

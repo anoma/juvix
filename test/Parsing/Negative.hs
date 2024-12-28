@@ -107,6 +107,13 @@ filesErrorTests =
       $ \case
         ErrWrongTopModuleName {} -> Nothing
         _ -> wrongError,
+    negTest
+      "Incorrect top module path (markdown)"
+      $(mkRelDir "issue2674")
+      $(mkRelFile "Main.juvix.md")
+      $ \case
+        ErrWrongTopModuleName {} -> Nothing
+        _ -> wrongError,
     negTestAbsDir
       "Incorrect top module path of an orphan file."
       (relToProject $(mkRelDir "tests/WithoutPackageFile"))
