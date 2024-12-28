@@ -22,7 +22,6 @@ import Juvix.Compiler.Tree.Data.TransformationId.Parser qualified as Tree
 import Juvix.Data.Field
 import Juvix.Data.Keyword.All qualified as Kw
 import Juvix.Prelude
-import Juvix.Prelude as Juvix
 import Juvix.Prelude.Parsing qualified as P
 import Juvix.Prelude.Pretty hiding (group, list)
 import Options.Applicative hiding (helpDoc)
@@ -50,7 +49,7 @@ parseInputFilesMod :: NonEmpty FileExt -> Mod ArgumentFields (Prepath File) -> P
 parseInputFilesMod exts' mods = do
   let exts = NonEmpty.toList exts'
       mvars = intercalate "|" (map toMetavar exts)
-      dotExts = intercalate ", " (map Prelude.show exts)
+      dotExts = intercalate ", " (map show exts)
       helpMsg = "Path to a " <> dotExts <> " file"
       completers = foldMap (completer . extCompleter) exts
   _pathPath <-
@@ -130,7 +129,7 @@ parseNumThreads = do
         <> value defaultNumThreads
         <> showDefault
         <> help "Number of physical threads to run"
-        <> completer (listCompleter (Juvix.show NumThreadsAuto : [Juvix.show j | j <- [1 .. numCapabilities]]))
+        <> completer (listCompleter (show NumThreadsAuto : [show j | j <- [1 .. numCapabilities]]))
     )
 
 parseProgramInputFile :: Parser (AppPath File)
@@ -186,6 +185,16 @@ parseGenericOutputDir m = do
 somePreDirOpt :: ReadM (Prepath Dir)
 somePreDirOpt = mkPrepath <$> str
 
+someInputPreFileOrDirOpt :: ReadM (AppPath FileOrDir)
+someInputPreFileOrDirOpt = mkInputAppPath . mkPrepath <$> str
+  where
+    mkInputAppPath :: Prepath f -> AppPath f
+    mkInputAppPath p =
+      AppPath
+        { _pathPath = p,
+          _pathIsInput = True
+        }
+
 somePreFileOrDirOpt :: ReadM (Prepath FileOrDir)
 somePreFileOrDirOpt = mkPrepath <$> str
 
@@ -240,13 +249,13 @@ enumReader :: forall a. (Bounded a, Enum a, Show a) => Proxy a -> ReadM a
 enumReader _ = eitherReader $ \val ->
   case lookup val assocs of
     Just x -> return x
-    Nothing -> Left ("Invalid value " <> val <> ". Valid values are: " <> (Juvix.show (allElements @a)))
+    Nothing -> Left ("Invalid value " <> val <> ". Valid values are: " <> (show (allElements @a)))
   where
     assocs :: [(String, a)]
     assocs = [(Prelude.show x, x) | x <- allElements @a]
 
 enumCompleter :: forall a. (Bounded a, Enum a, Show a) => Proxy a -> Completer
-enumCompleter _ = listCompleter [Juvix.show e | e <- allElements @a]
+enumCompleter _ = listCompleter [show e | e <- allElements @a]
 
 extCompleter :: FileExt -> Completer
 extCompleter ext = mkCompleter $ \word -> do

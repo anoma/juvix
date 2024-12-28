@@ -12,7 +12,8 @@ module Juvix.Compiler.Pipeline.Driver
     processFileUpToParsing,
     processModule,
     processImport,
-    processRecursiveUpToTyped,
+    processRecursivelyUpToTyped,
+    processRecursivelyUpTo,
     processImports,
     processModuleToStoredCore,
   )
@@ -280,7 +281,53 @@ processProject = do
   nodes <- toList <$> asks (importTreeProjectNodes rootDir)
   forWithM nodes (mkEntryIndex >=> processModule)
 
-processRecursiveUpToTyped ::
+processRecursivelyUpTo ::
+  forall a r.
+  ( Members
+      '[ Reader EntryPoint,
+         TopModuleNameChecker,
+         TaggedLock,
+         HighlightBuilder,
+         Error JuvixError,
+         Files,
+         PathResolver,
+         ModuleInfoCache
+       ]
+      r
+  ) =>
+  (ImportNode -> Bool) ->
+  Sem (Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': r) a ->
+  Sem r (a, [a])
+processRecursivelyUpTo shouldRecurse upto = do
+  entry <- ask
+  PipelineResult {..} <- processFileUpToParsing entry
+  let imports = HashMap.keys (_pipelineResultImports ^. Store.moduleTable)
+  ms <- fmap catMaybes . forM imports $ \imp ->
+    withPathFile imp goImport
+  let pkg = entry ^. entryPointPackageId
+  mid <- runReader pkg (getModuleId (_pipelineResult ^. Parser.resultModule . modulePath . to topModulePathKey))
+  res <-
+    evalTopNameIdGen mid
+      . runReader _pipelineResultImports
+      . runReader _pipelineResult
+      $ upto
+  return (res, ms)
+  where
+    goImport :: ImportNode -> Sem r (Maybe a)
+    goImport node = runFail $ do
+      failUnless (shouldRecurse node)
+      pkgInfo <- fromJust . HashMap.lookup (node ^. importNodePackageRoot) <$> getPackageInfos
+      let pid = pkgInfo ^. packageInfoPackageId
+      entry <- ask
+      let entry' =
+            entry
+              { _entryPointStdin = Nothing,
+                _entryPointPackageId = pid,
+                _entryPointModulePath = Just (node ^. importNodeAbsFile)
+              }
+      (^. pipelineResult) <$> runReader entry' (processFileUpTo (inject upto))
+
+processRecursivelyUpToTyped ::
   forall r.
   ( Members
       '[ Reader EntryPoint,
@@ -295,33 +342,7 @@ processRecursiveUpToTyped ::
       r
   ) =>
   Sem r (InternalTypedResult, [InternalTypedResult])
-processRecursiveUpToTyped = do
-  entry <- ask
-  PipelineResult {..} <- processFileUpToParsing entry
-  let imports = HashMap.keys (_pipelineResultImports ^. Store.moduleTable)
-  ms <- forM imports $ \imp ->
-    withPathFile imp goImport
-  let pkg = entry ^. entryPointPackageId
-  mid <- runReader pkg (getModuleId (_pipelineResult ^. Parser.resultModule . modulePath . to topModulePathKey))
-  a <-
-    evalTopNameIdGen mid
-      . runReader _pipelineResultImports
-      . runReader _pipelineResult
-      $ upToInternalTyped
-  return (a, ms)
-  where
-    goImport :: ImportNode -> Sem r InternalTypedResult
-    goImport node = do
-      pkgInfo <- fromJust . HashMap.lookup (node ^. importNodePackageRoot) <$> getPackageInfos
-      let pid = pkgInfo ^. packageInfoPackageId
-      entry <- ask
-      let entry' =
-            entry
-              { _entryPointStdin = Nothing,
-                _entryPointPackageId = pid,
-                _entryPointModulePath = Just (node ^. importNodeAbsFile)
-              }
-      (^. pipelineResult) <$> runReader entry' (processFileUpTo upToInternalTyped)
+processRecursivelyUpToTyped = processRecursivelyUpTo (const True) upToInternalTyped
 
 processImport ::
   forall r.
