@@ -1289,7 +1289,6 @@ holesHelper mhint expr = do
           blt <- getAxiomBuiltinInfo n
           case blt of
             Just BuiltinIOSequence -> checkBuiltinApp n 0 2 args
-            Just BuiltinTrace -> checkBuiltinApp n 1 1 args
             _ -> return ()
         ExpressionIden (IdenFunction n) -> do
           blt <- getFunctionBuiltinInfo n
