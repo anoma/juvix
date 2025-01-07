@@ -1,6 +1,7 @@
 module Juvix.Compiler.Concrete.Translation.ImportScanner.Megaparsec
   ( module Juvix.Compiler.Concrete.Translation.ImportScanner.Base,
     scanBSImports,
+    parserStateToScanResult,
   )
 where
 
@@ -11,7 +12,6 @@ import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState
 import Juvix.Compiler.Concrete.Translation.FromSource.ParserResultBuilder
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
 import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
 import Juvix.Prelude
 
 scanBSImports ::
@@ -19,16 +19,22 @@ scanBSImports ::
   Path Abs File ->
   ByteString ->
   Sem r ScanResult
-scanBSImports fp inputBS = do
-  st <-
-    evalHighlightBuilder
-      . execParserResultBuilder mempty
-      . ignoreTopModuleNameChecker
-      $ runModuleParser fp (decodeUtf8 inputBS)
-  return
-    ScanResult
-      { _scanResultImports = hashSet . map fromImport $ st ^. parserStateImports
-      }
+scanBSImports fp inputBS =
+  fmap parserStateToScanResult
+    . evalHighlightBuilder
+    . execParserResultBuilder mempty
+    . ignoreTopModuleNameChecker
+    $ runModuleParser fp (decodeUtf8 inputBS)
+
+parserStateToScanResult :: ParserState -> ScanResult
+parserStateToScanResult st =
+  ScanResult
+    { _scanResultImports = hashSet . map fromImport $ st ^. parserStateImports
+    }
   where
     fromImport :: Import 'Parsed -> ImportScan
-    fromImport i = topModulePathToImportScan (i ^. importModulePath)
+    fromImport i =
+      ImportScan
+        { _importScanLoc = getLoc (i ^. importModulePath),
+          _importScanKey = topModulePathKey (i ^. importModulePath)
+        }

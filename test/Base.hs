@@ -80,8 +80,8 @@ assertEqDiff show_ msg a b
       putStrLn "End diff"
       Monad.fail msg
   where
-    pa = lines $ show_ a
-    pb = lines $ show_ b
+    pa = lines (show_ a)
+    pb = lines (show_ b)
 
 assertEqDiffShow :: (Eq a, Show a) => String -> a -> a -> Assertion
 assertEqDiffShow = assertEqDiff show
