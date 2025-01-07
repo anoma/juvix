@@ -781,7 +781,8 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
         registerAxiomDef (mkLambda' mkTypeField' (mkBuiltinApp' OpFieldToInt [mkVar' 0]))
       Internal.BuiltinString -> return ()
       Internal.BuiltinIO -> return ()
-      Internal.BuiltinTrace -> return ()
+      Internal.BuiltinTrace ->
+        registerAxiomDef (mkLambda' mkSmallUniv (mkLambda' (mkVar' 0) (mkBuiltinApp' OpTrace [mkVar' 0])))
       Internal.BuiltinFail ->
         registerAxiomDef (mkLambda' mkSmallUniv (mkLambda' (mkVar' 0) (mkBuiltinApp' OpFail [mkVar' 0])))
       Internal.BuiltinIntToString -> do
@@ -1300,7 +1301,6 @@ goIden i = do
       axiomInfoBuiltin <- Internal.getAxiomBuiltinInfo n
       case axiomInfoBuiltin of
         Just Internal.BuiltinIOSequence -> error "internal to core: >> must be called with 2 arguments"
-        Just Internal.BuiltinTrace -> error "internal to core: trace must be called with 1 argument"
         _ -> return ()
       m <- getIdent identIndex
       return $ case m of
@@ -1415,12 +1415,7 @@ goApplication a = do
         Just Internal.BuiltinStringEq -> app
         Just Internal.BuiltinStringToNat -> app
         Just Internal.BuiltinNatToString -> app
-        Just Internal.BuiltinTrace -> do
-          as <- exprArgs
-          case as of
-            (_ : arg : xs) ->
-              return (mkApps' (mkBuiltinApp' OpTrace [arg]) xs)
-            _ -> error "internal to core: trace must be called with 1 argument"
+        Just Internal.BuiltinTrace -> app
         Just Internal.BuiltinFail -> app
         Just Internal.BuiltinIntToString -> app
         Just Internal.BuiltinIntPrint -> app
