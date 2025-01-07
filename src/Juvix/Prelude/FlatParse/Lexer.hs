@@ -11,7 +11,5 @@ import Juvix.Prelude.FlatParse
 whiteSpace1 :: Parser e ()
 whiteSpace1 = skipSome whiteSpaceChar
 
--- TODO is Ascii version much faster?
 whiteSpaceChar :: Parser e ()
--- whiteSpaceChar = skipSatisfyAscii L.isWhiteSpace
 whiteSpaceChar = skipSatisfy L.isWhiteSpace
