@@ -298,7 +298,9 @@ destruct = \case
 
       mkBranchChild :: CaseBranch -> NodeChild
       mkBranchChild CaseBranch {..} =
-        (if _caseBranchSave then oneTempVar (TempVar Nothing Nothing) else noTempVar) _caseBranchBody
+        (if _caseBranchSave then oneTempVar (TempVar Nothing Nothing indTy) else noTempVar) _caseBranchBody
+        where
+          indTy = TyInductive (TypeInductive _nodeCaseInductive)
 
       mkBranches :: [CaseBranch] -> [Node] -> [CaseBranch]
       mkBranches = zipWithExact (flip (set caseBranchBody))

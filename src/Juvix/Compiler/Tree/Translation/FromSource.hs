@@ -430,7 +430,12 @@ parseSave = do
       { _nodeSaveInfo = NodeInfo (Just loc'),
         _nodeSaveArg = arg,
         _nodeSaveBody = body,
-        _nodeSaveTempVar = TempVar mname (Just loc)
+        _nodeSaveTempVar =
+          TempVar
+            { _tempVarName = mname,
+              _tempVarLocation = Just loc,
+              _tempVarType = TyDynamic
+            }
       }
 
 withSave ::

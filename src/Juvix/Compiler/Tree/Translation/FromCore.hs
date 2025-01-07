@@ -270,7 +270,12 @@ genCode infoTable fi =
           { _nodeSaveInfo = mempty,
             _nodeSaveArg = arg,
             _nodeSaveBody = body,
-            _nodeSaveTempVar = TempVar (Just name) loc
+            _nodeSaveTempVar =
+              TempVar
+                { _tempVarName = Just name,
+                  _tempVarLocation = loc,
+                  _tempVarType = convertType 0 (_letItem ^. Core.letItemBinder . Core.binderType)
+                }
           }
       where
         name = _letItem ^. Core.letItemBinder . Core.binderName

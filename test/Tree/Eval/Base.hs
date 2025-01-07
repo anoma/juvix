@@ -7,6 +7,7 @@ import Juvix.Compiler.Tree.Error
 import Juvix.Compiler.Tree.Evaluator
 import Juvix.Compiler.Tree.Language.Base
 import Juvix.Compiler.Tree.Language.Value
+import Juvix.Compiler.Tree.Options qualified as Tree
 import Juvix.Compiler.Tree.Pretty
 import Juvix.Compiler.Tree.Transformation
 import Juvix.Compiler.Tree.Translation.FromSource
@@ -36,12 +37,13 @@ treeEvalAssertionParam evalParam mainFile expectedFile trans testTrans step = do
     Left err -> assertFailure (prettyString err)
     Right tab0 -> do
       step "Validate"
-      case run $ runError @JuvixError $ applyTransformations [Validate] tab0 of
+      let opts = Tree.defaultOptions
+      case run $ runReader opts $ runError @JuvixError $ applyTransformations [Validate] tab0 of
         Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right tab1 -> do
           unless (null trans) $
             step "Transform"
-          case run $ runError @JuvixError $ applyTransformations trans tab1 of
+          case run $ runReader opts $ runError @JuvixError $ applyTransformations trans tab1 of
             Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
             Right tab -> do
               testTrans tab

@@ -16,7 +16,7 @@ import Juvix.Compiler.Tree.Transformation.FilterUnreachable
 import Juvix.Compiler.Tree.Transformation.IdentityTrans
 import Juvix.Compiler.Tree.Transformation.Validate
 
-applyTransformations :: forall r. (Member (Error JuvixError) r) => [TransformationId] -> InfoTable -> Sem r InfoTable
+applyTransformations :: forall r. (Members '[Error JuvixError, Reader Options] r) => [TransformationId] -> InfoTable -> Sem r InfoTable
 applyTransformations ts tbl = foldM (flip appTrans) tbl ts
   where
     appTrans :: TransformationId -> InfoTable -> Sem r InfoTable
