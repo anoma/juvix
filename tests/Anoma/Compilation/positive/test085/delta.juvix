@@ -12,7 +12,7 @@ main : Delta :=
         logic := \{_ _ := true};
         ephemeral := true;
         quantity := 55;
-        data := 0, 0;
+        data := 0;
         nullifier-key := 0;
         nonce := 0;
         rseed := 0;
@@ -28,7 +28,8 @@ main : Delta :=
     resNullifier : Nat := nullifier resource;
   in -- Most of these call return large nouns that are not appropritate for testing.
       -- This test checks that these functions do not crash.
-    kind resource
+      kind
+      resource
     >-> addDelta (resource-delta resource) (resource-delta resource)
     >-> addDelta (resource-delta resource) (resource-delta resource)
     >-> proveDelta zeroDelta
