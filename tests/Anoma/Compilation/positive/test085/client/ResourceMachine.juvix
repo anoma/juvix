@@ -14,7 +14,7 @@ module Resource;
       logic : Resource-Logic;
       ephemeral : Bool;
       quantity : Nat;
-      data : Pair Nat Nat;
+      data : Nat;
       --- 256 bits
       nullifier-key : Nat;
       --- nonce for commitments 256 bits

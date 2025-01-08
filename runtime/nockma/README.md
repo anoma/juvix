@@ -7,5 +7,5 @@ shell in the root of the Anoma clone:
 
 ```sh
 iex -S mix
-iex(1)> File.write("./anomalib.nockma", Nock.rm_core |> Noun.Format.print)
+iex(1)> File.write("./anomalib.nockma", Nock.Lib.rm_core |> Noun.Format.print)
 ```
