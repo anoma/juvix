@@ -1,7 +1,7 @@
 # Title
 
 ```juvix
-module InvalidExtractModuleBlockExtraAttribute;
+module Markdown.InvalidCodeBlockExtraAttribute;
 ```
 
 ```juvix hide extract-module-statements
