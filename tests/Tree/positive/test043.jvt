@@ -1,0 +1,41 @@
+
+type List {
+  nil : List;
+  cons : (*, List) -> List;
+}
+
+function lambda_add(integer) : integer;
+function lambda_add2(integer, integer) : integer;
+function mapnat(integer -> integer, List) : List;
+function main() : List;
+
+function lambda_add(_X' : integer) : integer {
+  add(1, _X')
+}
+
+function lambda_add2(_X : integer, _Y : integer) : integer {
+  add(_X, _Y)
+}
+
+function mapnat(f : integer -> integer, _X : List) : List {
+  case[List](_X) {
+    nil: alloc[nil]()
+    cons: save {
+      alloc[cons](ccall(f, tmp[0].cons[0]), call[mapnat](f, tmp[0].cons[1]))
+    }
+  }
+}
+
+function mysum(f : (integer, integer) -> integer, _X : List) : integer {
+  case[List](_X) {
+    nil: 0
+    cons: save {
+      ccall(f, tmp[0].cons[0], call[mysum](f, tmp[0].cons[1]))
+    }
+  }
+}
+
+function main() : integer {
+  call[mysum](calloc[lambda_add2](), call[mapnat](calloc[lambda_add](), alloc[cons](1, alloc[cons](3, alloc[cons](4, alloc[nil]())))))
+  -- result: 11
+}

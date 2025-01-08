@@ -1,15 +1,14 @@
-module Tree.Transformation.Apply (allTests) where
+module Tree.Transformation.ConvertUnaryCalls (allTests) where
 
 import Base
 import Juvix.Compiler.Tree.Transformation
-import Juvix.Compiler.Tree.Transformation.Apply (checkNoCallClosures)
 import Tree.Eval.Positive qualified as Eval
 import Tree.Transformation.Base
 
 allTests :: TestTree
 allTests =
   testGroup
-    "Apply"
+    "ConvertUnaryCalls"
     ( map liftTest $
         Eval.filterTests
           [ "Test007: Higher-order functions",
@@ -22,13 +21,13 @@ allTests =
     )
 
 pipe :: [TransformationId]
-pipe = [Apply]
+pipe = [ConvertUnaryCalls]
 
 liftTest :: Eval.PosTest -> TestTree
 liftTest _testEval =
   fromTest
     Test
       { _testTransformations = pipe,
-        _testAssertion = assertBool "check no CallClosures" . checkNoCallClosures,
+        _testAssertion = const (return ()),
         _testEval
       }
