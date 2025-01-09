@@ -16,6 +16,8 @@ module Juvix.Compiler.Pipeline.Driver
     processRecursivelyUpTo,
     processImports,
     processModuleToStoredCore,
+    processProjectUpToScoping,
+    processProjectUpToParsing,
   )
 where
 
@@ -23,9 +25,13 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print.Base (docNoCommentsDefault)
+import Juvix.Compiler.Concrete.Translation.FromParsed (scopeCheck)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (getModuleId)
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoper
+import Juvix.Compiler.Concrete.Translation.FromSource (fromSource)
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
+import Juvix.Compiler.Concrete.Translation.FromSource.Data.Context (ParserResult)
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState (parserStateImports)
 import Juvix.Compiler.Concrete.Translation.FromSource.Data.ParserState qualified as Parser
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker
@@ -40,11 +46,13 @@ import Juvix.Compiler.Pipeline.JvoCache
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Core.Extra
+import Juvix.Compiler.Store.Extra
 import Juvix.Compiler.Store.Extra qualified as Store
 import Juvix.Compiler.Store.Language
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Store.Options qualified as StoredModule
 import Juvix.Compiler.Store.Options qualified as StoredOptions
+import Juvix.Compiler.Store.Scoped.Language (ScopedModuleTable)
 import Juvix.Compiler.Store.Scoped.Language qualified as Scoped
 import Juvix.Data.CodeAnn
 import Juvix.Data.SHA256 qualified as SHA256
@@ -275,11 +283,128 @@ processModuleCacheMiss entryIx = do
       return r
     ProcessModuleRecompile recomp -> recomp ^. recompileDo
 
-processProject :: (Members '[PathResolver, ModuleInfoCache, Reader EntryPoint, Reader ImportTree] r) => Sem r [(ImportNode, PipelineResult ModuleInfo)]
+processProject ::
+  (Members '[PathResolver, ModuleInfoCache, Reader EntryPoint, Reader ImportTree] r) =>
+  Sem r [ProcessedNode ()]
 processProject = do
   rootDir <- asks (^. entryPointRoot)
-  nodes <- toList <$> asks (importTreeProjectNodes rootDir)
-  forWithM nodes (mkEntryIndex >=> processModule)
+  nodes <- asks (importTreeProjectNodes rootDir)
+  map mkProcessed <$> forWithM nodes (mkEntryIndex >=> processModule)
+  where
+    mkProcessed :: (ImportNode, PipelineResult ModuleInfo) -> ProcessedNode ()
+    mkProcessed (_processedNode, _processedNodeInfo) =
+      ProcessedNode
+        { _processedNodeData = (),
+          ..
+        }
+
+processProjectWith ::
+  forall a r.
+  ( Members
+      '[ Error JuvixError,
+         ModuleInfoCache,
+         PathResolver,
+         Reader EntryPoint,
+         Reader ImportTree,
+         Files
+       ]
+      r
+  ) =>
+  ( forall r'.
+    ( Members
+        '[ Error JuvixError,
+           Files,
+           Reader PackageId,
+           HighlightBuilder,
+           PathResolver
+         ]
+        r'
+    ) =>
+    ProcessedNode () ->
+    Sem r' a
+  ) ->
+  Sem r [ProcessedNode a]
+processProjectWith procNode = do
+  l <- processProject
+  pkgId <- asks (^. entryPointPackageId)
+  runReader pkgId $
+    sequence
+      [ do
+          d <-
+            withResolverRoot (n ^. processedNode . importNodePackageRoot)
+              . evalHighlightBuilder
+              $ procNode n
+          return (set processedNodeData d n)
+        | n <- l
+      ]
+
+processProjectUpToScoping ::
+  forall r.
+  ( Members
+      '[ Files,
+         Error JuvixError,
+         PathResolver,
+         ModuleInfoCache,
+         Reader EntryPoint,
+         Reader ImportTree
+       ]
+      r
+  ) =>
+  Sem r [ProcessedNode ScoperResult]
+processProjectUpToScoping = processProjectWith processNodeUpToScoping
+
+processProjectUpToParsing ::
+  forall r.
+  ( Members
+      '[ Files,
+         Error JuvixError,
+         PathResolver,
+         ModuleInfoCache,
+         Reader EntryPoint,
+         Reader ImportTree
+       ]
+      r
+  ) =>
+  Sem r [ProcessedNode ParserResult]
+processProjectUpToParsing = processProjectWith processNodeUpToParsing
+
+processNodeUpToParsing ::
+  ( Members
+      '[ PathResolver,
+         Error JuvixError,
+         Files,
+         HighlightBuilder,
+         Reader PackageId
+       ]
+      r
+  ) =>
+  ProcessedNode () ->
+  Sem r ParserResult
+processNodeUpToParsing node =
+  runTopModuleNameChecker $
+    fromSource Nothing (Just (node ^. processedNode . importNodeAbsFile))
+
+processNodeUpToScoping ::
+  ( Members
+      '[ PathResolver,
+         Error JuvixError,
+         Files,
+         HighlightBuilder,
+         Reader PackageId
+       ]
+      r
+  ) =>
+  ProcessedNode () ->
+  Sem r ScoperResult
+processNodeUpToScoping node = do
+  parseRes <- processNodeUpToParsing node
+  pkg <- ask
+  let modules = node ^. processedNodeInfo . pipelineResultImports
+      scopedModules :: ScopedModuleTable = getScopedModuleTable modules
+      tmp :: TopModulePathKey = relPathtoTopModulePathKey (node ^. processedNode . importNodeFile)
+      moduleid :: ModuleId = run (runReader pkg (getModuleId tmp))
+  evalTopNameIdGen moduleid $
+    scopeCheck pkg scopedModules parseRes
 
 processRecursivelyUpTo ::
   forall a r.

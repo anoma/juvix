@@ -2,19 +2,13 @@
 
 module Juvix.Formatter where
 
-import Juvix.Compiler.Concrete.Data.Highlight.Builder (evalHighlightBuilder)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print (ppOutDefault)
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (ScoperResult, getModuleId, scopeCheck)
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (ScoperResult)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
-import Juvix.Compiler.Concrete.Translation.FromSource (ParserResult, fromSource)
-import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker (runTopModuleNameChecker)
+import Juvix.Compiler.Pipeline.Driver.Data
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver
-import Juvix.Compiler.Pipeline.Result
-import Juvix.Compiler.Store.Extra (getScopedModuleTable)
-import Juvix.Compiler.Store.Language qualified as Store
-import Juvix.Compiler.Store.Scoped.Language (ScopedModuleTable)
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Paths
 import Juvix.Prelude
@@ -113,36 +107,23 @@ formatModuleInfo ::
        ]
       r
   ) =>
-  ImportNode ->
-  PipelineResult Store.ModuleInfo ->
+  ProcessedNode ScoperResult ->
   Sem r SourceCode
-formatModuleInfo node moduleInfo =
-  withResolverRoot (node ^. importNodePackageRoot)
-    . evalHighlightBuilder
-    $ do
-      pkg :: PackageId <- ask
-      parseRes :: ParserResult <-
-        runTopModuleNameChecker $
-          fromSource Nothing (Just (node ^. importNodeAbsFile))
-      let modules = moduleInfo ^. pipelineResultImports
-          scopedModules :: ScopedModuleTable = getScopedModuleTable modules
-          tmp :: TopModulePathKey = relPathtoTopModulePathKey (node ^. importNodeFile)
-          moduleid :: ModuleId = run (runReader pkg (getModuleId tmp))
-      scopeRes :: ScoperResult <-
-        evalTopNameIdGen moduleid $
-          scopeCheck pkg scopedModules parseRes
-      originalSource :: Text <- readFile' (node ^. importNodeAbsFile)
-      formattedTxt <-
-        runReader originalSource $
-          formatScoperResult False scopeRes
-      let formatRes =
-            SourceCode
-              { _sourceCodeFormatted = formattedTxt,
-                _sourceCodeOriginal = originalSource
-              }
-      return . forcing formatRes $ do
-        forcesField sourceCodeFormatted
-        forcesField sourceCodeOriginal
+formatModuleInfo pnode = do
+  let node = pnode ^. processedNode
+      scopeRes = pnode ^. processedNodeData
+  originalSource :: Text <- readFile' (node ^. importNodeAbsFile)
+  formattedTxt <-
+    runReader originalSource $
+      formatScoperResult False scopeRes
+  let formatRes =
+        SourceCode
+          { _sourceCodeFormatted = formattedTxt,
+            _sourceCodeOriginal = originalSource
+          }
+  return . forcing formatRes $ do
+    forcesField sourceCodeFormatted
+    forcesField sourceCodeOriginal
 
 formatPath ::
   (Members '[Reader OriginalSource, ScopeEff] r) =>

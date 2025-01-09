@@ -4,7 +4,9 @@ module Juvix.Compiler.Pipeline.Driver.Data
   )
 where
 
+import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
 import Juvix.Compiler.Pipeline.Result
+import Juvix.Compiler.Store.Language
 import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
@@ -15,7 +17,17 @@ data CompileResult = CompileResult
     _compileResultChanged :: Bool
   }
 
+data ProcessedNode a = ProcessedNode
+  { _processedNode :: ImportNode,
+    _processedNodeInfo :: PipelineResult ModuleInfo,
+    _processedNodeData :: a
+  }
+
 makeLenses ''CompileResult
+makeLenses ''ProcessedNode
+
+instance Functor ProcessedNode where
+  fmap = over processedNodeData
 
 instance Semigroup CompileResult where
   sconcat l =
