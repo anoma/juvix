@@ -21,7 +21,7 @@ tests:
         trap 'rm -rf -- "$temp"' EXIT
         cp Test.juvix.md $temp
         cd $temp
-        touch juvix.yaml
+        juvix init
         juvix --log-level error markdown Test.juvix.md --stdout
     stdout:
       contains:
@@ -37,7 +37,7 @@ tests:
         trap 'rm -rf -- "$temp"' EXIT
         cp Test.juvix.md $temp
         cd $temp
-        touch juvix.yaml
+        juvix init
         juvix --log-level error markdown Test.juvix.md --output-dir=OUT
         [ -d OUT ]
         [ -f OUT/Test.md ]
@@ -53,7 +53,7 @@ tests:
         trap 'rm -rf -- "$temp"' EXIT
         cp Test.juvix.md $temp
         cd $temp
-        touch juvix.yaml
+        juvix init
         juvix --log-level error markdown Test.juvix.md --prefix-id="XYZ"
         cat markdown/Test.md
     stdout:

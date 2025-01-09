@@ -75,7 +75,7 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "Test.juvix.md")
       -- Cmd to regenerate the expected file: juvix markdown --prefix-url X --prefix-id Y --no-path Test.juvix.md
-      $(mkRelFile "markdown/Markdown.Test.md")
+      $(mkRelFile "markdown/Test.md")
       "X"
       "Y"
       True
