@@ -3,6 +3,10 @@ module Commands.Dev.Nockma.Encode.Options where
 import CommonOptions
 import Prelude (show)
 
+data Transcode
+  = Cue
+  deriving stock (Eq, Bounded, Ord, Enum, Data)
+
 data EncodeType
   = EncodeBase64
   | EncodeBytes
@@ -22,7 +26,8 @@ instance Pretty EncodeType where
 
 data NockmaEncodeOptions = NockmaEncodeOptions
   { _nockmaEncodeFrom :: EncodeType,
-    _nockmaEncodeTo :: EncodeType
+    _nockmaEncodeTo :: EncodeType,
+    _nockmaEncodeApply :: Maybe Transcode
   }
   deriving stock (Data)
 
@@ -57,7 +62,11 @@ parseNockmaEncodeOptions = do
                 <> encodingHelp
             )
       )
-
+  optCue <-
+    switch
+      ( long "cue"
+          <> help "Apply cue if the original encoding wasn't jammed"
+      )
   _nockmaEncodeTo <-
     option
       (enumReader Proxy)
@@ -69,4 +78,6 @@ parseNockmaEncodeOptions = do
                 <> encodingHelp
             )
       )
-  pure NockmaEncodeOptions {..}
+  pure $
+    let _nockmaEncodeApply = guard optCue $> Cue
+     in NockmaEncodeOptions {..}
