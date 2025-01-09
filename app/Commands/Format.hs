@@ -49,7 +49,7 @@ targetFromOptions opts = do
 -- | Formats the project on the root
 formatProject ::
   forall r.
-  (Members '[App, EmbedIO, TaggedLock, Logger, ScopeEff, Files, Output FormattedFileInfo] r) =>
+  (Members (ScopeEff ': Output FormattedFileInfo ': AppEffects) r) =>
   Sem r FormatResult
 formatProject = silenceProgressLog . runPipelineOptions . runPipelineSetup $ do
   res :: [ProcessedNode ScoperResult] <- processProjectUpToScoping
@@ -61,7 +61,7 @@ formatProject = silenceProgressLog . runPipelineOptions . runPipelineSetup $ do
   formatPkgRes <- formatPackageDotJuvix
   return (formatRes <> formatPkgRes)
 
-formatPackageDotJuvix :: forall r. (Members '[App, Files, Logger, Output FormattedFileInfo, ScopeEff] r) => Sem r FormatResult
+formatPackageDotJuvix :: forall r. (Members (Output FormattedFileInfo ': ScopeEff ': AppEffects) r) => Sem r FormatResult
 formatPackageDotJuvix = do
   pkgDotJuvix <- askPackageDotJuvixPath
   ifM (fileExists' pkgDotJuvix) (format pkgDotJuvix) (return mempty)
