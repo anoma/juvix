@@ -24,35 +24,29 @@ runCommand opts = runSimpleErrorIO $ do
     EncodeBytes ->
       case opts ^. nockmaEncodeApply of
         Nothing -> renderStdOutRaw (jamToByteString from)
-        Just Cue -> case from of
-          Nockma.TermAtom a -> renderStdOutRaw (naturalToByteString (a ^. Nockma.atom))
-          Nockma.TermCell {} -> throw @SimpleError "Cannot cue a cell"
+        Just Cue -> termToByteString from >>= renderStdOutRaw
     EncodeBase64 ->
       case opts ^. nockmaEncodeApply of
         Nothing -> renderStdOut (encodeJam64 from)
-        Just Cue -> case from of
-          Nockma.TermAtom a ->
-            renderStdOut
+        Just Cue ->
+          termToByteString from
+            >>= renderStdOut
               . decodeUtf8
               . Base64.encode
-              . naturalToByteString
-              $ a ^. Nockma.atom
-          Nockma.TermCell {} -> throw @SimpleError "Cannot cue a cell"
     EncodeText ->
       case opts ^. nockmaEncodeApply of
         Nothing -> renderStdOut (Nockma.ppSerialize from)
-        Just Cue -> case from of
-          Nockma.TermAtom a ->
-            (decodeCue . naturalToByteString $ a ^. Nockma.atom) >>= renderStdOut . Nockma.ppSerialize
-          Nockma.TermCell {} -> throw @SimpleError "Cannot cue a cell"
+        Just Cue -> termToByteString from >>= decodeCue >>= renderStdOut . Nockma.ppSerialize
     EncodeDebug ->
       case opts ^. nockmaEncodeApply of
         Nothing -> renderStdOut (Nockma.ppPrint from)
-        Just Cue -> case from of
-          Nockma.TermAtom a ->
-            (decodeCue . naturalToByteString $ a ^. Nockma.atom) >>= renderStdOut . Nockma.ppPrint
-          Nockma.TermCell {} -> throw @SimpleError "Cannot cue a cell"
+        Just Cue -> termToByteString from >>= decodeCue >>= renderStdOut . Nockma.ppPrint
   where
+    termToByteString :: (Members '[Error SimpleError] r') => Term Natural -> Sem r' ByteString
+    termToByteString = \case
+      Nockma.TermCell {} -> throw @SimpleError "Cannot cue a cell"
+      Nockma.TermAtom a -> return (naturalToByteString (a ^. Nockma.atom))
+
     fromTextEncoding :: (Members '[App, EmbedIO] r') => Sem r' (Term Natural)
     fromTextEncoding = do
       bs <- getContents

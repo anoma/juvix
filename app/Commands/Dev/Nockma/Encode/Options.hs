@@ -65,7 +65,7 @@ parseNockmaEncodeOptions = do
   optCue <-
     switch
       ( long "cue"
-          <> help "Apply cue if the original encoding wasn't jammed"
+          <> help "Apply cue"
       )
   _nockmaEncodeTo <-
     option
