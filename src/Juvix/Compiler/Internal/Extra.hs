@@ -186,7 +186,8 @@ genPatternDefs valueName pat =
     goPatternVariable :: VarName -> Sem (Output FunctionDef ': r) ()
     goPatternVariable var = do
       h <- freshHole (getLoc valueName)
-      let body =
+      let var' = set nameKind KNameLocal var
+          body =
             ExpressionCase
               Case
                 { _caseExpression = ExpressionIden (IdenFunction valueName),
@@ -197,7 +198,7 @@ genPatternDefs valueName pat =
                       CaseBranch
                         { _caseBranchPattern = pat,
                           _caseBranchRhs =
-                            CaseBranchRhsExpression (ExpressionIden (IdenVar var))
+                            CaseBranchRhsExpression (ExpressionIden (IdenVar var'))
                         }
                 }
       body' <- clone body
