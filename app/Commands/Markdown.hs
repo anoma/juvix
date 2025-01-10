@@ -19,12 +19,39 @@ runCommand ::
   (Members AppEffects r) =>
   MarkdownOptions ->
   Sem r ()
-runCommand opts = runPipelineOptions . runPipelineSetup $ do
-  res :: [ProcessedNode ScoperResult] <- processProjectUpToScoping
-  forM_ res (goScoperResult opts . (^. processedNodeData))
+runCommand opts = runReader opts $ do
+  case opts ^. markdownInputFile of
+    Nothing -> goProject
+    Just p ->
+      fromAppPathFileOrDir p >>= \case
+        Left f -> goSingleFile f
+        Right {} -> goProject
 
-goScoperResult :: (Members AppEffects r) => MarkdownOptions -> Scoper.ScoperResult -> Sem r ()
-goScoperResult opts scopedM = do
+goSingleFile ::
+  forall r.
+  (Members (Reader MarkdownOptions ': AppEffects) r) =>
+  Path Abs File ->
+  Sem r ()
+goSingleFile f = do
+  let inputFile =
+        AppPath
+          { _pathPath = preFileFromAbs f,
+            _pathIsInput = True
+          }
+  scopedM :: Scoper.ScoperResult <- runPipelineNoOptions (Just inputFile) upToScopingEntry
+  goScoperResult scopedM
+
+goProject ::
+  forall r.
+  (Members (Reader MarkdownOptions ': AppEffects) r) =>
+  Sem r ()
+goProject = runPipelineOptions . runPipelineSetup $ do
+  res :: [ProcessedNode ScoperResult] <- processProjectUpToScoping
+  forM_ res (goScoperResult . (^. processedNodeData))
+
+goScoperResult :: (Members (Reader MarkdownOptions ': AppEffects) r) => Scoper.ScoperResult -> Sem r ()
+goScoperResult scopedM = do
+  opts <- ask
   let m :: Module 'Scoped 'ModuleTop = scopedM ^. Scoper.resultModule
   if
       | isNothing (m ^. moduleMarkdownInfo) ->
