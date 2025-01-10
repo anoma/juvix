@@ -6,7 +6,7 @@ import Juvix.Compiler.Tree.Extra.Recursors
 import Juvix.Compiler.Tree.Extra.Type
 import Juvix.Compiler.Tree.Transformation.Base
 
--- Replaces generic calls (with CallClosures) to unknown unary functions with
+-- | Replaces generic calls (with CallClosures) to unknown unary functions with
 -- known non-function target types by direct closure calls (with Call)
 convertUnaryCalls :: InfoTable -> InfoTable
 convertUnaryCalls tab = mapT convert tab
