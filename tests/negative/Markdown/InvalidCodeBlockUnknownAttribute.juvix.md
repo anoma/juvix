@@ -1,7 +1,7 @@
 # Title
 
 ```juvix
-module InvalidExtractModuleBlockUnknownAttribute;
+module Markdown.InvalidCodeBlockUnknownAttribute;
 ```
 
 ```juvix invalid-attribute

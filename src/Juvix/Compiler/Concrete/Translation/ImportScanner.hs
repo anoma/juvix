@@ -52,13 +52,13 @@ scanBSImports fp inputBS = do
           logWarn (mkAnsiText ("The FlatParse parser failed to scan the file " <> toFilePath @Text fp <> ". Falling back to MegaParsec."))
           Megaparsec.scanBSImports fp inputBS
     ImportScanStrategyFlatParse -> case FlatParse.scanBSImports fp inputBS of
+      Just r -> return r
       Nothing ->
         throw $
           ErrFlatParseError
             FlatParseError
               { _flatParseErrorLoc = fileLoc
               }
-      Just r -> return r
     ImportScanStrategyMegaparsec -> Megaparsec.scanBSImports fp inputBS
   where
     adaptStrategy :: ImportScanStrategy -> ImportScanStrategy
