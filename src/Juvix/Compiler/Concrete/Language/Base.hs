@@ -279,11 +279,11 @@ data Definition (s :: Stage)
   | DefinitionDeriving (Deriving s)
   | DefinitionInductive (InductiveDef s)
   | DefinitionAxiom (AxiomDef s)
+  | DefinitionModule (Module s 'ModuleLocal)
   | DefinitionProjectionDef (ProjectionDef s)
 
 data NonDefinition (s :: Stage)
   = NonDefinitionImport (Import s)
-  | NonDefinitionModule (Module s 'ModuleLocal)
   | NonDefinitionOpenModule (OpenModule s 'OpenFull)
 
 newtype Statements (s :: Stage) = Statements
@@ -3757,6 +3757,11 @@ getFunctionSymbol sym = case sing :: SStage s of
     FunctionDefName p -> p
     FunctionDefNamePattern {} -> impossibleError "invalid call"
   SScoped -> sym ^. functionDefNameScoped
+
+modulePathTypeKey :: forall s. (SingI s) => ModulePathType s 'ModuleTop -> TopModulePathKey
+modulePathTypeKey p = case sing :: SStage s of
+  SParsed -> topModulePathKey p
+  SScoped -> topModulePathKey (p ^. S.nameConcrete)
 
 functionSymbolPattern :: forall s. (SingI s) => FunctionSymbolType s -> Maybe (PatternAtomType s)
 functionSymbolPattern f = case sing :: SStage s of

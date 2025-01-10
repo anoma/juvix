@@ -32,15 +32,27 @@ scopeNameSpaceLocal s = case s of
   SNameSpaceModules -> scopeLocalModuleSymbols
   SNameSpaceFixities -> scopeLocalFixitySymbols
 
+emptyReserved :: Reserved
+emptyReserved =
+  Reserved
+    { _reservedLocalSymbols = mempty,
+      _reservedLocalModuleSymbols = mempty,
+      _reservedLocalFixitySymbols = mempty
+    }
+
+emptyInScope :: InScope
+emptyInScope =
+  InScope
+    { _inScopeSymbols = mempty,
+      _inScopeLocalModuleSymbols = mempty,
+      _inScopeFixitySymbols = mempty
+    }
+
 emptyScope :: S.AbsModulePath -> Scope
 emptyScope absPath =
   Scope
     { _scopePath = absPath,
-      _scopeSymbols = mempty,
-      _scopeModuleSymbols = mempty,
-      _scopeFixitySymbols = mempty,
-      _scopeTopModules = mempty,
-      _scopeLocalSymbols = mempty,
-      _scopeLocalModuleSymbols = mempty,
-      _scopeLocalFixitySymbols = mempty
+      _scopeInScope = emptyInScope,
+      _scopeImports = mempty,
+      _scopeReserved = emptyReserved
     }

@@ -27,24 +27,32 @@ data BindingStrategy
   | -- | Top binding does not allow shadowing. It may result in an ambiguous error
     BindingTop
 
+data InScope = InScope
+  { _inScopeSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceSymbols),
+    -- | Local module symbols (excluding top modules associated with files)
+    _inScopeLocalModuleSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceModules),
+    _inScopeFixitySymbols :: HashMap Symbol (SymbolInfo 'NameSpaceFixities)
+  }
+
+-- | Symbols that have been defined in the current scope level. Every symbol
+-- should map to itself. This is needed because we may query it with a
+-- symbol with a different location but we may want the location of the
+-- original symbol
+data Reserved = Reserved
+  { _reservedLocalSymbols :: HashMap Symbol S.Symbol,
+    _reservedLocalModuleSymbols :: HashMap Symbol S.Symbol,
+    _reservedLocalFixitySymbols :: HashMap Symbol S.Symbol
+  }
+
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
-    _scopeSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceSymbols),
-    -- | Local module symbols (excluding top modules associated with files)
-    _scopeModuleSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceModules),
-    _scopeFixitySymbols :: HashMap Symbol (SymbolInfo 'NameSpaceFixities),
+    _scopeInScope :: InScope,
     -- | The map from S.NameId to Modules is needed because we support merging
     -- several imports under the same name. E.g.
     -- import A as X;
     -- import B as X;
-    _scopeTopModules :: HashMap TopModulePathKey (HashMap S.NameId ScopedModule),
-    -- | Symbols that have been defined in the current scope level. Every symbol
-    -- should map to itself. This is needed because we may query it with a
-    -- symbol with a different location but we may want the location of the
-    -- original symbol
-    _scopeLocalSymbols :: HashMap Symbol S.Symbol,
-    _scopeLocalModuleSymbols :: HashMap Symbol S.Symbol,
-    _scopeLocalFixitySymbols :: HashMap Symbol S.Symbol
+    _scopeImports :: HashMap TopModulePathKey (HashMap S.NameId ScopedModule),
+    _scopeReserved :: Reserved
   }
 
 newtype ModulesCache = ModulesCache
@@ -55,9 +63,16 @@ newtype ScopeParameters = ScopeParameters
   { _scopeImportedModules :: HashMap TopModulePathKey ScopedModule
   }
 
+data ReservedLocalModule = ReservedLocalModule
+  { _reservedLocalModuleExportInfo :: ExportInfo,
+    _reservedLocalModuleReserved :: Reserved,
+    _reservedLocalModuleStatements :: StatementSections 'Parsed
+  }
+
 data ScoperState = ScoperState
   { -- | Local and top modules currently in scope - used to look up qualified symbols
     _scoperModules :: HashMap S.NameId ScopedModule,
+    _scoperReservedLocalModules :: HashMap S.NameId ReservedLocalModule,
     _scoperAlias :: HashMap S.NameId PreSymbolEntry,
     _scoperNameSignatures :: HashMap S.NameId (NameSignature 'Parsed),
     -- | Indexed by the inductive type. This is used for record updates
@@ -98,6 +113,8 @@ emptyScoperSyntax :: ScoperSyntax
 emptyScoperSyntax = ScoperSyntax mempty mempty
 
 makeLenses ''ScoperIterators
+makeLenses ''InScope
+makeLenses ''ReservedLocalModule
 makeLenses ''SymbolOperator
 makeLenses ''SymbolIterator
 makeLenses ''SymbolInfo
@@ -107,3 +124,22 @@ makeLenses ''ScoperSyntax
 makeLenses ''ScoperState
 makeLenses ''ScopeParameters
 makeLenses ''ModulesCache
+makeLenses ''Reserved
+
+scopeSymbols :: Lens' Scope (HashMap Symbol (SymbolInfo 'NameSpaceSymbols))
+scopeSymbols = scopeInScope . inScopeSymbols
+
+scopeModuleSymbols :: Lens' Scope (HashMap Symbol (SymbolInfo 'NameSpaceModules))
+scopeModuleSymbols = scopeInScope . inScopeLocalModuleSymbols
+
+scopeFixitySymbols :: Lens' Scope (HashMap Symbol (SymbolInfo 'NameSpaceFixities))
+scopeFixitySymbols = scopeInScope . inScopeFixitySymbols
+
+scopeLocalSymbols :: Lens' Scope (HashMap Symbol S.Symbol)
+scopeLocalSymbols = scopeReserved . reservedLocalSymbols
+
+scopeLocalModuleSymbols :: Lens' Scope (HashMap Symbol S.Symbol)
+scopeLocalModuleSymbols = scopeReserved . reservedLocalModuleSymbols
+
+scopeLocalFixitySymbols :: Lens' Scope (HashMap Symbol S.Symbol)
+scopeLocalFixitySymbols = scopeReserved . reservedLocalFixitySymbols
