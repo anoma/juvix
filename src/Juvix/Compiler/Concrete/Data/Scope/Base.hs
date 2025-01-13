@@ -63,16 +63,18 @@ newtype ScopeParameters = ScopeParameters
   { _scopeImportedModules :: HashMap TopModulePathKey ScopedModule
   }
 
-data ReservedLocalModule = ReservedLocalModule
-  { _reservedLocalModuleExportInfo :: ExportInfo,
-    _reservedLocalModuleReserved :: Reserved,
-    _reservedLocalModuleStatements :: StatementSections 'Parsed
+data ReservedModule = ReservedModule
+  { _reservedModuleName :: S.Name,
+    _reservedModuleExportInfo :: ExportInfo,
+    _reservedModuleReserved :: Reserved,
+    _reservedModuleStatements :: StatementSections 'Parsed
   }
 
 data ScoperState = ScoperState
   { -- | Local and top modules currently in scope - used to look up qualified symbols
+    -- TODO unify
     _scoperModules :: HashMap S.NameId ScopedModule,
-    _scoperReservedLocalModules :: HashMap S.NameId ReservedLocalModule,
+    _scoperReservedModules :: HashMap S.NameId ReservedModule,
     _scoperAlias :: HashMap S.NameId PreSymbolEntry,
     _scoperNameSignatures :: HashMap S.NameId (NameSignature 'Parsed),
     -- | Indexed by the inductive type. This is used for record updates
@@ -114,7 +116,7 @@ emptyScoperSyntax = ScoperSyntax mempty mempty
 
 makeLenses ''ScoperIterators
 makeLenses ''InScope
-makeLenses ''ReservedLocalModule
+makeLenses ''ReservedModule
 makeLenses ''SymbolOperator
 makeLenses ''SymbolIterator
 makeLenses ''SymbolInfo
@@ -126,6 +128,46 @@ makeLenses ''ScopeParameters
 makeLenses ''ModulesCache
 makeLenses ''Reserved
 
+scopedToReservedModule :: ScopedModule -> ReservedModule
+scopedToReservedModule scoped =
+  ReservedModule
+    { _reservedModuleName = scoped ^. scopedModuleName,
+      _reservedModuleExportInfo = scoped ^. scopedModuleExportInfo,
+      _reservedModuleReserved = emptyReserved,
+      _reservedModuleStatements = SectionsEmpty
+    }
+
+emptyReserved :: Reserved
+emptyReserved =
+  Reserved
+    { _reservedLocalSymbols = mempty,
+      _reservedLocalModuleSymbols = mempty,
+      _reservedLocalFixitySymbols = mempty
+    }
+
+emptyInScope :: InScope
+emptyInScope =
+  InScope
+    { _inScopeSymbols = mempty,
+      _inScopeLocalModuleSymbols = mempty,
+      _inScopeFixitySymbols = mempty
+    }
+
+emptyScope :: S.AbsModulePath -> Scope
+emptyScope absPath =
+  Scope
+    { _scopePath = absPath,
+      _scopeInScope = emptyInScope,
+      _scopeImports = mempty,
+      _scopeReserved = emptyReserved
+    }
+
+reservedNameSpace :: forall (ns :: NameSpace). (SingI ns) => Proxy ns -> Lens' Reserved (HashMap Symbol S.Symbol)
+reservedNameSpace Proxy = case sing :: SNameSpace ns of
+  SNameSpaceSymbols -> reservedLocalSymbols
+  SNameSpaceModules -> reservedLocalModuleSymbols
+  SNameSpaceFixities -> reservedLocalFixitySymbols
+
 scopeSymbols :: Lens' Scope (HashMap Symbol (SymbolInfo 'NameSpaceSymbols))
 scopeSymbols = scopeInScope . inScopeSymbols
 
@@ -135,11 +177,11 @@ scopeModuleSymbols = scopeInScope . inScopeLocalModuleSymbols
 scopeFixitySymbols :: Lens' Scope (HashMap Symbol (SymbolInfo 'NameSpaceFixities))
 scopeFixitySymbols = scopeInScope . inScopeFixitySymbols
 
-scopeLocalSymbols :: Lens' Scope (HashMap Symbol S.Symbol)
-scopeLocalSymbols = scopeReserved . reservedLocalSymbols
+scopeReservedSymbols :: Lens' Scope (HashMap Symbol S.Symbol)
+scopeReservedSymbols = scopeReserved . reservedLocalSymbols
 
-scopeLocalModuleSymbols :: Lens' Scope (HashMap Symbol S.Symbol)
-scopeLocalModuleSymbols = scopeReserved . reservedLocalModuleSymbols
+scopeReservedLocalModuleSymbols :: Lens' Scope (HashMap Symbol S.Symbol)
+scopeReservedLocalModuleSymbols = scopeReserved . reservedLocalModuleSymbols
 
-scopeLocalFixitySymbols :: Lens' Scope (HashMap Symbol S.Symbol)
-scopeLocalFixitySymbols = scopeReserved . reservedLocalFixitySymbols
+scopeReservedFixitySymbols :: Lens' Scope (HashMap Symbol S.Symbol)
+scopeReservedFixitySymbols = scopeReserved . reservedLocalFixitySymbols

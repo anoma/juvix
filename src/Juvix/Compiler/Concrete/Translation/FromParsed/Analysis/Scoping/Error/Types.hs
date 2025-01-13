@@ -712,7 +712,7 @@ instance ToGenericError ConstructorExpectedLeftApplication where
 
 data ModuleDoesNotExportSymbol = ModuleDoesNotExportSymbol
   { _moduleDoesNotExportSymbol :: Symbol,
-    _moduleDoesNotExportModule :: S.TopModulePath
+    _moduleDoesNotExportModule :: S.Name
   }
 
 instance ToGenericError ModuleDoesNotExportSymbol where

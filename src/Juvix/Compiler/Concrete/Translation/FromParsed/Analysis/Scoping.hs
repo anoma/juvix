@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use list literal" #-}
 module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping
   ( module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping,
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context,
@@ -9,6 +12,7 @@ import Control.Monad.Combinators.Expr qualified as P
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.Text qualified as Text
 import GHC.Base (maxInt, minInt)
 import Juvix.Compiler.Concrete.Data.Highlight.Builder
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder
@@ -50,7 +54,7 @@ iniScoperState :: InfoTable -> ScoperState
 iniScoperState tab =
   ScoperState
     { _scoperModules = mempty,
-      _scoperReservedLocalModules = mempty,
+      _scoperReservedModules = mempty,
       _scoperNameSignatures = tab ^. infoParsedNameSigs,
       _scoperRecordFields = tab ^. infoRecords,
       _scoperAlias = tab ^. infoScoperAlias,
@@ -283,7 +287,6 @@ reserveSymbolOfNameSpace ns kind kindPretty nameSig builtin s = do
   whenJust builtin (`registerBuiltin` s')
   whenJust nameSig (modify' . set (scoperNameSignatures . at (s' ^. S.nameId)) . Just)
   whenJust nameSig (registerParsedNameSig (s' ^. S.nameId))
-  modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
   let isTop = case strat of
         BindingLocal -> False
         BindingTop -> True
@@ -307,6 +310,7 @@ reserveSymbolOfNameSpace ns kind kindPretty nameSig builtin s = do
         Just SymbolInfo {..} -> case strat of
           BindingLocal -> symbolInfoSingle mentry
           BindingTop -> SymbolInfo (HashMap.insert path mentry _symbolInfo)
+  modify (set (scopeReservedNameSpace sns . at s) (Just s'))
   modify (over scopeNameSpace (HashMap.alter (Just . addS entry) s))
   return s'
   where
@@ -316,7 +320,7 @@ reserveSymbolOfNameSpace ns kind kindPretty nameSig builtin s = do
     sns :: Sing ns = sing
     checkNotBound :: Sem r ()
     checkNotBound = do
-      exists <- HashMap.lookup s <$> gets (^. scopeNameSpaceLocal sns)
+      exists <- gets (^. scopeReservedNameSpace sns . at s)
       whenJust exists $ \d ->
         throw
           ( ErrMultipleDeclarations
@@ -357,7 +361,7 @@ getReservedLocalModuleSymbol ::
   Symbol ->
   Sem r S.Symbol
 getReservedLocalModuleSymbol s = do
-  m <- gets (^. scopeLocalModuleSymbols)
+  m <- gets (^. scopeReservedLocalModuleSymbols)
   let s' = fromMaybe err (m ^. at s)
       err = impossibleError ("Module " <> ppTrace s <> " not found in the scope. Contents of scope:\n" <> ppTrace (toList m))
   return s'
@@ -369,7 +373,7 @@ getReservedDefinitionSymbol ::
   Symbol ->
   Sem r S.Symbol
 getReservedDefinitionSymbol s = do
-  m <- gets (^. scopeLocalSymbols)
+  m <- gets (^. scopeReservedSymbols)
   let s' = fromMaybe err (m ^. at s)
       err = impossibleError ("Symbol " <> ppTrace s <> " not found in the scope. Contents of scope:\n" <> ppTrace (toList m))
   return s'
@@ -459,7 +463,7 @@ bindFixitySymbol ::
   Symbol ->
   Sem r S.Symbol
 bindFixitySymbol s = do
-  m <- gets (^. scopeLocalFixitySymbols)
+  m <- gets (^. scopeReservedFixitySymbols)
   let s' = fromMaybe err (m ^. at s)
       err = error ("impossible. Contents of scope:\n" <> ppTrace (toList m))
   return s'
@@ -660,8 +664,8 @@ checkImportNoPublic import_@Import {..} = do
   registerName False importName
   whenJust synonymName (registerName False)
   registerScoperModules scopedModule
-  importOpen' <- mapM (checkOpenModuleShort scopedModule) _importOpen
-  usingHiding' <- mapM (checkUsingHiding importName exportInfoOriginal) _importUsingHiding
+  importOpen' <- mapM (checkOpenModuleShort (scopedToReservedModule scopedModule)) _importOpen
+  usingHiding' <- mapM (checkUsingHiding sname' exportInfoOriginal) _importUsingHiding
   let exportInfoFiltered :: ExportInfo = filterExportInfo _importPublic usingHiding' exportInfoOriginal
       filteredScopedModule = set scopedModuleExportInfo exportInfoFiltered scopedModule
   addModuleToScope filteredScopedModule
@@ -684,7 +688,8 @@ checkImportNoPublic import_@Import {..} = do
 
     registerScoperModules :: ScopedModule -> Sem r ()
     registerScoperModules m = do
-      modify (over scoperModules (HashMap.insert (m ^. scopedModulePath . S.nameId) m))
+      modify (set (scoperModules . at (m ^. scopedModulePath . S.nameId)) (Just m))
+      modify (set (scoperReservedModules . at (m ^. scopedModulePath . S.nameId)) (Just (scopedToReservedModule m)))
       forM_ (m ^. scopedModuleLocalModules) registerScoperModules
 
 getTopModulePath :: Module 'Parsed 'ModuleTop -> S.AbsModulePath
@@ -694,17 +699,23 @@ getTopModulePath Module {..} =
       S._absLocalPath = mempty
     }
 
-getModuleExportInfo :: forall r. (Members '[State ScoperState] r) => ModuleSymbolEntry -> Sem r ExportInfo
-getModuleExportInfo = fmap (^. reservedLocalModuleExportInfo) . getReservedLocalModule
+getModuleExportInfo :: forall r. (HasCallStack, Members '[State ScoperState] r) => [Text] -> ModuleSymbolEntry -> Sem r ExportInfo
+getModuleExportInfo msg = fmap (^. reservedModuleExportInfo) . getReservedLocalModule ("getModuleExportInfo" : msg)
 
-getReservedLocalModule :: forall r. (Members '[State ScoperState] r) => ModuleSymbolEntry -> Sem r ReservedLocalModule
-getReservedLocalModule m = fromMaybeM err (gets (^. scoperReservedLocalModules . at (m ^. moduleEntry . S.nameId)))
+getReservedLocalModule :: forall r. (HasCallStack, Members '[State ScoperState] r) => [Text] -> ModuleSymbolEntry -> Sem r ReservedModule
+getReservedLocalModule debug m = fromMaybeM err (gets (^. scoperReservedModules . at (m ^. moduleEntry . S.nameId)))
   where
     err :: Sem r a
     err = do
-      ms <- toList <$> gets (^. scoperModules)
-      error
-        ( "impossible. Could not find "
+      ms <- toList <$> gets (^. scoperReservedModules)
+      impossibleError
+        ( "getReservedLocalModule\n"
+            <> Text.unlines debug
+            <> "\ncallStack =\n"
+            <> ghcCallStack
+            <> "\n"
+            <> ". "
+            <> "Could not find "
             <> ppTrace m
             <> "\nModules in the state: "
             <> ppTrace ms
@@ -712,19 +723,20 @@ getReservedLocalModule m = fromMaybeM err (gets (^. scoperReservedLocalModules .
 
 lookupLocalSymbolAux ::
   forall r.
-  (Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output PreSymbolEntry, Output FixitySymbolEntry] r) =>
+  (HasCallStack, Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output PreSymbolEntry, Output FixitySymbolEntry] r) =>
+  [Text] ->
   (S.WhyInScope -> Bool) ->
   [Symbol] ->
   Symbol ->
   Sem r ()
-lookupLocalSymbolAux whyInScope modules final =
+lookupLocalSymbolAux msg whyInScope modules final =
   case modules of
     [] ->
       lookHere
     p : ps -> do
       entries <- gets (^.. scopeModuleSymbols . at p . _Just . symbolInfo . each)
       let entries' = filter (whyInScope . (^. moduleEntry . S.nameWhyInScope)) entries
-      mapM_ (getModuleExportInfo >=> lookInExport final ps) entries'
+      mapM_ (getModuleExportInfo ("lookupLocalSymbolAux" : msg) >=> lookInExport final ps) entries'
   where
     lookHere :: Sem r ()
     lookHere = do
@@ -744,11 +756,12 @@ lookupLocalSymbolAux whyInScope modules final =
 -- | Do not call directly. Looks for a symbol in (possibly) nested local modules
 lookupSymbolAux ::
   forall r.
-  (Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output PreSymbolEntry, Output FixitySymbolEntry] r) =>
+  (HasCallStack, Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output PreSymbolEntry, Output FixitySymbolEntry] r) =>
+  [Text] ->
   [Symbol] ->
   Symbol ->
   Sem r ()
-lookupSymbolAux modules final = do
+lookupSymbolAux debug modules final = do
   hereOrInLocalModule
   importedTopModule
   where
@@ -765,7 +778,7 @@ lookupSymbolAux modules final = do
         lookPrefix pref' path2 modules'
       when (notNull pref) $
         lookPrefix pref path2 modules
-      lookupLocalSymbolAux (const True) modules final
+      lookupLocalSymbolAux ("lookupSymbolAux" : debug) (const True) modules final
 
     lookPrefix :: [Symbol] -> [Symbol] -> [Symbol] -> Sem r ()
     lookPrefix pref path modules' = do
@@ -773,6 +786,7 @@ lookupSymbolAux modules final = do
           inheritDepth = length path - prefLen
           modules'' = drop prefLen modules'
       lookupLocalSymbolAux
+        ("lookPrefix" : [])
         (== iterate S.BecauseInherited S.BecauseDefined !! inheritDepth)
         modules''
         final
@@ -803,16 +817,17 @@ lookInExport sym remaining e = case remaining of
   where
     mayModule :: ExportInfo -> Symbol -> Sem r (Maybe ExportInfo)
     mayModule ExportInfo {..} s =
-      mapM getModuleExportInfo (HashMap.lookup s _exportModuleSymbols)
+      mapM (getModuleExportInfo ("lookInExport" : [])) (HashMap.lookup s _exportModuleSymbols)
 
 -- | We return a list of entries because qualified names can point to different
 -- modules due to nesting.
 lookupQualifiedSymbol ::
   forall r.
   (Members '[State Scope, State ScoperState] r) =>
+  [Text] ->
   ([Symbol], Symbol) ->
   Sem r (HashSet PreSymbolEntry, HashSet ModuleSymbolEntry, HashSet FixitySymbolEntry)
-lookupQualifiedSymbol sms = do
+lookupQualifiedSymbol debug sms = do
   (es, (ms, fs)) <-
     runOutputHashSet
       . runOutputHashSet
@@ -831,7 +846,7 @@ lookupQualifiedSymbol sms = do
       where
         -- Current module.
         here :: Sem r' ()
-        here = lookupSymbolAux path sym
+        here = lookupSymbolAux (["here"] ++ debug) path sym
         -- Looks for top level modules
         there :: Sem r' ()
         there = mapM_ (uncurry lookInTopModule) allTopPaths
@@ -872,7 +887,7 @@ checkQualifiedName ::
   QualifiedName ->
   Sem r PreSymbolEntry
 checkQualifiedName q@(QualifiedName (SymbolPath p) sym) = do
-  es <- fst3 <$> lookupQualifiedSymbol (toList p, sym)
+  es <- fst3 <$> lookupQualifiedSymbol ["checkQualifiedName"] (toList p, sym)
   case toList es of
     [] -> notInScope
     [e] -> return e
@@ -957,8 +972,8 @@ exportScope scope@Scope {..} = do
                     SNameSpaceFixities -> ExportEntriesFixities es
                 }
 
-getLocalModules :: (Member (State ScoperState) r) => ExportInfo -> Sem r (HashMap S.NameId ScopedModule)
-getLocalModules ExportInfo {..} = do
+getScopedLocalModules :: (Member (State ScoperState) r) => ExportInfo -> Sem r (HashMap S.NameId ScopedModule)
+getScopedLocalModules ExportInfo {..} = do
   mds <- gets (^. scoperModules)
   return . hashMap . map (fetch mds) $ toList _exportModuleSymbols
   where
@@ -1578,7 +1593,7 @@ checkTopModule m@Module {..} = checkedModule
             doc' <- mapM checkJudoc _moduleDoc
             registerModuleDoc (path' ^. S.nameId) doc'
             return (e, body', path', doc')
-      localModules <- getLocalModules e
+      localModules <- getScopedLocalModules e
       _moduleId <- getModuleId (topModulePathKey (path' ^. S.nameConcrete))
       doctbl <- getDocTable _moduleId
       let md =
@@ -1609,8 +1624,8 @@ withTopScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
 withTopScope ma = do
   before <- get @Scope
   let scope' =
-        ( set scopeLocalSymbols mempty
-            . set scopeLocalModuleSymbols mempty
+        ( set scopeReservedSymbols mempty
+            . set scopeReservedLocalModuleSymbols mempty
         )
           before
   put scope'
@@ -1624,18 +1639,18 @@ withScope scope ma = do
   put before
   return x
 
-withLocalScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
-withLocalScope localScoped = do
+-- FIXME change scope
+withLocalScopeReserved :: (Members '[State Scope] r) => Reserved -> Sem r a -> Sem r a
+withLocalScopeReserved reserved localScoped = do
   before <- get @Scope
-  let scope' =
-        ( set scopeLocalSymbols mempty
-            . set scopeLocalModuleSymbols mempty
-        )
-          before
+  let scope' = set scopeReserved reserved before
   put scope'
   x <- localScoped
   put before
   return x
+
+withLocalScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
+withLocalScope = withLocalScopeReserved emptyReserved
 
 syntaxBlock :: (Members '[Error ScoperError] r) => Sem (State ScoperSyntax ': r) a -> Sem r a
 syntaxBlock m =
@@ -1683,17 +1698,15 @@ reserveModuleBody ::
   Sem r (StatementSections 'Parsed)
 reserveModuleBody body = reserveSections (mkSections body)
 
--- TODO constraints minimize
 checkLocalModuleBody ::
   forall r.
   (Members '[HighlightBuilder, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader PackageId, Reader BindingStrategy] r) =>
   ModuleSymbolEntry ->
   Sem r [Statement 'Scoped]
 checkLocalModuleBody m = syntaxBlock $ do
-  body <- (^. reservedLocalModuleStatements) <$> getReservedLocalModule m
+  body <- (^. reservedModuleStatements) <$> getReservedLocalModule ("checkLocalModuleBody" : []) m
   checkFlattenSections body
 
--- TODO constraints minimize
 checkTopModuleBody ::
   forall r.
   (Members '[HighlightBuilder, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader PackageId, Reader BindingStrategy] r) =>
@@ -1703,7 +1716,6 @@ checkTopModuleBody body =
   syntaxBlock $
     reserveModuleBody body >>= checkFlattenSections
 
--- TODO constraints minimize
 checkFlattenSections ::
   forall r.
   (Members '[HighlightBuilder, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader PackageId, Reader BindingStrategy, State ScoperSyntax] r) =>
@@ -1830,7 +1842,7 @@ checkSections sec = topBindings helper
               DefinitionProjectionDef d -> DefinitionProjectionDef <$> checkProjectionDef d
 
 defineInductiveModule :: forall r. (Members '[Reader PackageId] r) => S.Symbol -> InductiveDef 'Parsed -> Sem r (Module 'Parsed 'ModuleLocal)
-defineInductiveModule headConstr i = do
+defineInductiveModule headConstr i =
   runReader (getLoc (i ^. inductiveName)) genModule
   where
     genModule :: forall s'. (Members '[Reader Interval, Reader PackageId] s') => Sem s' (Module 'Parsed 'ModuleLocal)
@@ -2063,20 +2075,21 @@ reserveLocalModule ::
   Module 'Parsed 'ModuleLocal ->
   Sem r ()
 reserveLocalModule Module {..} = do
-  resModule :: ReservedLocalModule <- withLocalScope $ do
-    -- TODO we only need to change the scopePath, not the scopeSymbols
+  _modulePath' :: S.Symbol <- reserveLocalModuleSymbol _modulePath
+  resModule :: ReservedModule <- withLocalScope $ do
+    -- TODO Q: we only need to change the scopePath, not the scopeSymbols ?
     inheritScope _modulePath
     b <- reserveModuleBody _moduleBody
     export <- get >>= exportScope
     reserved <- gets (^. scopeReserved)
     return
-      ReservedLocalModule
-        { _reservedLocalModuleExportInfo = export,
-          _reservedLocalModuleReserved = reserved,
-          _reservedLocalModuleStatements = b
+      ReservedModule
+        { _reservedModuleExportInfo = export,
+          _reservedModuleName = S.unqualifiedSymbol _modulePath',
+          _reservedModuleReserved = reserved,
+          _reservedModuleStatements = b
         }
-  _modulePath' <- reserveLocalModuleSymbol _modulePath
-  modify (set (scoperReservedLocalModules . at (_modulePath' ^. S.nameId)) (Just resModule))
+  modify (set (scoperReservedModules . at (_modulePath' ^. S.nameId)) (Just resModule))
   registerName True _modulePath'
 
 inheritScope :: (Members '[State Scope] r') => Symbol -> Sem r' ()
@@ -2119,16 +2132,15 @@ checkLocalModule md@Module {..} = do
   _modulePath' <- getReservedLocalModuleSymbol _modulePath
   let modEntry = ModuleSymbolEntry (S.unqualifiedSymbol _modulePath')
       mid = _modulePath' ^. S.nameId
-  reservedModule <- getReservedLocalModule modEntry
+  reservedModule <- getReservedLocalModule ["lo"] modEntry
   (tab, (moduleBody', moduleDoc')) <-
-    withLocalScope . runReader (tab1 <> tab2) . runInfoTableBuilder mempty $ do
-      modify (set scopeReserved (reservedModule ^. reservedLocalModuleReserved))
+    withLocalScopeReserved (reservedModule ^. reservedModuleReserved) . runReader (tab1 <> tab2) . runInfoTableBuilder mempty $ do
       inheritScope _modulePath
       b <- checkLocalModuleBody modEntry
       doc' <- mapM checkJudoc _moduleDoc
       return (b, doc')
-  let exportInfo = reservedModule ^. reservedLocalModuleExportInfo
-  localModules <- getLocalModules exportInfo
+  let exportInfo = reservedModule ^. reservedModuleExportInfo
+  localModules <- getScopedLocalModules exportInfo
   let moduleName = S.unqualifiedSymbol _modulePath'
       m =
         Module
@@ -2180,17 +2192,17 @@ getModule ::
   (Members '[State ScoperState] r) =>
   ModuleSymbolEntry ->
   Name ->
-  Sem r ScopedModule
+  Sem r ReservedModule
 getModule e n =
-  set (scopedModuleName . S.nameConcrete) n
-    <$> gets (^?! scoperModules . at (e ^. moduleEntry . S.nameId) . _Just)
+  set (reservedModuleName . S.nameConcrete) n
+    <$> gets (^?! scoperReservedModules . at (e ^. moduleEntry . S.nameId) . _Just)
 
 lookupModuleSymbol ::
   (Members '[Error ScoperError, State Scope, State ScoperState] r) =>
   Name ->
-  Sem r ScopedModule
+  Sem r ReservedModule
 lookupModuleSymbol n = do
-  es <- snd3 <$> lookupQualifiedSymbol (path, sym)
+  es <- snd3 <$> lookupQualifiedSymbol ["lookupModuleSymbol"] (path, sym)
   case nonEmpty (resolveShadowing (toList es)) of
     Nothing -> notInScope
     Just (x :| []) -> getModule x n
@@ -2204,7 +2216,7 @@ lookupModuleSymbol n = do
 checkOpenModuleShort ::
   forall r.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
-  ScopedModule ->
+  ReservedModule ->
   OpenModule 'Parsed 'OpenShort ->
   Sem r (OpenModule 'Scoped 'OpenShort)
 checkOpenModuleShort = checkOpenModuleHelper
@@ -2221,11 +2233,11 @@ checkOpenModule open@OpenModule {..} = do
 checkUsingHiding ::
   forall r.
   (Members '[Error ScoperError, InfoTableBuilder] r) =>
-  S.TopModulePath ->
+  S.Name ->
   ExportInfo ->
   UsingHiding 'Parsed ->
   Sem r (UsingHiding 'Scoped)
-checkUsingHiding modulepath exportInfo = \case
+checkUsingHiding moduleName exportInfo = \case
   Hiding h -> Hiding <$> checkHidingList h
   Using uh -> Using <$> checkUsingList uh
   where
@@ -2238,7 +2250,7 @@ checkUsingHiding modulepath exportInfo = \case
               . ErrModuleDoesNotExportSymbol
               $ ModuleDoesNotExportSymbol
                 { _moduleDoesNotExportSymbol = s,
-                  _moduleDoesNotExportModule = modulepath
+                  _moduleDoesNotExportModule = moduleName
                 }
       entry <- maybe err return mentry
       let scopedSym = entryToSymbol entry s
@@ -2300,16 +2312,16 @@ checkUsingHiding modulepath exportInfo = \case
 checkOpenModuleHelper ::
   forall r short.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r, SingI short) =>
-  ScopedModule ->
+  ReservedModule ->
   OpenModule 'Parsed short ->
   Sem r (OpenModule 'Scoped short)
-checkOpenModuleHelper openedModule OpenModule {..} = do
-  let exportInfo = openedModule ^. scopedModuleExportInfo
-  registerName False (openedModule ^. scopedModuleName)
-  usingHiding' <- mapM (checkUsingHiding (openedModule ^. scopedModulePath) exportInfo) _openModuleUsingHiding
+checkOpenModuleHelper reservedMod OpenModule {..} = do
+  let exportInfo = reservedMod ^. reservedModuleExportInfo
+  registerName False (reservedMod ^. reservedModuleName)
+  usingHiding' <- mapM (checkUsingHiding (reservedMod ^. reservedModuleName) exportInfo) _openModuleUsingHiding
   mergeScope (filterExportInfo _openModulePublic usingHiding' exportInfo)
   let openName :: OpenModuleNameType 'Scoped short = case sing :: SIsOpenShort short of
-        SOpenFull -> openedModule ^. scopedModuleName
+        SOpenFull -> reservedMod ^. reservedModuleName
         SOpenShort -> ()
   return
     OpenModule
@@ -2822,7 +2834,7 @@ checkUnqualifiedName ::
 checkUnqualifiedName s = do
   scope <- get
   -- Lookup at the global scope
-  entries <- fst3 <$> lookupQualifiedSymbol ([], s)
+  entries <- fst3 <$> lookupQualifiedSymbol ["checkUnqualifiedName"] ([], s)
   case resolveShadowing (toList entries) of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
     [x] -> return x
@@ -2837,7 +2849,7 @@ checkFixitySymbol ::
 checkFixitySymbol s = do
   scope <- get
   -- Lookup at the global scope
-  entries <- thd3 <$> lookupQualifiedSymbol ([], s)
+  entries <- thd3 <$> lookupQualifiedSymbol ["checkFixitySymbol"] ([], s)
   case resolveShadowing (toList entries) of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
     [x] -> do
@@ -2936,7 +2948,7 @@ lookupNameOfKind ::
   Name ->
   Sem r (Maybe ScopedIden)
 lookupNameOfKind nameKind n = do
-  entries <- lookupQualifiedSymbol (path, sym) >>= mapMaybeM filterEntry . toList . fst3
+  entries <- lookupQualifiedSymbol ["lookupNameOfKind"] (path, sym) >>= mapMaybeM filterEntry . toList . fst3
   case entries of
     [] -> return Nothing
     [(_, s)] -> return (Just s) -- There is one constructor with such a name
@@ -3421,7 +3433,7 @@ checkAliasDef ::
 checkAliasDef def@AliasDef {..} = do
   scanAlias def
   doc' <- maybe (return Nothing) (return . Just <=< checkJudoc) _aliasDefDoc
-  aliasName' :: S.Symbol <- gets (^?! scopeLocalSymbols . at _aliasDefName . _Just)
+  aliasName' :: S.Symbol <- gets (^?! scopeReservedSymbols . at _aliasDefName . _Just)
   asName' <- checkScopedIden _aliasDefAsName
   return
     AliasDef
@@ -3434,7 +3446,7 @@ checkAliasDef def@AliasDef {..} = do
     scanAlias :: AliasDef 'Parsed -> Sem r ()
     scanAlias a = do
       reserveAliasDef a
-      aliasId <- gets (^?! scopeLocalSymbols . at (a ^. aliasDefName) . _Just . S.nameId)
+      aliasId <- gets (^?! scopeReservedSymbols . at (a ^. aliasDefName) . _Just . S.nameId)
       asName <- checkName (a ^. aliasDefAsName)
       modify' (set (scoperAlias . at aliasId) (Just asName))
       registerAlias aliasId asName

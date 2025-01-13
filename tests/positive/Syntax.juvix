@@ -39,7 +39,7 @@ syntax operator ==2 cmp;
   | _ _ := false;
 
 module MutualTypes;
-  isNotEmpty {a : Type} (t : Tree a) : Bool := not (isEmpty t);
+  isNotEmpty {a : Type} (t : MutualTypes.Tree a) : Bool := not (MutualTypes.isEmpty t);
 
   isEmpty {a : Type} : (t : Tree a) -> Bool
     | empty := true

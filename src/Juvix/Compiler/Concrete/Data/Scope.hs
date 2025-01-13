@@ -26,33 +26,8 @@ scopeNameSpace = case sing :: SNameSpace ns of
   SNameSpaceModules -> scopeModuleSymbols
   SNameSpaceFixities -> scopeFixitySymbols
 
-scopeNameSpaceLocal :: forall (ns :: NameSpace). Sing ns -> Lens' Scope (HashMap Symbol S.Symbol)
-scopeNameSpaceLocal s = case s of
-  SNameSpaceSymbols -> scopeLocalSymbols
-  SNameSpaceModules -> scopeLocalModuleSymbols
-  SNameSpaceFixities -> scopeLocalFixitySymbols
-
-emptyReserved :: Reserved
-emptyReserved =
-  Reserved
-    { _reservedLocalSymbols = mempty,
-      _reservedLocalModuleSymbols = mempty,
-      _reservedLocalFixitySymbols = mempty
-    }
-
-emptyInScope :: InScope
-emptyInScope =
-  InScope
-    { _inScopeSymbols = mempty,
-      _inScopeLocalModuleSymbols = mempty,
-      _inScopeFixitySymbols = mempty
-    }
-
-emptyScope :: S.AbsModulePath -> Scope
-emptyScope absPath =
-  Scope
-    { _scopePath = absPath,
-      _scopeInScope = emptyInScope,
-      _scopeImports = mempty,
-      _scopeReserved = emptyReserved
-    }
+scopeReservedNameSpace :: forall (ns :: NameSpace). Sing ns -> Lens' Scope (HashMap Symbol S.Symbol)
+scopeReservedNameSpace s = case s of
+  SNameSpaceSymbols -> scopeReservedSymbols
+  SNameSpaceModules -> scopeReservedLocalModuleSymbols
+  SNameSpaceFixities -> scopeReservedFixitySymbols
