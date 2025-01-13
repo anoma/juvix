@@ -584,6 +584,9 @@ instance PrettyPrint QualifiedName where
     let symbols = _qualifiedPath ^. pathParts NonEmpty.|> _qualifiedSymbol
     dotted (ppSymbolType <$> symbols)
 
+instance PrettyPrint ReservedModule where
+  ppCode m = ppCode (m ^. reservedModuleName)
+
 instance PrettyPrint ScopedModule where
   ppCode m = ppCode (m ^. scopedModuleName)
 

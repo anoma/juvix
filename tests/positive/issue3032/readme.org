@@ -1,0 +1,31 @@
+#+title: Scoping
+
+* How a module is scoped
+Since we want to be able to forward reference local modules, we need to
+generate their full ExportInfo during scanning phase. The scanning phase
+consists in going through the definitions and adding the symbols they define
+to the scope. During this phase we do not scopecheck the bodies of the definitions.
+
+In order to generate the full ExportInfo we need to scopecheck the open and
+import statements. Since this has to be done sequentially, it won't be possible
+to forward reference modules in open statements.
+#+begin_example
+module Me;
+ module Child1;
+ end;
+
+ -- we can forward reference using qualified names
+ axiom X : Child2.Child2-Type; -- ok
+
+ open Child1;  -- ok
+ open Sibling; -- fail
+ open Child2; -- fail
+
+ module Child2;
+   axiom Child2-Type : Type
+ end;
+end;
+
+module Sibling;
+end;
+#+end_example
