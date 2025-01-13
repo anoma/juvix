@@ -343,7 +343,11 @@ tests =
     posTest
       "Termination crash because of empty permutation"
       $(mkRelDir ".")
-      $(mkRelFile "issue3064.juvix")
+      $(mkRelFile "issue3064.juvix"),
+    posTest
+      "Let-patterns with named arguments"
+      $(mkRelDir ".")
+      $(mkRelFile "NamedArgLet.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]
