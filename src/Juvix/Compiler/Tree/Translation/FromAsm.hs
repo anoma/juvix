@@ -192,7 +192,12 @@ goFunction infoTab fi = do
             Save
               NodeSave
                 { _nodeSaveInfo = mempty,
-                  _nodeSaveTempVar = TempVar _cmdSaveName (_cmdSaveInfo ^. Asm.commandInfoLocation),
+                  _nodeSaveTempVar =
+                    TempVar
+                      { _tempVarName = _cmdSaveName,
+                        _tempVarLocation = _cmdSaveInfo ^. Asm.commandInfoLocation,
+                        _tempVarType = TyDynamic
+                      },
                   _nodeSaveArg = arg,
                   _nodeSaveBody = body
                 }
@@ -255,7 +260,7 @@ goFunction infoTab fi = do
               NodeSave
                 { _nodeSaveInfo = mempty,
                   _nodeSaveArg = arg,
-                  _nodeSaveTempVar = TempVar Nothing Nothing,
+                  _nodeSaveTempVar = TempVar Nothing Nothing TyDynamic,
                   _nodeSaveBody =
                     Binop
                       NodeBinop

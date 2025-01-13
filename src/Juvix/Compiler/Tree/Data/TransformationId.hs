@@ -8,6 +8,8 @@ data TransformationId
   = IdentityTrans
   | IdentityU
   | IdentityD
+  | ConvertUnaryCalls
+  | OptPhaseMain
   | Apply
   | FilterUnreachable
   | Validate
@@ -24,13 +26,13 @@ data PipelineId
 type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
 
 toNockmaTransformations :: [TransformationId]
-toNockmaTransformations = [Validate, Apply, FilterUnreachable]
+toNockmaTransformations = [Validate, OptPhaseMain, Apply, FilterUnreachable]
 
 toAsmTransformations :: [TransformationId]
-toAsmTransformations = [Validate, CheckNoAnoma, CheckNoByteArray]
+toAsmTransformations = [Validate, CheckNoAnoma, CheckNoByteArray, OptPhaseMain]
 
 toCairoAsmTransformations :: [TransformationId]
-toCairoAsmTransformations = [Validate, Apply, FilterUnreachable]
+toCairoAsmTransformations = [Validate, OptPhaseMain, Apply, FilterUnreachable]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
@@ -38,6 +40,8 @@ instance TransformationId' TransformationId where
     IdentityTrans -> strIdentity
     IdentityU -> strIdentityU
     IdentityD -> strIdentityD
+    ConvertUnaryCalls -> strConvertUnaryCalls
+    OptPhaseMain -> strOptPhaseMain
     Apply -> strApply
     FilterUnreachable -> strFilterUnreachable
     Validate -> strValidate

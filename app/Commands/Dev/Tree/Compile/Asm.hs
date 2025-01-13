@@ -14,9 +14,11 @@ runCommand opts = do
   outFile <- getOutputFile FileExtJuvixAsm (Just inputFile) moutputFile
   mainFile <- getMainFile (Just inputFile)
   tab :: InfoTable <- readFile mainFile >>= getRight . Tree.runParser mainFile
+  ep <- getEntryPoint (Just inputFile)
   res <-
     getRight
       . run
+      . runReader ep
       . runError @JuvixError
       $ treeToAsm tab
   writeFileEnsureLn outFile (Asm.ppPrint res res)

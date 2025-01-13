@@ -300,10 +300,10 @@ coreToVampIR = Core.toStored >=> storedCoreToVampIR
 -- Other workflows
 --------------------------------------------------------------------------------
 
-treeToAsm :: (Member (Error JuvixError) r) => Tree.InfoTable -> Sem r Asm.InfoTable
+treeToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r Asm.InfoTable
 treeToAsm = Tree.toAsm >=> return . Asm.fromTree
 
-treeToCairoAsm :: (Member (Error JuvixError) r) => Tree.InfoTable -> Sem r Asm.InfoTable
+treeToCairoAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r Asm.InfoTable
 treeToCairoAsm = Tree.toCairoAsm >=> return . Asm.fromTree
 
 treeToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.InfoTable -> Sem r Reg.InfoTable

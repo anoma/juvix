@@ -16,6 +16,21 @@ import Juvix.Compiler.Tree.Extra.Type.Base
 import Juvix.Compiler.Tree.Language.Base
 import Juvix.Compiler.Tree.Pretty
 
+isConcreteAtomType :: Type -> Bool
+isConcreteAtomType = \case
+  TyConstr {} -> True
+  TyInductive {} -> True
+  TyInteger {} -> True
+  TyBool {} -> True
+  TyString -> True
+  TyField -> True
+  TyByteArray -> True
+  TyRandomGenerator -> True
+  TyUnit -> True
+  TyVoid -> True
+  TyDynamic -> False
+  TyFun {} -> False
+
 unfoldType :: Type -> ([Type], Type)
 unfoldType ty = (typeArgs ty, typeTarget ty)
 

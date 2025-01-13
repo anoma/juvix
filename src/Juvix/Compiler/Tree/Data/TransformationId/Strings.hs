@@ -20,6 +20,12 @@ strIdentityU = "identity-umap"
 strIdentityD :: Text
 strIdentityD = "identity-dmap"
 
+strConvertUnaryCalls :: Text
+strConvertUnaryCalls = "convert-unary-calls"
+
+strOptPhaseMain :: Text
+strOptPhaseMain = "opt-phase-main"
+
 strApply :: Text
 strApply = "apply"
 

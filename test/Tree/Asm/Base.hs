@@ -8,18 +8,20 @@ import Juvix.Compiler.Tree.Translation.FromSource
 import Juvix.Data.PPOutput
 
 treeAsmAssertion ::
+  Path Abs Dir ->
   Path Abs File ->
   Path Abs File ->
   (String -> IO ()) ->
   Assertion
-treeAsmAssertion mainFile expectedFile step = do
+treeAsmAssertion root' mainFile expectedFile step = do
   step "Parse"
   s <- readFile mainFile
   case runParser mainFile s of
     Left err -> assertFailure (prettyString err)
     Right tabIni -> do
       step "Translate"
-      case run $ runError @JuvixError $ Tree.toAsm tabIni of
+      entryPoint <- testDefaultEntryPointIO root' mainFile
+      case run $ runReader entryPoint $ runError @JuvixError $ Tree.toAsm tabIni of
         Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right tab -> do
           let tab' = Asm.fromTree tab

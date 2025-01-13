@@ -249,5 +249,10 @@ tests =
       "Test042: Uncurried function type unification"
       $(mkRelDir ".")
       $(mkRelFile "test042.jvt")
-      $(mkRelFile "out/test042.out")
+      $(mkRelFile "out/test042.out"),
+    PosTest
+      "Test043: Unary closure calls"
+      $(mkRelDir ".")
+      $(mkRelFile "test043.jvt")
+      $(mkRelFile "out/test043.out")
   ]

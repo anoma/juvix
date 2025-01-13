@@ -30,12 +30,12 @@ treeEvalTransformationErrorAssertion mainFile trans checkError step = do
     Left err -> assertFailure (prettyString err)
     Right tab0 -> do
       step "Validate"
-      case run $ runError @JuvixError $ applyTransformations [Validate] tab0 of
+      case run $ runReader Tree.defaultOptions $ runError @JuvixError $ applyTransformations [Validate] tab0 of
         Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right tab1 -> do
           unless (null trans) $
             step "Transform"
-          case run $ runError @JuvixError $ applyTransformations trans tab1 of
+          case run $ runReader Tree.defaultOptions $ runError @JuvixError $ applyTransformations trans tab1 of
             Left e -> checkError e
             Right {} -> assertFailure "Expected error"
 

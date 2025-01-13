@@ -1,12 +1,14 @@
 module Juvix.Compiler.Tree.Language
   ( module Juvix.Compiler.Tree.Language,
     module Juvix.Compiler.Tree.Language.Base,
+    module Juvix.Compiler.Tree.Language.Type,
     module Juvix.Compiler.Tree.Language.Builtins,
   )
 where
 
 import Juvix.Compiler.Tree.Language.Base
 import Juvix.Compiler.Tree.Language.Builtins
+import Juvix.Compiler.Tree.Language.Type
 
 -- | Function call type
 data CallType
@@ -177,7 +179,8 @@ data CaseBranch = CaseBranch
 
 data TempVar = TempVar
   { _tempVarName :: Maybe Text,
-    _tempVarLocation :: Maybe Location
+    _tempVarLocation :: Maybe Location,
+    _tempVarType :: Type
   }
 
 data NodeSave = NodeSave

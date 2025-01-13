@@ -3,6 +3,7 @@ module Commands.Dev.Tree.Read where
 import Commands.Base
 import Commands.Dev.Tree.Read.Options
 import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
+import Juvix.Compiler.Tree.Options qualified as TreeOptions
 import Juvix.Compiler.Tree.Pretty qualified as Tree
 import Juvix.Compiler.Tree.Transformation qualified as Tree
 import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
@@ -15,7 +16,7 @@ runCommand opts = do
   case Tree.runParser afile s of
     Left err -> exitJuvixError (JuvixError err)
     Right tab -> do
-      r <- runError @JuvixError (Tree.applyTransformations (project opts ^. treeReadTransformations) tab)
+      r <- runReader TreeOptions.defaultOptions $ runError @JuvixError (Tree.applyTransformations (project opts ^. treeReadTransformations) tab)
       case r of
         Left err -> exitJuvixError (JuvixError err)
         Right tab' -> do

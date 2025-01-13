@@ -12,7 +12,7 @@ testDescr Eval.PosTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ treeAsmAssertion file' expected'
+          _testAssertion = Steps $ treeAsmAssertion tRoot file' expected'
         }
 
 ignoredTests :: [String]
