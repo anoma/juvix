@@ -3,6 +3,10 @@ module test026;
 
 import Stdlib.Prelude open;
 
+phead {A} {{Partial}} : List A -> A
+  | nil := fail "phead: empty list"
+  | (h :: t) := h;
+
 type Queue (A : Type) := queue : List A → List A → Queue A;
 
 qfst : {A : Type} → Queue A → List A
