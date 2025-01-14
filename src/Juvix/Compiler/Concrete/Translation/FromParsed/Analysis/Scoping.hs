@@ -342,7 +342,7 @@ addToScope ns kind s s' = withSingI ns $ do
         Just SymbolInfo {..} -> case strat of
           BindingLocal -> symbolInfoSingle mentry
           BindingTop -> SymbolInfo (HashMap.insert path mentry _symbolInfo)
-  modify (over scopeNameSpace (HashMap.alter (Just . addS entry) s))
+  modify (over scopeNameSpaceI (HashMap.alter (Just . addS entry) s))
   where
     isAlias = case kind of
       KNameAlias -> True
@@ -375,7 +375,7 @@ reserveSymbolOf k =
     (fromSing k)
 
 getReservedLocalModuleSymbol ::
-  (Members '[State Scope] r) =>
+  (HasCallStack, Members '[State Scope] r) =>
   Symbol ->
   Sem r S.Symbol
 getReservedLocalModuleSymbol s = do
@@ -551,7 +551,8 @@ checkImport i@Import {..} = case _importPublic of
 
 checkImportPublic ::
   forall r.
-  ( Members
+  ( HasCallStack,
+    Members
       '[ Error ScoperError,
          State Scope,
          Reader ScopeParameters,
@@ -764,7 +765,7 @@ lookupLocalSymbolAux msg whyInScope modules final =
             Proxy ns ->
             Sem r' ()
           helper Proxy = do
-            entries <- gets (^.. scopeNameSpace @ns . at final . _Just . symbolInfo . each)
+            entries <- gets (^.. scopeNameSpaceI @ns . at final . _Just . symbolInfo . each)
             let entries' = filter (whyInScope . (^. entryName . S.nameWhyInScope)) entries
             mapM_ output entries'
       helper (Proxy @'NameSpaceSymbols)
@@ -864,7 +865,7 @@ lookupQualifiedSymbol debug sms = do
       where
         -- Current module.
         here :: Sem r' ()
-        here = lookupSymbolAux (["here"] ++ debug) path sym
+        here = lookupSymbolAux ("here" : debug) path sym
         -- Looks for top level modules
         there :: Sem r' ()
         there = mapM_ (uncurry lookInTopModule) allTopPaths
@@ -1641,11 +1642,7 @@ checkTopModule m@Module {..} = checkedModule
 withTopScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
 withTopScope ma = do
   before <- get @Scope
-  let scope' =
-        ( set scopeReservedSymbols mempty
-            . set scopeReservedLocalModuleSymbols mempty
-        )
-          before
+  let scope' = set scopeReserved emptyReserved before
   put scope'
   ma
 
@@ -1675,9 +1672,11 @@ withLocalModuleScope reserved localScoped = withLocalScope $ do
         addToScope ns kind s s'
 
 withLocalScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
-withLocalScope localScoped = do
+withLocalScope ma = do
   before <- get @Scope
-  x <- localScoped
+  let scope' = set scopeReserved emptyReserved before
+  put scope'
+  x <- ma
   put before
   return x
 
@@ -1689,42 +1688,11 @@ syntaxBlock m =
     checkOrphanIterators
     return a
 
-flattenSections :: forall s. StatementSections s -> [Statement s]
-flattenSections s = run . execOutputList $ case s of
-  SectionsEmpty -> return ()
-  SectionsNonDefinitions n -> goNonDefinitions n
-  SectionsDefinitions n -> goDefinitions n
-  where
-    goNonDefinitions :: forall t. (Members '[Output (Statement s)] t) => NonDefinitionsSection s -> Sem t ()
-    goNonDefinitions NonDefinitionsSection {..} = do
-      mapM_ (output . toStatement) _nonDefinitionsSection
-      whenJust _nonDefinitionsNext goDefinitions
-      where
-        toStatement :: NonDefinition s -> Statement s
-        toStatement = \case
-          NonDefinitionImport d -> StatementImport d
-          NonDefinitionOpenModule d -> StatementOpenModule d
-
-    goDefinitions :: forall t. (Members '[Output (Statement s)] t) => DefinitionsSection s -> Sem t ()
-    goDefinitions DefinitionsSection {..} = do
-      mapM_ (output . toStatement) _definitionsSection
-      whenJust _definitionsNext goNonDefinitions
-      where
-        toStatement :: Definition s -> Statement s
-        toStatement = \case
-          DefinitionSyntax d -> StatementSyntax d
-          DefinitionDeriving d -> StatementDeriving d
-          DefinitionModule d -> StatementModule d
-          DefinitionAxiom d -> StatementAxiom d
-          DefinitionFunctionDef d -> StatementFunctionDef d
-          DefinitionInductive d -> StatementInductive d
-          DefinitionProjectionDef d -> StatementProjectionDef d
-
 reserveModuleBody ::
   forall r.
   (Members '[HighlightBuilder, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader PackageId, Reader BindingStrategy, State ScoperSyntax] r) =>
   [Statement 'Parsed] ->
-  Sem r (StatementSections 'Parsed)
+  Sem r [Statement 'Parsed]
 reserveModuleBody body = reserveSections (mkSections body)
 
 checkLocalModuleBody ::
@@ -1748,9 +1716,9 @@ checkTopModuleBody body =
 checkFlattenSections ::
   forall r.
   (Members '[HighlightBuilder, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader PackageId, Reader BindingStrategy, State ScoperSyntax] r) =>
-  StatementSections 'Parsed ->
+  [Statement 'Parsed] ->
   Sem r [Statement 'Scoped]
-checkFlattenSections sec = flattenSections <$> checkSections sec
+checkFlattenSections = checkSections
 
 reserveSections ::
   forall r.
@@ -1768,107 +1736,77 @@ reserveSections ::
        ]
       r
   ) =>
-  StatementSections 'Parsed ->
-  Sem r (StatementSections 'Parsed)
-reserveSections sec = topBindings helper
+  [Statement 'Parsed] ->
+  Sem r [Statement 'Parsed]
+reserveSections = topBindings . concatMapM (fmap toList . reserveDefinition)
   where
-    helper ::
-      forall r'.
-      (r' ~ Reader BindingStrategy ': r) =>
-      Sem r' (StatementSections 'Parsed)
-    helper = case sec of
-      SectionsEmpty -> return SectionsEmpty
-      SectionsDefinitions d -> SectionsDefinitions <$> goDefinitions d
-      SectionsNonDefinitions d -> SectionsNonDefinitions <$> goNonDefinitions d
-      where
-        goNonDefinitions :: NonDefinitionsSection 'Parsed -> Sem r' (NonDefinitionsSection 'Parsed)
-        goNonDefinitions NonDefinitionsSection {..} = do
-          sec' <- mapM goNonDefinition _nonDefinitionsSection
-          next' <- mapM goDefinitions _nonDefinitionsNext
-          return
-            NonDefinitionsSection
-              { _nonDefinitionsNext = next',
-                _nonDefinitionsSection = sec'
-              }
-          where
-            goNonDefinition :: NonDefinition 'Parsed -> Sem r' (NonDefinition 'Parsed)
-            goNonDefinition = \case
-              NonDefinitionImport i -> checkImport i $> NonDefinitionImport i
-              NonDefinitionOpenModule i -> checkOpenModule i $> NonDefinitionOpenModule i
-
-        goDefinitions :: DefinitionsSection 'Parsed -> Sem r' (DefinitionsSection 'Parsed)
-        goDefinitions DefinitionsSection {..} = do
-          defs' <- sconcatMapM reserveDefinition _definitionsSection
-          next' <- mapM goNonDefinitions _definitionsNext
-          return
-            DefinitionsSection
-              { _definitionsNext = next',
-                _definitionsSection = defs'
-              }
-          where
-            reserveDefinition :: Definition 'Parsed -> Sem r' (NonEmpty (Definition 'Parsed))
-            reserveDefinition def = case def of
-              DefinitionSyntax s -> resolveSyntaxDef s $> pure def
-              DefinitionFunctionDef d -> reserveFunctionLikeSymbol d $> pure def
-              DefinitionDeriving d -> reserveDerivingSymbol d $> pure def
-              DefinitionAxiom d -> void (reserveAxiomSymbol d) $> pure def
-              DefinitionModule d -> void (reserveLocalModule d) $> pure def
-              DefinitionProjectionDef d -> void (reserveProjectionSymbol d) $> pure def
-              DefinitionInductive d -> do
-                m <- reserveInductive d
-                reserveLocalModule m
-                return (def :| [DefinitionModule m])
+    reserveDefinition ::
+      ( Members
+          '[ Error ScoperError,
+             State Scope,
+             State ScoperState,
+             State ScoperSyntax,
+             Reader PackageId,
+             Reader ScopeParameters,
+             InfoTableBuilder,
+             NameIdGen,
+             HighlightBuilder,
+             Reader BindingStrategy,
+             Reader InfoTable
+           ]
+          r'
+      ) =>
+      Statement 'Parsed ->
+      Sem r' (NonEmpty (Statement 'Parsed))
+    reserveDefinition def = case def of
+      StatementSyntax s -> resolveSyntaxDef s $> pure def
+      StatementFunctionDef d -> reserveFunctionLikeSymbol d $> pure def
+      StatementDeriving d -> reserveDerivingSymbol d $> pure def
+      StatementAxiom d -> void (reserveAxiomSymbol d) $> pure def
+      StatementModule d -> void (reserveLocalModule d) $> pure def
+      StatementProjectionDef d -> void (reserveProjectionSymbol d) $> pure def
+      StatementImport i -> checkImport i $> pure def
+      StatementOpenModule i -> checkOpenModule i $> pure def
+      StatementInductive d -> do
+        m <- reserveInductive d
+        reserveLocalModule m
+        return (def :| [StatementModule m])
 
 checkSections ::
   forall r.
   (Members '[HighlightBuilder, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax] r) =>
-  StatementSections 'Parsed ->
-  Sem r (StatementSections 'Scoped)
-checkSections sec = topBindings helper
+  [Statement 'Parsed] ->
+  Sem r [Statement 'Scoped]
+checkSections = topBindings . mapM goDefinition
   where
-    helper ::
-      forall r'.
-      (r' ~ Reader BindingStrategy ': r) =>
-      Sem r' (StatementSections 'Scoped)
-    helper = case sec of
-      SectionsEmpty -> return SectionsEmpty
-      SectionsDefinitions d -> SectionsDefinitions <$> goDefinitions d
-      SectionsNonDefinitions d -> SectionsNonDefinitions <$> goNonDefinitions d
-      where
-        goNonDefinitions :: NonDefinitionsSection 'Parsed -> Sem r' (NonDefinitionsSection 'Scoped)
-        goNonDefinitions NonDefinitionsSection {..} = do
-          sec' <- mapM goNonDefinition _nonDefinitionsSection
-          next' <- mapM goDefinitions _nonDefinitionsNext
-          return
-            NonDefinitionsSection
-              { _nonDefinitionsNext = next',
-                _nonDefinitionsSection = sec'
-              }
-          where
-            goNonDefinition :: NonDefinition 'Parsed -> Sem r' (NonDefinition 'Scoped)
-            goNonDefinition = \case
-              NonDefinitionImport i -> NonDefinitionImport <$> checkImport i
-              NonDefinitionOpenModule i -> NonDefinitionOpenModule <$> checkOpenModule i
-
-        goDefinitions :: DefinitionsSection 'Parsed -> Sem r' (DefinitionsSection 'Scoped)
-        goDefinitions DefinitionsSection {..} = do
-          sec' <- mapM goDefinition _definitionsSection
-          next' <- mapM goNonDefinitions _definitionsNext
-          return
-            DefinitionsSection
-              { _definitionsNext = next',
-                _definitionsSection = sec'
-              }
-          where
-            goDefinition :: Definition 'Parsed -> Sem r' (Definition 'Scoped)
-            goDefinition = \case
-              DefinitionSyntax s -> DefinitionSyntax <$> checkSyntaxDef s
-              DefinitionFunctionDef d -> DefinitionFunctionDef <$> checkFunctionDef d
-              DefinitionDeriving d -> DefinitionDeriving <$> checkDeriving d
-              DefinitionAxiom d -> DefinitionAxiom <$> checkAxiomDef d
-              DefinitionModule d -> DefinitionModule <$> checkLocalModule d
-              DefinitionInductive d -> DefinitionInductive <$> checkInductiveDef d
-              DefinitionProjectionDef d -> DefinitionProjectionDef <$> checkProjectionDef d
+    goDefinition ::
+      ( Members
+          '[ Error ScoperError,
+             State Scope,
+             State ScoperState,
+             State ScoperSyntax,
+             Reader PackageId,
+             Reader ScopeParameters,
+             InfoTableBuilder,
+             NameIdGen,
+             HighlightBuilder,
+             Reader BindingStrategy,
+             Reader InfoTable
+           ]
+          r'
+      ) =>
+      Statement 'Parsed ->
+      Sem r' (Statement 'Scoped)
+    goDefinition = \case
+      StatementSyntax s -> StatementSyntax <$> checkSyntaxDef s
+      StatementFunctionDef d -> StatementFunctionDef <$> checkFunctionDef d
+      StatementDeriving d -> StatementDeriving <$> checkDeriving d
+      StatementAxiom d -> StatementAxiom <$> checkAxiomDef d
+      StatementModule d -> StatementModule <$> checkLocalModule d
+      StatementImport i -> StatementImport <$> checkImport i
+      StatementOpenModule i -> StatementOpenModule <$> checkOpenModule i
+      StatementInductive d -> StatementInductive <$> checkInductiveDef d
+      StatementProjectionDef d -> StatementProjectionDef <$> checkProjectionDef d
 
 defineInductiveModule :: forall r. (Members '[Reader PackageId] r) => S.Symbol -> InductiveDef 'Parsed -> Sem r (Module 'Parsed 'ModuleLocal)
 defineInductiveModule headConstr i =
@@ -2021,7 +1959,7 @@ reserveInductive d = do
               modify' (set (scoperRecordFields . at (ind ^. S.nameId)) (Just info))
               registerRecordInfo (ind ^. S.nameId) info
 
-mkLetSections :: [LetStatement 'Parsed] -> StatementSections 'Parsed
+mkLetSections :: [LetStatement 'Parsed] -> [Statement 'Parsed]
 mkLetSections = mkSections . map toTopStatement
   where
     toTopStatement :: LetStatement 'Parsed -> Statement 'Parsed
@@ -2030,52 +1968,9 @@ mkLetSections = mkSections . map toTopStatement
       LetAliasDef f -> StatementSyntax (SyntaxAlias f)
       LetOpen o -> StatementOpenModule o
 
-mkSections :: [Statement 'Parsed] -> StatementSections 'Parsed
-mkSections = \case
-  [] -> SectionsEmpty
-  h : hs -> case fromStatement h of
-    Left d -> SectionsDefinitions (goDefinitions (pure d) hs)
-    Right d -> SectionsNonDefinitions (goNonDefinitions (pure d) hs)
-  where
-    goDefinitions :: NonEmpty (Definition 'Parsed) -> [Statement 'Parsed] -> DefinitionsSection 'Parsed
-    goDefinitions acc = \case
-      s : ss -> case fromStatement s of
-        Left d -> goDefinitions (NonEmpty.cons d acc) ss
-        Right d ->
-          DefinitionsSection
-            { _definitionsSection = NonEmpty.reverse acc,
-              _definitionsNext = Just (goNonDefinitions (pure d) ss)
-            }
-      [] ->
-        DefinitionsSection
-          { _definitionsSection = NonEmpty.reverse acc,
-            _definitionsNext = Nothing
-          }
-    goNonDefinitions :: NonEmpty (NonDefinition 'Parsed) -> [Statement 'Parsed] -> NonDefinitionsSection 'Parsed
-    goNonDefinitions acc = \case
-      s : ss -> case fromStatement s of
-        Right d -> goNonDefinitions (NonEmpty.cons d acc) ss
-        Left d ->
-          NonDefinitionsSection
-            { _nonDefinitionsSection = NonEmpty.reverse acc,
-              _nonDefinitionsNext = Just (goDefinitions (pure d) ss)
-            }
-      [] ->
-        NonDefinitionsSection
-          { _nonDefinitionsSection = NonEmpty.reverse acc,
-            _nonDefinitionsNext = Nothing
-          }
-    fromStatement :: Statement 'Parsed -> Either (Definition 'Parsed) (NonDefinition 'Parsed)
-    fromStatement = \case
-      StatementAxiom a -> Left (DefinitionAxiom a)
-      StatementFunctionDef n -> Left (DefinitionFunctionDef n)
-      StatementDeriving n -> Left (DefinitionDeriving n)
-      StatementInductive i -> Left (DefinitionInductive i)
-      StatementSyntax s -> Left (DefinitionSyntax s)
-      StatementProjectionDef s -> Left (DefinitionProjectionDef s)
-      StatementImport i -> Right (NonDefinitionImport i)
-      StatementModule m -> Left (DefinitionModule m)
-      StatementOpenModule o -> Right (NonDefinitionOpenModule o)
+-- TODO remove
+mkSections :: [Statement 'Parsed] -> [Statement 'Parsed]
+mkSections = id
 
 reserveLocalModuleSymbol ::
   (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, Reader BindingStrategy] r) =>
@@ -2139,7 +2034,8 @@ inheritScope _modulePath = do
 
 checkLocalModule ::
   forall r.
-  ( Members
+  ( HasCallStack,
+    Members
       '[ HighlightBuilder,
          Error ScoperError,
          State Scope,
@@ -2369,7 +2265,7 @@ checkOpenModuleHelper reservedMod OpenModule {..} = do
         mergeSymbol :: forall ns. (SingI ns) => (Symbol, NameSpaceEntryType ns) -> Sem r ()
         mergeSymbol (s, entry) =
           modify
-            (over scopeNameSpace (HashMap.insertWith (<>) s (symbolInfoSingle entry)))
+            (over scopeNameSpaceI (HashMap.insertWith (<>) s (symbolInfoSingle entry)))
 
 filterExportInfo :: PublicAnn -> Maybe (UsingHiding 'Scoped) -> ExportInfo -> ExportInfo
 filterExportInfo pub openModif = alterEntries . filterScope
@@ -2479,41 +2375,27 @@ checkLetStatements =
     . mkLetSections
     . toList
   where
-    fromSections :: StatementSections s -> NonEmpty (LetStatement s)
-    fromSections = \case
-      SectionsEmpty -> impossible
-      SectionsDefinitions d -> fromDefs d
-      SectionsNonDefinitions d -> fromNonDefs d
+    fromSections :: [Statement s] -> NonEmpty (LetStatement s)
+    fromSections l = fromDef <$> nonEmpty' l
       where
-        fromDefs :: DefinitionsSection s -> NonEmpty (LetStatement s)
-        fromDefs DefinitionsSection {..} =
-          (fromDef <$> _definitionsSection) <>? (fromNonDefs <$> _definitionsNext)
-          where
-            fromSyn :: SyntaxDef s -> LetStatement s
-            fromSyn = \case
-              SyntaxAlias a -> LetAliasDef a
-              SyntaxFixity {} -> impossible
-              SyntaxOperator {} -> impossible
-              SyntaxIterator {} -> impossible
+        fromSyn :: SyntaxDef s -> LetStatement s
+        fromSyn = \case
+          SyntaxAlias a -> LetAliasDef a
+          SyntaxFixity {} -> impossible
+          SyntaxOperator {} -> impossible
+          SyntaxIterator {} -> impossible
 
-            fromDef :: Definition s -> LetStatement s
-            fromDef = \case
-              DefinitionFunctionDef d -> LetFunctionDef d
-              DefinitionSyntax syn -> fromSyn syn
-              DefinitionInductive {} -> impossible
-              DefinitionModule {} -> impossible
-              DefinitionDeriving {} -> impossible
-              DefinitionProjectionDef {} -> impossible
-              DefinitionAxiom {} -> impossible
-
-        fromNonDefs :: NonDefinitionsSection s -> NonEmpty (LetStatement s)
-        fromNonDefs NonDefinitionsSection {..} =
-          (fromNonDef <$> _nonDefinitionsSection) <>? (fromDefs <$> _nonDefinitionsNext)
-          where
-            fromNonDef :: NonDefinition s -> LetStatement s
-            fromNonDef = \case
-              NonDefinitionImport {} -> impossible
-              NonDefinitionOpenModule o -> LetOpen o
+        fromDef :: Statement s -> LetStatement s
+        fromDef = \case
+          StatementFunctionDef d -> LetFunctionDef d
+          StatementSyntax syn -> fromSyn syn
+          StatementOpenModule o -> LetOpen o
+          StatementInductive {} -> impossible
+          StatementModule {} -> impossible
+          StatementDeriving {} -> impossible
+          StatementProjectionDef {} -> impossible
+          StatementAxiom {} -> impossible
+          StatementImport {} -> impossible
 
 checkRecordPattern ::
   forall r.
