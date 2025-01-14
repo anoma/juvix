@@ -3,6 +3,10 @@ module test007;
 
 import Stdlib.Prelude open;
 
+phead {A} {{Partial}} : List A -> A
+  | nil := fail "phead: empty list"
+  | (h :: t) := h;
+
 map' {A B} (f : A → B) : List A → List B :=
   \ {
     | nil := nil
