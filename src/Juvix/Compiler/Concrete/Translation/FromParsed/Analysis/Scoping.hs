@@ -527,6 +527,29 @@ reservePatternFunctionSymbols = goAtom
       void (reservePatternName (NameUnqualified _patternBindingName))
       goAtom _patternBindingPattern
 
+reserveImport ::
+  forall r.
+  ( Members
+      '[ HighlightBuilder,
+         Error ScoperError,
+         State Scope,
+         Reader ScopeParameters,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         Reader BindingStrategy,
+         State ScoperSyntax,
+         Reader PackageId
+       ]
+      r
+  ) =>
+  Import 'Parsed ->
+  Sem r ()
+reserveImport i@Import {..} = case _importPublic of
+  NoPublic -> return ()
+  Public {} -> reserveImportPublic i
+
 checkImport ::
   forall r.
   ( Members
@@ -548,6 +571,75 @@ checkImport ::
 checkImport i@Import {..} = case _importPublic of
   NoPublic -> checkImportNoPublic i
   Public {} -> checkImportPublic i
+
+-- TODO factor common code
+reserveImportPublic ::
+  forall r.
+  ( Members
+      '[ Error ScoperError,
+         State Scope,
+         Reader ScopeParameters,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         HighlightBuilder,
+         Reader BindingStrategy,
+         State ScoperSyntax,
+         Reader PackageId
+       ]
+      r
+  ) =>
+  Import 'Parsed ->
+  Sem r ()
+reserveImportPublic i@Import {..} = do
+  let locMod :: Module 'Parsed 'ModuleLocal =
+        localModule (splitName outerOpenModuleName)
+  reserveLocalModule locMod
+  where
+    gen :: forall a. Sem '[Reader Interval] a -> a
+    gen = run . runReader loc
+
+    loc :: Interval
+    loc = getLoc i
+
+    outerOpenModuleName :: Name
+    outerOpenModuleName = topModulePathToName (fromMaybe _importModulePath _importAsName)
+
+    innerOpen :: OpenModule 'Parsed 'OpenFull
+    innerOpen = gen $ do
+      _openModuleKw <- G.kw G.kwOpen
+      let _openModuleName = topModulePathToName _importModulePath
+      pubKw <- Irrelevant <$> G.kw G.kwPublic
+      let
+      return
+        OpenModule
+          { _openModuleKw,
+            _openModuleUsingHiding = _importUsingHiding,
+            _openModulePublic = Public pubKw,
+            _openModuleName
+          }
+
+    singletonModule :: Symbol -> Statement 'Parsed -> Module 'Parsed 'ModuleLocal
+    singletonModule modName stm = gen $ do
+      _moduleKw <- G.kw G.kwModule
+      _moduleKwEnd <- G.kw G.kwEnd
+      let _moduleId = ()
+          _moduleBody = [stm]
+      return
+        Module
+          { _moduleDoc = Nothing,
+            _modulePragmas = Nothing,
+            _moduleOrigin = LocalModuleType,
+            _moduleMarkdownInfo = Nothing,
+            _modulePath = modName,
+            ..
+          }
+
+    localModule :: ([Symbol], Symbol) -> Module 'Parsed 'ModuleLocal
+    localModule (qualf, m) = case qualf of
+      [] -> singletonModule m (StatementOpenModule innerOpen)
+      n : ns -> singletonModule n (StatementModule (localModule (ns, m)))
 
 checkImportPublic ::
   forall r.
@@ -1688,13 +1780,6 @@ syntaxBlock m =
     checkOrphanIterators
     return a
 
-reserveModuleBody ::
-  forall r.
-  (Members '[HighlightBuilder, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader PackageId, Reader BindingStrategy, State ScoperSyntax] r) =>
-  [Statement 'Parsed] ->
-  Sem r [Statement 'Parsed]
-reserveModuleBody body = reserveSections (mkSections body)
-
 checkLocalModuleBody ::
   forall r.
   (Members '[HighlightBuilder, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader PackageId, Reader BindingStrategy] r) =>
@@ -1702,7 +1787,7 @@ checkLocalModuleBody ::
   Sem r [Statement 'Scoped]
 checkLocalModuleBody m = syntaxBlock $ do
   body <- (^. reservedModuleStatements) <$> getReservedLocalModule ("checkLocalModuleBody" : []) m
-  checkFlattenSections body
+  checkReservedStatements body
 
 checkTopModuleBody ::
   forall r.
@@ -1711,16 +1796,9 @@ checkTopModuleBody ::
   Sem r [Statement 'Scoped]
 checkTopModuleBody body =
   syntaxBlock $
-    reserveModuleBody body >>= checkFlattenSections
+    reserveModuleBody body >>= checkReservedStatements
 
-checkFlattenSections ::
-  forall r.
-  (Members '[HighlightBuilder, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader PackageId, Reader BindingStrategy, State ScoperSyntax] r) =>
-  [Statement 'Parsed] ->
-  Sem r [Statement 'Scoped]
-checkFlattenSections = checkSections
-
-reserveSections ::
+reserveModuleBody ::
   forall r.
   ( Members
       '[ HighlightBuilder,
@@ -1738,7 +1816,7 @@ reserveSections ::
   ) =>
   [Statement 'Parsed] ->
   Sem r [Statement 'Parsed]
-reserveSections = topBindings . concatMapM (fmap toList . reserveDefinition)
+reserveModuleBody = topBindings . concatMapM (fmap toList . reserveDefinition)
   where
     reserveDefinition ::
       ( Members
@@ -1765,19 +1843,19 @@ reserveSections = topBindings . concatMapM (fmap toList . reserveDefinition)
       StatementAxiom d -> void (reserveAxiomSymbol d) $> pure def
       StatementModule d -> void (reserveLocalModule d) $> pure def
       StatementProjectionDef d -> void (reserveProjectionSymbol d) $> pure def
-      StatementImport i -> checkImport i $> pure def
-      StatementOpenModule i -> checkOpenModule i $> pure def
+      StatementImport i -> reserveImport i $> pure def
+      StatementOpenModule {} -> return (pure def)
       StatementInductive d -> do
         m <- reserveInductive d
         reserveLocalModule m
         return (def :| [StatementModule m])
 
-checkSections ::
+checkReservedStatements ::
   forall r.
   (Members '[HighlightBuilder, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax] r) =>
   [Statement 'Parsed] ->
   Sem r [Statement 'Scoped]
-checkSections = topBindings . mapM goDefinition
+checkReservedStatements = topBindings . mapM goDefinition
   where
     goDefinition ::
       ( Members
@@ -1960,17 +2038,13 @@ reserveInductive d = do
               registerRecordInfo (ind ^. S.nameId) info
 
 mkLetSections :: [LetStatement 'Parsed] -> [Statement 'Parsed]
-mkLetSections = mkSections . map toTopStatement
+mkLetSections = map toTopStatement
   where
     toTopStatement :: LetStatement 'Parsed -> Statement 'Parsed
     toTopStatement = \case
       LetFunctionDef f -> StatementFunctionDef f
       LetAliasDef f -> StatementSyntax (SyntaxAlias f)
       LetOpen o -> StatementOpenModule o
-
--- TODO remove
-mkSections :: [Statement 'Parsed] -> [Statement 'Parsed]
-mkSections = id
 
 reserveLocalModuleSymbol ::
   (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, Reader BindingStrategy] r) =>
@@ -2371,7 +2445,7 @@ checkLetStatements ::
 checkLetStatements =
   ignoreSyntax
     . fmap fromSections
-    . (reserveSections >=> checkSections)
+    . (reserveModuleBody >=> checkReservedStatements)
     . mkLetSections
     . toList
   where
