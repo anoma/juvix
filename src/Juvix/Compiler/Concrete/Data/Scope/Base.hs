@@ -162,8 +162,17 @@ emptyScope absPath =
       _scopeReserved = emptyReserved
     }
 
-reservedNameSpace :: forall (ns :: NameSpace). (SingI ns) => Proxy ns -> Lens' Reserved (HashMap Symbol S.Symbol)
-reservedNameSpace Proxy = case sing :: SNameSpace ns of
+scopeNameSpace :: forall (ns :: NameSpace). (SingI ns) => Lens' Scope (HashMap Symbol (SymbolInfo ns))
+scopeNameSpace = case sing :: SNameSpace ns of
+  SNameSpaceSymbols -> scopeSymbols
+  SNameSpaceModules -> scopeModuleSymbols
+  SNameSpaceFixities -> scopeFixitySymbols
+
+reservedNameSpace ::
+  forall (ns :: NameSpace).
+  Sing ns ->
+  Lens' Reserved (HashMap Symbol S.Symbol)
+reservedNameSpace = \case
   SNameSpaceSymbols -> reservedLocalSymbols
   SNameSpaceModules -> reservedLocalModuleSymbols
   SNameSpaceFixities -> reservedLocalFixitySymbols

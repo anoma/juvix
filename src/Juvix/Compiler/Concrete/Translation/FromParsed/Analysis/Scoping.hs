@@ -281,7 +281,6 @@ reserveSymbolOfNameSpace ::
   Sem r S.Symbol
 reserveSymbolOfNameSpace ns kind kindPretty nameSig builtin s = do
   checkNotBound
-  path <- gets (^. scopePath)
   strat <- ask
   s' <- freshSymbol kind kindPretty s
   whenJust builtin (`registerBuiltin` s')
@@ -291,6 +290,39 @@ reserveSymbolOfNameSpace ns kind kindPretty nameSig builtin s = do
         BindingLocal -> False
         BindingTop -> True
   registerName isTop s'
+  modify (set (scopeReservedNameSpace sns . at s) (Just s'))
+  addToScope ns kind s s'
+  return s'
+  where
+    sns :: Sing ns = sing
+    checkNotBound :: Sem r ()
+    checkNotBound = do
+      exists <- gets (^. scopeReservedNameSpace sns . at s)
+      whenJust exists $ \d ->
+        throw
+          ( ErrMultipleDeclarations
+              MultipleDeclarations
+                { _multipleDeclSecond = s,
+                  _multipleDeclFirst = getLoc d
+                }
+          )
+
+addToScope ::
+  forall r ns.
+  ( Members
+      '[ State Scope,
+         Reader BindingStrategy
+       ]
+      r
+  ) =>
+  SNameSpace ns ->
+  NameKind ->
+  Symbol ->
+  S.Symbol ->
+  Sem r ()
+addToScope ns kind s s' = withSingI ns $ do
+  strat <- ask
+  path <- gets (^. scopePath)
   let u = S.unqualifiedSymbol s'
       entry :: NameSpaceEntryType ns
       entry =
@@ -310,25 +342,11 @@ reserveSymbolOfNameSpace ns kind kindPretty nameSig builtin s = do
         Just SymbolInfo {..} -> case strat of
           BindingLocal -> symbolInfoSingle mentry
           BindingTop -> SymbolInfo (HashMap.insert path mentry _symbolInfo)
-  modify (set (scopeReservedNameSpace sns . at s) (Just s'))
   modify (over scopeNameSpace (HashMap.alter (Just . addS entry) s))
-  return s'
   where
     isAlias = case kind of
       KNameAlias -> True
       _ -> False
-    sns :: Sing ns = sing
-    checkNotBound :: Sem r ()
-    checkNotBound = do
-      exists <- gets (^. scopeReservedNameSpace sns . at s)
-      whenJust exists $ \d ->
-        throw
-          ( ErrMultipleDeclarations
-              MultipleDeclarations
-                { _multipleDeclSecond = s,
-                  _multipleDeclFirst = getLoc d
-                }
-          )
 
 reserveSymbolOf ::
   forall (nameKind :: NameKind) r.
@@ -1639,18 +1657,29 @@ withScope scope ma = do
   put before
   return x
 
--- FIXME change scope
-withLocalScopeReserved :: (Members '[State Scope] r) => Reserved -> Sem r a -> Sem r a
-withLocalScopeReserved reserved localScoped = do
+withLocalModuleScope ::
+  forall r a.
+  (Members '[Reader BindingStrategy, State Scope] r) =>
+  Reserved ->
+  Sem r a ->
+  Sem r a
+withLocalModuleScope reserved localScoped = withLocalScope $ do
+  modify (set scopeReserved reserved)
+  putReservedInScope
+  localScoped
+  where
+    putReservedInScope :: Sem r ()
+    putReservedInScope = forEachNameSpace $ \ns ->
+      forM_ (HashMap.toList (reserved ^. reservedNameSpace ns)) $ \(s, s') -> do
+        let kind = getNameKind s'
+        addToScope ns kind s s'
+
+withLocalScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
+withLocalScope localScoped = do
   before <- get @Scope
-  let scope' = set scopeReserved reserved before
-  put scope'
   x <- localScoped
   put before
   return x
-
-withLocalScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
-withLocalScope = withLocalScopeReserved emptyReserved
 
 syntaxBlock :: (Members '[Error ScoperError] r) => Sem (State ScoperSyntax ': r) a -> Sem r a
 syntaxBlock m =
@@ -2134,7 +2163,7 @@ checkLocalModule md@Module {..} = do
       mid = _modulePath' ^. S.nameId
   reservedModule <- getReservedLocalModule ["lo"] modEntry
   (tab, (moduleBody', moduleDoc')) <-
-    withLocalScopeReserved (reservedModule ^. reservedModuleReserved) . runReader (tab1 <> tab2) . runInfoTableBuilder mempty $ do
+    withLocalModuleScope (reservedModule ^. reservedModuleReserved) . runReader (tab1 <> tab2) . runInfoTableBuilder mempty $ do
       inheritScope _modulePath
       b <- checkLocalModuleBody modEntry
       doc' <- mapM checkJudoc _moduleDoc

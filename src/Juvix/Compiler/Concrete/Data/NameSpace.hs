@@ -42,6 +42,9 @@ nameSpaceElemName = \case
   NameSpaceModules -> "module"
   NameSpaceFixities -> "fixity"
 
+forEachNameSpace :: (Monad m) => (forall (ns :: NameSpace). Sing ns -> m ()) -> m ()
+forEachNameSpace f = sequence_ [withSomeSing ns f | ns <- allElements]
+
 entryName :: forall ns. (SingI ns) => Lens' (NameSpaceEntryType ns) S.Name
 entryName = case sing :: SNameSpace ns of
   SNameSpaceSymbols -> \f -> \case
