@@ -36,6 +36,9 @@ type family NameSpaceEntryType s = res | res -> s where
   NameSpaceEntryType 'NameSpaceModules = ModuleSymbolEntry
   NameSpaceEntryType 'NameSpaceFixities = FixitySymbolEntry
 
+forEachNameSpace :: (Monad m) => (forall (ns :: NameSpace). Sing ns -> m ()) -> m ()
+forEachNameSpace f = sequence_ [withSomeSing ns f | ns <- allElements]
+
 entryName :: forall ns. (SingI ns) => Lens' (NameSpaceEntryType ns) S.Name
 entryName = case sing :: SNameSpace ns of
   SNameSpaceSymbols -> \f -> \case

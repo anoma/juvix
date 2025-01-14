@@ -20,12 +20,6 @@ nsEntry = case sing :: SNameSpace ns of
   SNameSpaceSymbols -> preSymbolName
   SNameSpaceFixities -> fixityEntry
 
-scopeNameSpace :: forall (ns :: NameSpace). (SingI ns) => Lens' Scope (HashMap Symbol (SymbolInfo ns))
-scopeNameSpace = case sing :: SNameSpace ns of
-  SNameSpaceSymbols -> scopeSymbols
-  SNameSpaceModules -> scopeModuleSymbols
-  SNameSpaceFixities -> scopeFixitySymbols
-
 scopeReservedNameSpace :: forall (ns :: NameSpace). Sing ns -> Lens' Scope (HashMap Symbol S.Symbol)
 scopeReservedNameSpace s = case s of
   SNameSpaceSymbols -> scopeReservedSymbols
