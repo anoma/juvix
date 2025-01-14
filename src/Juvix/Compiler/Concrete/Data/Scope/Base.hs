@@ -27,24 +27,32 @@ data BindingStrategy
   | -- | Top binding does not allow shadowing. It may result in an ambiguous error
     BindingTop
 
+data InScope = InScope
+  { _inScopeSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceSymbols),
+    -- | Local module symbols (excluding top modules associated with files)
+    _inScopeLocalModuleSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceModules),
+    _inScopeFixitySymbols :: HashMap Symbol (SymbolInfo 'NameSpaceFixities)
+  }
+
+-- | Symbols that have been defined in the current scope level. Every symbol
+-- should map to itself. This is needed because we may query it with a
+-- symbol with a different location but we may want the location of the
+-- original symbol
+data Reserved = Reserved
+  { _reservedLocalSymbols :: HashMap Symbol S.Symbol,
+    _reservedLocalModuleSymbols :: HashMap Symbol S.Symbol,
+    _reservedLocalFixitySymbols :: HashMap Symbol S.Symbol
+  }
+
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
-    _scopeSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceSymbols),
-    -- | Local module symbols (excluding top modules associated with files)
-    _scopeModuleSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceModules),
-    _scopeFixitySymbols :: HashMap Symbol (SymbolInfo 'NameSpaceFixities),
+    _scopeInScope :: InScope,
     -- | The map from S.NameId to Modules is needed because we support merging
     -- several imports under the same name. E.g.
     -- import A as X;
     -- import B as X;
-    _scopeTopModules :: HashMap TopModulePathKey (HashMap S.NameId ScopedModule),
-    -- | Symbols that have been defined in the current scope level. Every symbol
-    -- should map to itself. This is needed because we may query it with a
-    -- symbol with a different location but we may want the location of the
-    -- original symbol
-    _scopeLocalSymbols :: HashMap Symbol S.Symbol,
-    _scopeLocalModuleSymbols :: HashMap Symbol S.Symbol,
-    _scopeLocalFixitySymbols :: HashMap Symbol S.Symbol
+    _scopeImports :: HashMap TopModulePathKey (HashMap S.NameId ScopedModule),
+    _scopeReserved :: Reserved
   }
 
 newtype ModulesCache = ModulesCache
@@ -55,9 +63,18 @@ newtype ScopeParameters = ScopeParameters
   { _scopeImportedModules :: HashMap TopModulePathKey ScopedModule
   }
 
+data ReservedModule = ReservedModule
+  { _reservedModuleName :: S.Name,
+    _reservedModuleExportInfo :: ExportInfo,
+    _reservedModuleReserved :: Reserved,
+    _reservedModuleStatements :: [Statement 'Parsed]
+  }
+
 data ScoperState = ScoperState
   { -- | Local and top modules currently in scope - used to look up qualified symbols
+    -- TODO unify
     _scoperModules :: HashMap S.NameId ScopedModule,
+    _scoperReservedModules :: HashMap S.NameId ReservedModule,
     _scoperAlias :: HashMap S.NameId PreSymbolEntry,
     _scoperNameSignatures :: HashMap S.NameId (NameSignature 'Parsed),
     -- | Indexed by the inductive type. This is used for record updates
@@ -98,6 +115,8 @@ emptyScoperSyntax :: ScoperSyntax
 emptyScoperSyntax = ScoperSyntax mempty mempty
 
 makeLenses ''ScoperIterators
+makeLenses ''InScope
+makeLenses ''ReservedModule
 makeLenses ''SymbolOperator
 makeLenses ''SymbolIterator
 makeLenses ''SymbolInfo
@@ -107,3 +126,75 @@ makeLenses ''ScoperSyntax
 makeLenses ''ScoperState
 makeLenses ''ScopeParameters
 makeLenses ''ModulesCache
+makeLenses ''Reserved
+
+-- TODO this is ugly, why _reservedModuleStatements = [] is ok?
+scopedToReservedModule :: ScopedModule -> ReservedModule
+scopedToReservedModule scoped =
+  ReservedModule
+    { _reservedModuleName = scoped ^. scopedModuleName,
+      _reservedModuleExportInfo = scoped ^. scopedModuleExportInfo,
+      _reservedModuleReserved = emptyReserved,
+      _reservedModuleStatements = []
+    }
+
+emptyReserved :: Reserved
+emptyReserved =
+  Reserved
+    { _reservedLocalSymbols = mempty,
+      _reservedLocalModuleSymbols = mempty,
+      _reservedLocalFixitySymbols = mempty
+    }
+
+emptyInScope :: InScope
+emptyInScope =
+  InScope
+    { _inScopeSymbols = mempty,
+      _inScopeLocalModuleSymbols = mempty,
+      _inScopeFixitySymbols = mempty
+    }
+
+emptyScope :: S.AbsModulePath -> Scope
+emptyScope absPath =
+  Scope
+    { _scopePath = absPath,
+      _scopeInScope = emptyInScope,
+      _scopeImports = mempty,
+      _scopeReserved = emptyReserved
+    }
+
+scopeNameSpaceI :: forall (ns :: NameSpace). (SingI ns) => Lens' Scope (HashMap Symbol (SymbolInfo ns))
+scopeNameSpaceI = scopeNameSpace sing
+
+scopeNameSpace :: forall (ns :: NameSpace). Sing ns -> Lens' Scope (HashMap Symbol (SymbolInfo ns))
+scopeNameSpace = \case
+  SNameSpaceSymbols -> scopeSymbols
+  SNameSpaceModules -> scopeModuleSymbols
+  SNameSpaceFixities -> scopeFixitySymbols
+
+reservedNameSpace ::
+  forall (ns :: NameSpace).
+  Sing ns ->
+  Lens' Reserved (HashMap Symbol S.Symbol)
+reservedNameSpace = \case
+  SNameSpaceSymbols -> reservedLocalSymbols
+  SNameSpaceModules -> reservedLocalModuleSymbols
+  SNameSpaceFixities -> reservedLocalFixitySymbols
+
+scopeSymbols :: Lens' Scope (HashMap Symbol (SymbolInfo 'NameSpaceSymbols))
+scopeSymbols = scopeInScope . inScopeSymbols
+
+scopeModuleSymbols :: Lens' Scope (HashMap Symbol (SymbolInfo 'NameSpaceModules))
+scopeModuleSymbols = scopeInScope . inScopeLocalModuleSymbols
+
+scopeFixitySymbols :: Lens' Scope (HashMap Symbol (SymbolInfo 'NameSpaceFixities))
+scopeFixitySymbols = scopeInScope . inScopeFixitySymbols
+
+scopeReservedSymbols :: Lens' Scope (HashMap Symbol S.Symbol)
+scopeReservedSymbols = scopeReserved . reservedLocalSymbols
+
+scopeReservedLocalModuleSymbols :: Lens' Scope (HashMap Symbol S.Symbol)
+scopeReservedLocalModuleSymbols = scopeReserved . reservedLocalModuleSymbols
+
+scopeReservedFixitySymbols :: Lens' Scope (HashMap Symbol S.Symbol)
+scopeReservedFixitySymbols = scopeReserved . reservedLocalFixitySymbols

@@ -30,7 +30,7 @@ type SemVer :=
 --- A ;Dependency; defines a Juvix package dependency.
 type Dependency :=
   | --- A filesystem path to another Juvix Package.
-    path@{path : String}
+    path@{pathStr : String}
   | --- A ;git; repository containing a Juvix package at its root
     git@{
       -- A name for this dependency

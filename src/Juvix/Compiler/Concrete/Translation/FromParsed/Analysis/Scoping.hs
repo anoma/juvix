@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use list literal" #-}
 module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping
   ( module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping,
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context,
@@ -9,6 +12,7 @@ import Control.Monad.Combinators.Expr qualified as P
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.Text qualified as Text
 import GHC.Base (maxInt, minInt)
 import Juvix.Compiler.Concrete.Data.Highlight.Builder
 import Juvix.Compiler.Concrete.Data.InfoTableBuilder
@@ -50,6 +54,7 @@ iniScoperState :: InfoTable -> ScoperState
 iniScoperState tab =
   ScoperState
     { _scoperModules = mempty,
+      _scoperReservedModules = mempty,
       _scoperNameSignatures = tab ^. infoParsedNameSigs,
       _scoperRecordFields = tab ^. infoRecords,
       _scoperAlias = tab ^. infoScoperAlias,
@@ -276,17 +281,48 @@ reserveSymbolOfNameSpace ::
   Sem r S.Symbol
 reserveSymbolOfNameSpace ns kind kindPretty nameSig builtin s = do
   checkNotBound
-  path <- gets (^. scopePath)
   strat <- ask
   s' <- freshSymbol kind kindPretty s
   whenJust builtin (`registerBuiltin` s')
   whenJust nameSig (modify' . set (scoperNameSignatures . at (s' ^. S.nameId)) . Just)
   whenJust nameSig (registerParsedNameSig (s' ^. S.nameId))
-  modify (set (scopeNameSpaceLocal sns . at s) (Just s'))
   let isTop = case strat of
         BindingLocal -> False
         BindingTop -> True
   registerName isTop s'
+  modify (set (scopeReservedNameSpace sns . at s) (Just s'))
+  addToScope ns kind s s'
+  return s'
+  where
+    sns :: Sing ns = sing
+    checkNotBound :: Sem r ()
+    checkNotBound = do
+      exists <- gets (^. scopeReservedNameSpace sns . at s)
+      whenJust exists $ \d ->
+        throw
+          ( ErrMultipleDeclarations
+              MultipleDeclarations
+                { _multipleDeclSecond = s,
+                  _multipleDeclFirst = getLoc d
+                }
+          )
+
+addToScope ::
+  forall r ns.
+  ( Members
+      '[ State Scope,
+         Reader BindingStrategy
+       ]
+      r
+  ) =>
+  SNameSpace ns ->
+  NameKind ->
+  Symbol ->
+  S.Symbol ->
+  Sem r ()
+addToScope ns kind s s' = withSingI ns $ do
+  strat <- ask
+  path <- gets (^. scopePath)
   let u = S.unqualifiedSymbol s'
       entry :: NameSpaceEntryType ns
       entry =
@@ -306,24 +342,11 @@ reserveSymbolOfNameSpace ns kind kindPretty nameSig builtin s = do
         Just SymbolInfo {..} -> case strat of
           BindingLocal -> symbolInfoSingle mentry
           BindingTop -> SymbolInfo (HashMap.insert path mentry _symbolInfo)
-  modify (over scopeNameSpace (HashMap.alter (Just . addS entry) s))
-  return s'
+  modify (over scopeNameSpaceI (HashMap.alter (Just . addS entry) s))
   where
     isAlias = case kind of
       KNameAlias -> True
       _ -> False
-    sns :: Sing ns = sing
-    checkNotBound :: Sem r ()
-    checkNotBound = do
-      exists <- HashMap.lookup s <$> gets (^. scopeNameSpaceLocal sns)
-      whenJust exists $ \d ->
-        throw
-          ( ErrMultipleDeclarations
-              MultipleDeclarations
-                { _multipleDeclSecond = s,
-                  _multipleDeclFirst = getLoc d
-                }
-          )
 
 reserveSymbolOf ::
   forall (nameKind :: NameKind) r.
@@ -351,14 +374,24 @@ reserveSymbolOf k =
     (fromSing k)
     (fromSing k)
 
+getReservedLocalModuleSymbol ::
+  (HasCallStack, Members '[State Scope] r) =>
+  Symbol ->
+  Sem r S.Symbol
+getReservedLocalModuleSymbol s = do
+  m <- gets (^. scopeReservedLocalModuleSymbols)
+  let s' = fromMaybe err (m ^. at s)
+      err = impossibleError ("Module " <> ppTrace s <> " not found in the scope. Contents of scope:\n" <> ppTrace (toList m))
+  return s'
+
 getReservedDefinitionSymbol ::
   forall r.
   (HasCallStack) =>
-  (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState, Reader BindingStrategy] r) =>
+  (Members '[State Scope] r) =>
   Symbol ->
   Sem r S.Symbol
 getReservedDefinitionSymbol s = do
-  m <- gets (^. scopeLocalSymbols)
+  m <- gets (^. scopeReservedSymbols)
   let s' = fromMaybe err (m ^. at s)
       err = impossibleError ("Symbol " <> ppTrace s <> " not found in the scope. Contents of scope:\n" <> ppTrace (toList m))
   return s'
@@ -448,7 +481,7 @@ bindFixitySymbol ::
   Symbol ->
   Sem r S.Symbol
 bindFixitySymbol s = do
-  m <- gets (^. scopeLocalFixitySymbols)
+  m <- gets (^. scopeReservedFixitySymbols)
   let s' = fromMaybe err (m ^. at s)
       err = error ("impossible. Contents of scope:\n" <> ppTrace (toList m))
   return s'
@@ -494,6 +527,29 @@ reservePatternFunctionSymbols = goAtom
       void (reservePatternName (NameUnqualified _patternBindingName))
       goAtom _patternBindingPattern
 
+reserveImport ::
+  forall r.
+  ( Members
+      '[ HighlightBuilder,
+         Error ScoperError,
+         State Scope,
+         Reader ScopeParameters,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         Reader BindingStrategy,
+         State ScoperSyntax,
+         Reader PackageId
+       ]
+      r
+  ) =>
+  Import 'Parsed ->
+  Sem r ()
+reserveImport i@Import {..} = case _importPublic of
+  NoPublic -> return ()
+  Public {} -> reserveImportPublic i
+
 checkImport ::
   forall r.
   ( Members
@@ -516,9 +572,79 @@ checkImport i@Import {..} = case _importPublic of
   NoPublic -> checkImportNoPublic i
   Public {} -> checkImportPublic i
 
-checkImportPublic ::
+-- TODO factor common code
+reserveImportPublic ::
   forall r.
   ( Members
+      '[ Error ScoperError,
+         State Scope,
+         Reader ScopeParameters,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         HighlightBuilder,
+         Reader BindingStrategy,
+         State ScoperSyntax,
+         Reader PackageId
+       ]
+      r
+  ) =>
+  Import 'Parsed ->
+  Sem r ()
+reserveImportPublic i@Import {..} = do
+  let locMod :: Module 'Parsed 'ModuleLocal =
+        localModule (splitName outerOpenModuleName)
+  reserveLocalModule locMod
+  where
+    gen :: forall a. Sem '[Reader Interval] a -> a
+    gen = run . runReader loc
+
+    loc :: Interval
+    loc = getLoc i
+
+    outerOpenModuleName :: Name
+    outerOpenModuleName = topModulePathToName (fromMaybe _importModulePath _importAsName)
+
+    innerOpen :: OpenModule 'Parsed 'OpenFull
+    innerOpen = gen $ do
+      _openModuleKw <- G.kw G.kwOpen
+      let _openModuleName = topModulePathToName _importModulePath
+      pubKw <- Irrelevant <$> G.kw G.kwPublic
+      let
+      return
+        OpenModule
+          { _openModuleKw,
+            _openModuleUsingHiding = _importUsingHiding,
+            _openModulePublic = Public pubKw,
+            _openModuleName
+          }
+
+    singletonModule :: Symbol -> Statement 'Parsed -> Module 'Parsed 'ModuleLocal
+    singletonModule modName stm = gen $ do
+      _moduleKw <- G.kw G.kwModule
+      _moduleKwEnd <- G.kw G.kwEnd
+      let _moduleId = ()
+          _moduleBody = [stm]
+      return
+        Module
+          { _moduleDoc = Nothing,
+            _modulePragmas = Nothing,
+            _moduleOrigin = LocalModuleType,
+            _moduleMarkdownInfo = Nothing,
+            _modulePath = modName,
+            ..
+          }
+
+    localModule :: ([Symbol], Symbol) -> Module 'Parsed 'ModuleLocal
+    localModule (qualf, m) = case qualf of
+      [] -> singletonModule m (StatementOpenModule innerOpen)
+      n : ns -> singletonModule n (StatementModule (localModule (ns, m)))
+
+checkImportPublic ::
+  forall r.
+  ( HasCallStack,
+    Members
       '[ Error ScoperError,
          State Scope,
          Reader ScopeParameters,
@@ -649,8 +775,8 @@ checkImportNoPublic import_@Import {..} = do
   registerName False importName
   whenJust synonymName (registerName False)
   registerScoperModules scopedModule
-  importOpen' <- mapM (checkOpenModuleShort scopedModule) _importOpen
-  usingHiding' <- mapM (checkUsingHiding importName exportInfoOriginal) _importUsingHiding
+  importOpen' <- mapM (checkOpenModuleShort (scopedToReservedModule scopedModule)) _importOpen
+  usingHiding' <- mapM (checkUsingHiding sname' exportInfoOriginal) _importUsingHiding
   let exportInfoFiltered :: ExportInfo = filterExportInfo _importPublic usingHiding' exportInfoOriginal
       filteredScopedModule = set scopedModuleExportInfo exportInfoFiltered scopedModule
   addModuleToScope filteredScopedModule
@@ -666,14 +792,15 @@ checkImportNoPublic import_@Import {..} = do
   where
     addModuleToScope :: ScopedModule -> Sem r ()
     addModuleToScope smod = do
-      let mpath :: TopModulePathKey = topModulePathKey (fromMaybe _importModulePath _importAsName)
+      let mpath :: TopModulePathKey = modulePathTypeKey (fromMaybe _importModulePath _importAsName)
           uid :: S.NameId = smod ^. scopedModuleName . S.nameId
           singTbl = HashMap.singleton uid smod
-      modify (over (scopeTopModules . at mpath) (Just . maybe singTbl (HashMap.insert uid smod)))
+      modify (over (scopeImports . at mpath) (Just . maybe singTbl (HashMap.insert uid smod)))
 
     registerScoperModules :: ScopedModule -> Sem r ()
     registerScoperModules m = do
-      modify (over scoperModules (HashMap.insert (m ^. scopedModulePath . S.nameId) m))
+      modify (set (scoperModules . at (m ^. scopedModulePath . S.nameId)) (Just m))
+      modify (set (scoperReservedModules . at (m ^. scopedModulePath . S.nameId)) (Just (scopedToReservedModule m)))
       forM_ (m ^. scopedModuleLocalModules) registerScoperModules
 
 getTopModulePath :: Module 'Parsed 'ModuleTop -> S.AbsModulePath
@@ -683,14 +810,23 @@ getTopModulePath Module {..} =
       S._absLocalPath = mempty
     }
 
-getModuleExportInfo :: forall r. (Members '[State ScoperState] r) => ModuleSymbolEntry -> Sem r ExportInfo
-getModuleExportInfo m = fromMaybeM err (gets (^? scoperModules . at (m ^. moduleEntry . S.nameId) . _Just . scopedModuleExportInfo))
+getModuleExportInfo :: forall r. (HasCallStack, Members '[State ScoperState] r) => [Text] -> ModuleSymbolEntry -> Sem r ExportInfo
+getModuleExportInfo msg = fmap (^. reservedModuleExportInfo) . getReservedLocalModule ("getModuleExportInfo" : msg)
+
+getReservedLocalModule :: forall r. (HasCallStack, Members '[State ScoperState] r) => [Text] -> ModuleSymbolEntry -> Sem r ReservedModule
+getReservedLocalModule debug m = fromMaybeM err (gets (^. scoperReservedModules . at (m ^. moduleEntry . S.nameId)))
   where
     err :: Sem r a
     err = do
-      ms <- toList <$> gets (^. scoperModules)
-      error
-        ( "impossible. Could not find "
+      ms <- toList <$> gets (^. scoperReservedModules)
+      impossibleError
+        ( "getReservedLocalModule\n"
+            <> Text.unlines debug
+            <> "\ncallStack =\n"
+            <> ghcCallStack
+            <> "\n"
+            <> ". "
+            <> "Could not find "
             <> ppTrace m
             <> "\nModules in the state: "
             <> ppTrace ms
@@ -698,19 +834,20 @@ getModuleExportInfo m = fromMaybeM err (gets (^? scoperModules . at (m ^. module
 
 lookupLocalSymbolAux ::
   forall r.
-  (Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output PreSymbolEntry, Output FixitySymbolEntry] r) =>
+  (HasCallStack, Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output PreSymbolEntry, Output FixitySymbolEntry] r) =>
+  [Text] ->
   (S.WhyInScope -> Bool) ->
   [Symbol] ->
   Symbol ->
   Sem r ()
-lookupLocalSymbolAux whyInScope modules final =
+lookupLocalSymbolAux msg whyInScope modules final =
   case modules of
     [] ->
       lookHere
     p : ps -> do
       entries <- gets (^.. scopeModuleSymbols . at p . _Just . symbolInfo . each)
       let entries' = filter (whyInScope . (^. moduleEntry . S.nameWhyInScope)) entries
-      mapM_ (getModuleExportInfo >=> lookInExport final ps) entries'
+      mapM_ (getModuleExportInfo ("lookupLocalSymbolAux" : msg) >=> lookInExport final ps) entries'
   where
     lookHere :: Sem r ()
     lookHere = do
@@ -720,7 +857,7 @@ lookupLocalSymbolAux whyInScope modules final =
             Proxy ns ->
             Sem r' ()
           helper Proxy = do
-            entries <- gets (^.. scopeNameSpace @ns . at final . _Just . symbolInfo . each)
+            entries <- gets (^.. scopeNameSpaceI @ns . at final . _Just . symbolInfo . each)
             let entries' = filter (whyInScope . (^. entryName . S.nameWhyInScope)) entries
             mapM_ output entries'
       helper (Proxy @'NameSpaceSymbols)
@@ -730,11 +867,12 @@ lookupLocalSymbolAux whyInScope modules final =
 -- | Do not call directly. Looks for a symbol in (possibly) nested local modules
 lookupSymbolAux ::
   forall r.
-  (Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output PreSymbolEntry, Output FixitySymbolEntry] r) =>
+  (HasCallStack, Members '[State ScoperState, State Scope, Output ModuleSymbolEntry, Output PreSymbolEntry, Output FixitySymbolEntry] r) =>
+  [Text] ->
   [Symbol] ->
   Symbol ->
   Sem r ()
-lookupSymbolAux modules final = do
+lookupSymbolAux debug modules final = do
   hereOrInLocalModule
   importedTopModule
   where
@@ -745,13 +883,13 @@ lookupSymbolAux modules final = do
           path1 = topPath ^. modulePathDir ++ [topPath ^. modulePathName]
           path2 = path0 ^. S.absLocalPath
           pref = commonPrefix path2 modules
-      when (isPrefixOf path1 modules) $ do
+      when (path1 `isPrefixOf` modules) $ do
         let modules' = drop (length path1) modules
             pref' = commonPrefix path2 modules'
         lookPrefix pref' path2 modules'
       when (notNull pref) $
         lookPrefix pref path2 modules
-      lookupLocalSymbolAux (const True) modules final
+      lookupLocalSymbolAux ("lookupSymbolAux" : debug) (const True) modules final
 
     lookPrefix :: [Symbol] -> [Symbol] -> [Symbol] -> Sem r ()
     lookPrefix pref path modules' = do
@@ -759,13 +897,14 @@ lookupSymbolAux modules final = do
           inheritDepth = length path - prefLen
           modules'' = drop prefLen modules'
       lookupLocalSymbolAux
+        ("lookPrefix" : [])
         (== iterate S.BecauseInherited S.BecauseDefined !! inheritDepth)
         modules''
         final
 
     importedTopModule :: Sem r ()
     importedTopModule = do
-      tbl <- gets (^. scopeTopModules)
+      tbl <- gets (^. scopeImports)
       mapM_ output (tbl ^.. at path . _Just . each . to mkModuleEntry)
       where
         path = topModulePathKey (TopModulePath modules final)
@@ -789,16 +928,17 @@ lookInExport sym remaining e = case remaining of
   where
     mayModule :: ExportInfo -> Symbol -> Sem r (Maybe ExportInfo)
     mayModule ExportInfo {..} s =
-      mapM getModuleExportInfo (HashMap.lookup s _exportModuleSymbols)
+      mapM (getModuleExportInfo ("lookInExport" : [])) (HashMap.lookup s _exportModuleSymbols)
 
 -- | We return a list of entries because qualified names can point to different
 -- modules due to nesting.
 lookupQualifiedSymbol ::
   forall r.
   (Members '[State Scope, State ScoperState] r) =>
+  [Text] ->
   ([Symbol], Symbol) ->
   Sem r (HashSet PreSymbolEntry, HashSet ModuleSymbolEntry, HashSet FixitySymbolEntry)
-lookupQualifiedSymbol sms = do
+lookupQualifiedSymbol debug sms = do
   (es, (ms, fs)) <-
     runOutputHashSet
       . runOutputHashSet
@@ -817,7 +957,7 @@ lookupQualifiedSymbol sms = do
       where
         -- Current module.
         here :: Sem r' ()
-        here = lookupSymbolAux path sym
+        here = lookupSymbolAux ("here" : debug) path sym
         -- Looks for top level modules
         there :: Sem r' ()
         there = mapM_ (uncurry lookInTopModule) allTopPaths
@@ -837,7 +977,7 @@ lookupQualifiedSymbol sms = do
 
             lookInTopModule :: TopModulePathKey -> [Symbol] -> Sem r' ()
             lookInTopModule topPath remaining = do
-              tbl <- gets (^. scopeTopModules)
+              tbl <- gets (^. scopeImports)
               sequence_
                 [ lookInExport sym remaining (ref ^. scopedModuleExportInfo)
                   | Just t <- [tbl ^. at topPath],
@@ -858,7 +998,7 @@ checkQualifiedName ::
   QualifiedName ->
   Sem r PreSymbolEntry
 checkQualifiedName q@(QualifiedName (SymbolPath p) sym) = do
-  es <- fst3 <$> lookupQualifiedSymbol (toList p, sym)
+  es <- fst3 <$> lookupQualifiedSymbol ["checkQualifiedName"] (toList p, sym)
   case toList es of
     [] -> notInScope
     [e] -> return e
@@ -903,10 +1043,16 @@ exportScope ::
   (Members '[State Scope, Error ScoperError] r) =>
   Scope ->
   Sem r ExportInfo
-exportScope Scope {..} = do
-  _exportSymbols <- HashMap.fromList <$> mapMaybeM mkentry (HashMap.toList _scopeSymbols)
-  _exportModuleSymbols <- HashMap.fromList <$> mapMaybeM mkentry (HashMap.toList _scopeModuleSymbols)
-  _exportFixitySymbols <- HashMap.fromList <$> mapMaybeM mkentry (HashMap.toList _scopeFixitySymbols)
+exportScope scope@Scope {..} = do
+  let mkHashMap ::
+        forall ns.
+        (SingI ns) =>
+        (Lens' Scope (HashMap Symbol (SymbolInfo ns))) ->
+        Sem r (HashMap Symbol (NameSpaceEntryType ns))
+      mkHashMap l = hashMap <$> mapMaybeM mkentry (HashMap.toList (scope ^. l))
+  _exportSymbols <- mkHashMap scopeSymbols
+  _exportModuleSymbols <- mkHashMap scopeModuleSymbols
+  _exportFixitySymbols <- mkHashMap scopeFixitySymbols
   return ExportInfo {..}
   where
     mkentry ::
@@ -938,13 +1084,13 @@ exportScope Scope {..} = do
                 )
             )
 
-getLocalModules :: (Member (State ScoperState) r) => ExportInfo -> Sem r (HashMap S.NameId ScopedModule)
-getLocalModules ExportInfo {..} = do
+getScopedLocalModules :: (Member (State ScoperState) r) => ExportInfo -> Sem r (HashMap S.NameId ScopedModule)
+getScopedLocalModules ExportInfo {..} = do
   mds <- gets (^. scoperModules)
-  return $ HashMap.fromList $ map (fetch mds) $ HashMap.elems _exportModuleSymbols
+  return . hashMap . map (fetch mds) $ toList _exportModuleSymbols
   where
     fetch :: HashMap NameId ScopedModule -> ModuleSymbolEntry -> (NameId, ScopedModule)
-    fetch mds ModuleSymbolEntry {..} = (n, fromJust $ HashMap.lookup n mds)
+    fetch mds ModuleSymbolEntry {..} = (n, fromJust (mds ^. at n))
       where
         n = _moduleEntry ^. S.nameId
 
@@ -966,7 +1112,7 @@ readScopeModule import_ = do
               <> "\nAvailable modules:\n "
               <> show (HashMap.keys (mods ^. scopeImportedModules))
           )
-  let path = topModulePathKey (import_ ^. importModulePath)
+  let path = modulePathTypeKey (import_ ^. importModulePath)
   return (fromMaybe err (mods ^. scopeImportedModules . at path))
 
 checkFixityInfo ::
@@ -1554,11 +1700,12 @@ checkTopModule m@Module {..} = checkedModule
         $ do
           path' <- freshTopModulePath
           withTopScope $ do
-            (e, body') <- topBindings (checkModuleBody _moduleBody)
+            body' <- topBindings (checkTopModuleBody _moduleBody)
+            e <- get >>= exportScope
             doc' <- mapM checkJudoc _moduleDoc
             registerModuleDoc (path' ^. S.nameId) doc'
             return (e, body', path', doc')
-      localModules <- getLocalModules e
+      localModules <- getScopedLocalModules e
       _moduleId <- getModuleId (topModulePathKey (path' ^. S.nameConcrete))
       doctbl <- getDocTable _moduleId
       let md =
@@ -1588,11 +1735,7 @@ checkTopModule m@Module {..} = checkedModule
 withTopScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
 withTopScope ma = do
   before <- get @Scope
-  let scope' =
-        ( set scopeLocalSymbols mempty
-            . set scopeLocalModuleSymbols mempty
-        )
-          before
+  let scope' = set scopeReserved emptyReserved before
   put scope'
   ma
 
@@ -1604,14 +1747,27 @@ withScope scope ma = do
   put before
   return x
 
+withLocalModuleScope ::
+  forall r a.
+  (Members '[Reader BindingStrategy, State Scope] r) =>
+  Reserved ->
+  Sem r a ->
+  Sem r a
+withLocalModuleScope reserved localScoped = withLocalScope $ do
+  modify (set scopeReserved reserved)
+  putReservedInScope
+  localScoped
+  where
+    putReservedInScope :: Sem r ()
+    putReservedInScope = forEachNameSpace $ \ns ->
+      forM_ (HashMap.toList (reserved ^. reservedNameSpace ns)) $ \(s, s') -> do
+        let kind = getNameKind s'
+        addToScope ns kind s s'
+
 withLocalScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
 withLocalScope ma = do
   before <- get @Scope
-  let scope' =
-        ( set scopeLocalSymbols mempty
-            . set scopeLocalModuleSymbols mempty
-        )
-          before
+  let scope' = set scopeReserved emptyReserved before
   put scope'
   x <- ma
   put before
@@ -1625,366 +1781,271 @@ syntaxBlock m =
     checkOrphanIterators
     return a
 
-checkModuleBody ::
+checkLocalModuleBody ::
+  forall r.
+  (Members '[HighlightBuilder, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader PackageId, Reader BindingStrategy] r) =>
+  ModuleSymbolEntry ->
+  Sem r [Statement 'Scoped]
+checkLocalModuleBody m = syntaxBlock $ do
+  body <- (^. reservedModuleStatements) <$> getReservedLocalModule ("checkLocalModuleBody" : []) m
+  checkReservedStatements body
+
+checkTopModuleBody ::
   forall r.
   (Members '[HighlightBuilder, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader PackageId, Reader BindingStrategy] r) =>
   [Statement 'Parsed] ->
-  Sem r (ExportInfo, [Statement 'Scoped])
-checkModuleBody body = do
-  body' <-
-    fmap flattenSections
-      . syntaxBlock
-      $ checkSections (mkSections body)
-  exported <- get >>= exportScope
-  return (exported, body')
-  where
-    flattenSections :: forall s. StatementSections s -> [Statement s]
-    flattenSections s = run . execOutputList $ case s of
-      SectionsEmpty -> return ()
-      SectionsNonDefinitions n -> goNonDefinitions n
-      SectionsDefinitions n -> goDefinitions n
-      where
-        goNonDefinitions :: forall t. (Members '[Output (Statement s)] t) => NonDefinitionsSection s -> Sem t ()
-        goNonDefinitions NonDefinitionsSection {..} = do
-          mapM_ (output . toStatement) _nonDefinitionsSection
-          whenJust _nonDefinitionsNext goDefinitions
-          where
-            toStatement :: NonDefinition s -> Statement s
-            toStatement = \case
-              NonDefinitionImport d -> StatementImport d
-              NonDefinitionModule d -> StatementModule d
-              NonDefinitionOpenModule d -> StatementOpenModule d
+  Sem r [Statement 'Scoped]
+checkTopModuleBody body =
+  syntaxBlock $
+    reserveModuleBody body >>= checkReservedStatements
 
-        goDefinitions :: forall t. (Members '[Output (Statement s)] t) => DefinitionsSection s -> Sem t ()
-        goDefinitions DefinitionsSection {..} = do
-          mapM_ (output . toStatement) _definitionsSection
-          whenJust _definitionsNext goNonDefinitions
-          where
-            toStatement :: Definition s -> Statement s
-            toStatement = \case
-              DefinitionSyntax d -> StatementSyntax d
-              DefinitionDeriving d -> StatementDeriving d
-              DefinitionAxiom d -> StatementAxiom d
-              DefinitionFunctionDef d -> StatementFunctionDef d
-              DefinitionInductive d -> StatementInductive d
-              DefinitionProjectionDef d -> StatementProjectionDef d
-
-checkSections ::
+reserveModuleBody ::
   forall r.
-  (Members '[HighlightBuilder, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax, Reader PackageId] r) =>
-  StatementSections 'Parsed ->
-  Sem r (StatementSections 'Scoped)
-checkSections sec = topBindings helper
+  ( Members
+      '[ HighlightBuilder,
+         Error ScoperError,
+         Reader ScopeParameters,
+         State Scope,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         State ScoperSyntax,
+         Reader PackageId
+       ]
+      r
+  ) =>
+  [Statement 'Parsed] ->
+  Sem r [Statement 'Parsed]
+reserveModuleBody = topBindings . concatMapM (fmap toList . reserveDefinition)
   where
-    helper ::
-      forall r'.
-      (r' ~ Reader BindingStrategy ': r) =>
-      Sem r' (StatementSections 'Scoped)
-    helper = case sec of
-      SectionsEmpty -> return SectionsEmpty
-      SectionsDefinitions d -> SectionsDefinitions <$> goDefinitions d
-      SectionsNonDefinitions d -> SectionsNonDefinitions <$> goNonDefinitions d
+    reserveDefinition ::
+      ( Members
+          '[ Error ScoperError,
+             State Scope,
+             State ScoperState,
+             State ScoperSyntax,
+             Reader PackageId,
+             Reader ScopeParameters,
+             InfoTableBuilder,
+             NameIdGen,
+             HighlightBuilder,
+             Reader BindingStrategy,
+             Reader InfoTable
+           ]
+          r'
+      ) =>
+      Statement 'Parsed ->
+      Sem r' (NonEmpty (Statement 'Parsed))
+    reserveDefinition def = case def of
+      StatementSyntax s -> resolveSyntaxDef s $> pure def
+      StatementFunctionDef d -> reserveFunctionLikeSymbol d $> pure def
+      StatementDeriving d -> reserveDerivingSymbol d $> pure def
+      StatementAxiom d -> void (reserveAxiomSymbol d) $> pure def
+      StatementModule d -> void (reserveLocalModule d) $> pure def
+      StatementProjectionDef d -> void (reserveProjectionSymbol d) $> pure def
+      StatementImport i -> reserveImport i $> pure def
+      StatementOpenModule {} -> return (pure def)
+      StatementInductive d -> do
+        m <- reserveInductive d
+        reserveLocalModule m
+        return (def :| [StatementModule m])
+
+checkReservedStatements ::
+  forall r.
+  (Members '[HighlightBuilder, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax] r) =>
+  [Statement 'Parsed] ->
+  Sem r [Statement 'Scoped]
+checkReservedStatements = topBindings . mapM goDefinition
+  where
+    goDefinition ::
+      ( Members
+          '[ Error ScoperError,
+             State Scope,
+             State ScoperState,
+             State ScoperSyntax,
+             Reader PackageId,
+             Reader ScopeParameters,
+             InfoTableBuilder,
+             NameIdGen,
+             HighlightBuilder,
+             Reader BindingStrategy,
+             Reader InfoTable
+           ]
+          r'
+      ) =>
+      Statement 'Parsed ->
+      Sem r' (Statement 'Scoped)
+    goDefinition = \case
+      StatementSyntax s -> StatementSyntax <$> checkSyntaxDef s
+      StatementFunctionDef d -> StatementFunctionDef <$> checkFunctionDef d
+      StatementDeriving d -> StatementDeriving <$> checkDeriving d
+      StatementAxiom d -> StatementAxiom <$> checkAxiomDef d
+      StatementModule d -> StatementModule <$> checkLocalModule d
+      StatementImport i -> StatementImport <$> checkImport i
+      StatementOpenModule i -> StatementOpenModule <$> checkOpenModule i
+      StatementInductive d -> StatementInductive <$> checkInductiveDef d
+      StatementProjectionDef d -> StatementProjectionDef <$> checkProjectionDef d
+
+defineInductiveModule :: forall r. (Members '[Reader PackageId] r) => S.Symbol -> InductiveDef 'Parsed -> Sem r (Module 'Parsed 'ModuleLocal)
+defineInductiveModule headConstr i =
+  runReader (getLoc (i ^. inductiveName)) genModule
+  where
+    genModule :: forall s'. (Members '[Reader Interval, Reader PackageId] s') => Sem s' (Module 'Parsed 'ModuleLocal)
+    genModule = do
+      _moduleKw <- G.kw G.kwModule
+      _moduleKwEnd <- G.kw G.kwEnd
+      let _modulePath = i ^. inductiveName
+          _moduleId = ()
+      _moduleBody <- genBody
+      return
+        Module
+          { _moduleDoc = Nothing,
+            _modulePragmas = Nothing,
+            _moduleOrigin = LocalModuleType,
+            _moduleMarkdownInfo = Nothing,
+            ..
+          }
       where
-        goNonDefinitions :: NonDefinitionsSection 'Parsed -> Sem r' (NonDefinitionsSection 'Scoped)
-        goNonDefinitions NonDefinitionsSection {..} = do
-          sec' <- mapM goNonDefinition _nonDefinitionsSection
-          next' <- mapM goDefinitions _nonDefinitionsNext
-          return
-            NonDefinitionsSection
-              { _nonDefinitionsNext = next',
-                _nonDefinitionsSection = sec'
-              }
+        genBody :: Sem s' [Statement 'Parsed]
+        genBody = fromMaybe [] <$> runFail genFieldProjections
           where
-            goNonDefinition :: NonDefinition 'Parsed -> Sem r' (NonDefinition 'Scoped)
-            goNonDefinition = \case
-              NonDefinitionModule m -> NonDefinitionModule <$> checkLocalModule m
-              NonDefinitionImport i -> NonDefinitionImport <$> checkImport i
-              NonDefinitionOpenModule i -> NonDefinitionOpenModule <$> checkOpenModule i
-
-        goDefinitions :: DefinitionsSection 'Parsed -> Sem r' (DefinitionsSection 'Scoped)
-        goDefinitions DefinitionsSection {..} = goDefs [] [] (toList _definitionsSection)
-          where
-            -- This function goes through a section reserving definitions and
-            -- collecting inductive modules. It breaks a section when the
-            -- collected inductive modules are non-empty (there were some
-            -- inductive definitions) and the next definition is a function
-            -- definition.
-            -- `acc` holds the definitions in the section encountered up till
-            -- now (reversed)
-            -- `ms` holds the inductive modules for the inductive definitions in
-            -- the section up till now (reversed)
-            goDefs :: [Definition 'Parsed] -> [Module 'Parsed 'ModuleLocal] -> [Definition 'Parsed] -> Sem r' (DefinitionsSection 'Scoped)
-            goDefs acc ms = \case
-              -- if there were some inductive type definitions (the list `ms` of
-              -- corresponding inductive modules is not empty) and the next
-              -- definition is a function definition, then we need to break the
-              -- section and start a new one
-              def@DefinitionFunctionDef {} : defs
-                | not (null ms) -> do
-                    massert (not (null acc))
-                    sec' <- goDefsSection (nonEmpty' (reverse acc))
-                    ms' <- goInductiveModules (nonEmpty' (reverse ms))
-                    next' <- goDefs [] [] (def : defs)
-                    let next'' =
-                          NonDefinitionsSection
-                            { _nonDefinitionsSection = ms',
-                              _nonDefinitionsNext = Just next'
-                            }
-                    return
-                      DefinitionsSection
-                        { _definitionsNext = Just next'',
-                          _definitionsSection = sec'
-                        }
-              def : defs -> do
-                -- `reserveDefinition` returns the created inductive module if
-                -- `def` is an inductive type definition
-                m <- reserveDefinition def
-                let ms' = maybeToList m ++ ms
-                goDefs (def : acc) ms' defs
-              [] -> do
-                massert (not (null acc))
-                sec' <- goDefsSection (nonEmpty' (reverse acc))
-                next' <- case nonEmpty (reverse ms) of
-                  Nothing -> mapM goNonDefinitions _definitionsNext
-                  Just ms' ->
-                    case _definitionsNext of
-                      Nothing -> do
-                        ms'' <- goInductiveModules ms'
-                        return $
-                          Just
-                            NonDefinitionsSection
-                              { _nonDefinitionsSection = ms'',
-                                _nonDefinitionsNext = Nothing
-                              }
-                      Just nd -> do
-                        ms'' <- goInductiveModules ms'
-                        nd' <- goNonDefinitions nd
-                        return $ Just $ over nonDefinitionsSection (ms'' <>) nd'
-                return
-                  DefinitionsSection
-                    { _definitionsNext = next',
-                      _definitionsSection = sec'
-                    }
-
-            -- checks the local inductive modules generated for the inductive type definitions
-            goInductiveModules :: NonEmpty (Module 'Parsed 'ModuleLocal) -> Sem r' (NonEmpty (NonDefinition 'Scoped))
-            goInductiveModules ms = do
-              ms' <- mapM checkLocalModule ms
-              return $ fmap NonDefinitionModule ms'
-
-            -- checks the definitions in a section
-            goDefsSection :: NonEmpty (Definition 'Parsed) -> Sem r' (NonEmpty (Definition 'Scoped))
-            goDefsSection defs = do
-              mapM goDefinition defs
-
-            reserveDefinition :: Definition 'Parsed -> Sem r' (Maybe (Module 'Parsed 'ModuleLocal))
-            reserveDefinition = \case
-              DefinitionSyntax s -> resolveSyntaxDef s $> Nothing
-              DefinitionFunctionDef d -> reserveFunctionLikeSymbol d >> return Nothing
-              DefinitionDeriving d -> reserveDerivingSymbol d >> return Nothing
-              DefinitionAxiom d -> reserveAxiomSymbol d >> return Nothing
-              DefinitionProjectionDef d -> reserveProjectionSymbol d >> return Nothing
-              DefinitionInductive d -> Just <$> reserveInductive d
+            genFieldProjections :: Sem (Fail ': s') [Statement 'Parsed]
+            genFieldProjections = do
+              fs <- toList <$> getFields
+              return . run . evalState 0 $ mapM goRecordStatement fs
               where
-                -- returns the module generated for the inductive definition
-                reserveInductive :: InductiveDef 'Parsed -> Sem r' (Module 'Parsed 'ModuleLocal)
-                reserveInductive d = do
-                  i <- reserveInductiveSymbol d
-                  let builtinConstrs :: NonEmpty (Maybe BuiltinConstructor)
-                      builtinConstrs =
-                        NonEmpty.prependList
-                          (maybe [] ((map Just . builtinConstructors) . (^. withLocParam)) (d ^. inductiveBuiltin))
-                          (NonEmpty.repeat Nothing)
-                  constrs <- mapM (uncurry reserveConstructor) (mzip builtinConstrs (d ^. inductiveConstructors))
-                  m <- defineInductiveModule (head constrs) d
-                  ignoreFail (registerRecordType (head constrs) i)
-                  return m
+                goRecordStatement :: RecordStatement 'Parsed -> Sem '[State Int] (Statement 'Parsed)
+                goRecordStatement = \case
+                  RecordStatementSyntax f -> StatementSyntax <$> goSyntax f
+                  RecordStatementField f -> goField f
                   where
-                    reserveConstructor :: Maybe BuiltinConstructor -> ConstructorDef 'Parsed -> Sem r' S.Symbol
-                    reserveConstructor b c = do
-                      c' <- reserveConstructorSymbol d c b
-                      let storeSig :: RecordNameSignature 'Parsed -> Sem r' ()
-                          storeSig sig = modify' (set (scoperConstructorFields . at (c' ^. S.nameId)) (Just sig))
-                          mrecord :: Maybe (RhsRecord 'Parsed) = c ^? constructorRhs . _ConstructorRhsRecord
-                      whenJust mrecord $ \r -> do
-                        let sig = mkRecordNameSignature r
-                        storeSig sig
-                        registerParsedConstructorSig (c' ^. S.nameId) sig
-                      return c'
+                    goSyntax :: RecordSyntaxDef 'Parsed -> Sem s (SyntaxDef 'Parsed)
+                    goSyntax = \case
+                      RecordSyntaxOperator d -> return (SyntaxOperator d)
+                      RecordSyntaxIterator d -> return (SyntaxIterator d)
 
-                    registerRecordType :: S.Symbol -> S.Symbol -> Sem (Fail ': r') ()
-                    registerRecordType mconstr ind =
-                      case d ^. inductiveConstructors of
-                        mkRec :| cs
-                          | notNull cs -> fail
-                          | otherwise -> do
-                              fs <-
-                                failMaybe $
-                                  mkRec
-                                    ^? ( constructorRhs
-                                           . _ConstructorRhsRecord
-                                           . to mkRecordNameSignature
-                                       )
-                              let info =
-                                    RecordInfo
-                                      { _recordInfoSignature = fs,
-                                        _recordInfoConstructor = mconstr
-                                      }
-                              modify' (set (scoperRecordFields . at (ind ^. S.nameId)) (Just info))
-                              registerRecordInfo (ind ^. S.nameId) info
-
-            goDefinition :: Definition 'Parsed -> Sem r' (Definition 'Scoped)
-            goDefinition = \case
-              DefinitionSyntax s -> DefinitionSyntax <$> checkSyntaxDef s
-              DefinitionFunctionDef d -> DefinitionFunctionDef <$> checkFunctionDef d
-              DefinitionDeriving d -> DefinitionDeriving <$> checkDeriving d
-              DefinitionAxiom d -> DefinitionAxiom <$> checkAxiomDef d
-              DefinitionInductive d -> DefinitionInductive <$> checkInductiveDef d
-              DefinitionProjectionDef d -> DefinitionProjectionDef <$> checkProjectionDef d
-
-            defineInductiveModule :: S.Symbol -> InductiveDef 'Parsed -> Sem r' (Module 'Parsed 'ModuleLocal)
-            defineInductiveModule headConstr i = do
-              runReader (getLoc (i ^. inductiveName)) genModule
-              where
-                genModule :: forall s'. (Members '[Reader Interval, Reader PackageId, State Scope] s') => Sem s' (Module 'Parsed 'ModuleLocal)
-                genModule = do
-                  _moduleKw <- G.kw G.kwModule
-                  _moduleKwEnd <- G.kw G.kwEnd
-                  let _modulePath = i ^. inductiveName
-                      _moduleId = ()
-                  _moduleBody <- genBody
-                  return
-                    Module
-                      { _moduleDoc = Nothing,
-                        _modulePragmas = Nothing,
-                        _moduleOrigin = LocalModuleType,
-                        _moduleMarkdownInfo = Nothing,
-                        ..
-                      }
-                  where
-                    genBody :: Sem s' [Statement 'Parsed]
-                    genBody = fromMaybe [] <$> runFail genFieldProjections
+                    goField :: RecordField 'Parsed -> Sem '[State Int] (Statement 'Parsed)
+                    goField f = do
+                      idx <- get
+                      let s = mkProjection (Indexed idx f)
+                      incFieldIx
+                      return (StatementProjectionDef s)
                       where
-                        genFieldProjections :: Sem (Fail ': s') [Statement 'Parsed]
-                        genFieldProjections = do
-                          fs <- toList <$> getFields
-                          return . run . evalState 0 $ mapM goRecordStatement fs
-                          where
-                            goRecordStatement :: RecordStatement 'Parsed -> Sem '[State Int] (Statement 'Parsed)
-                            goRecordStatement = \case
-                              RecordStatementSyntax f -> StatementSyntax <$> goSyntax f
-                              RecordStatementField f -> goField f
-                              where
-                                goSyntax :: RecordSyntaxDef 'Parsed -> Sem s (SyntaxDef 'Parsed)
-                                goSyntax = \case
-                                  RecordSyntaxOperator d -> return (SyntaxOperator d)
-                                  RecordSyntaxIterator d -> return (SyntaxIterator d)
+                        incFieldIx :: Sem '[State Int] ()
+                        incFieldIx = modify' @Int succ
 
-                                goField :: RecordField 'Parsed -> Sem '[State Int] (Statement 'Parsed)
-                                goField f = do
-                                  idx <- get
-                                  let s = mkProjection (Indexed idx f)
-                                  incFieldIx
-                                  return (StatementProjectionDef s)
-                                  where
-                                    incFieldIx :: Sem '[State Int] ()
-                                    incFieldIx = modify' @Int succ
+                mkProjection ::
+                  Indexed (RecordField 'Parsed) ->
+                  ProjectionDef 'Parsed
+                mkProjection (Indexed idx field) =
+                  ProjectionDef
+                    { _projectionConstructor = headConstr,
+                      _projectionField = field ^. fieldName,
+                      _projectionType = G.mkProjectionType i (G.mkTypeSigType' (G.mkWildcardParsed (getLoc (i ^. inductiveName))) (field ^. fieldTypeSig)),
+                      _projectionFieldIx = idx,
+                      _projectionKind = kind,
+                      _projectionFieldBuiltin = field ^. fieldBuiltin,
+                      _projectionDoc = field ^. fieldDoc,
+                      _projectionPragmas = combinePragmas (i ^. inductivePragmas) (field ^. fieldPragmas)
+                    }
+                  where
+                    kind :: ProjectionKind
+                    kind = case field ^. fieldIsImplicit of
+                      ExplicitField -> ProjectionExplicit
+                      ImplicitInstanceField -> ProjectionCoercion
 
-                            mkProjection ::
-                              Indexed (RecordField 'Parsed) ->
-                              ProjectionDef 'Parsed
-                            mkProjection (Indexed idx field) =
-                              ProjectionDef
-                                { _projectionConstructor = headConstr,
-                                  _projectionField = field ^. fieldName,
-                                  _projectionType = G.mkProjectionType i (G.mkTypeSigType' (G.mkWildcardParsed (getLoc (i ^. inductiveName))) (field ^. fieldTypeSig)),
-                                  _projectionFieldIx = idx,
-                                  _projectionKind = kind,
-                                  _projectionFieldBuiltin = field ^. fieldBuiltin,
-                                  _projectionDoc = field ^. fieldDoc,
-                                  _projectionPragmas = combinePragmas (i ^. inductivePragmas) (field ^. fieldPragmas)
-                                }
-                              where
-                                kind :: ProjectionKind
-                                kind = case field ^. fieldIsImplicit of
-                                  ExplicitField -> ProjectionExplicit
-                                  ImplicitInstanceField -> ProjectionCoercion
+                    combinePragmas :: Maybe ParsedPragmas -> Maybe ParsedPragmas -> Maybe ParsedPragmas
+                    combinePragmas p1 p2 = case (p1, p2) of
+                      (Nothing, Nothing) -> Nothing
+                      (Just p, Nothing) -> Just p
+                      (Nothing, Just p) -> Just p
+                      (Just p1', Just p2') ->
+                        Just
+                          ( over
+                              (withLocParam . withSourceValue . pragmasIsabelleIgnore)
+                              (\i2 -> i2 <|> (p1' ^. withLocParam . withSourceValue . pragmasIsabelleIgnore))
+                              p2'
+                          )
 
-                                combinePragmas :: Maybe ParsedPragmas -> Maybe ParsedPragmas -> Maybe ParsedPragmas
-                                combinePragmas p1 p2 = case (p1, p2) of
-                                  (Nothing, Nothing) -> Nothing
-                                  (Just p, Nothing) -> Just p
-                                  (Nothing, Just p) -> Just p
-                                  (Just p1', Just p2') ->
-                                    Just
-                                      ( over
-                                          (withLocParam . withSourceValue . pragmasIsabelleIgnore)
-                                          (\i2 -> i2 <|> (p1' ^. withLocParam . withSourceValue . pragmasIsabelleIgnore))
-                                          p2'
-                                      )
+                getFields :: Sem (Fail ': s') [RecordStatement 'Parsed]
+                getFields = case i ^. inductiveConstructors of
+                  c :| [] -> case c ^. constructorRhs of
+                    ConstructorRhsRecord r -> return (r ^. rhsRecordStatements)
+                    _ -> fail
+                  _ -> fail
 
-                            getFields :: Sem (Fail ': s') [RecordStatement 'Parsed]
-                            getFields = case i ^. inductiveConstructors of
-                              c :| [] -> case c ^. constructorRhs of
-                                ConstructorRhsRecord r -> return (r ^. rhsRecordStatements)
-                                _ -> fail
-                              _ -> fail
+-- returns the module generated for the inductive definition
+reserveInductive ::
+  forall r.
+  ( Members
+      '[ Reader PackageId,
+         Error ScoperError,
+         Reader BindingStrategy,
+         Reader InfoTable,
+         State ScoperSyntax,
+         State Scope,
+         NameIdGen,
+         State ScoperState,
+         InfoTableBuilder
+       ]
+      r
+  ) =>
+  InductiveDef 'Parsed ->
+  Sem r (Module 'Parsed 'ModuleLocal)
+reserveInductive d = do
+  i <- reserveInductiveSymbol d
+  let builtinConstrs :: NonEmpty (Maybe BuiltinConstructor)
+      builtinConstrs =
+        NonEmpty.prependList
+          (maybe [] ((map Just . builtinConstructors) . (^. withLocParam)) (d ^. inductiveBuiltin))
+          (NonEmpty.repeat Nothing)
+  constrs <- mapM (uncurry reserveConstructor) (mzip builtinConstrs (d ^. inductiveConstructors))
+  m <- defineInductiveModule (head constrs) d
+  ignoreFail (registerRecordType (head constrs) i)
+  return m
+  where
+    reserveConstructor :: Maybe BuiltinConstructor -> ConstructorDef 'Parsed -> Sem r S.Symbol
+    reserveConstructor b c = do
+      c' <- reserveConstructorSymbol d c b
+      let storeSig :: RecordNameSignature 'Parsed -> Sem r ()
+          storeSig sig = modify' (set (scoperConstructorFields . at (c' ^. S.nameId)) (Just sig))
+          mrecord :: Maybe (RhsRecord 'Parsed) = c ^? constructorRhs . _ConstructorRhsRecord
+      whenJust mrecord $ \r -> do
+        let sig = mkRecordNameSignature r
+        storeSig sig
+        registerParsedConstructorSig (c' ^. S.nameId) sig
+      return c'
 
-mkLetSections :: [LetStatement 'Parsed] -> StatementSections 'Parsed
-mkLetSections = mkSections . map toTopStatement
+    registerRecordType :: S.Symbol -> S.Symbol -> Sem (Fail ': r) ()
+    registerRecordType mconstr ind =
+      case d ^. inductiveConstructors of
+        mkRec :| cs
+          | notNull cs -> fail
+          | otherwise -> do
+              fs <-
+                failMaybe $
+                  mkRec
+                    ^? ( constructorRhs
+                           . _ConstructorRhsRecord
+                           . to mkRecordNameSignature
+                       )
+              let info =
+                    RecordInfo
+                      { _recordInfoSignature = fs,
+                        _recordInfoConstructor = mconstr
+                      }
+              modify' (set (scoperRecordFields . at (ind ^. S.nameId)) (Just info))
+              registerRecordInfo (ind ^. S.nameId) info
+
+mkLetSections :: [LetStatement 'Parsed] -> [Statement 'Parsed]
+mkLetSections = map toTopStatement
   where
     toTopStatement :: LetStatement 'Parsed -> Statement 'Parsed
     toTopStatement = \case
       LetFunctionDef f -> StatementFunctionDef f
       LetAliasDef f -> StatementSyntax (SyntaxAlias f)
       LetOpen o -> StatementOpenModule o
-
-mkSections :: [Statement 'Parsed] -> StatementSections 'Parsed
-mkSections = \case
-  [] -> SectionsEmpty
-  h : hs -> case fromStatement h of
-    Left d -> SectionsDefinitions (goDefinitions (pure d) hs)
-    Right d -> SectionsNonDefinitions (goNonDefinitions (pure d) hs)
-  where
-    goDefinitions :: NonEmpty (Definition 'Parsed) -> [Statement 'Parsed] -> DefinitionsSection 'Parsed
-    goDefinitions acc = \case
-      s : ss -> case fromStatement s of
-        Left d -> goDefinitions (NonEmpty.cons d acc) ss
-        Right d ->
-          DefinitionsSection
-            { _definitionsSection = NonEmpty.reverse acc,
-              _definitionsNext = Just (goNonDefinitions (pure d) ss)
-            }
-      [] ->
-        DefinitionsSection
-          { _definitionsSection = NonEmpty.reverse acc,
-            _definitionsNext = Nothing
-          }
-    goNonDefinitions :: NonEmpty (NonDefinition 'Parsed) -> [Statement 'Parsed] -> NonDefinitionsSection 'Parsed
-    goNonDefinitions acc = \case
-      s : ss -> case fromStatement s of
-        Right d -> goNonDefinitions (NonEmpty.cons d acc) ss
-        Left d ->
-          NonDefinitionsSection
-            { _nonDefinitionsSection = NonEmpty.reverse acc,
-              _nonDefinitionsNext = Just (goDefinitions (pure d) ss)
-            }
-      [] ->
-        NonDefinitionsSection
-          { _nonDefinitionsSection = NonEmpty.reverse acc,
-            _nonDefinitionsNext = Nothing
-          }
-    fromStatement :: Statement 'Parsed -> Either (Definition 'Parsed) (NonDefinition 'Parsed)
-    fromStatement = \case
-      StatementAxiom a -> Left (DefinitionAxiom a)
-      StatementFunctionDef n -> Left (DefinitionFunctionDef n)
-      StatementDeriving n -> Left (DefinitionDeriving n)
-      StatementInductive i -> Left (DefinitionInductive i)
-      StatementSyntax s -> Left (DefinitionSyntax s)
-      StatementProjectionDef s -> Left (DefinitionProjectionDef s)
-      StatementImport i -> Right (NonDefinitionImport i)
-      StatementModule m -> Right (NonDefinitionModule m)
-      StatementOpenModule o -> Right (NonDefinitionOpenModule o)
 
 reserveLocalModuleSymbol ::
   (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, Reader BindingStrategy] r) =>
@@ -1993,9 +2054,63 @@ reserveLocalModuleSymbol ::
 reserveLocalModuleSymbol =
   ignoreSyntax . reserveSymbolOf SKNameLocalModule Nothing Nothing
 
-checkLocalModule ::
+reserveLocalModule ::
   forall r.
   ( Members
+      '[ HighlightBuilder,
+         Error ScoperError,
+         State Scope,
+         Reader ScopeParameters,
+         State ScoperState,
+         InfoTableBuilder,
+         Reader InfoTable,
+         NameIdGen,
+         Reader BindingStrategy,
+         State ScoperSyntax,
+         Reader PackageId
+       ]
+      r
+  ) =>
+  Module 'Parsed 'ModuleLocal ->
+  Sem r ()
+reserveLocalModule Module {..} = do
+  _modulePath' :: S.Symbol <- reserveLocalModuleSymbol _modulePath
+  resModule :: ReservedModule <- withLocalScope $ do
+    -- TODO Q: we only need to change the scopePath, not the scopeSymbols ?
+    inheritScope _modulePath
+    b <- reserveModuleBody _moduleBody
+    export <- get >>= exportScope
+    reserved <- gets (^. scopeReserved)
+    return
+      ReservedModule
+        { _reservedModuleExportInfo = export,
+          _reservedModuleName = S.unqualifiedSymbol _modulePath',
+          _reservedModuleReserved = reserved,
+          _reservedModuleStatements = b
+        }
+  modify (set (scoperReservedModules . at (_modulePath' ^. S.nameId)) (Just resModule))
+  registerName True _modulePath'
+
+inheritScope :: (Members '[State Scope] r') => Symbol -> Sem r' ()
+inheritScope _modulePath = do
+  absPath <- (S.<.> _modulePath) <$> gets (^. scopePath)
+  modify (set scopePath absPath)
+  modify (over scopeSymbols (fmap inheritSymbol))
+  modify (over scopeModuleSymbols (fmap inheritSymbol))
+  modify (over scopeFixitySymbols (fmap inheritSymbol))
+  where
+    inheritSymbol :: forall ns. (SingI ns) => SymbolInfo ns -> SymbolInfo ns
+    inheritSymbol (SymbolInfo s) = SymbolInfo (inheritEntry <$> s)
+      where
+        inheritEntry :: NameSpaceEntryType ns -> NameSpaceEntryType ns
+        inheritEntry =
+          over (nsEntry . S.nameWhyInScope) S.BecauseInherited
+            . set (nsEntry . S.nameVisibilityAnn) VisPrivate
+
+checkLocalModule ::
+  forall r.
+  ( HasCallStack,
+    Members
       '[ HighlightBuilder,
          Error ScoperError,
          State Scope,
@@ -2014,16 +2129,19 @@ checkLocalModule ::
 checkLocalModule md@Module {..} = do
   tab1 <- ask @InfoTable
   tab2 <- getBuilderInfoTable
-  (tab, (moduleExportInfo, moduleBody', moduleDoc')) <-
-    withLocalScope . runReader (tab1 <> tab2) . runInfoTableBuilder mempty $ do
-      inheritScope
-      (e, b) <- checkModuleBody _moduleBody
+  _modulePath' <- getReservedLocalModuleSymbol _modulePath
+  let modEntry = ModuleSymbolEntry (S.unqualifiedSymbol _modulePath')
+      mid = _modulePath' ^. S.nameId
+  reservedModule <- getReservedLocalModule ["lo"] modEntry
+  (tab, (moduleBody', moduleDoc')) <-
+    withLocalModuleScope (reservedModule ^. reservedModuleReserved) . runReader (tab1 <> tab2) . runInfoTableBuilder mempty $ do
+      inheritScope _modulePath
+      b <- checkLocalModuleBody modEntry
       doc' <- mapM checkJudoc _moduleDoc
-      return (e, b, doc')
-  _modulePath' <- reserveLocalModuleSymbol _modulePath
-  localModules <- getLocalModules moduleExportInfo
-  let mid = _modulePath' ^. S.nameId
-      moduleName = S.unqualifiedSymbol _modulePath'
+      return (b, doc')
+  let exportInfo = reservedModule ^. reservedModuleExportInfo
+  localModules <- getScopedLocalModules exportInfo
+  let moduleName = S.unqualifiedSymbol _modulePath'
       m =
         Module
           { _modulePath = _modulePath',
@@ -2042,7 +2160,7 @@ checkLocalModule md@Module {..} = do
             _scopedModuleName = moduleName,
             _scopedModuleDocTable = mempty,
             _scopedModuleFilePath = P.getModuleFilePath md,
-            _scopedModuleExportInfo = moduleExportInfo,
+            _scopedModuleExportInfo = exportInfo,
             _scopedModuleLocalModules = localModules,
             _scopedModuleInfoTable = tab
           }
@@ -2050,22 +2168,6 @@ checkLocalModule md@Module {..} = do
   registerLocalModule smod
   registerName True _modulePath'
   return m
-  where
-    inheritScope :: (Members '[Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, Reader BindingStrategy] r') => Sem r' ()
-    inheritScope = do
-      absPath <- (S.<.> _modulePath) <$> gets (^. scopePath)
-      modify (set scopePath absPath)
-      modify (over scopeSymbols (fmap inheritSymbol))
-      modify (over scopeModuleSymbols (fmap inheritSymbol))
-      modify (over scopeFixitySymbols (fmap inheritSymbol))
-      where
-        inheritSymbol :: forall ns. (SingI ns) => SymbolInfo ns -> SymbolInfo ns
-        inheritSymbol (SymbolInfo s) = SymbolInfo (inheritEntry <$> s)
-          where
-            inheritEntry :: NameSpaceEntryType ns -> NameSpaceEntryType ns
-            inheritEntry =
-              over (nsEntry . S.nameWhyInScope) S.BecauseInherited
-                . set (nsEntry . S.nameVisibilityAnn) VisPrivate
 
 checkOrphanOperators :: forall r. (Members '[Error ScoperError, State ScoperSyntax] r) => Sem r ()
 checkOrphanOperators = do
@@ -2090,17 +2192,17 @@ getModule ::
   (Members '[State ScoperState] r) =>
   ModuleSymbolEntry ->
   Name ->
-  Sem r ScopedModule
+  Sem r ReservedModule
 getModule e n =
-  set (scopedModuleName . S.nameConcrete) n
-    <$> gets (^?! scoperModules . at (e ^. moduleEntry . S.nameId) . _Just)
+  set (reservedModuleName . S.nameConcrete) n
+    <$> gets (^?! scoperReservedModules . at (e ^. moduleEntry . S.nameId) . _Just)
 
 lookupModuleSymbol ::
   (Members '[Error ScoperError, State Scope, State ScoperState] r) =>
   Name ->
-  Sem r ScopedModule
+  Sem r ReservedModule
 lookupModuleSymbol n = do
-  es <- snd3 <$> lookupQualifiedSymbol (path, sym)
+  es <- snd3 <$> lookupQualifiedSymbol ["lookupModuleSymbol"] (path, sym)
   case nonEmpty (resolveShadowing (toList es)) of
     Nothing -> notInScope
     Just (x :| []) -> getModule x n
@@ -2114,7 +2216,7 @@ lookupModuleSymbol n = do
 checkOpenModuleShort ::
   forall r.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
-  ScopedModule ->
+  ReservedModule ->
   OpenModule 'Parsed 'OpenShort ->
   Sem r (OpenModule 'Scoped 'OpenShort)
 checkOpenModuleShort = checkOpenModuleHelper
@@ -2131,11 +2233,11 @@ checkOpenModule open@OpenModule {..} = do
 checkUsingHiding ::
   forall r.
   (Members '[Error ScoperError, InfoTableBuilder] r) =>
-  S.TopModulePath ->
+  S.Name ->
   ExportInfo ->
   UsingHiding 'Parsed ->
   Sem r (UsingHiding 'Scoped)
-checkUsingHiding modulepath exportInfo = \case
+checkUsingHiding moduleName exportInfo = \case
   Hiding h -> Hiding <$> checkHidingList h
   Using uh -> Using <$> checkUsingList uh
   where
@@ -2148,7 +2250,7 @@ checkUsingHiding modulepath exportInfo = \case
               . ErrModuleDoesNotExportSymbol
               $ ModuleDoesNotExportSymbol
                 { _moduleDoesNotExportSymbol = s,
-                  _moduleDoesNotExportModule = modulepath
+                  _moduleDoesNotExportModule = moduleName
                 }
       entry <- maybe err return mentry
       let scopedSym = entryToSymbol entry s
@@ -2210,16 +2312,16 @@ checkUsingHiding modulepath exportInfo = \case
 checkOpenModuleHelper ::
   forall r short.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r, SingI short) =>
-  ScopedModule ->
+  ReservedModule ->
   OpenModule 'Parsed short ->
   Sem r (OpenModule 'Scoped short)
-checkOpenModuleHelper openedModule OpenModule {..} = do
-  let exportInfo = openedModule ^. scopedModuleExportInfo
-  registerName False (openedModule ^. scopedModuleName)
-  usingHiding' <- mapM (checkUsingHiding (openedModule ^. scopedModulePath) exportInfo) _openModuleUsingHiding
+checkOpenModuleHelper reservedMod OpenModule {..} = do
+  let exportInfo = reservedMod ^. reservedModuleExportInfo
+  registerName False (reservedMod ^. reservedModuleName)
+  usingHiding' <- mapM (checkUsingHiding (reservedMod ^. reservedModuleName) exportInfo) _openModuleUsingHiding
   mergeScope (filterExportInfo _openModulePublic usingHiding' exportInfo)
   let openName :: OpenModuleNameType 'Scoped short = case sing :: SIsOpenShort short of
-        SOpenFull -> openedModule ^. scopedModuleName
+        SOpenFull -> reservedMod ^. reservedModuleName
         SOpenShort -> ()
   return
     OpenModule
@@ -2238,7 +2340,7 @@ checkOpenModuleHelper openedModule OpenModule {..} = do
         mergeSymbol :: forall ns. (SingI ns) => (Symbol, NameSpaceEntryType ns) -> Sem r ()
         mergeSymbol (s, entry) =
           modify
-            (over scopeNameSpace (HashMap.insertWith (<>) s (symbolInfoSingle entry)))
+            (over scopeNameSpaceI (HashMap.insertWith (<>) s (symbolInfoSingle entry)))
 
 filterExportInfo :: PublicAnn -> Maybe (UsingHiding 'Scoped) -> ExportInfo -> ExportInfo
 filterExportInfo pub openModif = alterEntries . filterScope
@@ -2344,45 +2446,31 @@ checkLetStatements ::
 checkLetStatements =
   ignoreSyntax
     . fmap fromSections
-    . checkSections
+    . (reserveModuleBody >=> checkReservedStatements)
     . mkLetSections
     . toList
   where
-    fromSections :: StatementSections s -> NonEmpty (LetStatement s)
-    fromSections = \case
-      SectionsEmpty -> impossible
-      SectionsDefinitions d -> fromDefs d
-      SectionsNonDefinitions d -> fromNonDefs d
+    fromSections :: [Statement s] -> NonEmpty (LetStatement s)
+    fromSections l = fromDef <$> nonEmpty' l
       where
-        fromDefs :: DefinitionsSection s -> NonEmpty (LetStatement s)
-        fromDefs DefinitionsSection {..} =
-          (fromDef <$> _definitionsSection) <>? (fromNonDefs <$> _definitionsNext)
-          where
-            fromSyn :: SyntaxDef s -> LetStatement s
-            fromSyn = \case
-              SyntaxAlias a -> LetAliasDef a
-              SyntaxFixity {} -> impossible
-              SyntaxOperator {} -> impossible
-              SyntaxIterator {} -> impossible
+        fromSyn :: SyntaxDef s -> LetStatement s
+        fromSyn = \case
+          SyntaxAlias a -> LetAliasDef a
+          SyntaxFixity {} -> impossible
+          SyntaxOperator {} -> impossible
+          SyntaxIterator {} -> impossible
 
-            fromDef :: Definition s -> LetStatement s
-            fromDef = \case
-              DefinitionFunctionDef d -> LetFunctionDef d
-              DefinitionSyntax syn -> fromSyn syn
-              DefinitionInductive {} -> impossible
-              DefinitionDeriving {} -> impossible
-              DefinitionProjectionDef {} -> impossible
-              DefinitionAxiom {} -> impossible
-
-        fromNonDefs :: NonDefinitionsSection s -> NonEmpty (LetStatement s)
-        fromNonDefs NonDefinitionsSection {..} =
-          (fromNonDef <$> _nonDefinitionsSection) <>? (fromDefs <$> _nonDefinitionsNext)
-          where
-            fromNonDef :: NonDefinition s -> LetStatement s
-            fromNonDef = \case
-              NonDefinitionImport {} -> impossible
-              NonDefinitionModule {} -> impossible
-              NonDefinitionOpenModule o -> LetOpen o
+        fromDef :: Statement s -> LetStatement s
+        fromDef = \case
+          StatementFunctionDef d -> LetFunctionDef d
+          StatementSyntax syn -> fromSyn syn
+          StatementOpenModule o -> LetOpen o
+          StatementInductive {} -> impossible
+          StatementModule {} -> impossible
+          StatementDeriving {} -> impossible
+          StatementProjectionDef {} -> impossible
+          StatementAxiom {} -> impossible
+          StatementImport {} -> impossible
 
 checkRecordPattern ::
   forall r.
@@ -2732,7 +2820,7 @@ checkUnqualifiedName ::
 checkUnqualifiedName s = do
   scope <- get
   -- Lookup at the global scope
-  entries <- fst3 <$> lookupQualifiedSymbol ([], s)
+  entries <- fst3 <$> lookupQualifiedSymbol ["checkUnqualifiedName"] ([], s)
   case resolveShadowing (toList entries) of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
     [x] -> return x
@@ -2747,7 +2835,7 @@ checkFixitySymbol ::
 checkFixitySymbol s = do
   scope <- get
   -- Lookup at the global scope
-  entries <- thd3 <$> lookupQualifiedSymbol ([], s)
+  entries <- thd3 <$> lookupQualifiedSymbol ["checkFixitySymbol"] ([], s)
   case resolveShadowing (toList entries) of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
     [x] -> do
@@ -2846,7 +2934,7 @@ lookupNameOfKind ::
   Name ->
   Sem r (Maybe ScopedIden)
 lookupNameOfKind nameKind n = do
-  entries <- lookupQualifiedSymbol (path, sym) >>= mapMaybeM filterEntry . toList . fst3
+  entries <- lookupQualifiedSymbol ["lookupNameOfKind"] (path, sym) >>= mapMaybeM filterEntry . toList . fst3
   case entries of
     [] -> return Nothing
     [(_, s)] -> return (Just s) -- There is one constructor with such a name
@@ -3331,7 +3419,7 @@ checkAliasDef ::
 checkAliasDef def@AliasDef {..} = do
   scanAlias def
   doc' <- maybe (return Nothing) (return . Just <=< checkJudoc) _aliasDefDoc
-  aliasName' :: S.Symbol <- gets (^?! scopeLocalSymbols . at _aliasDefName . _Just)
+  aliasName' :: S.Symbol <- gets (^?! scopeReservedSymbols . at _aliasDefName . _Just)
   asName' <- checkScopedIden _aliasDefAsName
   return
     AliasDef
@@ -3344,7 +3432,7 @@ checkAliasDef def@AliasDef {..} = do
     scanAlias :: AliasDef 'Parsed -> Sem r ()
     scanAlias a = do
       reserveAliasDef a
-      aliasId <- gets (^?! scopeLocalSymbols . at (a ^. aliasDefName) . _Just . S.nameId)
+      aliasId <- gets (^?! scopeReservedSymbols . at (a ^. aliasDefName) . _Just . S.nameId)
       asName <- checkName (a ^. aliasDefAsName)
       modify' (set (scoperAlias . at aliasId) (Just asName))
       registerAlias aliasId asName
