@@ -2,16 +2,16 @@ module Example1;
 
 axiom a : Type;
 
--- type T :=
---   mkT@{
---     t : R;
---   };
+type T :=
+  mkT@{
+    t : R;
+  };
 
--- -- x1 : T -> a := T.t1;
+-- x1 : T -> a := T.t1;
 
--- type R :=
---   mkR@{
---     r : T;
---   };
+type R :=
+  mkR@{
+    r : T;
+  };
 
--- y1 : R -> T := R.r;
+y1 : R -> T := R.r;

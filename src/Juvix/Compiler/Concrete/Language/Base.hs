@@ -255,37 +255,6 @@ deriving stock instance Ord (Argument 'Parsed)
 
 deriving stock instance Ord (Argument 'Scoped)
 
--- | We group consecutive definitions and reserve symbols in advance, so that we
--- don't need extra syntax for mutually recursive definitions. Also, it allows
--- us to be more flexible with the ordering of the definitions.
-data StatementSections (s :: Stage)
-  = SectionsDefinitions (DefinitionsSection s)
-  | SectionsNonDefinitions (NonDefinitionsSection s)
-  | SectionsEmpty
-
-data DefinitionsSection (s :: Stage) = DefinitionsSection
-  { _definitionsSection :: NonEmpty (Definition s),
-    _definitionsNext :: Maybe (NonDefinitionsSection s)
-  }
-
-data NonDefinitionsSection (s :: Stage) = NonDefinitionsSection
-  { _nonDefinitionsSection :: NonEmpty (NonDefinition s),
-    _nonDefinitionsNext :: Maybe (DefinitionsSection s)
-  }
-
-data Definition (s :: Stage)
-  = DefinitionSyntax (SyntaxDef s)
-  | DefinitionFunctionDef (FunctionDef s)
-  | DefinitionDeriving (Deriving s)
-  | DefinitionInductive (InductiveDef s)
-  | DefinitionAxiom (AxiomDef s)
-  | DefinitionModule (Module s 'ModuleLocal)
-  | DefinitionProjectionDef (ProjectionDef s)
-
-data NonDefinition (s :: Stage)
-  = NonDefinitionImport (Import s)
-  | NonDefinitionOpenModule (OpenModule s 'OpenFull)
-
 newtype Statements (s :: Stage) = Statements
   { _statements :: [Statement s]
   }
@@ -3013,8 +2982,6 @@ makeLenses ''RecordUpdateExtra
 makeLenses ''RecordUpdate
 makeLenses ''RecordUpdateApp
 makeLenses ''RecordUpdateField
-makeLenses ''NonDefinitionsSection
-makeLenses ''DefinitionsSection
 makeLenses ''ProjectionDef
 makeLenses ''ScopedIden
 makeLenses ''FixityDef
@@ -3083,6 +3050,7 @@ makeLenses ''MarkdownInfo
 makeLenses ''Deriving
 
 makePrisms ''NamedArgument
+makePrisms ''Statement
 makePrisms ''ConstructorRhs
 makePrisms ''FunctionDefNameParsed
 
@@ -3730,11 +3698,6 @@ data ApeLeaf
   | ApeLeafPattern Pattern
   | ApeLeafPatternArg PatternArg
   | ApeLeafAtom (AnyStage ExpressionAtom)
-
-_DefinitionSyntax :: Traversal' (Definition s) (SyntaxDef s)
-_DefinitionSyntax f x = case x of
-  DefinitionSyntax r -> DefinitionSyntax <$> f r
-  _ -> pure x
 
 _SyntaxAlias :: Traversal' (SyntaxDef s) (AliasDef s)
 _SyntaxAlias f x = case x of

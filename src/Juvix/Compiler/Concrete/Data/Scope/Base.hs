@@ -67,7 +67,7 @@ data ReservedModule = ReservedModule
   { _reservedModuleName :: S.Name,
     _reservedModuleExportInfo :: ExportInfo,
     _reservedModuleReserved :: Reserved,
-    _reservedModuleStatements :: StatementSections 'Parsed
+    _reservedModuleStatements :: [Statement 'Parsed]
   }
 
 data ScoperState = ScoperState
@@ -128,13 +128,14 @@ makeLenses ''ScopeParameters
 makeLenses ''ModulesCache
 makeLenses ''Reserved
 
+-- TODO this is ugly, why _reservedModuleStatements = [] is ok?
 scopedToReservedModule :: ScopedModule -> ReservedModule
 scopedToReservedModule scoped =
   ReservedModule
     { _reservedModuleName = scoped ^. scopedModuleName,
       _reservedModuleExportInfo = scoped ^. scopedModuleExportInfo,
       _reservedModuleReserved = emptyReserved,
-      _reservedModuleStatements = SectionsEmpty
+      _reservedModuleStatements = []
     }
 
 emptyReserved :: Reserved
@@ -162,8 +163,11 @@ emptyScope absPath =
       _scopeReserved = emptyReserved
     }
 
-scopeNameSpace :: forall (ns :: NameSpace). (SingI ns) => Lens' Scope (HashMap Symbol (SymbolInfo ns))
-scopeNameSpace = case sing :: SNameSpace ns of
+scopeNameSpaceI :: forall (ns :: NameSpace). (SingI ns) => Lens' Scope (HashMap Symbol (SymbolInfo ns))
+scopeNameSpaceI = scopeNameSpace sing
+
+scopeNameSpace :: forall (ns :: NameSpace). Sing ns -> Lens' Scope (HashMap Symbol (SymbolInfo ns))
+scopeNameSpace = \case
   SNameSpaceSymbols -> scopeSymbols
   SNameSpaceModules -> scopeModuleSymbols
   SNameSpaceFixities -> scopeFixitySymbols
