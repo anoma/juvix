@@ -1,62 +1,99 @@
-module Commands.Markdown where
+module Commands.Markdown (runCommand) where
 
 import Commands.Base
 import Commands.Markdown.Options
-import Data.Text.IO qualified as Text
+import Juvix.Compiler.Backend.Markdown.Error
 import Juvix.Compiler.Backend.Markdown.Translation.FromTyped.Source
 import Juvix.Compiler.Backend.Markdown.Translation.FromTyped.Source qualified as MK
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
-import Juvix.Compiler.Concrete.Language qualified as Concrete
-import Juvix.Compiler.Concrete.Pretty qualified as Concrete
+import Juvix.Compiler.Concrete.Language as Concrete
+import Juvix.Compiler.Concrete.Pretty as Concrete
+import Juvix.Compiler.Concrete.Print.Base qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
+import Juvix.Data.CodeAnn
 import Juvix.Extra.Assets (writeAssets)
 
 runCommand ::
+  forall r.
   (Members AppEffects r) =>
   MarkdownOptions ->
   Sem r ()
-runCommand opts = do
-  let inputFile = opts ^. markdownInputFile
-  scopedM <- runPipelineNoOptions inputFile upToScopingEntry
-  let m = scopedM ^. Scoper.resultModule
-  outputDir <- fromAppPathDir (opts ^. markdownOutputDir)
-  let res =
-        MK.fromJuvixMarkdown'
-          ProcessJuvixBlocksArgs
-            { _processJuvixBlocksArgsConcreteOpts = Concrete.defaultOptions,
-              _processJuvixBlocksArgsUrlPrefix = opts ^. markdownUrlPrefix,
-              _processJuvixBlocksArgsIdPrefix =
-                opts ^. markdownIdPrefix,
-              _processJuvixBlocksArgsNoPath =
-                opts ^. markdownNoPath,
-              _processJuvixBlocksArgsExt =
-                opts ^. markdownExt,
-              _processJuvixBlocksArgsStripPrefix =
-                opts ^. markdownStripPrefix,
-              _processJuvixBlocksArgsComments = Scoper.getScoperResultComments scopedM,
-              _processJuvixBlocksArgsModule = m,
-              _processJuvixBlocksArgsOutputDir = outputDir,
-              _processJuvixBlocksArgsFolderStructure =
-                opts ^. markdownFolderStructure
-            }
-  case res of
-    Left err -> exitJuvixError (JuvixError err)
-    Right md
-      | opts ^. markdownStdout -> liftIO . putStrLn $ md
+runCommand opts = runReader opts $ do
+  case opts ^. markdownInputFile of
+    Nothing -> goProject
+    Just p ->
+      fromAppPathFileOrDir p >>= \case
+        Left f -> goSingleFile f
+        Right {} -> goProject
+
+goSingleFile ::
+  forall r.
+  (Members (Reader MarkdownOptions ': AppEffects) r) =>
+  Path Abs File ->
+  Sem r ()
+goSingleFile f = do
+  let inputFile =
+        AppPath
+          { _pathPath = preFileFromAbs f,
+            _pathIsInput = True
+          }
+  scopedM :: Scoper.ScoperResult <- runPipelineNoOptions (Just inputFile) upToScopingEntry
+  goScoperResult scopedM
+
+goProject ::
+  forall r.
+  (Members (Reader MarkdownOptions ': AppEffects) r) =>
+  Sem r ()
+goProject = runPipelineOptions . runPipelineSetup $ do
+  res :: [ProcessedNode ScoperResult] <- processProjectUpToScoping
+  forM_ res (goScoperResult . (^. processedNodeData))
+
+goScoperResult :: (Members (Reader MarkdownOptions ': AppEffects) r) => Scoper.ScoperResult -> Sem r ()
+goScoperResult scopedM = do
+  opts <- ask
+  let m :: Module 'Scoped 'ModuleTop = scopedM ^. Scoper.resultModule
+  if
+      | isNothing (m ^. moduleMarkdownInfo) ->
+          logInfo (mkAnsiText @(Doc CodeAnn) ("Skipping" <+> Concrete.docNoCommentsDefault (m ^. modulePath)))
       | otherwise -> do
-          ensureDir outputDir
-          when (opts ^. markdownWriteAssets) $
-            liftIO $
-              writeAssets outputDir
+          outputDir <- fromAppPathDir (opts ^. markdownOutputDir)
+          logProgress (mkAnsiText @(Doc CodeAnn) ("Processing" <+> Concrete.docNoCommentsDefault (m ^. modulePath)))
+          let args =
+                ProcessJuvixBlocksArgs
+                  { _processJuvixBlocksArgsConcreteOpts = Concrete.defaultOptions,
+                    _processJuvixBlocksArgsUrlPrefix = opts ^. markdownUrlPrefix,
+                    _processJuvixBlocksArgsIdPrefix =
+                      opts ^. markdownIdPrefix,
+                    _processJuvixBlocksArgsNoPath =
+                      opts ^. markdownNoPath,
+                    _processJuvixBlocksArgsExt =
+                      opts ^. markdownExt,
+                    _processJuvixBlocksArgsStripPrefix =
+                      opts ^. markdownStripPrefix,
+                    _processJuvixBlocksArgsComments = Scoper.getScoperResultComments scopedM,
+                    _processJuvixBlocksArgsModule = m,
+                    _processJuvixBlocksArgsOutputDir = outputDir,
+                    _processJuvixBlocksArgsFolderStructure =
+                      opts ^. markdownFolderStructure
+                  }
 
-          let mdFile :: Path Rel File
-              mdFile =
-                relFile
-                  ( Concrete.topModulePathToDottedPath
-                      (m ^. Concrete.modulePath . S.nameConcrete)
-                      <.> markdownFileExt
-                  )
-              absPath :: Path Abs File
-              absPath = outputDir <//> mdFile
+          md :: Text <- runAppError @MarkdownBackendError (MK.fromJuvixMarkdown args)
+          if
+              | opts ^. markdownStdout -> putStrLn md
+              | otherwise -> do
+                  ensureDir outputDir
+                  when (opts ^. markdownWriteAssets) $
+                    writeAssets outputDir
 
-          liftIO $ Text.writeFile (toFilePath absPath) md
+                  let mdFile :: Path Rel File
+                      mdFile =
+                        relFile
+                          ( Concrete.topModulePathToDottedPath
+                              (m ^. Concrete.modulePath . S.nameConcrete)
+                              <.> markdownFileExt
+                          )
+                      absPath :: Path Abs File
+                      absPath = outputDir <//> mdFile
+
+                  writeFileEnsureLn absPath md

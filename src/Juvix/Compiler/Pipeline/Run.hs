@@ -57,8 +57,7 @@ runPipelineHtmlEither ::
   EntryPoint ->
   Sem r (Either JuvixError (Typed.InternalTypedResult, [Typed.InternalTypedResult]))
 runPipelineHtmlEither entry = do
-  x <- runIOEitherPipeline' entry $ do
-    processRecursiveUpToTyped
+  x <- runIOEitherPipeline' entry processRecursivelyUpToTyped
   return . mapRight snd $ snd x
 
 runIOEitherHelper ::

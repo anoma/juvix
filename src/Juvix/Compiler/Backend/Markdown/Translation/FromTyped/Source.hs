@@ -39,9 +39,6 @@ data ProcessingState = ProcessingState
 makeLenses ''ProcessJuvixBlocksArgs
 makeLenses ''ProcessingState
 
-fromJuvixMarkdown' :: ProcessJuvixBlocksArgs -> Either MarkdownBackendError Text
-fromJuvixMarkdown' = run . runError . fromJuvixMarkdown
-
 fromJuvixMarkdown ::
   (Members '[Error MarkdownBackendError] r) =>
   ProcessJuvixBlocksArgs ->

@@ -3,8 +3,8 @@ module Commands.Format where
 import Commands.Base
 import Commands.Format.Options
 import Data.Text qualified as Text
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
-import Juvix.Compiler.Store.Language (ModuleInfo)
 import Juvix.Formatter
 
 data FormatNoEditRenderMode
@@ -49,19 +49,19 @@ targetFromOptions opts = do
 -- | Formats the project on the root
 formatProject ::
   forall r.
-  (Members '[App, EmbedIO, TaggedLock, Logger, ScopeEff, Files, Output FormattedFileInfo] r) =>
+  (Members (ScopeEff ': Output FormattedFileInfo ': AppEffects) r) =>
   Sem r FormatResult
 formatProject = silenceProgressLog . runPipelineOptions . runPipelineSetup $ do
-  res :: [(ImportNode, PipelineResult ModuleInfo)] <- processProject
+  res :: [ProcessedNode ScoperResult] <- processProjectUpToScoping
   pkgId :: PackageId <- (^. entryPointPackageId) <$> ask
-  res' :: [(ImportNode, SourceCode)] <- runReader pkgId $ forM res $ \(node, nfo) -> do
-    src <- formatModuleInfo node nfo
-    return (node, src)
+  res' :: [(ImportNode, SourceCode)] <- runReader pkgId $ forM res $ \node -> do
+    src <- formatModuleInfo node
+    return (node ^. processedNode, src)
   formatRes <- formatProjectSourceCode res'
   formatPkgRes <- formatPackageDotJuvix
   return (formatRes <> formatPkgRes)
 
-formatPackageDotJuvix :: forall r. (Members '[App, Files, Logger, Output FormattedFileInfo, ScopeEff] r) => Sem r FormatResult
+formatPackageDotJuvix :: forall r. (Members (Output FormattedFileInfo ': ScopeEff ': AppEffects) r) => Sem r FormatResult
 formatPackageDotJuvix = do
   pkgDotJuvix <- askPackageDotJuvixPath
   ifM (fileExists' pkgDotJuvix) (format pkgDotJuvix) (return mempty)

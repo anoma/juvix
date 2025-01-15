@@ -9,7 +9,7 @@ tests:
       - markdown
       - --help
     stdout:
-      contains: JUVIX_MARKDOWN_FILE
+      contains: JUVIX_MD_FILE_OR_PROJECT
     exit-status: 0
 
   - name: markdown-stdout

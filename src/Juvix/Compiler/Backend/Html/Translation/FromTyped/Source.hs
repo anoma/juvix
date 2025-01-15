@@ -78,7 +78,7 @@ data GenModuleTextArgs = GenModuleTextArgs
 
 makeLenses ''GenModuleTextArgs
 
-genSourceHtml :: GenSourceHtmlArgs -> IO ()
+genSourceHtml :: forall m. (MonadMask m, MonadIO m) => GenSourceHtmlArgs -> m ()
 genSourceHtml o@GenSourceHtmlArgs {..} = do
   let outputDir = _genSourceHtmlArgsOutputDir
   ensureDir outputDir
@@ -113,24 +113,25 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
     topModules :: HashMap NameId (Module 'Scoped 'ModuleTop)
     topModules = HashMap.fromList [(entry ^. modulePath . S.nameId, entry)]
 
-    outputModule :: Module 'Scoped 'ModuleTop -> IO ()
+    outputModule :: Module 'Scoped 'ModuleTop -> m ()
     outputModule m = do
       ensureDir (parent outputFile)
       let absPath = (htmlOptions ^. htmlOptionsOutputDir) <//> outputFile
       putStrLn $ "Writing " <> pack (toFilePath absPath)
-      utc <- getCurrentTime
-      Text.writeFile
-        (toFilePath outputFile)
-        ( run
-            . runReader htmlOptions
-            $ genModuleText
-              GenModuleTextArgs
-                { _genModuleTextArgsConcreteOpts = o ^. genSourceHtmlArgsConcreteOpts,
-                  _genModuleTextArgsUTC = utc,
-                  _genModuleTextArgsComments = _genSourceHtmlArgsComments,
-                  _genModuleTextArgsModule = m
-                }
-        )
+      utc <- liftIO getCurrentTime
+      liftIO $
+        Text.writeFile
+          (toFilePath outputFile)
+          ( run
+              . runReader htmlOptions
+              $ genModuleText
+                GenModuleTextArgs
+                  { _genModuleTextArgsConcreteOpts = o ^. genSourceHtmlArgsConcreteOpts,
+                    _genModuleTextArgsUTC = utc,
+                    _genModuleTextArgsComments = _genSourceHtmlArgsComments,
+                    _genModuleTextArgsModule = m
+                  }
+          )
       where
         ext = Text.unpack (htmlOptions ^. htmlOptionsExt)
 
