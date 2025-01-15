@@ -285,12 +285,28 @@ jobs:
           stack-build-arguments: ${{ env.STACK_BUILD_ARGS }}
           test: false
 
-      - name: Install and test Juvix
+      - name: Install Juvix
         id: test
         if: ${{ success() }}
         run: |
           cd main
           just ${{ env.JUST_ARGS }} install
+
+      - name: Get short SHA
+        run: echo "JUVIX_SHORT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
+
+      - name: Set juvix binary path
+        run: echo "JUVIX_BINARY_PATH=$HOME/.local/bin/juvix" >> $GITHUB_ENV
+
+      - name: store juvix binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: juvix-${{ env.JUVIX_SHORT_SHA }}
+          path: ${{ env.JUVIX_BINARY_PATH }}
+
+      - name: Test juvix
+        run: |
+          cd main
           just ${{ env.JUST_ARGS }} test
 
       - name: Typecheck and format Juvix examples
