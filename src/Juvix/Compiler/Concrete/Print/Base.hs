@@ -938,7 +938,7 @@ instance (SingI s) => PrettyPrint (FixitySyntaxDef s) where
 instance (SingI s) => PrettyPrint (OperatorSyntaxDef s) where
   ppCode OperatorSyntaxDef {..} = do
     let doc' = ppCode <$> _opDoc
-        opSymbol' = ppUnkindedSymbol _opSymbol
+        opSymbol' = ppSymbolType _opSymbol
         p = ppUnkindedSymbol _opFixity
     doc' ?<> ppCode _opSyntaxKw <+> ppCode _opKw <+> opSymbol' <+> p
 
@@ -972,7 +972,7 @@ instance PrettyPrint ParsedIteratorInfo where
 instance (SingI s) => PrettyPrint (IteratorSyntaxDef s) where
   ppCode IteratorSyntaxDef {..} = do
     let doc' = ppCode <$> _iterDoc
-        iterSymbol' = ppUnkindedSymbol _iterSymbol
+        iterSymbol' = ppSymbolType _iterSymbol
     doc'
       ?<> ppCode _iterSyntaxKw
       <+> ppCode _iterIteratorKw

@@ -454,8 +454,9 @@ instance Serialize FixityDef
 
 instance NFData FixityDef
 
+-- TODO use stage in _opSymbol and _opFixity
 data OperatorSyntaxDef (s :: Stage) = OperatorSyntaxDef
-  { _opSymbol :: Symbol,
+  { _opSymbol :: SymbolType s,
     _opFixity :: Symbol,
     _opDoc :: Maybe (Judoc s),
     _opKw :: KeywordRef,
@@ -483,11 +484,8 @@ instance Serialize (OperatorSyntaxDef 'Scoped)
 
 instance NFData (OperatorSyntaxDef 'Scoped)
 
-instance HasLoc (OperatorSyntaxDef s) where
-  getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLoc _opSymbol
-
 data IteratorSyntaxDef (s :: Stage) = IteratorSyntaxDef
-  { _iterSymbol :: Symbol,
+  { _iterSymbol :: SymbolType s,
     _iterInfo :: Maybe ParsedIteratorInfo,
     _iterDoc :: Maybe (Judoc s),
     _iterSyntaxKw :: KeywordRef,
@@ -514,9 +512,6 @@ instance NFData (IteratorSyntaxDef 'Parsed)
 instance Serialize (IteratorSyntaxDef 'Scoped)
 
 instance NFData (IteratorSyntaxDef 'Scoped)
-
-instance HasLoc (IteratorSyntaxDef s) where
-  getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLoc _iterSymbol
 
 data ArgDefault (s :: Stage) = ArgDefault
   { _argDefaultAssign :: Irrelevant KeywordRef,
@@ -3798,3 +3793,9 @@ instance HasAtomicity Pattern where
     PatternList l -> atomicity l
     PatternEmpty {} -> Atom
     PatternRecord r -> atomicity r
+
+instance (SingI s) => HasLoc (OperatorSyntaxDef s) where
+  getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLocSymbolType _opSymbol
+
+instance (SingI s) => HasLoc (IteratorSyntaxDef s) where
+  getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLocSymbolType _iterSymbol

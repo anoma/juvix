@@ -52,8 +52,8 @@ groupStatements = \case
       (StatementDeriving _, _) -> False
       (StatementSyntax _, StatementSyntax _) -> True
       (StatementSyntax (SyntaxFixity _), _) -> False
-      (StatementSyntax (SyntaxOperator o), s) -> definesSymbol (o ^. opSymbol) s
-      (StatementSyntax (SyntaxIterator i), s) -> definesSymbol (i ^. iterSymbol) s
+      (StatementSyntax (SyntaxOperator o), s) -> definesSymbol (symbolParsed (o ^. opSymbol)) s
+      (StatementSyntax (SyntaxIterator i), s) -> definesSymbol (symbolParsed (i ^. iterSymbol)) s
       (StatementSyntax (SyntaxAlias {}), _) -> False
       (StatementImport _, StatementImport _) -> True
       (StatementImport i, StatementOpenModule o) -> case sing :: SStage s of

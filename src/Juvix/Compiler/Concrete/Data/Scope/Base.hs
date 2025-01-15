@@ -66,8 +66,6 @@ newtype ScopeParameters = ScopeParameters
 data ReservedModule = ReservedModule
   { _reservedModuleName :: S.Name,
     _reservedModuleExportInfo :: ExportInfo,
-    -- TODO I think this field is not needed
-    _reservedModuleSyntax :: ScoperSyntax,
     _reservedModuleReserved :: Reserved,
     _reservedModuleStatements :: [Statement 'Parsed]
   }
@@ -86,10 +84,8 @@ data ScoperState = ScoperState
     _scoperScopedConstructorFields :: HashMap S.NameId (RecordNameSignature 'Scoped)
   }
 
-data SymbolOperator = SymbolOperator
-  { _symbolOperatorUsed :: Bool,
-    _symbolOperatorFixity :: Fixity,
-    _symbolOperatorDef :: OperatorSyntaxDef 'Parsed
+newtype SymbolOperator = SymbolOperator
+  { _symbolOperatorDef :: OperatorSyntaxDef 'Parsed
   }
   deriving stock (Show)
 
@@ -136,7 +132,6 @@ scopedToReservedModule scoped =
   ReservedModule
     { _reservedModuleName = scoped ^. scopedModuleName,
       _reservedModuleExportInfo = scoped ^. scopedModuleExportInfo,
-      _reservedModuleSyntax = emptyScoperSyntax,
       _reservedModuleReserved = emptyReserved,
       _reservedModuleStatements = []
     }
