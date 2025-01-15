@@ -2,9 +2,16 @@
 
 {-# HLINT ignore "Use list literal" #-}
 module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping
-  ( module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping,
-    module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context,
+  ( module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context,
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error,
+    scopeCheck,
+    scopeCheckRepl,
+    getModuleId,
+    scopeCheckImport,
+    scopeCheckOpenModule,
+    scopeCheckExpression,
+    scopeCheckExpressionAtoms,
+    iniScoperState,
   )
 where
 
@@ -171,6 +178,7 @@ freshSymbol ::
   Symbol ->
   Sem r S.Symbol
 freshSymbol _nameKind _nameKindPretty _nameConcrete = do
+  traceM ("fresh symbol " <> ppTrace _nameConcrete)
   _nameId <- freshNameId
   _nameDefinedIn <- gets (^. scopePath)
   let _nameDefined = getLoc _nameConcrete
@@ -374,6 +382,17 @@ reserveSymbolOf k =
     (fromSing k)
     (fromSing k)
 
+-- TODO unify  getReservedFixitySymbol, getReservedLocalModuleSymbol, getReservedDefinitionSymbol
+getReservedFixitySymbol ::
+  (HasCallStack, Members '[State Scope] r) =>
+  Symbol ->
+  Sem r S.Symbol
+getReservedFixitySymbol s = do
+  m <- gets (^. scopeReservedFixitySymbols)
+  let s' = fromMaybe err (m ^. at s)
+      err = impossibleError ("Fixity " <> ppTrace s <> " not found in the scope. Contents of scope:\n" <> ppTrace (toList m))
+  return s'
+
 getReservedLocalModuleSymbol ::
   (HasCallStack, Members '[State Scope] r) =>
   Symbol ->
@@ -422,6 +441,7 @@ reserveAliasSymbol ::
   AliasDef 'Parsed ->
   Sem r S.Symbol
 reserveAliasSymbol a = do
+  traceM ("reserve alias " <> ppTrace (a ^. aliasDefName))
   s <- reserveSymbolOf SKNameAlias Nothing Nothing (a ^. aliasDefName)
   let locAliasDef = getLoc a
   return (set S.nameDefined locAliasDef s)
@@ -1053,6 +1073,7 @@ exportScope scope@Scope {..} = do
   _exportSymbols <- mkHashMap scopeSymbols
   _exportModuleSymbols <- mkHashMap scopeModuleSymbols
   _exportFixitySymbols <- mkHashMap scopeFixitySymbols
+  traceM ("export fixity " <> show (length _exportFixitySymbols))
   return ExportInfo {..}
   where
     mkentry ::
@@ -1116,30 +1137,30 @@ readScopeModule import_ = do
 
 checkFixityInfo ::
   forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder, Reader InfoTable] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, NameIdGen, InfoTableBuilder, Reader InfoTable] r) =>
   ParsedFixityInfo 'Parsed ->
   Sem r (ParsedFixityInfo 'Scoped)
 checkFixityInfo ParsedFixityInfo {..} = do
-  fields' <- mapM checkFields _fixityFields
+  fields' <- mapM checkFixityFields _fixityFields
   return
     ParsedFixityInfo
       { _fixityFields = fields',
         ..
       }
-  where
-    checkFields :: ParsedFixityFields 'Parsed -> Sem r (ParsedFixityFields 'Scoped)
-    checkFields ParsedFixityFields {..} = do
-      same' <- mapM checkFixitySymbol _fixityFieldsPrecSame
-      below' <- mapM (mapM checkFixitySymbol) _fixityFieldsPrecBelow
-      above' <- mapM (mapM checkFixitySymbol) _fixityFieldsPrecAbove
-      return
-        ParsedFixityFields
-          { _fixityFieldsPrecSame = same',
-            _fixityFieldsPrecAbove = above',
-            _fixityFieldsPrecBelow = below',
-            _fixityFieldsAssoc,
-            _fixityFieldsBraces
-          }
+
+checkFixityFields :: (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable] r) => ParsedFixityFields 'Parsed -> Sem r (ParsedFixityFields 'Scoped)
+checkFixityFields ParsedFixityFields {..} = do
+  same' <- mapM checkFixitySymbol _fixityFieldsPrecSame
+  below' <- mapM (mapM checkFixitySymbol) _fixityFieldsPrecBelow
+  above' <- mapM (mapM checkFixitySymbol) _fixityFieldsPrecAbove
+  return
+    ParsedFixityFields
+      { _fixityFieldsPrecSame = same',
+        _fixityFieldsPrecAbove = above',
+        _fixityFieldsPrecBelow = below',
+        _fixityFieldsAssoc,
+        _fixityFieldsBraces
+      }
 
 getModuleId :: forall r. (Member (Reader PackageId) r) => TopModulePathKey -> Sem r ModuleId
 getModuleId path = do
@@ -1170,17 +1191,27 @@ checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
         _fixityKw
       }
 
+reserveFixitySyntaxDef ::
+  forall r.
+  (Members '[Reader BindingStrategy, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder, Reader InfoTable] r) =>
+  FixitySyntaxDef 'Parsed ->
+  Sem r ()
+reserveFixitySyntaxDef FixitySyntaxDef {..} =
+  void (reserveSymbolOf SKNameFixity Nothing Nothing _fixitySymbol)
+
 resolveFixitySyntaxDef ::
   forall r.
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder, Reader InfoTable] r) =>
   FixitySyntaxDef 'Parsed ->
   Sem r ()
 resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
-  sym <- reserveSymbolOf SKNameFixity Nothing Nothing _fixitySymbol
+  traceM ("reserve fixity " <> ppTrace _fixitySymbol)
+  sym <- getReservedFixitySymbol _fixitySymbol
   let fi :: ParsedFixityInfo 'Parsed = _fixityInfo
-  same <- mapM checkFixitySymbol (fi ^. fixityPrecSame)
-  below <- mapM checkFixitySymbol (fromMaybe [] $ fi ^. fixityPrecBelow)
-  above <- mapM checkFixitySymbol (fromMaybe [] $ fi ^. fixityPrecAbove)
+  fi' :: ParsedFixityInfo 'Scoped <- checkFixityInfo _fixityInfo
+  let same = fi' ^. fixityPrecSame
+      below = fromMaybe [] (fi' ^. fixityPrecBelow)
+      above = fromMaybe [] (fi' ^. fixityPrecAbove)
   fid <- maybe freshNameId getFixityId same
   below' <- mapM getFixityId below
   above' <- mapM getFixityId above
@@ -1255,18 +1286,19 @@ resolveOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
   checkNotDefined
   sym <- checkFixitySymbol _opFixity
   fx <- lookupFixity (sym ^. S.nameId)
+  traceM ("register operator " <> ppTrace _opSymbol)
   let sf =
         SymbolOperator
           { _symbolOperatorUsed = False,
             _symbolOperatorDef = s,
             _symbolOperatorFixity = fx ^. fixityDefFixity
           }
-  modify (over scoperSyntaxOperators (over scoperOperators (HashMap.insert _opSymbol sf)))
+  modify (set (scoperSyntaxOperators . scoperOperators . at _opSymbol) (Just sf))
   where
     checkNotDefined :: Sem r ()
     checkNotDefined =
       whenJustM
-        (HashMap.lookup _opSymbol <$> gets (^. scoperSyntaxOperators . scoperOperators))
+        (gets (^. scoperSyntaxOperators . scoperOperators . at _opSymbol))
         $ \s' -> throw (ErrDuplicateOperator (DuplicateOperator (s' ^. symbolOperatorDef) s))
 
 checkIteratorSyntaxDef ::
@@ -1772,22 +1804,30 @@ withLocalScope ma = do
   put before
   return x
 
-syntaxBlock :: (Members '[Error ScoperError] r) => Sem (State ScoperSyntax ': r) a -> Sem r a
-syntaxBlock m =
-  evalState emptyScoperSyntax $ do
+syntaxBlock ::
+  (Members '[Error ScoperError] r) =>
+  ScoperSyntax ->
+  Sem (State ScoperSyntax ': r) a ->
+  Sem r a
+syntaxBlock reservedSyntax m =
+  evalState reservedSyntax $ do
     a <- m
     checkOrphanOperators
     checkOrphanIterators
     return a
+
+syntaxBlockTop :: (Members '[Error ScoperError] r) => Sem (State ScoperSyntax ': r) a -> Sem r a
+syntaxBlockTop = syntaxBlock emptyScoperSyntax
 
 checkLocalModuleBody ::
   forall r.
   (Members '[HighlightBuilder, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader PackageId, Reader BindingStrategy] r) =>
   ModuleSymbolEntry ->
   Sem r [Statement 'Scoped]
-checkLocalModuleBody m = syntaxBlock $ do
-  body <- (^. reservedModuleStatements) <$> getReservedLocalModule ("checkLocalModuleBody" : []) m
-  checkReservedStatements body
+checkLocalModuleBody m = do
+  res <- getReservedLocalModule ("checkLocalModuleBody" : []) m
+  let body = res ^. reservedModuleStatements
+  syntaxBlock (res ^. reservedModuleSyntax) (checkReservedStatements body)
 
 checkTopModuleBody ::
   forall r.
@@ -1795,10 +1835,10 @@ checkTopModuleBody ::
   [Statement 'Parsed] ->
   Sem r [Statement 'Scoped]
 checkTopModuleBody body =
-  syntaxBlock $
-    reserveModuleBody body >>= checkReservedStatements
+  syntaxBlockTop $
+    reserveStatements body >>= checkReservedStatements
 
-reserveModuleBody ::
+reserveStatements ::
   forall r.
   ( Members
       '[ HighlightBuilder,
@@ -1816,7 +1856,7 @@ reserveModuleBody ::
   ) =>
   [Statement 'Parsed] ->
   Sem r [Statement 'Parsed]
-reserveModuleBody = topBindings . concatMapM (fmap toList . reserveDefinition)
+reserveStatements defs = topBindings $ concatMapM (fmap toList . reserveDefinition) defs
   where
     reserveDefinition ::
       ( Members
@@ -1837,7 +1877,7 @@ reserveModuleBody = topBindings . concatMapM (fmap toList . reserveDefinition)
       Statement 'Parsed ->
       Sem r' (NonEmpty (Statement 'Parsed))
     reserveDefinition def = case def of
-      StatementSyntax s -> resolveSyntaxDef s $> pure def
+      StatementSyntax s -> reserveSyntaxDef s $> pure def
       StatementFunctionDef d -> reserveFunctionLikeSymbol d $> pure def
       StatementDeriving d -> reserveDerivingSymbol d $> pure def
       StatementAxiom d -> void (reserveAxiomSymbol d) $> pure def
@@ -1855,7 +1895,9 @@ checkReservedStatements ::
   (Members '[HighlightBuilder, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax] r) =>
   [Statement 'Parsed] ->
   Sem r [Statement 'Scoped]
-checkReservedStatements = topBindings . mapM goDefinition
+checkReservedStatements defs = topBindings $ do
+  -- mapM_ resolveSyntaxDef (defs ^.. each . _StatementSyntax)
+  mapM goDefinition defs
   where
     goDefinition ::
       ( Members
@@ -1867,8 +1909,8 @@ checkReservedStatements = topBindings . mapM goDefinition
              Reader ScopeParameters,
              InfoTableBuilder,
              NameIdGen,
-             HighlightBuilder,
              Reader BindingStrategy,
+             HighlightBuilder,
              Reader InfoTable
            ]
           r'
@@ -1876,7 +1918,7 @@ checkReservedStatements = topBindings . mapM goDefinition
       Statement 'Parsed ->
       Sem r' (Statement 'Scoped)
     goDefinition = \case
-      StatementSyntax s -> StatementSyntax <$> checkSyntaxDef s
+      StatementSyntax s -> StatementSyntax <$> (resolveSyntaxDef s >> checkSyntaxDef s)
       StatementFunctionDef d -> StatementFunctionDef <$> checkFunctionDef d
       StatementDeriving d -> StatementDeriving <$> checkDeriving d
       StatementAxiom d -> StatementAxiom <$> checkAxiomDef d
@@ -2077,13 +2119,15 @@ reserveLocalModule Module {..} = do
   resModule :: ReservedModule <- withLocalScope $ do
     -- TODO Q: we only need to change the scopePath, not the scopeSymbols ?
     inheritScope _modulePath
-    b <- reserveModuleBody _moduleBody
+    b <- reserveStatements _moduleBody
     export <- get >>= exportScope
     reserved <- gets (^. scopeReserved)
+    syntax <- get
     return
       ReservedModule
         { _reservedModuleExportInfo = export,
           _reservedModuleName = S.unqualifiedSymbol _modulePath',
+          _reservedModuleSyntax = syntax,
           _reservedModuleReserved = reserved,
           _reservedModuleStatements = b
         }
@@ -2316,6 +2360,7 @@ checkOpenModuleHelper ::
   Sem r (OpenModule 'Scoped short)
 checkOpenModuleHelper reservedMod OpenModule {..} = do
   let exportInfo = reservedMod ^. reservedModuleExportInfo
+  traceM ("open export fixity = " <> show (length (exportInfo ^. exportFixitySymbols)))
   registerName False (reservedMod ^. reservedModuleName)
   usingHiding' <- mapM (checkUsingHiding (reservedMod ^. reservedModuleName) exportInfo) _openModuleUsingHiding
   mergeScope (filterExportInfo _openModulePublic usingHiding' exportInfo)
@@ -2382,7 +2427,7 @@ filterExportInfo pub openModif = alterEntries . filterScope
             return (fromMaybe sym mayAs', e)
           u :: HashMap NameId (Maybe Symbol)
           u =
-            HashMap.fromList
+            hashMap
               [ (i ^. usingSymbol . S.nameId, i ^? usingAs . _Just . S.nameConcrete)
                 | i <- toList (l ^. usingList)
               ]
@@ -2445,7 +2490,7 @@ checkLetStatements ::
 checkLetStatements =
   ignoreSyntax
     . fmap fromSections
-    . (reserveModuleBody >=> checkReservedStatements)
+    . (reserveStatements >=> checkReservedStatements)
     . mkLetSections
     . toList
   where
@@ -2835,6 +2880,7 @@ checkFixitySymbol s = do
   scope <- get
   -- Lookup at the global scope
   entries <- thd3 <$> lookupQualifiedSymbol ["checkFixitySymbol"] ([], s)
+  traceM ("length entries = " <> show (length entries))
   case resolveShadowing (toList entries) of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
     [x] -> do
@@ -3401,7 +3447,7 @@ checkParsePatternAtom' ::
 checkParsePatternAtom' = localBindings . ignoreSyntax . runReader PatternNamesKindVariables . checkParsePatternAtom
 
 checkSyntaxDef ::
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax] r) =>
   SyntaxDef 'Parsed ->
   Sem r (SyntaxDef 'Scoped)
 checkSyntaxDef = \case
@@ -3412,7 +3458,7 @@ checkSyntaxDef = \case
 
 checkAliasDef ::
   forall r.
-  (Members '[Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax] r) =>
+  (Members '[Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax] r) =>
   AliasDef 'Parsed ->
   Sem r (AliasDef 'Scoped)
 checkAliasDef def@AliasDef {..} = do
@@ -3430,7 +3476,6 @@ checkAliasDef def@AliasDef {..} = do
   where
     scanAlias :: AliasDef 'Parsed -> Sem r ()
     scanAlias a = do
-      reserveAliasDef a
       aliasId <- gets (^?! scopeReservedSymbols . at (a ^. aliasDefName) . _Just . S.nameId)
       asName <- checkName (a ^. aliasDefAsName)
       modify' (set (scoperAlias . at aliasId) (Just asName))
@@ -3441,6 +3486,17 @@ reserveAliasDef ::
   AliasDef 'Parsed ->
   Sem r ()
 reserveAliasDef = void . reserveAliasSymbol
+
+reserveSyntaxDef ::
+  (Members '[Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
+  SyntaxDef 'Parsed ->
+  Sem r ()
+reserveSyntaxDef = \case
+  SyntaxFixity fixDef -> reserveFixitySyntaxDef fixDef
+  SyntaxOperator {} -> return ()
+  SyntaxIterator {} -> return ()
+  -- FIXME fix alias loops
+  SyntaxAlias d -> reserveAliasDef d
 
 resolveSyntaxDef ::
   (Members '[Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>

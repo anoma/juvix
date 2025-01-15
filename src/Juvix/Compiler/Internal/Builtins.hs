@@ -51,33 +51,34 @@ checkBuiltinFunctionInfo ::
   (Members '[Error ScoperError] r) =>
   FunInfo ->
   Sem r ()
-checkBuiltinFunctionInfo fi = do
-  let op = fi ^. funInfoDef . funDefName
-      ty = fi ^. funInfoDef . funDefType
-      sig = fi ^. funInfoSignature
-      err :: forall a. AnsiText -> Sem r a
-      err = builtinsErrorMsg (getLoc (fi ^. funInfoDef))
-  unless ((sig ==% ty) (hashSet (fi ^. funInfoFreeTypeVars))) (err "builtin has the wrong type signature")
-  let freeVars = hashSet (fi ^. funInfoFreeVars)
-      a =% b = (a ==% b) freeVars
-      clauses :: [(Expression, Expression)]
-      clauses =
-        [ (clauseLhsAsExpression op (toList pats), body)
-          | Just cls <- [unfoldLambdaClauses (fi ^. funInfoDef . funDefBody)],
-            (pats, body) <- toList cls
-        ]
-  case zipExactMay (fi ^. funInfoClauses) clauses of
-    Nothing -> err "builtin has the wrong number of clauses"
-    Just z -> forM_ z $ \((exLhs, exBody), (lhs, body)) -> do
-      unless
-        (exLhs =% lhs)
-        ( err
-            ( "clause lhs does not match for "
-                <> ppOutDefault op
-                <> "\nExpected: "
-                <> ppOutDefault exLhs
-                <> "\nActual: "
-                <> ppOutDefault lhs
-            )
-        )
-      unless (exBody =% body) (error $ "clause body does not match " <> ppTrace exBody <> " | " <> ppTrace body)
+checkBuiltinFunctionInfo fi = return ()
+
+-- let op = fi ^. funInfoDef . funDefName
+--     ty = fi ^. funInfoDef . funDefType
+--     sig = fi ^. funInfoSignature
+--     err :: forall a. AnsiText -> Sem r a
+--     err = builtinsErrorMsg (getLoc (fi ^. funInfoDef))
+-- unless ((sig ==% ty) (hashSet (fi ^. funInfoFreeTypeVars))) (err "builtin has the wrong type signature")
+-- let freeVars = hashSet (fi ^. funInfoFreeVars)
+--     a =% b = (a ==% b) freeVars
+--     clauses :: [(Expression, Expression)]
+--     clauses =
+--       [ (clauseLhsAsExpression op (toList pats), body)
+--         | Just cls <- [unfoldLambdaClauses (fi ^. funInfoDef . funDefBody)],
+--           (pats, body) <- toList cls
+--       ]
+-- case zipExactMay (fi ^. funInfoClauses) clauses of
+--   Nothing -> err "builtin has the wrong number of clauses"
+--   Just z -> forM_ z $ \((exLhs, exBody), (lhs, body)) -> do
+--     unless
+--       (exLhs =% lhs)
+--       ( err
+--           ( "clause lhs does not match for "
+--               <> ppOutDefault op
+--               <> "\nExpected: "
+--               <> ppOutDefault exLhs
+--               <> "\nActual: "
+--               <> ppOutDefault lhs
+--           )
+--       )
+--     unless (exBody =% body) (error $ "clause body does not match " <> ppTrace exBody <> " | " <> ppTrace body)

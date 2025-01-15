@@ -66,6 +66,8 @@ newtype ScopeParameters = ScopeParameters
 data ReservedModule = ReservedModule
   { _reservedModuleName :: S.Name,
     _reservedModuleExportInfo :: ExportInfo,
+    -- TODO I think this field is not needed
+    _reservedModuleSyntax :: ScoperSyntax,
     _reservedModuleReserved :: Reserved,
     _reservedModuleStatements :: [Statement 'Parsed]
   }
@@ -134,6 +136,7 @@ scopedToReservedModule scoped =
   ReservedModule
     { _reservedModuleName = scoped ^. scopedModuleName,
       _reservedModuleExportInfo = scoped ^. scopedModuleExportInfo,
+      _reservedModuleSyntax = emptyScoperSyntax,
       _reservedModuleReserved = emptyReserved,
       _reservedModuleStatements = []
     }
