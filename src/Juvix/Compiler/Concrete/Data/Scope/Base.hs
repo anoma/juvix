@@ -47,6 +47,8 @@ data Reserved = Reserved
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
     _scopeInScope :: InScope,
+    -- | The name id of the module containing this scope
+    _scopeModuleId :: NameId,
     -- | The map from S.NameId to Modules is needed because we support merging
     -- several imports under the same name. E.g.
     -- import A as X;
@@ -72,7 +74,7 @@ data ReservedModule = ReservedModule
 
 data ScoperState = ScoperState
   { -- | Local and top modules currently in scope - used to look up qualified symbols
-    -- TODO unify
+    -- TODO unify ?
     _scoperModules :: HashMap S.NameId ScopedModule,
     _scoperReservedModules :: HashMap S.NameId ReservedModule,
     _scoperAlias :: HashMap S.NameId PreSymbolEntry,
@@ -152,10 +154,11 @@ emptyInScope =
       _inScopeFixitySymbols = mempty
     }
 
-emptyScope :: S.AbsModulePath -> Scope
-emptyScope absPath =
+emptyScopeTop :: NameId -> S.AbsModulePath -> Scope
+emptyScopeTop modId absPath =
   Scope
     { _scopePath = absPath,
+      _scopeModuleId = modId,
       _scopeInScope = emptyInScope,
       _scopeImports = mempty,
       _scopeReserved = emptyReserved

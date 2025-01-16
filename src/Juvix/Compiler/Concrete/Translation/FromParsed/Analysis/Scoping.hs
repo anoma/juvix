@@ -1280,9 +1280,10 @@ checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
 checkIteratorSyntaxDef ::
   forall r.
   (Members '[Reader ScopeParameters, Reader InfoTable, Reader PackageId, InfoTableBuilder, NameIdGen, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax] r) =>
+  Bool ->
   IteratorSyntaxDef 'Parsed ->
   Sem r (IteratorSyntaxDef 'Scoped)
-checkIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
+checkIteratorSyntaxDef isTop s@IteratorSyntaxDef {..} = do
   checkNotDefined
   checkAtLeastOneRange
   let sf =
@@ -1290,10 +1291,11 @@ checkIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
           { _symbolIteratorUsed = False,
             _symbolIteratorDef = s
           }
-  itername <- (^. preSymbolName) <$> checkUnqualifiedName _iterSymbol
-  let itersym = over S.nameConcrete fromUnqualified' itername
+  let pname = NameUnqualified _iterSymbol
+  itername :: ScopedIden <- checkScopedIden pname
+  let itersym = over S.nameConcrete fromUnqualified' (itername ^. scopedIdenSrcName)
   modify (set (scoperSyntaxIterators . scoperIterators . at _iterSymbol) (Just sf))
-  modifyScopeEntry itersym (maybe emptyIteratorInfo fromParsedIteratorInfo _iterInfo)
+  modifyScope itersym (maybe emptyIteratorInfo fromParsedIteratorInfo _iterInfo)
   doc <- mapM checkJudoc _iterDoc
   return
     IteratorSyntaxDef
@@ -1310,20 +1312,52 @@ checkIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
         num :: Maybe Int
         num = s ^? iterInfo . _Just . to fromParsedIteratorInfo . iteratorInfoRangeNum . _Just
 
-    -- TODO try to factor common code with operator
-    modifyScopeEntry :: S.Symbol -> IteratorInfo -> Sem r ()
-    modifyScopeEntry scopedOperator iter
-      | S.canHaveFixity (getNameKind scopedOperator) = do
-          let sym = scopedOperator ^. S.nameConcrete
-              h :: SymbolInfo 'NameSpaceSymbols -> SymbolInfo 'NameSpaceSymbols
-              h = over symbolInfo (fmap adjustEntry)
-                where
-                  adjustEntry :: PreSymbolEntry -> PreSymbolEntry
-                  adjustEntry e
-                    | e ^. preSymbolName . S.nameId == scopedOperator ^. S.nameId = set (preSymbolName . S.nameIterator) (Just iter) e
-                    | otherwise = e
-          modify (over (scopeSymbols . at sym . _Just) h)
-      | otherwise = return ()
+    modifyScope :: S.Symbol -> IteratorInfo -> Sem r ()
+    modifyScope scopedIterator iter = do
+      modifyReserved
+      modifyScopeEntry
+      when isTop modifyModuleEntry
+      where
+        sym :: Symbol = scopedIterator ^. S.nameConcrete
+
+        modifyModuleEntry :: Sem r ()
+        modifyModuleEntry
+          | S.canBeIterator (getNameKind scopedIterator) = do
+              mid <- gets (^. scopeModuleId)
+              modify $
+                set
+                  ( scoperReservedModules
+                      . at mid
+                      . _Just
+                      . reservedModuleExportInfo
+                      . exportSymbols
+                      . at sym
+                      . _Just
+                      . preSymbolName
+                      . S.nameIterator
+                  )
+                  (Just iter)
+          | otherwise = return ()
+
+        modifyReserved :: Sem r ()
+        modifyReserved
+          | S.canBeIterator (getNameKind scopedIterator) = do
+              modify (set (scopeReservedSymbols . at sym . _Just . S.nameIterator) (Just iter))
+          | otherwise = return ()
+
+        -- TODO try to factor common code with operator
+        modifyScopeEntry :: Sem r ()
+        modifyScopeEntry
+          | S.canBeIterator (getNameKind scopedIterator) = do
+              let h :: SymbolInfo 'NameSpaceSymbols -> SymbolInfo 'NameSpaceSymbols
+                  h = over symbolInfo (fmap adjustEntry)
+                    where
+                      adjustEntry :: PreSymbolEntry -> PreSymbolEntry
+                      adjustEntry e
+                        | e ^. preSymbolName . S.nameId == scopedIterator ^. S.nameId = set (preSymbolName . S.nameIterator) (Just iter) e
+                        | otherwise = e
+              modify (over (scopeSymbols . at sym . _Just) h)
+          | otherwise = return ()
 
     checkNotDefined :: Sem r ()
     checkNotDefined =
@@ -1608,7 +1642,7 @@ checkInductiveDef InductiveDef {..} = do
             checkRecordSyntaxDef :: RecordSyntaxDef 'Parsed -> Sem r (RecordSyntaxDef 'Scoped)
             checkRecordSyntaxDef = \case
               RecordSyntaxOperator d -> RecordSyntaxOperator <$> checkOperatorSyntaxDef d
-              RecordSyntaxIterator d -> RecordSyntaxIterator <$> checkIteratorSyntaxDef d
+              RecordSyntaxIterator d -> RecordSyntaxIterator <$> checkIteratorSyntaxDef False d
 
             checkRecordStatement :: Reserved -> RecordStatement 'Parsed -> Sem r (RecordStatement 'Scoped)
             checkRecordStatement scopeSyntax = \case
@@ -1708,29 +1742,28 @@ checkTopModule m@Module {..} = checkedModule
       registerName True moduleName
       return moduleName
 
-    iniScope :: Scope
-    iniScope = emptyScope (getTopModulePath m)
-
     checkedModule :: Sem r (Module 'Scoped 'ModuleTop, ScopedModule, Scope)
     checkedModule = do
-      ( sc :: Scope,
-        ( tab :: InfoTable,
+      ( tab :: InfoTable,
+        ( sc :: Scope,
           ( e :: ExportInfo,
             body' :: [Statement 'Scoped],
             path' :: S.TopModulePath,
             doc' :: Maybe (Judoc 'Scoped)
             )
           )
-        ) <- runState iniScope
-        . runInfoTableBuilder mempty
-        $ do
+        ) <-
+        runInfoTableBuilder mempty $ do
           path' <- freshTopModulePath
-          withTopScope $ do
-            body' <- topBindings (checkTopModuleBody _moduleBody)
-            e <- get >>= exportScope
-            doc' <- mapM checkJudoc _moduleDoc
-            registerModuleDoc (path' ^. S.nameId) doc'
-            return (e, body', path', doc')
+          let iniScope :: Scope = emptyScopeTop (path' ^. S.nameId) (getTopModulePath m)
+          runState iniScope $
+            do
+              withTopScope $ do
+                body' <- topBindings (checkTopModuleBody _moduleBody)
+                e <- get >>= exportScope
+                doc' <- mapM checkJudoc _moduleDoc
+                registerModuleDoc (path' ^. S.nameId) doc'
+                return (e, body', path', doc')
       localModules <- getScopedLocalModules e
       _moduleId <- getModuleId (topModulePathKey (path' ^. S.nameConcrete))
       doctbl <- getDocTable _moduleId
@@ -1791,8 +1824,8 @@ withLocalScope ma = do
   put before
   return x
 
+-- TODO remove
 syntaxBlock ::
-  (Members '[Error ScoperError] r) =>
   ScoperSyntax ->
   Sem (State ScoperSyntax ': r) a ->
   Sem r a
@@ -1803,7 +1836,7 @@ syntaxBlock reservedSyntax m =
     checkOrphanIterators
     return a
 
-syntaxBlockTop :: (Members '[Error ScoperError] r) => Sem (State ScoperSyntax ': r) a -> Sem r a
+syntaxBlockTop :: Sem (State ScoperSyntax ': r) a -> Sem r a
 syntaxBlockTop = syntaxBlock emptyScoperSyntax
 
 checkLocalModuleBody ::
@@ -1880,9 +1913,7 @@ checkReservedStatements ::
   (Members '[HighlightBuilder, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax] r) =>
   [Statement 'Parsed] ->
   Sem r [Statement 'Scoped]
-checkReservedStatements defs = topBindings $ do
-  -- mapM_ resolveSyntaxDef (defs ^.. each . _StatementSyntax)
-  mapM goDefinition defs
+checkReservedStatements = topBindings . mapM goDefinition
   where
     goDefinition ::
       ( Members
@@ -2154,17 +2185,21 @@ checkLocalModule ::
 checkLocalModule md@Module {..} = do
   tab1 <- ask @InfoTable
   tab2 <- getBuilderInfoTable
-  _modulePath' <- getReservedLocalModuleSymbol _modulePath
+  _modulePath' :: S.Symbol <- getReservedLocalModuleSymbol _modulePath
   let modEntry = ModuleSymbolEntry (S.unqualifiedSymbol _modulePath')
       mid = _modulePath' ^. S.nameId
   reservedModule <- getReservedLocalModule ["lo"] modEntry
-  (tab, (moduleBody', moduleDoc')) <-
-    withLocalReservedScope (reservedModule ^. reservedModuleReserved) . runReader (tab1 <> tab2) . runInfoTableBuilder mempty $ do
-      inheritScope _modulePath
-      b <- checkLocalModuleBody modEntry
-      doc' <- mapM checkJudoc _moduleDoc
-      return (b, doc')
-  let exportInfo = reservedModule ^. reservedModuleExportInfo
+  (tab, (exportInfo, moduleBody', moduleDoc')) <-
+    withLocalReservedScope (reservedModule ^. reservedModuleReserved)
+      . runReader (tab1 <> tab2)
+      . runInfoTableBuilder mempty
+      $ do
+        modify (set scopeModuleId mid)
+        inheritScope _modulePath
+        b <- checkLocalModuleBody modEntry
+        doc' <- mapM checkJudoc _moduleDoc
+        e <- get >>= exportScope
+        return (e, b, doc')
   localModules <- getScopedLocalModules exportInfo
   let moduleName = S.unqualifiedSymbol _modulePath'
       m =
@@ -2205,13 +2240,14 @@ checkOrphanOperators = return ()
 --   Nothing -> return ()
 --   Just x -> throw (ErrUnusedOperatorDef (UnusedOperatorDef x))
 
-checkOrphanIterators :: forall r. (Members '[Error ScoperError, State ScoperSyntax] r) => Sem r ()
-checkOrphanIterators = do
-  declared <- gets (^. scoperSyntaxIterators . scoperIterators)
-  let unused = fmap (^. symbolIteratorDef) . find (^. symbolIteratorUsed . to not) . toList $ declared
-  case unused of
-    Nothing -> return ()
-    Just x -> throw (ErrUnusedIteratorDef (UnusedIteratorDef x))
+checkOrphanIterators :: forall r. Sem r ()
+checkOrphanIterators = return ()
+
+-- declared <- gets (^. scoperSyntaxIterators . scoperIterators)
+-- let unused = fmap (^. symbolIteratorDef) . find (^. symbolIteratorUsed . to not) . toList $ declared
+-- case unused of
+--   Nothing -> return ()
+--   Just x -> throw (ErrUnusedIteratorDef (UnusedIteratorDef x))
 
 symbolInfoSingle :: (SingI ns) => NameSpaceEntryType ns -> SymbolInfo ns
 symbolInfoSingle p = SymbolInfo $ HashMap.singleton (p ^. nsEntry . S.nameDefinedIn) p
@@ -3437,7 +3473,7 @@ checkSyntaxDef = \case
   SyntaxFixity fixDef -> SyntaxFixity <$> checkFixitySyntaxDef fixDef
   SyntaxAlias a -> SyntaxAlias <$> checkAliasDef a
   SyntaxOperator opDef -> SyntaxOperator <$> checkOperatorSyntaxDef opDef
-  SyntaxIterator iterDef -> SyntaxIterator <$> checkIteratorSyntaxDef iterDef
+  SyntaxIterator iterDef -> SyntaxIterator <$> checkIteratorSyntaxDef True iterDef
 
 checkAliasDef ::
   forall r.
