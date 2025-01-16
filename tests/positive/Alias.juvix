@@ -38,8 +38,8 @@ syntax operator || logical;
   | zero b := b
   | one _ := one;
 
-syntax operator or none;
 syntax alias or := ||;
+syntax operator or none;
 
 syntax alias ||| := ||;
 
@@ -49,8 +49,8 @@ or3' (a b c : Binary) : Binary := (a ||| b) ||| c;
 
 type Pair := mkPair Binary Binary;
 
-syntax operator , pair;
 syntax alias , := mkPair;
+syntax operator , pair;
 
 myPair : Pair := one, ⊥;
 

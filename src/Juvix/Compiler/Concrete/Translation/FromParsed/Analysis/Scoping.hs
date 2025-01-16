@@ -3451,7 +3451,7 @@ checkParsePatternAtom' ::
 checkParsePatternAtom' = localBindings . ignoreSyntax . runReader PatternNamesKindVariables . checkParsePatternAtom
 
 checkSyntaxDef ::
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax] r) =>
+  (Members '[Reader BindingStrategy, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax] r) =>
   SyntaxDef 'Parsed ->
   Sem r (SyntaxDef 'Scoped)
 checkSyntaxDef = \case
@@ -3462,14 +3462,17 @@ checkSyntaxDef = \case
 
 checkAliasDef ::
   forall r.
-  (Members '[Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax] r) =>
+  (Members '[Reader BindingStrategy, Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax] r) =>
   AliasDef 'Parsed ->
   Sem r (AliasDef 'Scoped)
 checkAliasDef def@AliasDef {..} = do
-  scanAlias def
+  aliasName' <- reserveAliasDef def
+  let aliasId = aliasName' ^. S.nameId
+  asName :: PreSymbolEntry <- checkName _aliasDefAsName
+  modify' (set (scoperAlias . at aliasId) (Just asName))
+  registerAlias aliasId asName
   doc' <- maybe (return Nothing) (return . Just <=< checkJudoc) _aliasDefDoc
-  aliasName' :: S.Symbol <- gets (^?! scopeReservedSymbols . at _aliasDefName . _Just)
-  asName' <- checkScopedIden _aliasDefAsName
+  asName' :: ScopedIden <- entryToScopedIden _aliasDefAsName asName
   return
     AliasDef
       { _aliasDefName = aliasName',
@@ -3477,19 +3480,12 @@ checkAliasDef def@AliasDef {..} = do
         _aliasDefDoc = doc',
         ..
       }
-  where
-    scanAlias :: AliasDef 'Parsed -> Sem r ()
-    scanAlias a = do
-      aliasId <- gets (^?! scopeReservedSymbols . at (a ^. aliasDefName) . _Just . S.nameId)
-      asName <- checkName (a ^. aliasDefAsName)
-      modify' (set (scoperAlias . at aliasId) (Just asName))
-      registerAlias aliasId asName
 
 reserveAliasDef ::
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader BindingStrategy] r) =>
   AliasDef 'Parsed ->
-  Sem r ()
-reserveAliasDef = void . reserveAliasSymbol
+  Sem r S.Symbol
+reserveAliasDef = reserveAliasSymbol
 
 reserveSyntaxDef ::
   (Members '[Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader BindingStrategy] r) =>
@@ -3499,8 +3495,8 @@ reserveSyntaxDef = \case
   SyntaxFixity fixDef -> reserveFixitySyntaxDef fixDef
   SyntaxOperator {} -> return ()
   SyntaxIterator {} -> return ()
-  -- FIXME fix alias loops
-  SyntaxAlias d -> reserveAliasDef d
+  -- TODO we don't reserve alias to avoid loops. Should we change this?
+  SyntaxAlias {} -> return ()
 
 resolveSyntaxDef ::
   (Members '[Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
