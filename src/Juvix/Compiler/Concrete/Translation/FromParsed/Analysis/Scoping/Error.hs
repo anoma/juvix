@@ -28,8 +28,6 @@ data ScoperError
   | ErrMultipleExport MultipleExportConflict
   | ErrAmbiguousSym AmbiguousSym
   | ErrAmbiguousModuleSym AmbiguousModuleSym
-  | ErrUnusedOperatorDef UnusedOperatorDef
-  | ErrUnusedIteratorDef UnusedIteratorDef
   | ErrDoubleBracesPattern DoubleBracesPattern
   | ErrDoubleBinderPattern DoubleBinderPattern
   | ErrAliasBinderPattern AliasBinderPattern
@@ -80,8 +78,6 @@ instance ToGenericError ScoperError where
     ErrMultipleExport e -> genericError e
     ErrAmbiguousSym e -> genericError e
     ErrAmbiguousModuleSym e -> genericError e
-    ErrUnusedOperatorDef e -> genericError e
-    ErrUnusedIteratorDef e -> genericError e
     ErrDoubleBracesPattern e -> genericError e
     ErrDoubleBinderPattern e -> genericError e
     ErrAliasBinderPattern e -> genericError e

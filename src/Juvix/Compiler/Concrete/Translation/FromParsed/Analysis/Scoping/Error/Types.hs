@@ -436,52 +436,6 @@ instance ToGenericError ModuleNotInScope where
           i = getLoc (e ^. moduleNotInScopeName)
           msg = "The module" <+> ppCode opts' _moduleNotInScopeName <+> "is not in scope"
 
-newtype UnusedOperatorDef = UnusedOperatorDef
-  { _unusedOperatorDef :: OperatorSyntaxDef 'Parsed
-  }
-  deriving stock (Show)
-
-instance ToGenericError UnusedOperatorDef where
-  genericError UnusedOperatorDef {..} = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = i,
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [i]
-            }
-        where
-          opts' = fromGenericOptions opts
-          i = getLoc _unusedOperatorDef
-          msg =
-            "Unused operator syntax definition:"
-              <> line
-              <> ppCode opts' _unusedOperatorDef
-
-newtype UnusedIteratorDef = UnusedIteratorDef
-  { _unusedIteratorDef :: IteratorSyntaxDef 'Parsed
-  }
-  deriving stock (Show)
-
-instance ToGenericError UnusedIteratorDef where
-  genericError UnusedIteratorDef {..} = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = i,
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [i]
-            }
-        where
-          opts' = fromGenericOptions opts
-          i = getLoc _unusedIteratorDef
-          msg =
-            "Unused iterator syntax definition:"
-              <> line
-              <> ppCode opts' _unusedIteratorDef
-
 data AmbiguousSym = AmbiguousSym
   { _ambiguousSymName :: Name,
     _ambiguousSymEntires :: [PreSymbolEntry]

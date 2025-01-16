@@ -110,11 +110,6 @@ scoperErrorTests =
       $(mkRelFile "ModuleNotInScope.juvix")
       $ wantsError ErrModuleNotInScope,
     negTest
-      "Unused operator syntax definition"
-      $(mkRelDir ".")
-      $(mkRelFile "UnusedOperatorDef.juvix")
-      $ wantsError ErrUnusedOperatorDef,
-    negTest
       "Ambiguous symbol"
       $(mkRelDir ".")
       $(mkRelFile "AmbiguousSymbol.juvix")
@@ -199,11 +194,6 @@ scoperErrorTests =
       $(mkRelDir ".")
       $(mkRelFile "Iterators4.juvix")
       $ wantsError ErrDuplicateIterator,
-    negTest
-      "Unused iterator declaration"
-      $(mkRelDir ".")
-      $(mkRelFile "Iterators5.juvix")
-      $ wantsError ErrUnusedIteratorDef,
     negTest
       "Repeated name in named application"
       $(mkRelDir ".")

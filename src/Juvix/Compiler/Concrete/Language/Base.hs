@@ -455,6 +455,7 @@ instance Serialize FixityDef
 instance NFData FixityDef
 
 -- TODO use stage in _opSymbol and _opFixity
+-- TODO allow qualified names
 data OperatorSyntaxDef (s :: Stage) = OperatorSyntaxDef
   { _opSymbol :: SymbolType s,
     _opFixity :: Symbol,
@@ -484,6 +485,7 @@ instance Serialize (OperatorSyntaxDef 'Scoped)
 
 instance NFData (OperatorSyntaxDef 'Scoped)
 
+-- TODO allow qualified names
 data IteratorSyntaxDef (s :: Stage) = IteratorSyntaxDef
   { _iterSymbol :: SymbolType s,
     _iterInfo :: Maybe ParsedIteratorInfo,
