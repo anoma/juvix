@@ -1057,9 +1057,6 @@ exportScope scope@Scope {..} = do
         [e] -> return (Just (s, e))
         e : es -> err (e :| es)
       where
-        shouldExport :: NameSpaceEntryType ns -> Bool
-        shouldExport ent = ent ^. nsEntry . S.nameVisibilityAnn == VisPublic
-
         err :: NonEmpty (NameSpaceEntryType ns) -> Sem r a
         err es =
           throw $
@@ -1650,7 +1647,7 @@ checkInductiveDef InductiveDef {..} = do
             checkRecordStatement :: Reserved -> RecordStatement 'Parsed -> Sem r (RecordStatement 'Scoped)
             checkRecordStatement scopeSyntax = \case
               RecordStatementField d -> RecordStatementField <$> checkField d
-              RecordStatementSyntax s -> RecordStatementSyntax <$> withLocalReservedScope scopeSyntax (checkRecordSyntaxDef s)
+              RecordStatementSyntax s -> RecordStatementSyntax <$> (withLocalScope (putReservedInScope scopeSyntax >> (checkRecordSyntaxDef s)))
 
             checkField :: RecordField 'Parsed -> Sem r (RecordField 'Scoped)
             checkField RecordField {..} = do
@@ -1801,17 +1798,6 @@ withTopScope ma = do
   let scope' = set scopeReserved emptyReserved before
   put scope'
   ma
-
-withLocalReservedScope ::
-  forall r a.
-  (Members '[Reader BindingStrategy, State Scope] r) =>
-  Reserved ->
-  Sem r a ->
-  Sem r a
-withLocalReservedScope reserved localScoped = withLocalScope $ do
-  modify (set scopeReserved reserved)
-  putReservedInScope reserved
-  localScoped
 
 withLocalScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
 withLocalScope ma = do
@@ -2191,26 +2177,25 @@ checkLocalModule md@Module {..} = do
   reservedModule <- getReservedLocalModule ["lo"] modEntry
   let reserved = reservedModule ^. reservedModuleReserved
   (tab, (exportInfo, moduleBody', moduleDoc')) <-
-    withLocalReservedScope reserved
+    withLocalScope
       . runReader (tab1 <> tab2)
       . runInfoTableBuilder mempty
       $ do
+        inheritScope _modulePath
+        modify (set scopeReserved reserved)
+        putReservedInScope reserved
         e0 <- get >>= exportScope
         traceM ("BEFORE check local module " <> ppTrace _modulePath' <> " with\n" <> ppTrace e0)
         modify (set scopeModuleId mid)
-        inheritScope _modulePath
         e1 <- get >>= exportScope
         traceM ("AFTER inherit check local module " <> ppTrace _modulePath' <> " with\n" <> ppTrace e1)
-        -- TODO we call putReservedInScope twice, also in withLocalReservedScope
-        putReservedInScope reserved
-        e2 <- get >>= exportScope
-        traceM ("AFTER PUT Reserved check local module " <> ppTrace _modulePath' <> " with\n" <> ppTrace e2)
         b <- checkLocalModuleBody modEntry
         doc' <- mapM checkJudoc _moduleDoc
         e <- get >>= exportScope
         traceM ("AFTER check local module " <> ppTrace _modulePath' <> " with\n" <> ppTrace e)
         return (e, b, doc')
   localModules <- getScopedLocalModules exportInfo
+  modify (set (scoperReservedModules . at mid . _Just . reservedModuleExportInfo) exportInfo)
   let moduleName = S.unqualifiedSymbol _modulePath'
       m =
         Module
@@ -2251,10 +2236,7 @@ putReservedInScope ::
 putReservedInScope reserved = forEachNameSpace $ \ns ->
   forM_ (HashMap.toList (reserved ^. reservedNameSpace ns)) $ \(s, s') -> do
     let kind = getNameKind s'
-    traceM ("putreserved " <> ppTrace s)
     addToScope ns kind s s'
-    e <- fromRight' <$> runError @ScoperError (get >>= exportScope)
-    traceM ("after  " <> ppTrace e)
 
 -- TODO remove
 -- checkOrphanOperators :: forall r. (Members '[Error ScoperError, State ScoperSyntax] r) => Sem r ()
@@ -2408,6 +2390,7 @@ checkOpenModuleHelper ::
   Sem r (OpenModule 'Scoped short)
 checkOpenModuleHelper reservedMod OpenModule {..} = do
   let exportInfo = reservedMod ^. reservedModuleExportInfo
+  traceM ("open module " <> ppTrace (reservedMod ^. reservedModuleName) <> "\n" <> ppTrace exportInfo)
   registerName False (reservedMod ^. reservedModuleName)
   usingHiding' <- mapM (checkUsingHiding (reservedMod ^. reservedModuleName) exportInfo) _openModuleUsingHiding
   mergeScope (filterExportInfo _openModulePublic usingHiding' exportInfo)

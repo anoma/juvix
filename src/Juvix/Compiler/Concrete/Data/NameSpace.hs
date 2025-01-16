@@ -42,6 +42,15 @@ nameSpaceElemName = \case
   NameSpaceModules -> "module"
   NameSpaceFixities -> "fixity"
 
+nsEntry :: forall ns. (SingI ns) => Lens' (NameSpaceEntryType ns) S.Name
+nsEntry = case sing :: SNameSpace ns of
+  SNameSpaceModules -> moduleEntry
+  SNameSpaceSymbols -> preSymbolName
+  SNameSpaceFixities -> fixityEntry
+
+shouldExport :: (SingI ns) => NameSpaceEntryType ns -> Bool
+shouldExport ent = ent ^. nsEntry . S.nameVisibilityAnn == VisPublic
+
 forEachNameSpace :: (Monad m) => (forall (ns :: NameSpace). Sing ns -> m ()) -> m ()
 forEachNameSpace f = sequence_ [withSomeSing ns f | ns <- allElements]
 

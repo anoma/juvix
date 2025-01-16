@@ -11,14 +11,7 @@ import Juvix.Compiler.Concrete.Data.Scope.Base
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Store.Scoped.Data.InfoTable
-import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude
-
-nsEntry :: forall ns. (SingI ns) => Lens' (NameSpaceEntryType ns) S.Name
-nsEntry = case sing :: SNameSpace ns of
-  SNameSpaceModules -> moduleEntry
-  SNameSpaceSymbols -> preSymbolName
-  SNameSpaceFixities -> fixityEntry
 
 scopeReservedNameSpace :: forall (ns :: NameSpace). Sing ns -> Lens' Scope (HashMap Symbol S.Symbol)
 scopeReservedNameSpace s = case s of
