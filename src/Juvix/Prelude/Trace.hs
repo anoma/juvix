@@ -31,8 +31,7 @@ trace = traceLabel ""
 
 traceM :: (Applicative f) => Text -> f ()
 traceM t = traceLabel "" t (pure ())
-
--- {-# WARNING traceM "Using traceM" #-}
+{-# WARNING traceM "Using traceM" #-}
 
 traceShow :: (Show b) => b -> b
 traceShow b = traceLabel "" (pack . show $ b) b
