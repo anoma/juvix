@@ -178,7 +178,6 @@ freshSymbol ::
   Symbol ->
   Sem r S.Symbol
 freshSymbol _nameKind _nameKindPretty _nameConcrete = do
-  traceM ("fresh symbol " <> ppTrace _nameConcrete)
   _nameId <- freshNameId
   _nameDefinedIn <- gets (^. scopePath)
   let _nameDefined = getLoc _nameConcrete
@@ -423,7 +422,6 @@ reserveAliasSymbol ::
   AliasDef 'Parsed ->
   Sem r S.Symbol
 reserveAliasSymbol a = do
-  traceM ("reserve alias " <> ppTrace (a ^. aliasDefName))
   s <- reserveSymbolOf SKNameAlias Nothing Nothing (a ^. aliasDefName)
   let locAliasDef = getLoc a
   return (set S.nameDefined locAliasDef s)
@@ -1043,7 +1041,6 @@ exportScope scope@Scope {..} = do
   _exportSymbols <- mkHashMap scopeSymbols
   _exportModuleSymbols <- mkHashMap scopeModuleSymbols
   _exportFixitySymbols <- mkHashMap scopeFixitySymbols
-  traceM ("export fixity " <> show (length _exportFixitySymbols))
   return ExportInfo {..}
   where
     mkentry ::
@@ -1175,7 +1172,6 @@ resolveFixitySyntaxDef ::
   FixitySyntaxDef 'Parsed ->
   Sem r ()
 resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
-  traceM ("reserve fixity " <> ppTrace _fixitySymbol)
   sym <- getReservedFixitySymbol _fixitySymbol
   let fi :: ParsedFixityInfo 'Parsed = _fixityInfo
   fi' :: ParsedFixityInfo 'Scoped <- checkFixityInfo _fixityInfo
@@ -1240,9 +1236,9 @@ checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
   checkNotDefined
   sym :: S.Symbol <- checkFixitySymbol _opFixity
   fx <- lookupFixity (sym ^. S.nameId)
-  traceM ("register operator " <> ppTrace _opSymbol)
-  opname <- (^. preSymbolName) <$> checkUnqualifiedName _opSymbol
-  let opsym = over S.nameConcrete fromUnqualified' opname
+  let pname = NameUnqualified _opSymbol
+  opname :: ScopedIden <- checkScopedIden pname
+  let opsym = over S.nameConcrete fromUnqualified' (opname ^. scopedIdenSrcName)
       sf =
         SymbolOperator
           { _symbolOperatorDef = s
@@ -1599,17 +1595,25 @@ checkInductiveDef InductiveDef {..} = do
           return rhs'
           where
             checkRecordStatements :: [RecordStatement 'Parsed] -> Sem r [RecordStatement 'Scoped]
-            checkRecordStatements = mapM checkRecordStatement
+            checkRecordStatements ss = do
+              -- The field names need to be only in scope for the syntax statements
+              scopeSyntax <- withLocalScope $ do
+                mapM_ reserveFieldName (ss ^.. each . _RecordStatementField)
+                gets (^. scopeReserved)
+              mapM (checkRecordStatement scopeSyntax) ss
+
+            reserveFieldName :: RecordField 'Parsed -> Sem r ()
+            reserveFieldName RecordField {..} = void (bindVariableSymbol _fieldName)
 
             checkRecordSyntaxDef :: RecordSyntaxDef 'Parsed -> Sem r (RecordSyntaxDef 'Scoped)
             checkRecordSyntaxDef = \case
               RecordSyntaxOperator d -> RecordSyntaxOperator <$> checkOperatorSyntaxDef d
               RecordSyntaxIterator d -> RecordSyntaxIterator <$> checkIteratorSyntaxDef d
 
-            checkRecordStatement :: RecordStatement 'Parsed -> Sem r (RecordStatement 'Scoped)
-            checkRecordStatement = \case
+            checkRecordStatement :: Reserved -> RecordStatement 'Parsed -> Sem r (RecordStatement 'Scoped)
+            checkRecordStatement scopeSyntax = \case
               RecordStatementField d -> RecordStatementField <$> checkField d
-              RecordStatementSyntax s -> RecordStatementSyntax <$> checkRecordSyntaxDef s
+              RecordStatementSyntax s -> RecordStatementSyntax <$> withLocalReservedScope scopeSyntax (checkRecordSyntaxDef s)
 
             checkField :: RecordField 'Parsed -> Sem r (RecordField 'Scoped)
             checkField RecordField {..} = do
@@ -1761,13 +1765,13 @@ withTopScope ma = do
   put scope'
   ma
 
-withLocalModuleScope ::
+withLocalReservedScope ::
   forall r a.
   (Members '[Reader BindingStrategy, State Scope] r) =>
   Reserved ->
   Sem r a ->
   Sem r a
-withLocalModuleScope reserved localScoped = withLocalScope $ do
+withLocalReservedScope reserved localScoped = withLocalScope $ do
   modify (set scopeReserved reserved)
   putReservedInScope
   localScoped
@@ -2155,7 +2159,7 @@ checkLocalModule md@Module {..} = do
       mid = _modulePath' ^. S.nameId
   reservedModule <- getReservedLocalModule ["lo"] modEntry
   (tab, (moduleBody', moduleDoc')) <-
-    withLocalModuleScope (reservedModule ^. reservedModuleReserved) . runReader (tab1 <> tab2) . runInfoTableBuilder mempty $ do
+    withLocalReservedScope (reservedModule ^. reservedModuleReserved) . runReader (tab1 <> tab2) . runInfoTableBuilder mempty $ do
       inheritScope _modulePath
       b <- checkLocalModuleBody modEntry
       doc' <- mapM checkJudoc _moduleDoc
@@ -2341,7 +2345,6 @@ checkOpenModuleHelper ::
   Sem r (OpenModule 'Scoped short)
 checkOpenModuleHelper reservedMod OpenModule {..} = do
   let exportInfo = reservedMod ^. reservedModuleExportInfo
-  traceM ("open export fixity = " <> show (length (exportInfo ^. exportFixitySymbols)))
   registerName False (reservedMod ^. reservedModuleName)
   usingHiding' <- mapM (checkUsingHiding (reservedMod ^. reservedModuleName) exportInfo) _openModuleUsingHiding
   mergeScope (filterExportInfo _openModulePublic usingHiding' exportInfo)
@@ -2861,7 +2864,6 @@ checkFixitySymbol s = do
   scope <- get
   -- Lookup at the global scope
   entries <- thd3 <$> lookupQualifiedSymbol ["checkFixitySymbol"] ([], s)
-  traceM ("length entries = " <> show (length entries))
   case resolveShadowing (toList entries) of
     [] -> throw (ErrSymNotInScope (NotInScope s scope))
     [x] -> do
