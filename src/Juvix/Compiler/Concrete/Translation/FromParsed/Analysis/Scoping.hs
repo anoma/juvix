@@ -313,7 +313,7 @@ addToScope ::
 addToScope ns kind s s' = withSingI ns $ do
   strat <- ask
   path <- gets (^. scopePath)
-  let u = S.unqualifiedSymbol s'
+  let u :: S.Name = S.unqualifiedSymbol s'
       entry :: NameSpaceEntryType ns
       entry =
         let symE
@@ -332,6 +332,7 @@ addToScope ns kind s s' = withSingI ns $ do
         Just SymbolInfo {..} -> case strat of
           BindingLocal -> symbolInfoSingle mentry
           BindingTop -> SymbolInfo (HashMap.insert path mentry _symbolInfo)
+  traceM ("add to scope:" <> ppTrace u <> " vis " <> ppTrace (u ^. S.nameVisibilityAnn))
   modify (over scopeNameSpaceI (HashMap.alter (Just . addS entry) s))
   where
     isAlias = case kind of
@@ -787,6 +788,8 @@ checkImportNoPublic import_@Import {..} = do
 
     registerScoperModules :: ScopedModule -> Sem r ()
     registerScoperModules m = do
+      traceM ("register scoper modules " <> ppTrace m <> " with ExportInfo = \n" <> ppTrace (m ^. scopedModuleExportInfo))
+
       modify (set (scoperModules . at (m ^. scopedModulePath . S.nameId)) (Just m))
       modify (set (scoperReservedModules . at (m ^. scopedModulePath . S.nameId)) (Just (scopedToReservedModule m)))
       forM_ (m ^. scopedModuleLocalModules) registerScoperModules
@@ -1765,6 +1768,7 @@ checkTopModule m@Module {..} = checkedModule
                 registerModuleDoc (path' ^. S.nameId) doc'
                 return (e, body', path', doc')
       localModules <- getScopedLocalModules e
+      traceM ("local modules = " <> ppTrace localModules)
       _moduleId <- getModuleId (topModulePathKey (path' ^. S.nameConcrete))
       doctbl <- getDocTable _moduleId
       let md =
@@ -1806,14 +1810,8 @@ withLocalReservedScope ::
   Sem r a
 withLocalReservedScope reserved localScoped = withLocalScope $ do
   modify (set scopeReserved reserved)
-  putReservedInScope
+  putReservedInScope reserved
   localScoped
-  where
-    putReservedInScope :: Sem r ()
-    putReservedInScope = forEachNameSpace $ \ns ->
-      forM_ (HashMap.toList (reserved ^. reservedNameSpace ns)) $ \(s, s') -> do
-        let kind = getNameKind s'
-        addToScope ns kind s s'
 
 withLocalScope :: (Members '[State Scope] r) => Sem r a -> Sem r a
 withLocalScope ma = do
@@ -1875,7 +1873,7 @@ reserveStatements ::
   ) =>
   [Statement 'Parsed] ->
   Sem r [Statement 'Parsed]
-reserveStatements defs = topBindings $ concatMapM (fmap toList . reserveDefinition) defs
+reserveStatements = topBindings . concatMapM (fmap toList . reserveDefinition)
   where
     reserveDefinition ::
       ( Members
@@ -2136,6 +2134,7 @@ reserveLocalModule Module {..} = do
     inheritScope _modulePath
     b <- reserveStatements _moduleBody
     export <- get >>= exportScope
+    traceM ("Reserved export for " <> ppTrace _modulePath' <> "\n" <> ppTrace export)
     reserved <- gets (^. scopeReserved)
     return
       ReservedModule
@@ -2155,6 +2154,7 @@ inheritScope _modulePath = do
   modify (over scopeModuleSymbols (fmap inheritSymbol))
   modify (over scopeFixitySymbols (fmap inheritSymbol))
   where
+    -- { _inScopeSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceSymbols),
     inheritSymbol :: forall ns. (SingI ns) => SymbolInfo ns -> SymbolInfo ns
     inheritSymbol (SymbolInfo s) = SymbolInfo (inheritEntry <$> s)
       where
@@ -2189,16 +2189,26 @@ checkLocalModule md@Module {..} = do
   let modEntry = ModuleSymbolEntry (S.unqualifiedSymbol _modulePath')
       mid = _modulePath' ^. S.nameId
   reservedModule <- getReservedLocalModule ["lo"] modEntry
+  let reserved = reservedModule ^. reservedModuleReserved
   (tab, (exportInfo, moduleBody', moduleDoc')) <-
-    withLocalReservedScope (reservedModule ^. reservedModuleReserved)
+    withLocalReservedScope reserved
       . runReader (tab1 <> tab2)
       . runInfoTableBuilder mempty
       $ do
+        e0 <- get >>= exportScope
+        traceM ("BEFORE check local module " <> ppTrace _modulePath' <> " with\n" <> ppTrace e0)
         modify (set scopeModuleId mid)
         inheritScope _modulePath
+        e1 <- get >>= exportScope
+        traceM ("AFTER inherit check local module " <> ppTrace _modulePath' <> " with\n" <> ppTrace e1)
+        -- TODO we call putReservedInScope twice, also in withLocalReservedScope
+        putReservedInScope reserved
+        e2 <- get >>= exportScope
+        traceM ("AFTER PUT Reserved check local module " <> ppTrace _modulePath' <> " with\n" <> ppTrace e2)
         b <- checkLocalModuleBody modEntry
         doc' <- mapM checkJudoc _moduleDoc
         e <- get >>= exportScope
+        traceM ("AFTER check local module " <> ppTrace _modulePath' <> " with\n" <> ppTrace e)
         return (e, b, doc')
   localModules <- getScopedLocalModules exportInfo
   let moduleName = S.unqualifiedSymbol _modulePath'
@@ -2228,6 +2238,23 @@ checkLocalModule md@Module {..} = do
   registerLocalModule smod
   registerName True _modulePath'
   return m
+
+putReservedInScope ::
+  ( Members
+      '[ Reader BindingStrategy,
+         State Scope
+       ]
+      r'
+  ) =>
+  Reserved ->
+  Sem r' ()
+putReservedInScope reserved = forEachNameSpace $ \ns ->
+  forM_ (HashMap.toList (reserved ^. reservedNameSpace ns)) $ \(s, s') -> do
+    let kind = getNameKind s'
+    traceM ("putreserved " <> ppTrace s)
+    addToScope ns kind s s'
+    e <- fromRight' <$> runError @ScoperError (get >>= exportScope)
+    traceM ("after  " <> ppTrace e)
 
 -- TODO remove
 -- checkOrphanOperators :: forall r. (Members '[Error ScoperError, State ScoperSyntax] r) => Sem r ()

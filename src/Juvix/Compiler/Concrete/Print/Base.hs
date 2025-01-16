@@ -20,7 +20,7 @@ import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
-import Juvix.Compiler.Store.Scoped.Language (Alias, ModuleSymbolEntry, PreSymbolEntry (..), ScopedModule, SymbolEntry, aliasName, moduleEntry, scopedModuleName, symbolEntry)
+import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Data.Ape.Base
 import Juvix.Data.Ape.Print
 import Juvix.Data.CodeAnn (Ann, CodeAnn (..), CodeAnnReference (..), ppCodeAnn, ppStringLit)
@@ -935,6 +935,23 @@ instance (SingI s) => PrettyPrint (FixitySyntaxDef s) where
         body' = ppCode _fixityInfo
     doc' ?<> header' <+> ppCode _fixityAssignKw <+> body'
 
+instance PrettyPrint VisibilityAnn where
+  ppCode = noLoc . ppCodeAnn
+
+instance PrettyPrint ExportInfo where
+  ppCode ExportInfo {..} = do
+    header "Export Info"
+    indent $ do
+      itemize
+        [ header "Symbols:"
+            >> ppCode _exportSymbols,
+          header "Module Symbols:"
+            >> ppCode _exportModuleSymbols,
+          header "Fixity Symbols:"
+            >> ppCode _exportFixitySymbols
+        ]
+      hardline
+
 instance (SingI s) => PrettyPrint (OperatorSyntaxDef s) where
   ppCode OperatorSyntaxDef {..} = do
     let doc' = ppCode <$> _opDoc
@@ -1625,6 +1642,21 @@ instance PrettyPrint SymbolEntry where
     noLoc
       ( kindWord
           P.<+> C.code (kindAnn (pretty (ent ^. symbolEntry . S.nameVerbatim)))
+          P.<+> "defined at"
+          P.<+> pretty (getLoc ent)
+      )
+    where
+      pretty' :: Text -> Doc a
+      pretty' = pretty
+      (kindAnn :: Doc Ann -> Doc Ann, kindWord :: Doc Ann) =
+        let k = getNameKind ent
+         in (annotate (AnnKind k), pretty' (nameKindText k))
+
+instance PrettyPrint FixitySymbolEntry where
+  ppCode ent =
+    noLoc
+      ( kindWord
+          P.<+> C.code (kindAnn (pretty (ent ^. fixityEntry . S.nameVerbatim)))
           P.<+> "defined at"
           P.<+> pretty (getLoc ent)
       )
