@@ -122,6 +122,13 @@ jobs:
           path: main
           submodules: true
 
+      - name: Checkout Anoma repo
+        uses: actions/checkout@v4
+        with:
+          repository: anoma/anoma
+          ref: ${{ env.ANOMA_VERSION }}
+          path: anoma
+
       - name: Add ~/.local/bin to PATH
         run: |
           mkdir -p "$HOME/.local/bin"
@@ -144,25 +151,21 @@ jobs:
         id: cache-anoma
         uses: actions/cache@v3
         with:
-          path: |
-            ${{ env.HOME }}/anoma
-          key: "${{ runner.os }}-anoma"
+          path: ${{ github.workspace }}/anoma
+          key: "${{ runner.os }}-${{ env.ANOMA_VERSION }}-anoma"
 
       - name: Install Protobuf Elixir dependencies
         shell: bash
+        working-directory: ${{ github.workspace }}/anoma
         run: |
-          cd anoma
           version=$(echo -n $(elixir -e "$(<mix.lock) |> Map.get(:protobuf) |> elem(2) |> IO.puts"))
           echo "version: ${version}"
           mix escript.install hex protobuf "$version" --force
 
       - name: Build anoma
         if: steps.cache-anoma.outputs.cache-hit != 'true'
+        working-directory: ${{ github.workspace }}/anoma
         run: |
-          cd $HOME
-          git clone https://github.com/anoma/anoma.git
-          cd anoma
-          git checkout ${{ env.ANOMA_VERSION }}
           mix local.hex --force
           echo "$HOME/.mix/escripts" >> $GITHUB_PATH
           mix deps.get
@@ -202,7 +205,7 @@ jobs:
 
       - name: Set ANOMA_PATH
         run: |
-          echo "ANOMA_PATH=$HOME/anoma" >> $GITHUB_ENV
+          echo "ANOMA_PATH=${{ github.workspace }}/anoma" >> $GITHUB_ENV
 
       - run: echo "HOME=$HOME" >> $GITHUB_ENV
         shell: bash
