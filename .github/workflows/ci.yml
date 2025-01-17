@@ -148,6 +148,14 @@ jobs:
             ${{ env.HOME }}/anoma
           key: "${{ runner.os }}-anoma"
 
+      - name: Install Protobuf Elixir dependencies
+        shell: bash
+        run: |
+          cd anoma
+          version=$(echo -n $(elixir -e "$(<mix.lock) |> Map.get(:protobuf) |> elem(2) |> IO.puts"))
+          echo "version: ${version}"
+          mix escript.install hex protobuf "$version" --force
+
       - name: Build anoma
         if: steps.cache-anoma.outputs.cache-hit != 'true'
         run: |
@@ -156,7 +164,6 @@ jobs:
           cd anoma
           git checkout ${{ env.ANOMA_VERSION }}
           mix local.hex --force
-          mix escript.install hex protobuf --force
           echo "$HOME/.mix/escripts" >> $GITHUB_PATH
           mix deps.get
           mix compile
