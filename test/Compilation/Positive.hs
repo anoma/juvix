@@ -525,5 +525,10 @@ tests =
         "Test090: Module self-reference"
         $(mkRelDir ".")
         $(mkRelFile "test090.juvix")
-        $(mkRelFile "out/test090.out")
+        $(mkRelFile "out/test090.out"),
+      posTest
+        "Test091: Instance termination"
+        $(mkRelDir ".")
+        $(mkRelFile "test091.juvix")
+        $(mkRelFile "out/test091.out")
     ]
