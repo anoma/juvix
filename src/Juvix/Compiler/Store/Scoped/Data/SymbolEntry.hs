@@ -85,6 +85,9 @@ instance HasNameKind ModuleSymbolEntry where
 instance HasLoc ModuleSymbolEntry where
   getLoc (ModuleSymbolEntry s) = s ^. S.nameDefined
 
+instance HasLoc FixitySymbolEntry where
+  getLoc (FixitySymbolEntry s) = s ^. S.nameDefined
+
 symbolEntryNameId :: SymbolEntry -> NameId
 symbolEntryNameId = (^. symbolEntry . S.nameId)
 

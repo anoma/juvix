@@ -36,6 +36,12 @@ type family NameSpaceEntryType s = res | res -> s where
   NameSpaceEntryType 'NameSpaceModules = ModuleSymbolEntry
   NameSpaceEntryType 'NameSpaceFixities = FixitySymbolEntry
 
+nameSpaceElemName :: (IsString str) => NameSpace -> str
+nameSpaceElemName = \case
+  NameSpaceSymbols -> "symbol"
+  NameSpaceModules -> "module"
+  NameSpaceFixities -> "fixity"
+
 entryName :: forall ns. (SingI ns) => Lens' (NameSpaceEntryType ns) S.Name
 entryName = case sing :: SNameSpace ns of
   SNameSpaceSymbols -> \f -> \case
