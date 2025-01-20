@@ -43,8 +43,11 @@ instance NFData InstanceFun
 
 data InstanceInfo = InstanceInfo
   { _instanceInfoInductive :: InductiveName,
+    -- | The parameters of the instance are the arguments of the target trait
     _instanceInfoParams :: [InstanceParam],
     _instanceInfoResult :: Iden,
+    -- | The arguments of the instance are the trait applications on which the
+    -- instance depends
     _instanceInfoArgs :: [FunctionParameter]
   }
   deriving stock (Eq, Generic)

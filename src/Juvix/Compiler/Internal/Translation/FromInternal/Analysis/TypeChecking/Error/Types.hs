@@ -608,8 +608,6 @@ instance ToGenericError TraitNotTerminating where
           msg =
             "Non-decreasing trait argument:"
               <+> ppCode opts' (e ^. traitNotTerminating)
-                <> line
-                <> "Each parameter of a trait in an instance argument must be structurally smaller than some parameter of the trait in the instance target"
 
 newtype DefaultArgLoop = DefaultArgLoop
   { _defaultArgLoop :: NonEmpty ArgId
