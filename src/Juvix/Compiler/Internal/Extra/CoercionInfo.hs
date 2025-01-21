@@ -39,7 +39,8 @@ coercionFromTypedIden TypedIden {..}
             _coercionInfoParams = _instanceAppArgs,
             _coercionInfoTarget = tgt,
             _coercionInfoResult = _typedIden,
-            _coercionInfoArgs = args'
+            _coercionInfoArgs = args',
+            _coercionInfoDecreasing = False
           }
   where
     (args, e) = unfoldFunType _typedIdenType

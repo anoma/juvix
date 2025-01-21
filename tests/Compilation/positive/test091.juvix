@@ -88,6 +88,25 @@ StateT-State
       mkStateT λ{_ := Applicative.pure (unit, s)};
   };
 
+-- coercion instance
+StateT-State-trans
+  {A B} {E : Type -> Type} {{Monad E}} {{State A E}} : State A (StateT B E) :=
+  mkState@{
+    get : StateT B E A := mkStateT@{
+      runStateT (s : B) : E (Pair A B) := do {
+        a <- State.get;
+        Applicative.pure (a, s);
+      }
+    };
+    put (a : A) : StateT B E Unit :=
+      mkStateT@{
+        runStateT (s : B) : E (Pair Unit B) := do {
+          State.put a;
+          Applicative.pure (unit, s);
+        };
+      };
+  };
+
 -------------------------------------------------------------------------------
 -- Reader
 -------------------------------------------------------------------------------
@@ -156,6 +175,7 @@ ReaderT-State
       mkReaderT (const (State.put s));
   };
 
+coercion instance
 ReaderT-Reader-trans
   {A B} {E : Type -> Type} {{Reader A E}} : Reader A (ReaderT B E) :=
   mkReader@{
@@ -245,7 +265,7 @@ readAndAddMul {E : Type -> Type} {{Monad E}} {{Reader Nat E}} {{Reader MyNat E}}
   };
 
 addMul (x y z : Nat) : Nat :=
-  readAndAddMul {{_}} {{ReaderT-Reader-trans}}
+  readAndAddMul
   |> runReader (mkMyNat z)
   |> runReader y
   |> runState x

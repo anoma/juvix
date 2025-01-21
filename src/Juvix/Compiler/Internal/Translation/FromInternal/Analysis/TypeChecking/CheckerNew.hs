@@ -132,11 +132,21 @@ checkCoercionCycles ::
   Sem r ()
 checkCoercionCycles = do
   ctab <- (^. typeCheckingTablesCoercionTable) <$> getCombinedTables
-  let s = toList $ cyclicCoercions ctab
-  whenJust (nonEmpty s) $
-    throw
-      . ErrCoercionCycles
-      . CoercionCycles
+  let cyclic = cyclicCoercions ctab
+      s = toList cyclic
+  when (any (notDecreasing cyclic ctab) s) $
+    throw (ErrCoercionCycles (CoercionCycles (nonEmpty' s)))
+  where
+    notDecreasing :: HashSet Name -> CoercionTable -> Name -> Bool
+    notDecreasing cyclic ctab n =
+      any
+        ( \ci ->
+            ci ^. coercionInfoDecreasing == False
+              && HashSet.member (ci ^. coercionInfoTarget . instanceAppHead) cyclic
+        )
+        cis
+      where
+        cis = fromJust $ HashMap.lookup n (ctab ^. coercionTableMap)
 
 checkTopModule ::
   (Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination] r) =>
@@ -467,7 +477,7 @@ checkCoercionType FunctionDef {..} = do
       unless (isTrait tab (_coercionInfoTarget ^. instanceAppHead)) $
         throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
       mapM_ checkArg _coercionInfoArgs
-      addCoercionInfo ci
+      addCoercionInfo (checkCoercionInfo ci)
       checkCoercionCycles
     Nothing ->
       throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))

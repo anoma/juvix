@@ -7,11 +7,17 @@ import Juvix.Extra.Serialize
 import Juvix.Prelude
 
 data CoercionInfo = CoercionInfo
-  { _coercionInfoInductive :: Name,
+  { -- | The inductive name of the trait on the right of `:`
+    _coercionInfoInductive :: Name,
+    -- | The parameters of the coercion are the arguments of the trait on the right of `:`
     _coercionInfoParams :: [InstanceParam],
+    -- | The target is the instance argument of the coercion instance
     _coercionInfoTarget :: InstanceApp,
+    -- | The identifier of the coercion instance definition
     _coercionInfoResult :: Iden,
-    _coercionInfoArgs :: [FunctionParameter]
+    -- | Implicit type arguments of the coercion
+    _coercionInfoArgs :: [FunctionParameter],
+    _coercionInfoDecreasing :: Bool
   }
   deriving stock (Eq, Generic)
 

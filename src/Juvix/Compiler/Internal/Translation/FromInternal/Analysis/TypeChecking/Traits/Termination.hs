@@ -1,8 +1,10 @@
 module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Traits.Termination
   ( checkTraitTermination,
+    checkCoercionInfo,
   )
 where
 
+import Juvix.Compiler.Internal.Extra.CoercionInfo
 import Juvix.Compiler.Internal.Extra.InstanceInfo
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Prelude
@@ -23,6 +25,13 @@ checkTraitTermination InstanceApp {..} InstanceInfo {..}
       return ()
   | otherwise =
       throw (ErrTraitNotTerminating (TraitNotTerminating _instanceAppExpression))
+
+checkCoercionInfo :: CoercionInfo -> CoercionInfo
+checkCoercionInfo ci@CoercionInfo {..} =
+  ci
+    { _coercionInfoDecreasing =
+        checkMultisetOrdering (_coercionInfoTarget ^. instanceAppArgs) _coercionInfoParams
+    }
 
 -- Checks the Dershowitz-Manna multiset ordering extension of the subterm
 -- ordering, according to the following characterization:

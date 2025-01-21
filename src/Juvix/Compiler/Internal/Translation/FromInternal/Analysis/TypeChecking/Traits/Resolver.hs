@@ -217,7 +217,11 @@ lookupInstance' visited canFillHoles ctab tab name params
       failUnless b
       let name' = _coercionInfoTarget ^. instanceAppHead
       args' <- mapM (substitutionI si) (_coercionInfoTarget ^. instanceAppArgs)
-      is <- lookupInstance' (name : visited) canFillHoles ctab tab name' args'
+      let visited' =
+            if
+                | _coercionInfoDecreasing -> visited
+                | otherwise -> name : visited
+      is <- lookupInstance' visited' canFillHoles ctab tab name' args'
       return $ map (first3 ((ci, si) :)) is
 
     goMatch :: InstanceParam -> InstanceParam -> Sem (State SubsI ': Fail ': r) Bool
