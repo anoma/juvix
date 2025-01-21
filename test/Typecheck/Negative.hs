@@ -243,7 +243,7 @@ tests =
       $(mkRelDir "Internal")
       $(mkRelFile "WrongCoercionArgument.juvix")
       $ \case
-        ErrWrongCoercionArgument {} -> Nothing
+        ErrTraitNotTerminating {} -> Nothing
         _ -> wrongError,
     negTest
       "Ambiguous coercions"

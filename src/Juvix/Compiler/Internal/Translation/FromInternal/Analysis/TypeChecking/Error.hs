@@ -26,7 +26,6 @@ data TypeCheckerError
   | ErrUnsupportedTypeFunction UnsupportedTypeFunction
   | ErrInvalidInstanceType InvalidInstanceType
   | ErrInvalidCoercionType InvalidCoercionType
-  | ErrWrongCoercionArgument WrongCoercionArgument
   | ErrCoercionCycles CoercionCycles
   | ErrTargetNotATrait TargetNotATrait
   | ErrNotATrait NotATrait
@@ -55,7 +54,6 @@ instance ToGenericError TypeCheckerError where
     ErrUnsupportedTypeFunction e -> genericError e
     ErrInvalidInstanceType e -> genericError e
     ErrInvalidCoercionType e -> genericError e
-    ErrWrongCoercionArgument e -> genericError e
     ErrCoercionCycles e -> genericError e
     ErrTargetNotATrait e -> genericError e
     ErrNotATrait e -> genericError e
@@ -84,7 +82,6 @@ instance Show TypeCheckerError where
     ErrUnsupportedTypeFunction {} -> "ErrUnsupportedTypeFunction"
     ErrInvalidInstanceType {} -> "ErrInvalidInstanceType"
     ErrInvalidCoercionType {} -> "ErrInvalidCoercionType"
-    ErrWrongCoercionArgument {} -> "ErrWrongCoercionArgument"
     ErrCoercionCycles {} -> "ErrCoercionCycles"
     ErrTargetNotATrait {} -> "ErrTargetNotATrait"
     ErrNotATrait {} -> "ErrNotATrait"
