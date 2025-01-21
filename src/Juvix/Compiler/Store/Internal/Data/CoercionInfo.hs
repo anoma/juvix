@@ -11,11 +11,11 @@ data CoercionInfo = CoercionInfo
     _coercionInfoInductive :: Name,
     -- | The parameters of the coercion are the arguments of the trait on the right of `:`
     _coercionInfoParams :: [InstanceParam],
-    -- | The target is the instance argument of the coercion instance
+    -- | The target instance argument of the coercion instance
     _coercionInfoTarget :: InstanceApp,
     -- | The identifier of the coercion instance definition
     _coercionInfoResult :: Iden,
-    -- | Implicit type arguments of the coercion
+    -- | Remaining instance arguments (not including the target)
     _coercionInfoArgs :: [FunctionParameter],
     _coercionInfoDecreasing :: Bool
   }

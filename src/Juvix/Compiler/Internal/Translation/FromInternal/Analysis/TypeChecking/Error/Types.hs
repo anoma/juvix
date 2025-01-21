@@ -383,7 +383,7 @@ instance ToGenericError InvalidCoercionType where
           "Invalid coercion type:"
             <+> ppCode opts _invalidCoercionTypeExpression
               <> line
-              <> "A coercion must have exactly one instance argument."
+              <> "A coercion must have a target instance argument."
     return
       GenericError
         { _genericErrorLoc = i,
@@ -393,29 +393,6 @@ instance ToGenericError InvalidCoercionType where
     where
       i :: Interval
       i = getLoc _invalidCoercionTypeExpression
-
-newtype WrongCoercionArgument = WrongCoercionArgument
-  { _wrongCoercionArgumentParameter :: FunctionParameter
-  }
-
-makeLenses ''WrongCoercionArgument
-
-instance ToGenericError WrongCoercionArgument where
-  genericError e = generr
-    where
-      generr =
-        return
-          GenericError
-            { _genericErrorLoc = i,
-              _genericErrorMessage =
-                ppOutput $
-                  "Expected an implicit type argument."
-                    <> line
-                    <> "A coercion can have only implicit type arguments followed by exactly one instance argument.",
-              _genericErrorIntervals = [i]
-            }
-        where
-          i = getLoc (e ^. wrongCoercionArgumentParameter)
 
 newtype TargetNotATrait = TargetNotATrait
   { _targetNotATraitType :: Expression

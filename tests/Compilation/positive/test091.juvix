@@ -88,7 +88,7 @@ StateT-State
       mkStateT λ{_ := Applicative.pure (unit, s)};
   };
 
--- coercion instance
+coercion instance
 StateT-State-trans
   {A B} {E : Type -> Type} {{Monad E}} {{State A E}} : State A (StateT B E) :=
   mkState@{
@@ -256,6 +256,25 @@ type MyNat := mkMyNat@{
   theNat : Nat;
 };
 
+getAndAdd {E : Type -> Type} {{Monad E}} {{State MyNat E}} {{State Nat E}} : E Nat :=
+  do {
+    s <- MyNat.theNat <$> State.get {MyNat};
+    modify ((+) s);
+    State.get
+  };
+
+addS (x y : Nat) : Nat :=
+  getAndAdd
+  |> evalState (mkMyNat y)
+  |> evalState x
+  |> run;
+
+addS' (x y : Nat) : Nat :=
+  getAndAdd
+  |> evalState x
+  |> evalState (mkMyNat y)
+  |> run;
+
 readAndAddMul {E : Type -> Type} {{Monad E}} {{Reader Nat E}} {{Reader MyNat E}} {{State Nat E}} : E Nat :=
   do {
     s <- MyNat.theNat <$> Reader.ask {MyNat};
@@ -272,5 +291,5 @@ addMul (x y z : Nat) : Nat :=
   |> run
   |> fst;
 
-main : Nat := add 1 2 + addMul 1 3 5 + add' 2 1;
+main : Nat := addS' (addS (add 1 2) (addMul 1 3 5)) (add' 2 1);
 -- result = 3 + 24 + 3 = 30

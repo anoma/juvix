@@ -405,6 +405,35 @@ checkDefType ty = checkIsType loc ty
   where
     loc = getLoc ty
 
+checkInstanceArg ::
+  forall r.
+  (Members '[Error TypeCheckerError, Reader InfoTable] r) =>
+  HashSet VarName ->
+  [InstanceParam] ->
+  FunctionParameter ->
+  Sem r ()
+checkInstanceArg metaVars params fp@FunctionParameter {..} = case _paramImplicit of
+  Implicit -> return ()
+  Explicit -> throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
+  ImplicitInstance -> do
+    tab <- ask
+    case traitFromExpression metaVars _paramType of
+      Just app@InstanceApp {..}
+        | isTrait tab _instanceAppHead ->
+            checkTraitTermination app params
+      _ ->
+        throw (ErrNotATrait (NotATrait _paramType))
+
+checkInstanceArgs ::
+  forall r.
+  (Members '[Error TypeCheckerError, Reader InfoTable] r) =>
+  [FunctionParameter] ->
+  [InstanceParam] ->
+  Sem r ()
+checkInstanceArgs args params = do
+  let metaVars = HashSet.fromList $ mapMaybe (^. paramName) args
+  mapM_ (checkInstanceArg metaVars params) args
+
 checkInstanceType ::
   forall r.
   (Members '[Error TypeCheckerError, Reader InfoTable, Inference, NameIdGen, ResultBuilder] r) =>
@@ -427,22 +456,10 @@ checkInstanceType FunctionDef {..} = do
       is <- subsumingInstances itab ii
       unless (null is) $
         throw (ErrSubsumedInstance (SubsumedInstance ii is (getLoc _funDefName)))
-      let metaVars = HashSet.fromList $ mapMaybe (^. paramName) _instanceInfoArgs
-      mapM_ (checkArg tab metaVars ii) _instanceInfoArgs
+      checkInstanceArgs (ii ^. instanceInfoArgs) (ii ^. instanceInfoParams)
       addInstanceInfo ii
     Nothing ->
       throw (ErrInvalidInstanceType (InvalidInstanceType _funDefType))
-  where
-    checkArg :: InfoTable -> HashSet VarName -> InstanceInfo -> FunctionParameter -> Sem r ()
-    checkArg tab metaVars ii fp@FunctionParameter {..} = case _paramImplicit of
-      Implicit -> return ()
-      Explicit -> throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
-      ImplicitInstance -> case traitFromExpression metaVars _paramType of
-        Just app@InstanceApp {..}
-          | isTrait tab _instanceAppHead ->
-              checkTraitTermination app ii
-        _ ->
-          throw (ErrNotATrait (NotATrait _paramType))
 
 checkInstanceParam ::
   (Member (Error TypeCheckerError) r) =>
@@ -476,17 +493,11 @@ checkCoercionType FunctionDef {..} = do
         throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
       unless (isTrait tab (_coercionInfoTarget ^. instanceAppHead)) $
         throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
-      mapM_ checkArg _coercionInfoArgs
+      checkInstanceArgs (ci ^. coercionInfoArgs) (ci ^. coercionInfoParams)
       addCoercionInfo (checkCoercionInfo ci)
       checkCoercionCycles
     Nothing ->
       throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
-  where
-    checkArg :: FunctionParameter -> Sem r ()
-    checkArg fp@FunctionParameter {..} = case _paramImplicit of
-      Implicit -> return ()
-      Explicit -> throw (ErrWrongCoercionArgument (WrongCoercionArgument fp))
-      ImplicitInstance -> throw (ErrWrongCoercionArgument (WrongCoercionArgument fp))
 
 checkCaseBranchRhs ::
   forall r.

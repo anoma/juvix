@@ -18,10 +18,10 @@ checkTraitTermination ::
   forall r.
   (Member (Error TypeCheckerError) r) =>
   InstanceApp ->
-  InstanceInfo ->
+  [InstanceParam] ->
   Sem r ()
-checkTraitTermination InstanceApp {..} InstanceInfo {..}
-  | checkMultisetOrdering _instanceAppArgs _instanceInfoParams =
+checkTraitTermination InstanceApp {..} params
+  | checkMultisetOrdering _instanceAppArgs params =
       return ()
   | otherwise =
       throw (ErrTraitNotTerminating (TraitNotTerminating _instanceAppExpression))
