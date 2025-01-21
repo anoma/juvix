@@ -258,7 +258,7 @@ type MyNat := mkMyNat@{
 
 getAndAdd {E : Type -> Type} {{Monad E}} {{State MyNat E}} {{State Nat E}} : E Nat :=
   do {
-    s <- MyNat.theNat <$> State.get {MyNat};
+    s <- MyNat.theNat <$> State.get;
     modify ((+) s);
     State.get
   };
@@ -277,7 +277,7 @@ addS' (x y : Nat) : Nat :=
 
 readAndAddMul {E : Type -> Type} {{Monad E}} {{Reader Nat E}} {{Reader MyNat E}} {{State Nat E}} : E Nat :=
   do {
-    s <- MyNat.theNat <$> Reader.ask {MyNat};
+    s <- MyNat.theNat <$> Reader.ask;
     s' <- readAndAdd;
     modify ((+) (s * s'));
     State.get
@@ -287,9 +287,8 @@ addMul (x y z : Nat) : Nat :=
   readAndAddMul
   |> runReader (mkMyNat z)
   |> runReader y
-  |> runState x
-  |> run
-  |> fst;
+  |> evalState x
+  |> run;
 
 main : Nat := addS' (addS (add 1 2) (addMul 1 3 5)) (add' 2 1);
 -- result = 3 + 24 + 3 = 30
