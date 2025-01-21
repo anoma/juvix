@@ -58,7 +58,7 @@ subsumingInstances ::
   InstanceInfo ->
   Sem r [(InstanceInfo)]
 subsumingInstances tab InstanceInfo {..} = do
-  is <- lookupInstance' [] False mempty tab _instanceInfoInductive _instanceInfoParams
+  is <- lookupInstance' [] False mempty tab _instanceInfoInductive (map makeRigidParam _instanceInfoParams)
   return $
     map snd3 $
       filter (\(_, x, _) -> x ^. instanceInfoResult /= _instanceInfoResult) is
@@ -234,7 +234,7 @@ lookupInstance' visited canFillHoles ctab tab name params
         | v1 == v2 ->
             return True
       (InstanceParamHole h, _)
-        | canFillHoles -> do
+        | canFillHoles && checkNoMeta t -> do
             m <- matchTypes (ExpressionHole h) (paramToExpression t)
             case m of
               Just {} -> return False

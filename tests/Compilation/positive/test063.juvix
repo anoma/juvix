@@ -69,6 +69,12 @@ fromU2toU {A} {{U2 A}} : U A :=
 instance
 instU2 : U2 String := mkU2 id;
 
+f {A} {{U A}} : A -> A := U.pp;
+
+g {A} {{U1 A}} : A -> A := f;
+
+h {A} {{U2 A}} : A -> A := f;
+
 trait
 type W1 A := mkW1;
 
@@ -83,11 +89,18 @@ instW2 : W2 String Nat := mkW2;
 
 wid {A} {{W1 A}} : A -> A := id;
 
-f {A} {{U A}} : A -> A := U.pp;
+trait
+type T A B := mkT;
 
-g {A} {{U1 A}} : A -> A := f;
+instance
+inst1 {A} : T A String := mkT;
 
-h {A} {{U2 A}} : A -> A := f;
+instance
+inst2 {B} : T String B := mkT;
+
+idT {{T String Nat}} : String -> String := id;
+
+idT' {{T String String}} : String -> String := id;
 
 main : IO :=
   printStringLn (T1.pp "a")
@@ -98,4 +111,4 @@ main : IO :=
     >>> printStringLn (f "f")
     >>> printStringLn (g {{mkU1 id}} "g")
     >>> printStringLn (h "h")
-    >>> printStringLn (wid "a");
+    >>> printStringLn (wid (idT "a"));
