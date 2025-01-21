@@ -925,18 +925,17 @@ exportScope Scope {..} = do
 
         err :: NonEmpty (NameSpaceEntryType ns) -> Sem r a
         err es =
-          throw
-            ( ErrMultipleExport
-                ( MultipleExportConflict
-                    _scopePath
-                    s
-                    ( case sing :: SNameSpace ns of
-                        SNameSpaceSymbols -> ExportEntriesSymbols es
-                        SNameSpaceModules -> ExportEntriesModules es
-                        SNameSpaceFixities -> ExportEntriesFixities es
-                    )
-                )
-            )
+          throw $
+            ErrMultipleExport
+              MultipleExportConflict
+                { _multipleExportModule = _scopePath,
+                  _multipleExportSymbol = s,
+                  _multipleExportNameSpace = fromSing (sing :: SNameSpace ns),
+                  _multipleExportEntries = case sing :: SNameSpace ns of
+                    SNameSpaceSymbols -> ExportEntriesSymbols es
+                    SNameSpaceModules -> ExportEntriesModules es
+                    SNameSpaceFixities -> ExportEntriesFixities es
+                }
 
 getLocalModules :: (Member (State ScoperState) r) => ExportInfo -> Sem r (HashMap S.NameId ScopedModule)
 getLocalModules ExportInfo {..} = do

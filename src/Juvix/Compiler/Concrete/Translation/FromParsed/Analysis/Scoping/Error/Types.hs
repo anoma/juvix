@@ -279,6 +279,7 @@ data ExportEntries
 data MultipleExportConflict = MultipleExportConflict
   { _multipleExportModule :: S.AbsModulePath,
     _multipleExportSymbol :: Symbol,
+    _multipleExportNameSpace :: NameSpace,
     _multipleExportEntries :: ExportEntries
   }
   deriving stock (Show)
@@ -297,10 +298,21 @@ instance ToGenericError MultipleExportConflict where
           opts' = fromGenericOptions opts
           i = getLoc _multipleExportModule
           msg =
-            "The symbol"
+            "The"
+              <+> nameSpaceElemName _multipleExportNameSpace
               <+> ppCode opts' _multipleExportSymbol
               <+> "is exported multiple times in the module"
               <+> ppCode opts' _multipleExportModule
+                <> hardline
+                <> itemize
+                  ( case _multipleExportEntries of
+                      ExportEntriesSymbols s -> ppEntry <$> s
+                      ExportEntriesModules s -> ppEntry <$> s
+                      ExportEntriesFixities s -> ppEntry <$> s
+                  )
+            where
+              ppEntry :: (HasLoc e) => e -> Doc CodeAnn
+              ppEntry e = "Defined in" <+> annotate (AnnKind KNameTopModule) (pretty (getLoc e))
 
 data NotInScope = NotInScope
   { _notInScopeSymbol :: Symbol,
