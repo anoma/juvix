@@ -69,6 +69,20 @@ fromU2toU {A} {{U2 A}} : U A :=
 instance
 instU2 : U2 String := mkU2 id;
 
+trait
+type W1 A := mkW1;
+
+trait
+type W2 A B := mkW2;
+
+coercion instance
+fromW2toW1 {A B} {{W2 A B}} : W1 A := mkW1;
+
+instance
+instW2 : W2 String Nat := mkW2;
+
+wid {A} {{W1 A}} : A -> A := id;
+
 f {A} {{U A}} : A -> A := U.pp;
 
 g {A} {{U1 A}} : A -> A := f;
@@ -83,4 +97,5 @@ main : IO :=
     >>> printStringLn (U.pp "e")
     >>> printStringLn (f "f")
     >>> printStringLn (g {{mkU1 id}} "g")
-    >>> printStringLn (h "h");
+    >>> printStringLn (h "h")
+    >>> printStringLn (wid "a");

@@ -226,17 +226,10 @@ lookupInstance' visited canFillHoles ctab tab name params
 
     goMatch :: InstanceParam -> InstanceParam -> Sem (State SubsI ': Fail ': r) Bool
     goMatch pat t = case (pat, t) of
-      (InstanceParamMeta v, _) -> do
-        m <- gets (HashMap.lookup v)
-        case m of
-          Just t'
-            | t' == t ->
-                return True
-            | otherwise ->
-                return False
-          Nothing -> do
-            modify (HashMap.insert v t)
-            return True
+      (InstanceParamMeta v, _) ->
+        goMatchMeta v t
+      (_, InstanceParamMeta v) ->
+        goMatchMeta v pat
       (InstanceParamVar v1, InstanceParamVar v2)
         | v1 == v2 ->
             return True
@@ -264,6 +257,19 @@ lookupInstance' visited canFillHoles ctab tab name params
       (InstanceParamVar {}, _) -> return False
       (InstanceParamApp {}, _) -> return False
       (InstanceParamFun {}, _) -> return False
+
+    goMatchMeta :: VarName -> InstanceParam -> Sem (State SubsI ': Fail ': r) Bool
+    goMatchMeta v t = do
+      m <- gets (HashMap.lookup v)
+      case m of
+        Just t'
+          | t' == t ->
+              return True
+          | otherwise ->
+              return False
+        Nothing -> do
+          modify (HashMap.insert v t)
+          return True
 
 lookupInstance ::
   forall r.
