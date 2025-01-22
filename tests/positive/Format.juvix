@@ -559,6 +559,10 @@ module PublicImports;
   axiom a : Inner.X.Y.Z.Nat;
 end;
 
+module Issue3287;
+  import Stdlib.Prelude as E using {Nat} public open public;
+end;
+
 --- Judoc comment 0
 syntax fixity aaa := binary {};
 

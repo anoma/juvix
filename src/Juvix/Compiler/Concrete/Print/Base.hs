@@ -1422,9 +1422,9 @@ instance (SingI s) => PrettyPrint (Import s) where
     ppCode (i ^. importKw)
       <+> ppModulePathType (i ^. importModulePath)
       <+?> ppAlias
-      <+?> open'
       <+?> usingHiding'
       <+?> public'
+      <+?> open'
     where
       ppAlias :: Maybe (Sem r ())
       ppAlias = case i ^. importAsName of
