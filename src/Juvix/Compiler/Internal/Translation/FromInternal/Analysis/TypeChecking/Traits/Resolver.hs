@@ -262,7 +262,8 @@ lookupInstance' visited canFillHoles ctab tab name params
     goMatchMeta v t = do
       m <- gets (HashMap.lookup v)
       case m of
-        Just t' -> t' == t
+        Just t' ->
+          return (t' == t)
         Nothing -> do
           modify (HashMap.insert v t)
           return True
