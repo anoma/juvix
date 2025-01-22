@@ -101,9 +101,9 @@ instance ToGenericError UnsolvedMeta where
       mkMsg = do
         m <- holeid
         let loopMsg
-              | e ^. unsolvedIsLoop = Just "The inference algorithm found a loop."
+              | e ^. unsolvedIsLoop = Just (line <> "The inference algorithm found a loop.")
               | otherwise = Nothing
-            msg = "Unable to infer the hole" <>? loopMsg <>? m
+            msg = "Unable to infer the hole." <>? loopMsg <>? m
         return msg
       holeid :: Sem r (Maybe (Doc Ann))
       holeid = runFail $ do

@@ -19,8 +19,8 @@ import Juvix.Prelude
 
 type SubsI = HashMap VarName InstanceParam
 
-subsIToE :: SubsI -> Subs
-subsIToE = fmap paramToExpression
+subsIToE :: (Member NameIdGen r) => SubsI -> Sem r Subs
+subsIToE = mapM paramToExpression
 
 type CoercionChain = [(CoercionInfo, SubsI)]
 
@@ -41,8 +41,9 @@ resolveTraitInstance TypedHole {..} = do
   ty <- strongNormalize _typedHoleType
   is <- lookupInstance ctab tab (ty ^. normalizedExpression)
   case is of
-    [(cs, ii, subs)] ->
-      expandArity' loc (subsIToE subs) (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)
+    [(cs, ii, subs)] -> do
+      subs' <- subsIToE subs
+      expandArity' loc subs' (ii ^. instanceInfoArgs) (ii ^. instanceInfoResult)
         >>= applyCoercions loc cs
     [] ->
       throw (ErrNoInstance (NoInstance ty loc))
@@ -58,7 +59,7 @@ subsumingInstances ::
   InstanceInfo ->
   Sem r [(InstanceInfo)]
 subsumingInstances tab InstanceInfo {..} = do
-  is <- lookupInstance' [] False mempty tab _instanceInfoInductive (map makeRigidParam _instanceInfoParams)
+  is <- lookupInstance' [] mempty tab _instanceInfoInductive (map makeRigidParam _instanceInfoParams)
   return $
     map snd3 $
       filter (\(_, x, _) -> x ^. instanceInfoResult /= _instanceInfoResult) is
@@ -72,7 +73,8 @@ substitutionI subs p = case p of
   InstanceParamVar {} -> return p
   InstanceParamApp InstanceApp {..} -> do
     args <- mapM (substitutionI subs) _instanceAppArgs
-    e <- substitutionE (subsIToE subs) _instanceAppExpression
+    subs' <- subsIToE subs
+    e <- substitutionE subs' _instanceAppExpression
     return $
       InstanceParamApp
         InstanceApp
@@ -83,7 +85,8 @@ substitutionI subs p = case p of
   InstanceParamFun InstanceFun {..} -> do
     l <- substitutionI subs _instanceFunLeft
     r <- substitutionI subs _instanceFunRight
-    e <- substitutionE (subsIToE subs) _instanceFunExpression
+    subs' <- subsIToE subs
+    e <- substitutionE subs' _instanceFunExpression
     return $
       InstanceParamFun
         InstanceFun
@@ -91,7 +94,12 @@ substitutionI subs p = case p of
             _instanceFunRight = r,
             _instanceFunExpression = e
           }
-  InstanceParamHole {} -> return p
+  InstanceParamHole h
+    | Just p' <- HashMap.lookup (varFromHole h) subs ->
+        -- we don't need to clone here because `InstanceParam` doesn't have binders
+        return p'
+    | otherwise ->
+        return p
   InstanceParamMeta v
     | Just p' <- HashMap.lookup v subs ->
         -- we don't need to clone here because `InstanceParam` doesn't have binders
@@ -134,7 +142,8 @@ applyCoercion ::
   Expression ->
   Sem r Expression
 applyCoercion loc (CoercionInfo {..}, subs) e = do
-  e' <- expandArity' loc (subsIToE subs) _coercionInfoArgs _coercionInfoResult
+  subs' <- subsIToE subs
+  e' <- expandArity' loc subs' _coercionInfoArgs _coercionInfoResult
   return $
     ExpressionApplication (Application e' e ImplicitInstance)
 
@@ -180,15 +189,14 @@ expandArity loc subs params e = case params of
 
 lookupInstance' ::
   forall r.
-  (Members '[Inference, NameIdGen] r) =>
+  (Members '[NameIdGen] r) =>
   [Name] ->
-  Bool ->
   CoercionTable ->
   InstanceTable ->
   Name ->
   [InstanceParam] ->
   Sem r [(CoercionChain, InstanceInfo, SubsI)]
-lookupInstance' visited canFillHoles ctab tab name params
+lookupInstance' visited ctab tab name params
   | name `elem` visited = return []
   | otherwise = do
       let is = fromMaybe [] $ lookupInstanceTable tab name
@@ -204,7 +212,7 @@ lookupInstance' visited canFillHoles ctab tab name params
       failUnless (length params == length _instanceInfoParams)
       (si, b) <-
         runState mempty $
-          and <$> sequence (zipWithExact goMatch _instanceInfoParams params)
+          and <$> sequence (zipWithExact (goMatch True) _instanceInfoParams params)
       failUnless b
       return ([], ii, si)
 
@@ -213,7 +221,7 @@ lookupInstance' visited canFillHoles ctab tab name params
       failUnless (length params == length _coercionInfoParams)
       (si, b) <-
         runState mempty $
-          and <$> sequence (zipWithExact goMatch _coercionInfoParams params)
+          and <$> sequence (zipWithExact (goMatch True) _coercionInfoParams params)
       failUnless b
       let name' = _coercionInfoTarget ^. instanceAppHead
       args' <- mapM (substitutionI si) (_coercionInfoTarget ^. instanceAppArgs)
@@ -221,49 +229,46 @@ lookupInstance' visited canFillHoles ctab tab name params
             if
                 | _coercionInfoDecreasing -> visited
                 | otherwise -> name : visited
-      is <- lookupInstance' visited' canFillHoles ctab tab name' args'
+      is <- lookupInstance' visited' ctab tab name' args'
       return $ map (first3 ((ci, si) :)) is
 
-    goMatch :: InstanceParam -> InstanceParam -> Sem (State SubsI ': Fail ': r) Bool
-    goMatch pat t = case (pat, t) of
-      (InstanceParamMeta v, _) ->
-        goMatchMeta v t
-      (_, InstanceParamMeta v) ->
-        goMatchMeta v pat
+    goMatch :: Bool -> InstanceParam -> InstanceParam -> Sem (State SubsI ': Fail ': r) Bool
+    goMatch assignMetas pat t = case (pat, t) of
+      (InstanceParamMeta v, _)
+        | assignMetas ->
+            goMatchMeta v t
+        | otherwise ->
+            return True
+      (_, InstanceParamMeta {}) ->
+        return True
+      (_, InstanceParamHole {}) ->
+        return True
       (InstanceParamVar v1, InstanceParamVar v2)
         | v1 == v2 ->
             return True
-      (InstanceParamHole h, _)
-        | canFillHoles && checkNoMeta t -> do
-            m <- matchTypes (ExpressionHole h) (paramToExpression t)
-            case m of
-              Just {} -> return False
-              Nothing -> return True
-        | otherwise ->
-            return False
-      (_, InstanceParamHole h)
-        | canFillHoles && checkNoMeta pat -> do
-            m <- matchTypes (paramToExpression pat) (ExpressionHole h)
-            case m of
-              Just {} -> return False
-              Nothing -> return True
       (InstanceParamApp app1, InstanceParamApp app2)
         | app1 ^. instanceAppHead == app2 ^. instanceAppHead -> do
-            and <$> sequence (zipWithExact goMatch (app1 ^. instanceAppArgs) (app2 ^. instanceAppArgs))
+            and <$> sequence (zipWithExact (goMatch assignMetas) (app1 ^. instanceAppArgs) (app2 ^. instanceAppArgs))
       (InstanceParamFun fun1, InstanceParamFun fun2) -> do
-        l <- goMatch (fun1 ^. instanceFunLeft) (fun2 ^. instanceFunLeft)
-        r <- goMatch (fun1 ^. instanceFunRight) (fun2 ^. instanceFunRight)
+        l <- goMatch assignMetas (fun1 ^. instanceFunLeft) (fun2 ^. instanceFunLeft)
+        r <- goMatch assignMetas (fun1 ^. instanceFunRight) (fun2 ^. instanceFunRight)
         return $ l && r
       (InstanceParamVar {}, _) -> return False
       (InstanceParamApp {}, _) -> return False
       (InstanceParamFun {}, _) -> return False
+      (InstanceParamHole {}, _) -> return False
 
     goMatchMeta :: VarName -> InstanceParam -> Sem (State SubsI ': Fail ': r) Bool
     goMatchMeta v t = do
       m <- gets (HashMap.lookup v)
       case m of
-        Just t' ->
-          return (t' == t)
+        Just t'
+          | t' == t ->
+              return True
+          | otherwise ->
+              -- Here, we need to match without assigning meta-variables to
+              -- avoid possible infinite loops
+              goMatch False t' t
         Nothing -> do
           modify (HashMap.insert v t)
           return True
@@ -278,6 +283,6 @@ lookupInstance ::
 lookupInstance ctab tab ty =
   case traitFromExpression mempty ty of
     Just InstanceApp {..} ->
-      lookupInstance' [] False ctab tab _instanceAppHead _instanceAppArgs
+      lookupInstance' [] ctab tab _instanceAppHead _instanceAppArgs
     _ ->
       return []
