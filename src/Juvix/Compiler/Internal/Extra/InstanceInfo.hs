@@ -45,18 +45,18 @@ makeRigidParam p = case p of
   InstanceParamMeta v ->
     InstanceParamVar v
 
-paramToExpression :: InstanceParam -> Expression
+paramToExpression :: (Member NameIdGen r) => InstanceParam -> Sem r Expression
 paramToExpression = \case
   InstanceParamVar v ->
-    ExpressionIden (IdenVar v)
+    return $ ExpressionIden (IdenVar v)
   InstanceParamApp InstanceApp {..} ->
-    _instanceAppExpression
+    return _instanceAppExpression
   InstanceParamFun InstanceFun {..} ->
-    _instanceFunExpression
+    return _instanceFunExpression
   InstanceParamHole h ->
-    ExpressionHole h
+    return $ ExpressionHole h
   InstanceParamMeta v ->
-    ExpressionIden (IdenVar v)
+    ExpressionHole . mkHole (getLoc v) <$> freshNameId
 
 paramFromExpression :: HashSet VarName -> Expression -> Maybe InstanceParam
 paramFromExpression metaVars e = case e of

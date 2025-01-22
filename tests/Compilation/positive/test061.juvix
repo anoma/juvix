@@ -104,4 +104,9 @@ main : IO :=
     >>> printStringLn (f5 "abba" 3)
     >>> printStringLn (Show.show {{_}} ["a"; "b"; "c"; "d"])
     >>> printStringLn (Show.show λ {x := not x})
-    >>> printStringLn (Show.show (3, [1; 2 + T.a 0]));
+    >>> printStringLn (Show.show (3, [1; 2 + T.a 0]))
+    >>> (for (acc := 0) ((x, _) in [1, 1; 2, 2; 3, 3]) {
+          acc + x
+         }
+         |> Show.show
+         |> printStringLn);

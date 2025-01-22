@@ -14,3 +14,4 @@ abba3
 a :: b :: c :: d :: nil
 \{ true := false | false := true }
 3, 1 :: 2 :: nil
+6

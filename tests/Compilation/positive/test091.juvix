@@ -233,7 +233,7 @@ Identity-Monad : Monad Identity :=
 
 readAndAdd {E : Type -> Type} {{Monad E}} {{Reader Nat E}} {{State Nat E}} : E Nat :=
   do {
-    s <- Reader.ask {Nat};
+    s <- Reader.ask;
     modify ((+) s);
     State.get
   };
