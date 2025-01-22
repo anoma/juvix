@@ -212,7 +212,7 @@ lookupInstance' visited ctab tab name params
       failUnless (length params == length _instanceInfoParams)
       (si, b) <-
         runState mempty $
-          and <$> sequence (zipWithExact goMatch _instanceInfoParams params)
+          and <$> sequence (zipWithExact (goMatch True) _instanceInfoParams params)
       failUnless b
       return ([], ii, si)
 
@@ -221,7 +221,7 @@ lookupInstance' visited ctab tab name params
       failUnless (length params == length _coercionInfoParams)
       (si, b) <-
         runState mempty $
-          and <$> sequence (zipWithExact goMatch _coercionInfoParams params)
+          and <$> sequence (zipWithExact (goMatch True) _coercionInfoParams params)
       failUnless b
       let name' = _coercionInfoTarget ^. instanceAppHead
       args' <- mapM (substitutionI si) (_coercionInfoTarget ^. instanceAppArgs)
@@ -232,23 +232,26 @@ lookupInstance' visited ctab tab name params
       is <- lookupInstance' visited' ctab tab name' args'
       return $ map (first3 ((ci, si) :)) is
 
-    goMatch :: InstanceParam -> InstanceParam -> Sem (State SubsI ': Fail ': r) Bool
-    goMatch pat t = case (pat, t) of
-      (InstanceParamMeta v, _) ->
-        goMatchMeta v t
-      (_, InstanceParamMeta v) ->
-        goMatchMeta v pat
-      (_, InstanceParamHole h) ->
-        goMatchMeta (varFromHole h) pat
+    goMatch :: Bool -> InstanceParam -> InstanceParam -> Sem (State SubsI ': Fail ': r) Bool
+    goMatch assignMetas pat t = case (pat, t) of
+      (InstanceParamMeta v, _)
+        | assignMetas ->
+            goMatchMeta v t
+        | otherwise ->
+            return True
+      (_, InstanceParamMeta {}) ->
+        return True
+      (_, InstanceParamHole {}) ->
+        return True
       (InstanceParamVar v1, InstanceParamVar v2)
         | v1 == v2 ->
             return True
       (InstanceParamApp app1, InstanceParamApp app2)
         | app1 ^. instanceAppHead == app2 ^. instanceAppHead -> do
-            and <$> sequence (zipWithExact goMatch (app1 ^. instanceAppArgs) (app2 ^. instanceAppArgs))
+            and <$> sequence (zipWithExact (goMatch assignMetas) (app1 ^. instanceAppArgs) (app2 ^. instanceAppArgs))
       (InstanceParamFun fun1, InstanceParamFun fun2) -> do
-        l <- goMatch (fun1 ^. instanceFunLeft) (fun2 ^. instanceFunLeft)
-        r <- goMatch (fun1 ^. instanceFunRight) (fun2 ^. instanceFunRight)
+        l <- goMatch assignMetas (fun1 ^. instanceFunLeft) (fun2 ^. instanceFunLeft)
+        r <- goMatch assignMetas (fun1 ^. instanceFunRight) (fun2 ^. instanceFunRight)
         return $ l && r
       (InstanceParamVar {}, _) -> return False
       (InstanceParamApp {}, _) -> return False
@@ -259,8 +262,13 @@ lookupInstance' visited ctab tab name params
     goMatchMeta v t = do
       m <- gets (HashMap.lookup v)
       case m of
-        Just t' ->
-          goMatch t' t
+        Just t'
+          | t' == t ->
+              return True
+          | otherwise ->
+              -- Here, we need to match without assigning meta-variables to
+              -- avoid possible infinite loops
+              goMatch False t' t
         Nothing -> do
           modify (HashMap.insert v t)
           return True
