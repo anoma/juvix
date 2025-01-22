@@ -25,6 +25,26 @@ updateInstanceTable tab ii@InstanceInfo {..} =
 lookupInstanceTable :: InstanceTable -> Name -> Maybe [InstanceInfo]
 lookupInstanceTable tab name = HashMap.lookup name (tab ^. instanceTableMap)
 
+makeRigidParam :: InstanceParam -> InstanceParam
+makeRigidParam p = case p of
+  InstanceParamVar {} ->
+    p
+  InstanceParamApp app@InstanceApp {..} ->
+    InstanceParamApp $
+      app
+        { _instanceAppArgs = map makeRigidParam _instanceAppArgs
+        }
+  InstanceParamFun fn@InstanceFun {..} ->
+    InstanceParamFun $
+      fn
+        { _instanceFunLeft = makeRigidParam _instanceFunLeft,
+          _instanceFunRight = makeRigidParam _instanceFunRight
+        }
+  InstanceParamHole {} ->
+    p
+  InstanceParamMeta v ->
+    InstanceParamVar v
+
 paramToExpression :: InstanceParam -> Expression
 paramToExpression = \case
   InstanceParamVar v ->

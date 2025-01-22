@@ -58,7 +58,7 @@ subsumingInstances ::
   InstanceInfo ->
   Sem r [(InstanceInfo)]
 subsumingInstances tab InstanceInfo {..} = do
-  is <- lookupInstance' [] False mempty tab _instanceInfoInductive _instanceInfoParams
+  is <- lookupInstance' [] False mempty tab _instanceInfoInductive (map makeRigidParam _instanceInfoParams)
   return $
     map snd3 $
       filter (\(_, x, _) -> x ^. instanceInfoResult /= _instanceInfoResult) is
@@ -226,22 +226,15 @@ lookupInstance' visited canFillHoles ctab tab name params
 
     goMatch :: InstanceParam -> InstanceParam -> Sem (State SubsI ': Fail ': r) Bool
     goMatch pat t = case (pat, t) of
-      (InstanceParamMeta v, _) -> do
-        m <- gets (HashMap.lookup v)
-        case m of
-          Just t'
-            | t' == t ->
-                return True
-            | otherwise ->
-                return False
-          Nothing -> do
-            modify (HashMap.insert v t)
-            return True
+      (InstanceParamMeta v, _) ->
+        goMatchMeta v t
+      (_, InstanceParamMeta v) ->
+        goMatchMeta v pat
       (InstanceParamVar v1, InstanceParamVar v2)
         | v1 == v2 ->
             return True
       (InstanceParamHole h, _)
-        | canFillHoles -> do
+        | canFillHoles && checkNoMeta t -> do
             m <- matchTypes (ExpressionHole h) (paramToExpression t)
             case m of
               Just {} -> return False
@@ -264,6 +257,16 @@ lookupInstance' visited canFillHoles ctab tab name params
       (InstanceParamVar {}, _) -> return False
       (InstanceParamApp {}, _) -> return False
       (InstanceParamFun {}, _) -> return False
+
+    goMatchMeta :: VarName -> InstanceParam -> Sem (State SubsI ': Fail ': r) Bool
+    goMatchMeta v t = do
+      m <- gets (HashMap.lookup v)
+      case m of
+        Just t' ->
+          return (t' == t)
+        Nothing -> do
+          modify (HashMap.insert v t)
+          return True
 
 lookupInstance ::
   forall r.

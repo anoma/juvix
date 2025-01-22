@@ -14,6 +14,7 @@ import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Occurrences
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New
 import Juvix.Compiler.Store.Internal.Data.InfoTable
+import Juvix.Compiler.Store.Internal.Data.InstanceInfo
 import Juvix.Data.CodeAnn
 import Juvix.Data.Keyword.All qualified as Kw
 import Juvix.Prelude
@@ -38,6 +39,26 @@ instance PrettyCode Name where
   ppCode n = do
     showNameId <- asks (^. optShowNameIds)
     return (prettyName showNameId n)
+
+instance PrettyCode InstanceFun where
+  ppCode InstanceFun {..} = do
+    l' <- ppCode _instanceFunLeft
+    r' <- ppCode _instanceFunRight
+    return $ l' <+> kwArrow <+> r'
+
+instance PrettyCode InstanceApp where
+  ppCode InstanceApp {..} = do
+    h' <- ppCode _instanceAppHead
+    args' <- mapM ppCode _instanceAppArgs
+    return $ h' <+> hsep args'
+
+instance PrettyCode InstanceParam where
+  ppCode = \case
+    InstanceParamVar v -> ppCode v
+    InstanceParamApp a -> ppCode a
+    InstanceParamFun f -> ppCode f
+    InstanceParamHole h -> ppCode h
+    InstanceParamMeta m -> ppCode m
 
 instance PrettyCode DerivingTrait where
   ppCode = return . ppCodeAnn
