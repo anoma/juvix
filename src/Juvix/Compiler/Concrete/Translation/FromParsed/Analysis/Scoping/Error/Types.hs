@@ -208,68 +208,6 @@ instance ToGenericError QualSymNotInScope where
           i = getLoc _qualSymNotInScope
           msg = "Qualified symbol not in scope:" <+> ppCode opts' _qualSymNotInScope
 
-data DuplicateOperator = DuplicateOperator
-  { _dupOperatorFirst :: OperatorSyntaxDef 'Parsed,
-    _dupOperatorSecond :: OperatorSyntaxDef 'Parsed
-  }
-  deriving stock (Show)
-
-instance ToGenericError DuplicateOperator where
-  genericError DuplicateOperator {..} = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = i2,
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [i1, i2]
-            }
-        where
-          opts' = fromGenericOptions opts
-          i1 = getLoc _dupOperatorFirst
-          i2 = getLoc _dupOperatorSecond
-
-          msg =
-            "Multiple operator declarations for symbol"
-              <+> ppCode opts' sym
-                <> ":"
-                <> line
-                <> indent' (align locs)
-            where
-              sym = _dupOperatorFirst ^. opSymbol
-              locs = vsep $ map (pretty . getLoc) [_dupOperatorFirst, _dupOperatorSecond]
-
-data DuplicateIterator = DuplicateIterator
-  { _dupIteratorFirst :: IteratorSyntaxDef 'Parsed,
-    _dupIteratorSecond :: IteratorSyntaxDef 'Parsed
-  }
-  deriving stock (Show)
-
-instance ToGenericError DuplicateIterator where
-  genericError DuplicateIterator {..} = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = i2,
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [i1, i2]
-            }
-        where
-          opts' = fromGenericOptions opts
-          i1 = getLoc _dupIteratorFirst
-          i2 = getLoc _dupIteratorSecond
-
-          msg =
-            "Multiple iterator declarations for symbol"
-              <+> ppCode opts' sym
-                <> ":"
-                <> line
-                <> indent' (align locs)
-            where
-              sym = _dupIteratorFirst ^. iterSymbol
-              locs = vsep $ map (pretty . getLoc) [_dupIteratorFirst, _dupIteratorFirst]
-
 data ExportEntries
   = ExportEntriesSymbols (NonEmpty PreSymbolEntry)
   | ExportEntriesModules (NonEmpty ModuleSymbolEntry)

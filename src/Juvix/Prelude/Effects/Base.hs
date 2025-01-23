@@ -250,7 +250,6 @@ reinterpret ::
   Sem r b
 reinterpret re i = reinterpretH re (const i)
 
--- TODO maybe think of a better name
 runTSimpleEff ::
   forall (handlerEs :: [Effect]) (localEs :: [Effect]) (r :: [Effect]) x.
   (SharedSuffix r handlerEs) =>

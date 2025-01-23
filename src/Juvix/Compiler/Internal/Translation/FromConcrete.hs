@@ -231,7 +231,6 @@ goSymbolPretty pp s =
       _nameFixity = s ^. S.nameFixity
     }
 
--- TODO give a better name?
 traverseM' ::
   forall r s t a b.
   (Monad r, Monad s, Traversable t) =>

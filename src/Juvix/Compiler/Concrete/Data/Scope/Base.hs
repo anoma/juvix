@@ -106,14 +106,6 @@ newtype ScoperIterators = ScoperIterators
   }
   deriving newtype (Semigroup, Monoid)
 
-data ScoperSyntax = ScoperSyntax
-  { _scoperSyntaxOperators :: ScoperOperators,
-    _scoperSyntaxIterators :: ScoperIterators
-  }
-
-emptyScoperSyntax :: ScoperSyntax
-emptyScoperSyntax = ScoperSyntax mempty mempty
-
 makeLenses ''ScoperIterators
 makeLenses ''InScope
 makeLenses ''ReservedModule
@@ -122,7 +114,6 @@ makeLenses ''SymbolIterator
 makeLenses ''SymbolInfo
 makeLenses ''Scope
 makeLenses ''ScoperOperators
-makeLenses ''ScoperSyntax
 makeLenses ''ScoperState
 makeLenses ''ScopeParameters
 makeLenses ''ModulesCache

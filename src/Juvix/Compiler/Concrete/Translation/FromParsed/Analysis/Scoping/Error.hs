@@ -23,8 +23,6 @@ data ScoperError
   | ErrSymNotInScope NotInScope
   | ErrQualSymNotInScope QualSymNotInScope
   | ErrModuleNotInScope ModuleNotInScope
-  | ErrDuplicateOperator DuplicateOperator
-  | ErrDuplicateIterator DuplicateIterator
   | ErrMultipleExport MultipleExportConflict
   | ErrAmbiguousSym AmbiguousSym
   | ErrAmbiguousModuleSym AmbiguousModuleSym
@@ -73,8 +71,6 @@ instance ToGenericError ScoperError where
     ErrSymNotInScope e -> genericError e
     ErrQualSymNotInScope e -> genericError e
     ErrModuleNotInScope e -> genericError e
-    ErrDuplicateOperator e -> genericError e
-    ErrDuplicateIterator e -> genericError e
     ErrMultipleExport e -> genericError e
     ErrAmbiguousSym e -> genericError e
     ErrAmbiguousModuleSym e -> genericError e

@@ -163,7 +163,7 @@ scopeCheckOpenModule ::
   Sem r (OpenModule 'Scoped 'OpenFull)
 scopeCheckOpenModule = mapError (JuvixError @ScoperError) . checkOpenModule
 
-freshVariable :: (Members '[NameIdGen, State ScoperSyntax, State Scope, State ScoperState] r) => Symbol -> Sem r S.Symbol
+freshVariable :: (Members '[NameIdGen, State Scope, State ScoperState] r) => Symbol -> Sem r S.Symbol
 freshVariable = freshSymbol KNameLocal KNameLocal
 
 freshSymbol ::
@@ -392,15 +392,12 @@ getReservedDefinitionSymbol s = do
       err = impossibleError ("Symbol " <> ppTrace s <> " not found in the scope. Contents of scope:\n" <> ppTrace (toList m))
   return s'
 
-ignoreSyntax :: Sem (State ScoperSyntax ': r) a -> Sem r a
-ignoreSyntax = evalState emptyScoperSyntax
-
 -- | Variables are assumed to never be infix operators
 bindVariableSymbol ::
   (Members '[Error ScoperError, NameIdGen, State Scope, InfoTableBuilder, Reader InfoTable, State ScoperState] r) =>
   Symbol ->
   Sem r S.Symbol
-bindVariableSymbol = localBindings . ignoreSyntax . reserveSymbolOf SKNameLocal Nothing Nothing
+bindVariableSymbol = localBindings . reserveSymbolOf SKNameLocal Nothing Nothing
 
 reserveInductiveSymbol ::
   (Members '[Error ScoperError, NameIdGen, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
@@ -474,7 +471,7 @@ reserveFunctionLikeSymbol f =
 
 reservePatternFunctionSymbols ::
   forall r.
-  (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
+  (Members '[Error ScoperError, NameIdGen, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
   PatternAtomType 'Parsed ->
   Sem r ()
 reservePatternFunctionSymbols = goAtom
@@ -1123,7 +1120,7 @@ getModuleId path = do
 
 checkFixitySyntaxDef ::
   forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder, Reader InfoTable, Reader PackageId] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, NameIdGen, InfoTableBuilder, Reader InfoTable, Reader PackageId] r) =>
   FixitySyntaxDef 'Parsed ->
   Sem r (FixitySyntaxDef 'Scoped)
 checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
@@ -1151,7 +1148,7 @@ reserveFixitySyntaxDef FixitySyntaxDef {..} =
 
 resolveFixitySyntaxDef ::
   forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, State ScoperSyntax, NameIdGen, InfoTableBuilder, Reader InfoTable] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, NameIdGen, InfoTableBuilder, Reader InfoTable] r) =>
   FixitySyntaxDef 'Parsed ->
   Sem r ()
 resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
@@ -1212,21 +1209,15 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
 
 checkOperatorSyntaxDef ::
   forall r.
-  (Members '[Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, InfoTableBuilder, Reader InfoTable, Reader ScopeParameters, Reader PackageId, NameIdGen] r) =>
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, Reader ScopeParameters, Reader PackageId, NameIdGen] r) =>
   OperatorSyntaxDef 'Parsed ->
   Sem r (OperatorSyntaxDef 'Scoped)
-checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
-  checkNotDefined
+checkOperatorSyntaxDef OperatorSyntaxDef {..} = do
   sym :: S.Symbol <- checkFixitySymbol _opFixity
   fx <- lookupFixity (sym ^. S.nameId)
   let pname = NameUnqualified _opSymbol
   opname :: ScopedIden <- checkScopedIden pname
   let opsym = over S.nameConcrete fromUnqualified' (opname ^. scopedIdenSrcName)
-      sf =
-        SymbolOperator
-          { _symbolOperatorDef = s
-          }
-  modify (set (scoperSyntaxOperators . scoperOperators . at _opSymbol) (Just sf))
   modifyScopeEntry opsym (fx ^. fixityDefFixity)
   mdef <- mapM checkJudoc _opDoc
   return
@@ -1238,14 +1229,6 @@ checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
         _opKw = _opKw
       }
   where
-    -- TODO I think this is not needed anymore because we may want to allow an
-    -- operator statement to override a fixity
-    checkNotDefined :: Sem r ()
-    checkNotDefined =
-      whenJustM
-        (gets (^. scoperSyntaxOperators . scoperOperators . at _opSymbol))
-        $ \s' -> throw (ErrDuplicateOperator (DuplicateOperator (s' ^. symbolOperatorDef) s))
-
     modifyScopeEntry :: S.Symbol -> Fixity -> Sem r ()
     modifyScopeEntry scopedOperator fx
       | S.canHaveFixity (getNameKind scopedOperator) = do
@@ -1262,22 +1245,15 @@ checkOperatorSyntaxDef s@OperatorSyntaxDef {..} = do
 
 checkIteratorSyntaxDef ::
   forall r.
-  (Members '[Reader ScopeParameters, Reader InfoTable, Reader PackageId, InfoTableBuilder, NameIdGen, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax] r) =>
+  (Members '[Reader ScopeParameters, Reader InfoTable, Reader PackageId, InfoTableBuilder, NameIdGen, Error ScoperError, State Scope, State ScoperState] r) =>
   Bool ->
   IteratorSyntaxDef 'Parsed ->
   Sem r (IteratorSyntaxDef 'Scoped)
 checkIteratorSyntaxDef isTop s@IteratorSyntaxDef {..} = do
-  checkNotDefined
   checkAtLeastOneRange
-  let sf =
-        SymbolIterator
-          { _symbolIteratorUsed = False,
-            _symbolIteratorDef = s
-          }
   let pname = NameUnqualified _iterSymbol
   itername :: ScopedIden <- checkScopedIden pname
   let itersym = over S.nameConcrete fromUnqualified' (itername ^. scopedIdenSrcName)
-  modify (set (scoperSyntaxIterators . scoperIterators . at _iterSymbol) (Just sf))
   modifyScope itersym (maybe emptyIteratorInfo fromParsedIteratorInfo _iterInfo)
   doc <- mapM checkJudoc _iterDoc
   return
@@ -1342,12 +1318,6 @@ checkIteratorSyntaxDef isTop s@IteratorSyntaxDef {..} = do
               modify (over (scopeSymbols . at sym . _Just) h)
           | otherwise = return ()
 
-    checkNotDefined :: Sem r ()
-    checkNotDefined =
-      whenJustM
-        (gets (^. scoperSyntaxIterators . scoperIterators . at _iterSymbol))
-        $ \s' -> throw (ErrDuplicateIterator (DuplicateIterator (s' ^. symbolIteratorDef) s))
-
 -- | Only used as syntactical convenience for registerX functions
 (@$>) :: (Functor m) => (a -> m ()) -> a -> m a
 (@$>) f a = f a $> a
@@ -1363,7 +1333,6 @@ checkDeriving ::
          HighlightBuilder,
          InfoTableBuilder,
          NameIdGen,
-         State ScoperSyntax,
          Reader BindingStrategy
        ]
       r
@@ -1401,7 +1370,7 @@ checkDeriving Deriving {..} = do
 
 checkTypeSig ::
   forall r.
-  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax, Reader BindingStrategy] r) =>
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, Reader BindingStrategy] r) =>
   TypeSig 'Parsed ->
   Sem r (TypeSig 'Scoped)
 checkTypeSig TypeSig {..} = do
@@ -1442,7 +1411,7 @@ checkTypeSig TypeSig {..} = do
 
 checkFunctionDef ::
   forall r.
-  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax, Reader BindingStrategy] r) =>
+  (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, Reader BindingStrategy] r) =>
   FunctionDef 'Parsed ->
   Sem r (FunctionDef 'Scoped)
 checkFunctionDef fdef@FunctionDef {..} = do
@@ -1535,7 +1504,6 @@ checkInductiveDef ::
          Reader InfoTable,
          NameIdGen,
          Reader PackageId,
-         State ScoperSyntax,
          Reader BindingStrategy
        ]
       r
@@ -1668,7 +1636,7 @@ checkInductiveDef InductiveDef {..} = do
 
 checkProjectionDef ::
   forall r.
-  (Members '[HighlightBuilder, Error ScoperError, InfoTableBuilder, Reader PackageId, Reader ScopeParameters, Reader InfoTable, Reader BindingStrategy, State Scope, State ScoperState, NameIdGen, State ScoperSyntax] r) =>
+  (Members '[HighlightBuilder, Error ScoperError, InfoTableBuilder, Reader PackageId, Reader ScopeParameters, Reader InfoTable, Reader BindingStrategy, State Scope, State ScoperState, NameIdGen] r) =>
   ProjectionDef 'Parsed ->
   Sem r (ProjectionDef 'Scoped)
 checkProjectionDef p = do
@@ -1790,21 +1758,6 @@ withLocalScope ma = do
   put before
   return x
 
--- TODO remove
-syntaxBlock ::
-  ScoperSyntax ->
-  Sem (State ScoperSyntax ': r) a ->
-  Sem r a
-syntaxBlock reservedSyntax m =
-  evalState reservedSyntax $ do
-    a <- m
-    checkOrphanOperators
-    checkOrphanIterators
-    return a
-
-syntaxBlockTop :: Sem (State ScoperSyntax ': r) a -> Sem r a
-syntaxBlockTop = syntaxBlock emptyScoperSyntax
-
 checkLocalModuleBody ::
   forall r.
   (Members '[HighlightBuilder, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader PackageId, Reader BindingStrategy] r) =>
@@ -1813,16 +1766,15 @@ checkLocalModuleBody ::
 checkLocalModuleBody m = do
   res <- getReservedLocalModule m
   let body = res ^. reservedModuleStatements
-  syntaxBlockTop (checkReservedStatements body)
+  checkReservedStatements body
 
 checkTopModuleBody ::
   forall r.
   (Members '[HighlightBuilder, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader PackageId, Reader BindingStrategy] r) =>
   [Statement 'Parsed] ->
   Sem r [Statement 'Scoped]
-checkTopModuleBody body =
-  syntaxBlockTop $
-    reserveStatements body >>= checkReservedStatements
+checkTopModuleBody =
+  reserveStatements >=> checkReservedStatements
 
 reserveStatements ::
   forall r.
@@ -1876,7 +1828,7 @@ reserveStatements = topBindings . concatMapM (fmap toList . reserveDefinition)
 
 checkReservedStatements ::
   forall r.
-  (Members '[HighlightBuilder, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax] r) =>
+  (Members '[HighlightBuilder, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId] r) =>
   [Statement 'Parsed] ->
   Sem r [Statement 'Scoped]
 checkReservedStatements = topBindings . mapM goDefinition
@@ -1886,7 +1838,6 @@ checkReservedStatements = topBindings . mapM goDefinition
           '[ Error ScoperError,
              State Scope,
              State ScoperState,
-             State ScoperSyntax,
              Reader PackageId,
              Reader ScopeParameters,
              InfoTableBuilder,
@@ -2075,7 +2026,7 @@ reserveLocalModuleSymbol ::
   Symbol ->
   Sem r S.Symbol
 reserveLocalModuleSymbol =
-  ignoreSyntax . reserveSymbolOf SKNameLocalModule Nothing Nothing
+  reserveSymbolOf SKNameLocalModule Nothing Nothing
 
 reserveLocalModule ::
   forall r.
@@ -2213,26 +2164,6 @@ putReservedInScope reserved = forEachNameSpace $ \ns ->
   forM_ (HashMap.toList (reserved ^. reservedNameSpace ns)) $ \(s, s') -> do
     let kind = getNameKind s'
     addToScope ns kind s s'
-
--- TODO remove
--- checkOrphanOperators :: forall r. (Members '[Error ScoperError, State ScoperSyntax] r) => Sem r ()
-checkOrphanOperators :: forall r. Sem r ()
-checkOrphanOperators = return ()
-
--- declared <- gets (^. scoperSyntaxOperators . scoperOperators)
--- let unused = fmap (^. symbolOperatorDef) . find (^. symbolOperatorUsed . to not) . toList $ declared
--- case unused of
---   Nothing -> return ()
---   Just x -> throw (ErrUnusedOperatorDef (UnusedOperatorDef x))
-
-checkOrphanIterators :: forall r. Sem r ()
-checkOrphanIterators = return ()
-
--- declared <- gets (^. scoperSyntaxIterators . scoperIterators)
--- let unused = fmap (^. symbolIteratorDef) . find (^. symbolIteratorUsed . to not) . toList $ declared
--- case unused of
---   Nothing -> return ()
---   Just x -> throw (ErrUnusedIteratorDef (UnusedIteratorDef x))
 
 symbolInfoSingle :: (SingI ns) => NameSpaceEntryType ns -> SymbolInfo ns
 symbolInfoSingle p = SymbolInfo $ HashMap.singleton (p ^. nsEntry . S.nameDefinedIn) p
@@ -2448,7 +2379,7 @@ filterExportInfo pub openModif = alterEntries . filterScope
       Nothing -> id
 
 checkAxiomDef ::
-  (Members '[HighlightBuilder, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, State ScoperState, NameIdGen, State ScoperSyntax, Reader BindingStrategy, Reader PackageId] r) =>
+  (Members '[HighlightBuilder, Reader ScopeParameters, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, State ScoperState, NameIdGen, Reader BindingStrategy, Reader PackageId] r) =>
   AxiomDef 'Parsed ->
   Sem r (AxiomDef 'Scoped)
 checkAxiomDef AxiomDef {..} = do
@@ -2493,8 +2424,7 @@ checkLetStatements ::
   NonEmpty (LetStatement 'Parsed) ->
   Sem r (NonEmpty (LetStatement 'Scoped))
 checkLetStatements =
-  ignoreSyntax
-    . fmap fromSections
+  fmap fromSections
     . (reserveStatements >=> checkReservedStatements)
     . mkLetSections
     . toList
@@ -2523,7 +2453,7 @@ checkLetStatements =
 
 checkRecordPattern ::
   forall r.
-  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   RecordPattern 'Parsed ->
   Sem r (RecordPattern 'Scoped)
 checkRecordPattern r = do
@@ -2546,7 +2476,7 @@ checkRecordPattern r = do
 
     checkItem ::
       forall r'.
-      (Members '[Reader (RecordNameSignature 'Parsed), Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r') =>
+      (Members '[Reader (RecordNameSignature 'Parsed), Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r') =>
       RecordPatternItem 'Parsed ->
       Sem r' (RecordPatternItem 'Scoped)
     checkItem = \case
@@ -2593,7 +2523,7 @@ findRecordFieldIdx f =
 
 checkListPattern ::
   forall r.
-  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   ListPattern 'Parsed ->
   Sem r (ListPattern 'Scoped)
 checkListPattern l = do
@@ -2921,7 +2851,7 @@ resolveShadowing es = go [(e, e ^. nsEntry . S.nameWhyInScope) | e <- es]
 
 checkPatternName' ::
   forall r.
-  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, NameIdGen, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, NameIdGen, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
   (Symbol -> Sem r S.Symbol) ->
   Name ->
   Sem r PatternScopedIden
@@ -2946,14 +2876,14 @@ checkPatternName' bindFun n = do
 
 checkPatternName ::
   forall r.
-  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, NameIdGen, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, NameIdGen, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
   Name ->
   Sem r PatternScopedIden
 checkPatternName = checkPatternName' getReservedDefinitionSymbol
 
 reservePatternName ::
   forall r.
-  (Members '[Error ScoperError, State Scope, NameIdGen, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
+  (Members '[Error ScoperError, State Scope, NameIdGen, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
   Name ->
   Sem r PatternScopedIden
 reservePatternName =
@@ -3010,13 +2940,13 @@ checkPatternBinding PatternBinding {..} = do
       | otherwise -> return (set patternArgName (Just n') p')
 
 checkPatternAtoms ::
-  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   PatternAtoms 'Parsed ->
   Sem r (PatternAtoms 'Scoped)
 checkPatternAtoms (PatternAtoms s i) = (`PatternAtoms` i) <$> mapM checkPatternAtom s
 
 checkParsePatternAtoms ::
-  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   PatternAtoms 'Parsed ->
   Sem r PatternArg
 checkParsePatternAtoms = checkPatternAtoms >=> parsePatternAtoms
@@ -3025,10 +2955,10 @@ checkParsePatternAtoms' ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   PatternAtoms 'Parsed ->
   Sem r PatternArg
-checkParsePatternAtoms' = localBindings . ignoreSyntax . runReader PatternNamesKindVariables . checkParsePatternAtoms
+checkParsePatternAtoms' = localBindings . runReader PatternNamesKindVariables . checkParsePatternAtoms
 
 checkPatternAtom ::
-  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   PatternAtom 'Parsed ->
   Sem r (PatternAtom 'Scoped)
 checkPatternAtom = \case
@@ -3092,7 +3022,7 @@ checkExpressionAtom e = case e of
   AtomNamedApplication i -> pure . AtomNamedApplication <$> checkNamedApplication i
   AtomRecordUpdate i -> pure . AtomRecordUpdate <$> checkRecordUpdate i
 
-reserveNamedArgumentName :: (Members '[Error ScoperError, NameIdGen, State ScoperSyntax, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) => NamedArgument 'Parsed -> Sem r ()
+reserveNamedArgumentName :: (Members '[Error ScoperError, NameIdGen, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) => NamedArgument 'Parsed -> Sem r ()
 reserveNamedArgumentName a = case a of
   NamedArgumentFunction f -> reserveFunctionLikeSymbol (f ^. namedArgumentFunctionDef)
   NamedArgumentItemPun {} -> return ()
@@ -3117,7 +3047,7 @@ checkNamedApplication napp = do
               . nameBlockSymbols
   forM_ nargs (checkNameInSignature namesInSignature . (^. namedArgumentSymbol))
   puns <- scopePuns (napp ^.. namedApplicationArguments . each . _NamedArgumentItemPun)
-  args' <- withLocalScope . localBindings . ignoreSyntax $ do
+  args' <- withLocalScope . localBindings $ do
     mapM_ reserveNamedArgumentName nargs
     mapM (checkNamedArgument puns) nargs
   let signatureExplicitNames =
@@ -3171,7 +3101,7 @@ checkNamedArgumentFunctionDef ::
   NamedArgumentFunctionDef 'Parsed ->
   Sem r (NamedArgumentFunctionDef 'Scoped)
 checkNamedArgumentFunctionDef NamedArgumentFunctionDef {..} = do
-  def <- localBindings . ignoreSyntax $ checkFunctionDef _namedArgumentFunctionDef
+  def <- localBindings $ checkFunctionDef _namedArgumentFunctionDef
   return
     NamedArgumentFunctionDef
       { _namedArgumentFunctionDef = def
@@ -3203,7 +3133,7 @@ checkRecordUpdate RecordUpdate {..} = do
     bindRecordUpdateVariable :: NameItem 'Parsed -> Sem r (IsImplicit, S.Symbol)
     bindRecordUpdateVariable NameItem {..} = do
       -- all fields have names so it is safe to use fromJust
-      v <- ignoreSyntax $ freshVariable (fromJust _nameItemSymbol)
+      v <- freshVariable (fromJust _nameItemSymbol)
       return (_nameItemImplicit, v)
 
 checkUpdateField ::
@@ -3439,7 +3369,7 @@ checkParseExpressionAtoms ::
 checkParseExpressionAtoms = checkExpressionAtoms >=> parseExpressionAtoms
 
 checkParsePatternAtom ::
-  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, State ScoperSyntax, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
+  (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   PatternAtom 'Parsed ->
   Sem r PatternArg
 checkParsePatternAtom = checkPatternAtom >=> parsePatternAtom
@@ -3448,10 +3378,10 @@ checkParsePatternAtom' ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   PatternAtom 'Parsed ->
   Sem r PatternArg
-checkParsePatternAtom' = localBindings . ignoreSyntax . runReader PatternNamesKindVariables . checkParsePatternAtom
+checkParsePatternAtom' = localBindings . runReader PatternNamesKindVariables . checkParsePatternAtom
 
 checkSyntaxDef ::
-  (Members '[Reader BindingStrategy, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId, State ScoperSyntax] r) =>
+  (Members '[Reader BindingStrategy, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId] r) =>
   SyntaxDef 'Parsed ->
   Sem r (SyntaxDef 'Scoped)
 checkSyntaxDef = \case
@@ -3462,7 +3392,7 @@ checkSyntaxDef = \case
 
 checkAliasDef ::
   forall r.
-  (Members '[Reader BindingStrategy, Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax] r) =>
+  (Members '[Reader BindingStrategy, Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
   AliasDef 'Parsed ->
   Sem r (AliasDef 'Scoped)
 checkAliasDef def@AliasDef {..} = do
@@ -3495,11 +3425,12 @@ reserveSyntaxDef = \case
   SyntaxFixity fixDef -> reserveFixitySyntaxDef fixDef
   SyntaxOperator {} -> return ()
   SyntaxIterator {} -> return ()
-  -- TODO we don't reserve alias to avoid loops. Should we change this?
+  -- NOTE we don't reserve alias because we don't allow alias to be forward
+  -- referenced. This also avoids alias cycles.
   SyntaxAlias {} -> return ()
 
 resolveSyntaxDef ::
-  (Members '[Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, State ScoperSyntax, Reader BindingStrategy] r) =>
+  (Members '[Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader BindingStrategy] r) =>
   SyntaxDef 'Parsed ->
   Sem r ()
 resolveSyntaxDef = \case
