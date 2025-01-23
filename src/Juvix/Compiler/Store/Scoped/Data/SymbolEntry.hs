@@ -86,9 +86,6 @@ instance HasNameKind ModuleSymbolEntry where
   getNameKind (ModuleSymbolEntry s) = S.getNameKind s
   getNameKindPretty (ModuleSymbolEntry s) = S.getNameKindPretty s
 
-instance HasLoc FixitySymbolEntry where
-  getLoc (FixitySymbolEntry s) = s ^. S.nameDefined
-
 instance HasLoc ModuleSymbolEntry where
   getLoc (ModuleSymbolEntry s) = s ^. S.nameDefined
 
