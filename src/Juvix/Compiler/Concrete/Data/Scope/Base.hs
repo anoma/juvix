@@ -76,7 +76,6 @@ data ReservedModule = ReservedModule
 
 data ScoperState = ScoperState
   { -- | Local and top modules currently in scope - used to look up qualified symbols
-    -- TODO unify ?
     _scoperModules :: HashMap S.NameId ScopedModule,
     _scoperReservedModules :: HashMap S.NameId ReservedModule,
     _scoperAlias :: HashMap S.NameId PreSymbolEntry,

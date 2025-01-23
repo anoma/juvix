@@ -1067,10 +1067,12 @@ genExportInfo = do
 getScopedLocalModules :: (Member (State ScoperState) r) => ExportInfo -> Sem r (HashMap S.NameId ScopedModule)
 getScopedLocalModules ExportInfo {..} = do
   mds <- gets (^. scoperModules)
-  return . hashMap . map (fetch mds) $ toList _exportModuleSymbols
+  return . hashMap . mapMaybe (fetch mds) $ toList _exportModuleSymbols
   where
-    fetch :: HashMap NameId ScopedModule -> ModuleSymbolEntry -> (NameId, ScopedModule)
-    fetch mds ModuleSymbolEntry {..} = (n, fromJust (mds ^. at n))
+    fetch :: HashMap NameId ScopedModule -> ModuleSymbolEntry -> Maybe (NameId, ScopedModule)
+    fetch mds ModuleSymbolEntry {..} = do
+      m <- mds ^. at n
+      return (n, m)
       where
         n = _moduleEntry ^. S.nameId
 
