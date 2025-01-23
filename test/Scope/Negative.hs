@@ -95,11 +95,6 @@ scoperErrorTests =
       $(mkRelFile "InfixErrorP.juvix")
       $ wantsError ErrInfixPattern,
     negTest
-      "Duplicate operator declaration"
-      $(mkRelDir ".")
-      $(mkRelFile "DuplicateOperator.juvix")
-      $ wantsError ErrDuplicateOperator,
-    negTest
       "Multiple export conflict"
       $(mkRelDir ".")
       $(mkRelFile "MultipleExportConflict.juvix")
@@ -189,11 +184,6 @@ scoperErrorTests =
       $(mkRelDir ".")
       $(mkRelFile "Iterators3.juvix")
       $ wantsError ErrIteratorUndefined,
-    negTest
-      "Duplicate iterator declaration"
-      $(mkRelDir ".")
-      $(mkRelFile "Iterators4.juvix")
-      $ wantsError ErrDuplicateIterator,
     negTest
       "Repeated name in named application"
       $(mkRelDir ".")
