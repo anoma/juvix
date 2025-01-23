@@ -386,9 +386,9 @@ deriving stock instance (Ord (SyntaxDef 'Scoped))
 
 data ParsedFixityFields (s :: Stage) = ParsedFixityFields
   { _fixityFieldsAssoc :: Maybe BinaryAssoc,
-    _fixityFieldsPrecSame :: Maybe (SymbolType s),
-    _fixityFieldsPrecBelow :: Maybe [SymbolType s],
-    _fixityFieldsPrecAbove :: Maybe [SymbolType s],
+    _fixityFieldsPrecSame :: Maybe (IdentifierType s),
+    _fixityFieldsPrecBelow :: Maybe [IdentifierType s],
+    _fixityFieldsPrecAbove :: Maybe [IdentifierType s],
     _fixityFieldsBraces :: Irrelevant (KeywordRef, KeywordRef)
   }
 
@@ -454,11 +454,9 @@ instance Serialize FixityDef
 
 instance NFData FixityDef
 
--- TODO use stage in _opSymbol and _opFixity
--- TODO allow qualified names
 data OperatorSyntaxDef (s :: Stage) = OperatorSyntaxDef
-  { _opSymbol :: SymbolType s,
-    _opFixity :: Symbol,
+  { _opSymbol :: IdentifierType s,
+    _opFixity :: IdentifierType s,
     _opDoc :: Maybe (Judoc s),
     _opKw :: KeywordRef,
     _opSyntaxKw :: KeywordRef
@@ -3075,13 +3073,13 @@ fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)
 fixityAssoc :: SimpleGetter (ParsedFixityInfo s) (Maybe (BinaryAssoc))
 fixityAssoc = fixityFieldHelper fixityFieldsAssoc
 
-fixityPrecSame :: SimpleGetter (ParsedFixityInfo s) (Maybe (SymbolType s))
+fixityPrecSame :: SimpleGetter (ParsedFixityInfo s) (Maybe (IdentifierType s))
 fixityPrecSame = fixityFieldHelper fixityFieldsPrecSame
 
-fixityPrecAbove :: SimpleGetter (ParsedFixityInfo s) (Maybe [SymbolType s])
+fixityPrecAbove :: SimpleGetter (ParsedFixityInfo s) (Maybe [IdentifierType s])
 fixityPrecAbove = fixityFieldHelper fixityFieldsPrecAbove
 
-fixityPrecBelow :: SimpleGetter (ParsedFixityInfo s) (Maybe [SymbolType s])
+fixityPrecBelow :: SimpleGetter (ParsedFixityInfo s) (Maybe [IdentifierType s])
 fixityPrecBelow = fixityFieldHelper fixityFieldsPrecBelow
 
 instance (SingI s) => HasLoc (LetStatement s) where
@@ -3797,7 +3795,7 @@ instance HasAtomicity Pattern where
     PatternRecord r -> atomicity r
 
 instance (SingI s) => HasLoc (OperatorSyntaxDef s) where
-  getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLocSymbolType _opSymbol
+  getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLocIdentifierType _opSymbol
 
 instance (SingI s) => HasLoc (IteratorSyntaxDef s) where
   getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLocSymbolType _iterSymbol

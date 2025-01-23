@@ -459,14 +459,14 @@ goFixity def = do
 
     mkPrec :: Sem r Html
     mkPrec = case info ^. fixityPrecSame of
-      Just (txt :: S.Symbol) -> do
+      Just (txt :: ScopedIden) -> do
         d <- ppCodeHtml defaultOptions txt
         return (row $ toHtml ("Same precedence as " <> d))
       Nothing ->
         goPrec "Higher" (info ^. fixityPrecAbove)
           <> goPrec "Lower" (info ^. fixityPrecBelow)
         where
-          goPrec :: Html -> Maybe [S.Symbol] -> Sem r Html
+          goPrec :: Html -> Maybe [ScopedIden] -> Sem r Html
           goPrec above ls = do
             semicolon' <- semiSeparator
             case ls >>= nonEmpty of

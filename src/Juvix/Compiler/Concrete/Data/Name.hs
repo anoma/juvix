@@ -77,6 +77,7 @@ instance HasLoc SymbolPath where
 
 deriving newtype instance Hashable SymbolPath
 
+makePrisms ''Name
 makeLenses ''QualifiedName
 makeLenses ''SymbolPath
 

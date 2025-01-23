@@ -901,10 +901,10 @@ instance PrettyPrint BinaryAssoc where
     AssocLeft -> Str.left
     AssocRight -> Str.right
 
-ppSymbolList :: (SingI s) => PrettyPrinting [SymbolType s]
-ppSymbolList items = do
+ppIdentifierList :: (SingI s) => PrettyPrinting [IdentifierType s]
+ppIdentifierList items = do
   ppCode Kw.delimBracketL
-  hsepSemicolon (map ppSymbolType items)
+  hsepSemicolon (map ppIdentifierType items)
   ppCode Kw.delimBracketR
 
 instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
@@ -916,13 +916,13 @@ instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
                 return (ppCode Kw.kwAssoc <+> ppCode Kw.kwAssign <+> ppCode a)
               sameItem = do
                 a <- _fixityFieldsPrecSame
-                return (ppCode Kw.kwSame <+> ppCode Kw.kwAssign <+> ppSymbolType a)
+                return (ppCode Kw.kwSame <+> ppCode Kw.kwAssign <+> ppIdentifierType a)
               aboveItem = do
                 a <- _fixityFieldsPrecAbove
-                return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppSymbolList a)
+                return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppIdentifierList a)
               belowItem = do
                 a <- _fixityFieldsPrecBelow
-                return (ppCode Kw.kwBelow <+> ppCode Kw.kwAssign <+> ppSymbolList a)
+                return (ppCode Kw.kwBelow <+> ppCode Kw.kwAssign <+> ppIdentifierList a)
               items = ppBlockOrList' (catMaybes [assocItem, sameItem, aboveItem, belowItem])
               (l, r) = _fixityFieldsBraces ^. unIrrelevant
           return (grouped (ppCode l <> items <> ppCode r))
@@ -955,8 +955,8 @@ instance PrettyPrint ExportInfo where
 instance (SingI s) => PrettyPrint (OperatorSyntaxDef s) where
   ppCode OperatorSyntaxDef {..} = do
     let doc' = ppCode <$> _opDoc
-        opSymbol' = ppSymbolType _opSymbol
-        p = ppUnkindedSymbol _opFixity
+        opSymbol' = ppIdentifierType _opSymbol
+        p = ppIdentifierType _opFixity
     doc' ?<> ppCode _opSyntaxKw <+> ppCode _opKw <+> opSymbol' <+> p
 
 instance PrettyPrint PatternApp where

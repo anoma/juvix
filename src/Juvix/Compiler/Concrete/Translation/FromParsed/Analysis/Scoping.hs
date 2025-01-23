@@ -979,32 +979,38 @@ checkQualifiedName q@(QualifiedName (SymbolPath p) sym) = do
     notInScope = throw (ErrQualSymNotInScope (QualSymNotInScope q))
 
 entryToScopedIden ::
-  (Members '[InfoTableBuilder, State ScoperState] r) =>
+  forall ns r.
+  (SingI ns, Members '[InfoTableBuilder, State ScoperState] r) =>
   Name ->
-  PreSymbolEntry ->
+  NameSpaceEntryType ns ->
   Sem r ScopedIden
 entryToScopedIden name e = do
   let helper :: S.Name' x -> S.Name
       helper = set S.nameConcrete name
       scopedName :: S.Name
-      scopedName = helper (e ^. preSymbolName)
-  si <- case e of
-    PreSymbolFinal {} ->
-      return
-        ScopedIden
-          { _scopedIdenFinal = scopedName,
-            _scopedIdenAlias = Nothing
-          }
-    PreSymbolAlias {} -> do
-      e' <- normalizePreSymbolEntry e
-      let scopedName' =
-            over S.nameFixity (maybe (e' ^. symbolEntry . S.nameFixity) Just) $
-              set S.nameKind (getNameKind e') scopedName
-      return
-        ScopedIden
-          { _scopedIdenAlias = Just scopedName',
-            _scopedIdenFinal = helper (e' ^. symbolEntry)
-          }
+      scopedName = helper (e ^. entryName)
+  si <-
+    let noAlias =
+          ScopedIden
+            { _scopedIdenFinal = scopedName,
+              _scopedIdenAlias = Nothing
+            }
+     in case sing :: SNameSpace ns of
+          SNameSpaceModules -> return noAlias
+          SNameSpaceFixities -> return noAlias
+          SNameSpaceSymbols ->
+            case e of
+              PreSymbolFinal {} -> return noAlias
+              PreSymbolAlias {} -> do
+                e' <- normalizePreSymbolEntry e
+                let scopedName' =
+                      over S.nameFixity (maybe (e' ^. symbolEntry . S.nameFixity) Just) $
+                        set S.nameKind (getNameKind e') scopedName
+                return
+                  ScopedIden
+                    { _scopedIdenAlias = Just scopedName',
+                      _scopedIdenFinal = helper (e' ^. symbolEntry)
+                    }
   registerScopedIden False si
   return si
 
@@ -1095,7 +1101,10 @@ checkFixityInfo ParsedFixityInfo {..} = do
         ..
       }
 
-checkFixityFields :: (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable] r) => ParsedFixityFields 'Parsed -> Sem r (ParsedFixityFields 'Scoped)
+checkFixityFields ::
+  (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable] r) =>
+  ParsedFixityFields 'Parsed ->
+  Sem r (ParsedFixityFields 'Scoped)
 checkFixityFields ParsedFixityFields {..} = do
   same' <- mapM checkFixitySymbol _fixityFieldsPrecSame
   below' <- mapM (mapM checkFixitySymbol) _fixityFieldsPrecBelow
@@ -1198,13 +1207,13 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
       }
   return ()
   where
-    getFixityDef :: (Members '[InfoTableBuilder, Reader InfoTable] r') => S.Symbol -> Sem r' FixityDef
-    getFixityDef = lookupFixity . (^. S.nameId)
+    getFixityDef :: (Members '[InfoTableBuilder, Reader InfoTable] r') => ScopedIden -> Sem r' FixityDef
+    getFixityDef = lookupFixity . (^. scopedIdenFinal . S.nameId)
 
-    getPrec :: (Members '[InfoTableBuilder, Reader InfoTable] r') => S.Symbol -> Sem r' Int
+    getPrec :: (Members '[InfoTableBuilder, Reader InfoTable] r') => ScopedIden -> Sem r' Int
     getPrec = return . (^. fixityDefPrec) <=< getFixityDef
 
-    getFixityId :: (Members '[InfoTableBuilder, Reader InfoTable] r') => S.Symbol -> Sem r' S.NameId
+    getFixityId :: (Members '[InfoTableBuilder, Reader InfoTable] r') => ScopedIden -> Sem r' S.NameId
     getFixityId = return . fromJust . (^. fixityDefFixity . fixityId) <=< getFixityDef
 
 checkOperatorSyntaxDef ::
@@ -1213,35 +1222,38 @@ checkOperatorSyntaxDef ::
   OperatorSyntaxDef 'Parsed ->
   Sem r (OperatorSyntaxDef 'Scoped)
 checkOperatorSyntaxDef OperatorSyntaxDef {..} = do
-  sym :: S.Symbol <- checkFixitySymbol _opFixity
-  fx <- lookupFixity (sym ^. S.nameId)
-  let pname = NameUnqualified _opSymbol
-  opname :: ScopedIden <- checkScopedIden pname
-  let opsym = over S.nameConcrete fromUnqualified' (opname ^. scopedIdenSrcName)
-  modifyScopeEntry opsym (fx ^. fixityDefFixity)
+  fixityIden :: ScopedIden <- checkFixitySymbol _opFixity
+  fx <- lookupFixity (fixityIden ^. scopedIdenFinal . S.nameId)
+  let pname = _opSymbol
+  opIden :: ScopedIden <- checkScopedIden pname
+  modifyScopeEntry opIden (fx ^. fixityDefFixity)
   mdef <- mapM checkJudoc _opDoc
   return
     OperatorSyntaxDef
-      { _opSymbol = opsym,
+      { _opSymbol = opIden,
         _opDoc = mdef,
-        _opFixity = _opFixity,
+        _opFixity = fixityIden,
         _opSyntaxKw = _opSyntaxKw,
         _opKw = _opKw
       }
   where
-    modifyScopeEntry :: S.Symbol -> Fixity -> Sem r ()
+    modifyScopeEntry :: ScopedIden -> Fixity -> Sem r ()
     modifyScopeEntry scopedOperator fx
       | S.canHaveFixity (getNameKind scopedOperator) = do
-          let sym = scopedOperator ^. S.nameConcrete
-              h :: SymbolInfo 'NameSpaceSymbols -> SymbolInfo 'NameSpaceSymbols
+          let h :: SymbolInfo 'NameSpaceSymbols -> SymbolInfo 'NameSpaceSymbols
               h = over symbolInfo (fmap adjustEntry)
                 where
                   adjustEntry :: PreSymbolEntry -> PreSymbolEntry
                   adjustEntry e
-                    | e ^. preSymbolName . S.nameId == scopedOperator ^. S.nameId = set (preSymbolName . S.nameFixity) (Just fx) e
+                    | e ^. preSymbolName . S.nameId == final ^. S.nameId = set (preSymbolName . S.nameFixity) (Just fx) e
                     | otherwise = e
-          modify (over (scopeSymbols . at sym . _Just) h)
+          case final ^. S.nameConcrete of
+            NameUnqualified sym ->
+              modify (over (scopeSymbols . at sym . _Just) h)
+            NameQualified {} -> return ()
       | otherwise = return ()
+      where
+        final = scopedOperator ^. scopedIdenFinal
 
 checkIteratorSyntaxDef ::
   forall r.
@@ -2809,21 +2821,18 @@ checkUnqualifiedName s = do
 
 checkFixitySymbol ::
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable] r) =>
-  Symbol ->
-  Sem r S.Symbol
+  Name ->
+  Sem r ScopedIden
 checkFixitySymbol s = do
-  scope <- get
   -- Lookup at the global scope
-  entries <- thd3 <$> lookupQualifiedSymbol ([], s)
+  entries <- thd3 <$> lookupQualifiedSymbol (splitName s)
   case resolveShadowing (toList entries) of
-    [] -> throw (ErrSymNotInScope (NotInScope s scope))
-    [x] -> do
-      let res = entryToSymbol x s
-      registerName False res
+    [] -> nameNotInScope s
+    [entry :: FixitySymbolEntry] -> do
+      res <- entryToScopedIden s entry
+      registerScopedIden False res
       return res
-    es -> throw (ErrAmbiguousSym (AmbiguousSym n (map (PreSymbolFinal . SymbolEntry . (^. fixityEntry)) es)))
-  where
-    n = NameUnqualified s
+    es -> throw (ErrAmbiguousSym (AmbiguousSym s (map (PreSymbolFinal . SymbolEntry . (^. fixityEntry)) es)))
 
 -- | Remove the symbol entries associated with a single symbol according to the
 -- shadowing rules for modules. For example, a symbol defined in the outer

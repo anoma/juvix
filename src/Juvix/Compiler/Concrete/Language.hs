@@ -40,7 +40,7 @@ statementLabel = \case
     goSyntax :: SyntaxDef s -> Maybe Text
     goSyntax = \case
       SyntaxFixity f -> Just (f ^. fixitySymbol . symbolTypeLabel)
-      SyntaxOperator f -> Just (f ^. opSymbol . symbolTypeLabel)
+      SyntaxOperator {} -> Nothing
       SyntaxIterator f -> Just (f ^. iterSymbol . symbolTypeLabel)
       SyntaxAlias f -> Just (f ^. aliasDefName . symbolTypeLabel)
 

@@ -52,7 +52,7 @@ groupStatements = \case
       (StatementDeriving _, _) -> False
       (StatementSyntax _, StatementSyntax _) -> True
       (StatementSyntax (SyntaxFixity _), _) -> False
-      (StatementSyntax (SyntaxOperator o), s) -> definesSymbol (symbolParsed (o ^. opSymbol)) s
+      (StatementSyntax (SyntaxOperator o), s) -> definesIdentifier (o ^. opSymbol) s
       (StatementSyntax (SyntaxIterator i), s) -> definesSymbol (symbolParsed (i ^. iterSymbol)) s
       (StatementSyntax (SyntaxAlias {}), _) -> False
       (StatementImport _, StatementImport _) -> True
@@ -70,6 +70,12 @@ groupStatements = \case
       (_, StatementFunctionDef {}) -> False
       (StatementProjectionDef {}, StatementProjectionDef {}) -> True
       (StatementProjectionDef {}, _) -> False
+
+    definesIdentifier :: IdentifierType s -> Statement s -> Bool
+    definesIdentifier i stm = maybe False (`definesSymbol` stm) $ case sing :: SStage s of
+      SParsed -> i ^? _NameUnqualified
+      SScoped -> i ^? scopedIdenSrcName . S.nameConcrete . _NameUnqualified
+
     definesSymbol :: Symbol -> Statement s -> Bool
     definesSymbol n s = case s of
       StatementInductive d -> n `elem` syms d
