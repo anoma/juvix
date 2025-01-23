@@ -1,0 +1,16 @@
+module Refs;
+
+-- at this point, P.p is in scope, but P.m is not
+axiom X : P.p;
+
+module P;
+  axiom p : Type;
+
+  open M public;
+end;
+
+axiom X1 : P.m;
+
+module M;
+  axiom m : Type;
+end;
