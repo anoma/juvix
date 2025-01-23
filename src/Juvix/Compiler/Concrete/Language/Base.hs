@@ -483,9 +483,8 @@ instance Serialize (OperatorSyntaxDef 'Scoped)
 
 instance NFData (OperatorSyntaxDef 'Scoped)
 
--- TODO allow qualified names
 data IteratorSyntaxDef (s :: Stage) = IteratorSyntaxDef
-  { _iterSymbol :: SymbolType s,
+  { _iterSymbol :: IdentifierType s,
     _iterInfo :: Maybe ParsedIteratorInfo,
     _iterDoc :: Maybe (Judoc s),
     _iterSyntaxKw :: KeywordRef,
@@ -3798,4 +3797,4 @@ instance (SingI s) => HasLoc (OperatorSyntaxDef s) where
   getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLocIdentifierType _opSymbol
 
 instance (SingI s) => HasLoc (IteratorSyntaxDef s) where
-  getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLocSymbolType _iterSymbol
+  getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLocIdentifierType _iterSymbol

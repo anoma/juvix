@@ -1,14 +1,57 @@
 module FixityOverwrite;
 
-import Stdlib.Data.Fixity open;
+import Stdlib.Data.Fixity as F;
 
 type T : Type := t;
 
-syntax operator , pair;
-type Pair := , T T;
+module P;
+  syntax operator , F.pair;
+  type Pair := , T T;
 
-p1 : Pair := t, t;
+  p1 : Pair := t, t;
+end;
 
-syntax operator , none;
+syntax operator P., F.none;
 
-p2 : Pair := , t t;
+p2 : P.Pair := P., t t;
+
+module Next;
+  -- inherited fixity from parent
+  p3 : P.Pair := P., t t;
+
+  open P;
+
+  p4 : P.Pair := , t t;
+end;
+
+module After;
+  type Pair := , T T;
+
+  -- An operator definition takes effect only on statements that come after it
+  p1 : Pair := , t t;
+
+  syntax operator , F.pair;
+
+  p2 : Pair := t, t;
+end;
+
+module Other;
+  type Pair := , T T;
+
+  syntax operator , F.pair;
+  syntax alias ! := ,;
+
+  -- An alias inherits the fixity of the referenced symbol
+  p1 : Pair := t ! t;
+  p2 : Pair := t , t;
+
+  -- When we change the fixity of the referenced symbol, the fixity of the alias
+  -- does not change.
+  syntax operator , F.none;
+  p1' : Pair := t ! t;
+  p2' : Pair := , t t;
+
+  -- We can overwrite the alias fixity
+  syntax operator ! F.none;
+  p1'' : Pair := ! t t;
+end;

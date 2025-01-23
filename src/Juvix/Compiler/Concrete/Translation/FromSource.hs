@@ -811,7 +811,7 @@ iteratorSyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Err
 iteratorSyntaxDef _iterSyntaxKw = do
   _iterIteratorKw <- kw kwIterator
   _iterDoc <- getJudoc
-  _iterSymbol <- symbol
+  _iterSymbol <- name
   _iterInfo <- optional parsedIteratorInfo
   return IteratorSyntaxDef {..}
 

@@ -7,8 +7,6 @@ module ImportantStuffFirst;
 
   --- N-Ary tree.
   type Tree (A : Type) := node : A -> Forest A -> Tree A;
-
-  axiom X : Forest.List; -- Is this too unintuitive?
 end;
 
 module List;

@@ -989,7 +989,7 @@ instance PrettyPrint ParsedIteratorInfo where
 instance (SingI s) => PrettyPrint (IteratorSyntaxDef s) where
   ppCode IteratorSyntaxDef {..} = do
     let doc' = ppCode <$> _iterDoc
-        iterSymbol' = ppSymbolType _iterSymbol
+        iterSymbol' = ppIdentifierType _iterSymbol
     doc'
       ?<> ppCode _iterSyntaxKw
       <+> ppCode _iterIteratorKw

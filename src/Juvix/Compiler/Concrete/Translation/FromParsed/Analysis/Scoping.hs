@@ -980,16 +980,17 @@ checkQualifiedName q@(QualifiedName (SymbolPath p) sym) = do
 
 entryToScopedIden ::
   forall ns r.
-  (SingI ns, Members '[InfoTableBuilder, State ScoperState] r) =>
+  (SingI ns, Members '[State Scope, InfoTableBuilder, State ScoperState] r) =>
   Name ->
   NameSpaceEntryType ns ->
   Sem r ScopedIden
 entryToScopedIden name e = do
-  let helper :: S.Name' x -> S.Name
-      helper = set S.nameConcrete name
+  let setConcrete :: S.Name' x -> S.Name
+      setConcrete = set S.nameConcrete name
+
       scopedName :: S.Name
-      scopedName = helper (e ^. entryName)
-  si <-
+      scopedName = setConcrete (e ^. entryName)
+  si0 <-
     let noAlias =
           ScopedIden
             { _scopedIdenFinal = scopedName,
@@ -1003,31 +1004,36 @@ entryToScopedIden name e = do
               PreSymbolFinal {} -> return noAlias
               PreSymbolAlias {} -> do
                 e' <- normalizePreSymbolEntry e
-                let scopedName' =
-                      over S.nameFixity (maybe (e' ^. symbolEntry . S.nameFixity) Just) $
-                        set S.nameKind (getNameKind e') scopedName
+                let scopedName' = set S.nameKind (getNameKind e') scopedName
                 return
                   ScopedIden
                     { _scopedIdenAlias = Just scopedName',
-                      _scopedIdenFinal = helper (e' ^. symbolEntry)
+                      _scopedIdenFinal = setConcrete (e' ^. symbolEntry)
                     }
+  si <- traverseOf scopedIdenSrcName getFixityAndIterator si0
   registerScopedIden False si
   return si
 
+getFixityAndIterator :: (Members '[State Scope] r) => S.Name -> Sem r S.Name
+getFixityAndIterator n = execState n $ do
+  let uid = n ^. S.nameId
+  whenJustM (gets (^. scopeFixities . at uid)) (modify @S.Name . set S.nameFixity . Just)
+  whenJustM (gets (^. scopeIterators . at uid)) (modify @S.Name . set S.nameIterator . Just)
+
 -- | We gather all symbols which have been defined or marked to be public in the given scope.
-exportScope ::
+genExportInfo ::
   forall r.
   (Members '[State Scope, Error ScoperError] r) =>
-  Scope ->
   Sem r ExportInfo
-exportScope scope@Scope {..} = do
+genExportInfo = do
+  scope <- get
   let mkHashMap ::
         forall ns.
         (SingI ns) =>
         (Lens' Scope (HashMap Symbol (SymbolInfo ns))) ->
         Sem r (HashMap Symbol (NameSpaceEntryType ns))
-      mkHashMap l = hashMap <$> mapMaybeM mkentry (HashMap.toList (scope ^. l))
-  _exportSymbols <- mkHashMap scopeSymbols
+      mkHashMap l = hashMap <$> mapMaybeM (mkentry (scope ^. scopePath)) (HashMap.toList (scope ^. l))
+  _exportSymbols :: HashMap Symbol PreSymbolEntry <- mkHashMap scopeSymbols >>= (traversed . preSymbolName) getFixityAndIterator
   _exportModuleSymbols <- mkHashMap scopeModuleSymbols
   _exportFixitySymbols <- mkHashMap scopeFixitySymbols
   return ExportInfo {..}
@@ -1035,9 +1041,10 @@ exportScope scope@Scope {..} = do
     mkentry ::
       forall ns.
       (SingI ns) =>
+      S.AbsModulePath ->
       (Symbol, SymbolInfo ns) ->
       Sem r (Maybe (Symbol, NameSpaceEntryType ns))
-    mkentry (s, SymbolInfo {..}) =
+    mkentry _scopePath (s, SymbolInfo {..}) =
       case filter shouldExport (toList _symbolInfo) of
         [] -> return Nothing
         [e] -> return (Just (s, e))
@@ -1223,10 +1230,11 @@ checkOperatorSyntaxDef ::
   Sem r (OperatorSyntaxDef 'Scoped)
 checkOperatorSyntaxDef OperatorSyntaxDef {..} = do
   fixityIden :: ScopedIden <- checkFixitySymbol _opFixity
-  fx <- lookupFixity (fixityIden ^. scopedIdenFinal . S.nameId)
-  let pname = _opSymbol
-  opIden :: ScopedIden <- checkScopedIden pname
-  modifyScopeEntry opIden (fx ^. fixityDefFixity)
+  fxDef <- lookupFixity (fixityIden ^. scopedIdenFinal . S.nameId)
+  let fx = fxDef ^. fixityDefFixity
+  opIden :: ScopedIden <- checkScopedIden _opSymbol
+  let uid = opIden ^. scopedIdenSrcName . S.nameId
+  modify (set (scopeFixities . at uid) (Just fx))
   mdef <- mapM checkJudoc _opDoc
   return
     OperatorSyntaxDef
@@ -1236,24 +1244,6 @@ checkOperatorSyntaxDef OperatorSyntaxDef {..} = do
         _opSyntaxKw = _opSyntaxKw,
         _opKw = _opKw
       }
-  where
-    modifyScopeEntry :: ScopedIden -> Fixity -> Sem r ()
-    modifyScopeEntry scopedOperator fx
-      | S.canHaveFixity (getNameKind scopedOperator) = do
-          let h :: SymbolInfo 'NameSpaceSymbols -> SymbolInfo 'NameSpaceSymbols
-              h = over symbolInfo (fmap adjustEntry)
-                where
-                  adjustEntry :: PreSymbolEntry -> PreSymbolEntry
-                  adjustEntry e
-                    | e ^. preSymbolName . S.nameId == final ^. S.nameId = set (preSymbolName . S.nameFixity) (Just fx) e
-                    | otherwise = e
-          case final ^. S.nameConcrete of
-            NameUnqualified sym ->
-              modify (over (scopeSymbols . at sym . _Just) h)
-            NameQualified {} -> return ()
-      | otherwise = return ()
-      where
-        final = scopedOperator ^. scopedIdenFinal
 
 checkIteratorSyntaxDef ::
   forall r.
@@ -1261,16 +1251,16 @@ checkIteratorSyntaxDef ::
   Bool ->
   IteratorSyntaxDef 'Parsed ->
   Sem r (IteratorSyntaxDef 'Scoped)
-checkIteratorSyntaxDef isTop s@IteratorSyntaxDef {..} = do
+checkIteratorSyntaxDef _isTop s@IteratorSyntaxDef {..} = do
   checkAtLeastOneRange
-  let pname = NameUnqualified _iterSymbol
-  itername :: ScopedIden <- checkScopedIden pname
-  let itersym = over S.nameConcrete fromUnqualified' (itername ^. scopedIdenSrcName)
-  modifyScope itersym (maybe emptyIteratorInfo fromParsedIteratorInfo _iterInfo)
+  itername :: ScopedIden <- checkScopedIden _iterSymbol
+  let uid = itername ^. scopedIdenSrcName . S.nameId
+      iterNfo = fromParsedIteratorInfo <$> _iterInfo
+  modify (set (scopeIterators . at uid) iterNfo)
   doc <- mapM checkJudoc _iterDoc
   return
     IteratorSyntaxDef
-      { _iterSymbol = itersym,
+      { _iterSymbol = itername,
         _iterDoc = doc,
         _iterInfo = _iterInfo,
         _iterIteratorKw,
@@ -1282,53 +1272,6 @@ checkIteratorSyntaxDef isTop s@IteratorSyntaxDef {..} = do
       where
         num :: Maybe Int
         num = s ^? iterInfo . _Just . to fromParsedIteratorInfo . iteratorInfoRangeNum . _Just
-
-    modifyScope :: S.Symbol -> IteratorInfo -> Sem r ()
-    modifyScope scopedIterator iter = do
-      modifyReserved
-      modifyScopeEntry
-      when isTop modifyModuleEntry
-      where
-        sym :: Symbol = scopedIterator ^. S.nameConcrete
-
-        modifyModuleEntry :: Sem r ()
-        modifyModuleEntry
-          | S.canBeIterator (getNameKind scopedIterator) = do
-              mid <- gets (^. scopeModuleId)
-              modify $
-                set
-                  ( scoperReservedModules
-                      . at mid
-                      . _Just
-                      . reservedModuleExportInfo
-                      . exportSymbols
-                      . at sym
-                      . _Just
-                      . preSymbolName
-                      . S.nameIterator
-                  )
-                  (Just iter)
-          | otherwise = return ()
-
-        modifyReserved :: Sem r ()
-        modifyReserved
-          | S.canBeIterator (getNameKind scopedIterator) = do
-              modify (set (scopeReservedSymbols . at sym . _Just . S.nameIterator) (Just iter))
-          | otherwise = return ()
-
-        -- TODO try to factor common code with operator
-        modifyScopeEntry :: Sem r ()
-        modifyScopeEntry
-          | S.canBeIterator (getNameKind scopedIterator) = do
-              let h :: SymbolInfo 'NameSpaceSymbols -> SymbolInfo 'NameSpaceSymbols
-                  h = over symbolInfo (fmap adjustEntry)
-                    where
-                      adjustEntry :: PreSymbolEntry -> PreSymbolEntry
-                      adjustEntry e
-                        | e ^. preSymbolName . S.nameId == scopedIterator ^. S.nameId = set (preSymbolName . S.nameIterator) (Just iter) e
-                        | otherwise = e
-              modify (over (scopeSymbols . at sym . _Just) h)
-          | otherwise = return ()
 
 -- | Only used as syntactical convenience for registerX functions
 (@$>) :: (Functor m) => (a -> m ()) -> a -> m a
@@ -1723,7 +1666,7 @@ checkTopModule m@Module {..} = checkedModule
             do
               withTopScope $ do
                 body' <- topBindings (checkTopModuleBody _moduleBody)
-                e <- get >>= exportScope
+                e <- genExportInfo
                 doc' <- mapM checkJudoc _moduleDoc
                 registerModuleDoc (path' ^. S.nameId) doc'
                 return (e, body', path', doc')
@@ -2064,7 +2007,7 @@ reserveLocalModule Module {..} = do
     -- TODO Q: we only need to change the scopePath, not the scopeSymbols ?
     inheritScope _modulePath
     b <- reserveStatements _moduleBody
-    export <- get >>= exportScope
+    export <- genExportInfo
     reserved <- gets (^. scopeReserved)
     return
       ReservedModule
@@ -2084,7 +2027,6 @@ inheritScope _modulePath = do
   modify (over scopeModuleSymbols (fmap inheritSymbol))
   modify (over scopeFixitySymbols (fmap inheritSymbol))
   where
-    -- { _inScopeSymbols :: HashMap Symbol (SymbolInfo 'NameSpaceSymbols),
     inheritSymbol :: forall ns. (SingI ns) => SymbolInfo ns -> SymbolInfo ns
     inheritSymbol (SymbolInfo s) = SymbolInfo (inheritEntry <$> s)
       where
@@ -2131,7 +2073,7 @@ checkLocalModule md@Module {..} = do
         modify (set scopeModuleId mid)
         b <- checkLocalModuleBody modEntry
         doc' <- mapM checkJudoc _moduleDoc
-        e <- get >>= exportScope
+        e <- genExportInfo
         return (e, b, doc')
   localModules <- getScopedLocalModules exportInfo
   modify (set (scoperReservedModules . at mid . _Just . reservedModuleExportInfo) exportInfo)
@@ -3409,6 +3351,7 @@ checkAliasDef def@AliasDef {..} = do
   let aliasId = aliasName' ^. S.nameId
   asName :: PreSymbolEntry <- checkName _aliasDefAsName
   modify' (set (scoperAlias . at aliasId) (Just asName))
+  inheritFixity aliasId asName
   registerAlias aliasId asName
   doc' <- maybe (return Nothing) (return . Just <=< checkJudoc) _aliasDefDoc
   asName' :: ScopedIden <- entryToScopedIden _aliasDefAsName asName
@@ -3419,6 +3362,12 @@ checkAliasDef def@AliasDef {..} = do
         _aliasDefDoc = doc',
         ..
       }
+  where
+    inheritFixity :: (Members '[State Scope] r') => NameId -> PreSymbolEntry -> Sem r' ()
+    inheritFixity aliasId asName = do
+      let targetId = asName ^. preSymbolName . S.nameId
+      whenJustM (gets (^. scopeFixities . (at targetId))) $ \fx ->
+        (modify (set (scopeFixities . at aliasId) (Just fx)))
 
 reserveAliasDef ::
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader BindingStrategy] r) =>
@@ -3435,7 +3384,7 @@ reserveSyntaxDef = \case
   SyntaxOperator {} -> return ()
   SyntaxIterator {} -> return ()
   -- NOTE we don't reserve alias because we don't allow alias to be forward
-  -- referenced. This also avoids alias cycles.
+  -- referenced. This avoids alias cycles.
   SyntaxAlias {} -> return ()
 
 resolveSyntaxDef ::

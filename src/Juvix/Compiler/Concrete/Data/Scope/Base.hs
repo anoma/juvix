@@ -46,6 +46,8 @@ data Reserved = Reserved
 
 data Scope = Scope
   { _scopePath :: S.AbsModulePath,
+    _scopeFixities :: HashMap NameId Fixity,
+    _scopeIterators :: HashMap NameId IteratorInfo,
     _scopeInScope :: InScope,
     -- | The name id of the module containing this scope
     _scopeModuleId :: NameId,
@@ -149,6 +151,8 @@ emptyScopeTop :: NameId -> S.AbsModulePath -> Scope
 emptyScopeTop modId absPath =
   Scope
     { _scopePath = absPath,
+      _scopeFixities = mempty,
+      _scopeIterators = mempty,
       _scopeModuleId = modId,
       _scopeInScope = emptyInScope,
       _scopeImports = mempty,

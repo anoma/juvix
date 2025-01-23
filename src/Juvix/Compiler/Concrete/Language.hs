@@ -41,7 +41,7 @@ statementLabel = \case
     goSyntax = \case
       SyntaxFixity f -> Just (f ^. fixitySymbol . symbolTypeLabel)
       SyntaxOperator {} -> Nothing
-      SyntaxIterator f -> Just (f ^. iterSymbol . symbolTypeLabel)
+      SyntaxIterator {} -> Nothing
       SyntaxAlias f -> Just (f ^. aliasDefName . symbolTypeLabel)
 
 -- | Indexes top statements by label

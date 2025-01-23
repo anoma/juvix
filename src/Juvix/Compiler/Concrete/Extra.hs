@@ -53,7 +53,7 @@ groupStatements = \case
       (StatementSyntax _, StatementSyntax _) -> True
       (StatementSyntax (SyntaxFixity _), _) -> False
       (StatementSyntax (SyntaxOperator o), s) -> definesIdentifier (o ^. opSymbol) s
-      (StatementSyntax (SyntaxIterator i), s) -> definesSymbol (symbolParsed (i ^. iterSymbol)) s
+      (StatementSyntax (SyntaxIterator i), s) -> definesIdentifier (i ^. iterSymbol) s
       (StatementSyntax (SyntaxAlias {}), _) -> False
       (StatementImport _, StatementImport _) -> True
       (StatementImport i, StatementOpenModule o) -> case sing :: SStage s of
