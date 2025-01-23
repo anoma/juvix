@@ -65,6 +65,11 @@ scoperErrorTests =
       $(mkRelFile "QualSymNotInScope.juvix")
       $ wantsError ErrQualSymNotInScope,
     negTest
+      "Qualified not in scope (forward reference)"
+      $(mkRelDir ".")
+      $(mkRelFile "ForwardModuleRef.juvix")
+      $ wantsError ErrQualSymNotInScope,
+    negTest
       "Multiple declarations"
       $(mkRelDir ".")
       $(mkRelFile "MultipleDeclarations.juvix")

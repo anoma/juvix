@@ -1,13 +1,11 @@
 module Example1;
 
-axiom a : Type;
-
 type T :=
   mkT@{
     t : R;
   };
 
--- x1 : T -> a := T.t1;
+x1 : T -> R := T.t;
 
 type R :=
   mkR@{

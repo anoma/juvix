@@ -1,7 +1,6 @@
-module Refs;
+module ForwardModuleRef;
 
--- at this point, P.p is in scope, but P.m is not
-axiom X : P.p;
+axiom X : P.m;
 
 module P;
   axiom p : Type;
