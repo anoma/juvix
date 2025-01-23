@@ -1,0 +1,14 @@
+module FixityOverwrite;
+
+import Stdlib.Data.Fixity open;
+
+type T : Type := t;
+
+syntax operator , pair;
+type Pair := , T T;
+
+p1 : Pair := t, t;
+
+syntax operator , none;
+
+p2 : Pair := , t t;

@@ -287,6 +287,10 @@ tests =
       $(mkRelDir "issue3068")
       $(mkRelFile "main.juvix"),
     posTest
+      "Fixity overwrite"
+      $(mkRelDir ".")
+      $(mkRelFile "FixityOverwrite.juvix"),
+    posTest
       "Type signatures"
       $(mkRelDir ".")
       $(mkRelFile "TypeSignatures.juvix")
