@@ -67,9 +67,14 @@ newtype ScopeParameters = ScopeParameters
   { _scopeImportedModules :: HashMap TopModulePathKey ScopedModule
   }
 
+data ModuleExportInfo = ModuleExportInfo
+  { -- | The name of the module
+    _moduleExportInfoModuleName :: S.Name,
+    _moduleExportInfo :: ExportInfo
+  }
+
 data ReservedModule = ReservedModule
   { _reservedModuleName :: S.Name,
-    _reservedModuleExportInfo :: ExportInfo,
     _reservedModuleReserved :: Reserved,
     _reservedModuleStatements :: [Statement 'Parsed]
   }
@@ -78,6 +83,7 @@ data ScoperState = ScoperState
   { -- | Local and top modules currently in scope - used to look up qualified symbols
     _scoperModules :: HashMap S.NameId ScopedModule,
     _scoperReservedModules :: HashMap S.NameId ReservedModule,
+    _scoperExportInfo :: HashMap S.NameId ModuleExportInfo,
     _scoperAlias :: HashMap S.NameId ScopedIden,
     _scoperNameSignatures :: HashMap S.NameId (NameSignature 'Parsed),
     -- | Indexed by the inductive type. This is used for record updates
@@ -108,6 +114,7 @@ newtype ScoperIterators = ScoperIterators
   deriving newtype (Semigroup, Monoid)
 
 makeLenses ''ScoperIterators
+makeLenses ''ModuleExportInfo
 makeLenses ''InScope
 makeLenses ''ReservedModule
 makeLenses ''SymbolOperator
@@ -120,14 +127,11 @@ makeLenses ''ScopeParameters
 makeLenses ''ModulesCache
 makeLenses ''Reserved
 
--- TODO this is ugly, why _reservedModuleStatements = [] is ok?
-scopedToReservedModule :: ScopedModule -> ReservedModule
-scopedToReservedModule scoped =
-  ReservedModule
-    { _reservedModuleName = scoped ^. scopedModuleName,
-      _reservedModuleExportInfo = scoped ^. scopedModuleExportInfo,
-      _reservedModuleReserved = emptyReserved,
-      _reservedModuleStatements = []
+scopedModuleToModuleExportInfo :: ScopedModule -> ModuleExportInfo
+scopedModuleToModuleExportInfo scoped =
+  ModuleExportInfo
+    { _moduleExportInfoModuleName = scoped ^. scopedModuleName,
+      _moduleExportInfo = scoped ^. scopedModuleExportInfo
     }
 
 emptyReserved :: Reserved

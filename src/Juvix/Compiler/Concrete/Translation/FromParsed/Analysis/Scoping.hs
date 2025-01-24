@@ -58,6 +58,7 @@ iniScoperState tab =
   ScoperState
     { _scoperModules = mempty,
       _scoperReservedModules = mempty,
+      _scoperExportInfo = mempty,
       _scoperNameSignatures = tab ^. infoParsedNameSigs,
       _scoperRecordFields = tab ^. infoRecords,
       _scoperAlias = tab ^. infoScoperAlias,
@@ -756,7 +757,7 @@ checkImportNoPublic import_@Import {..} = do
   registerName False importName
   whenJust synonymName (registerName False)
   registerScoperModules scopedModule
-  importOpen' <- mapM (checkOpenModuleShort (scopedToReservedModule scopedModule)) _importOpen
+  importOpen' <- mapM (checkOpenModuleShort (scopedModuleToModuleExportInfo scopedModule)) _importOpen
   usingHiding' <- mapM (checkUsingHiding sname' exportInfoOriginal) _importUsingHiding
   let exportInfoFiltered :: ExportInfo = filterExportInfo _importPublic usingHiding' exportInfoOriginal
       filteredScopedModule = set scopedModuleExportInfo exportInfoFiltered scopedModule
@@ -781,7 +782,7 @@ checkImportNoPublic import_@Import {..} = do
     registerScoperModules :: ScopedModule -> Sem r ()
     registerScoperModules m = do
       modify (set (scoperModules . at (m ^. scopedModulePath . S.nameId)) (Just m))
-      modify (set (scoperReservedModules . at (m ^. scopedModulePath . S.nameId)) (Just (scopedToReservedModule m)))
+      modify (set (scoperExportInfo . at (m ^. scopedModulePath . S.nameId)) (Just (scopedModuleToModuleExportInfo m)))
       forM_ (m ^. scopedModuleLocalModules) registerScoperModules
 
 getTopModulePath :: Module 'Parsed 'ModuleTop -> S.AbsModulePath
@@ -791,8 +792,20 @@ getTopModulePath Module {..} =
       S._absLocalPath = mempty
     }
 
-getModuleExportInfo :: forall r. (HasCallStack, Members '[State ScoperState] r) => ModuleSymbolEntry -> Sem r ExportInfo
-getModuleExportInfo = fmap (^. reservedModuleExportInfo) . getReservedLocalModule
+getModuleExportInfo :: forall r. (HasCallStack, Members '[State ScoperState] r) => ModuleSymbolEntry -> Sem r ModuleExportInfo
+getModuleExportInfo m =
+  fromMaybeM err $
+    gets (^. scoperExportInfo . at (m ^. moduleEntry . S.nameId))
+  where
+    err :: Sem r a
+    err = do
+      ms <- toList <$> gets (^. scoperReservedModules)
+      impossibleError
+        ( "Could not find "
+            <> ppTrace m
+            <> "\nExport Infos in the state: "
+            <> ppTrace ms
+        )
 
 getReservedLocalModule :: forall r. (HasCallStack, Members '[State ScoperState] r) => ModuleSymbolEntry -> Sem r ReservedModule
 getReservedLocalModule m = fromMaybeM err (gets (^. scoperReservedModules . at (m ^. moduleEntry . S.nameId)))
@@ -889,18 +902,19 @@ lookInExport ::
   (Members '[State ScoperState, Output PreSymbolEntry, Output ModuleSymbolEntry, Output FixitySymbolEntry] r) =>
   Symbol ->
   [Symbol] ->
-  ExportInfo ->
+  ModuleExportInfo ->
   Sem r ()
-lookInExport sym remaining e = case remaining of
+lookInExport sym remaining modExport = case remaining of
   [] -> do
     whenJust (e ^. exportSymbols . at sym) output
     whenJust (e ^. exportModuleSymbols . at sym) output
     whenJust (e ^. exportFixitySymbols . at sym) output
   s : ss -> whenJustM (mayModule e s) (lookInExport sym ss)
   where
-    mayModule :: ExportInfo -> Symbol -> Sem r (Maybe ExportInfo)
+    e :: ExportInfo = modExport ^. moduleExportInfo
+    mayModule :: ExportInfo -> Symbol -> Sem r (Maybe ModuleExportInfo)
     mayModule ExportInfo {..} s =
-      mapM getModuleExportInfo (HashMap.lookup s _exportModuleSymbols)
+      mapM getModuleExportInfo (_exportModuleSymbols ^. at s)
 
 -- | We return a list of entries because qualified names can point to different
 -- modules due to nesting.
@@ -950,7 +964,7 @@ lookupQualifiedSymbol sms = do
             lookInTopModule topPath remaining = do
               tbl <- gets (^. scopeImports)
               sequence_
-                [ lookInExport sym remaining (ref ^. scopedModuleExportInfo)
+                [ lookInExport sym remaining (scopedModuleToModuleExportInfo ref)
                   | Just t <- [tbl ^. at topPath],
                     ref <- toList t
                 ]
@@ -1721,10 +1735,9 @@ withLocalScope ma = do
 checkLocalModuleBody ::
   forall r.
   (Members '[HighlightBuilder, InfoTableBuilder, Reader InfoTable, Error ScoperError, State Scope, Reader ScopeParameters, State ScoperState, NameIdGen, Reader PackageId, Reader BindingStrategy] r) =>
-  ModuleSymbolEntry ->
+  ReservedModule ->
   Sem r [Statement 'Scoped]
-checkLocalModuleBody m = do
-  res <- getReservedLocalModule m
+checkLocalModuleBody res = do
   let body = res ^. reservedModuleStatements
   checkReservedStatements body
 
@@ -2008,20 +2021,27 @@ reserveLocalModule ::
   Sem r ()
 reserveLocalModule Module {..} = do
   _modulePath' :: S.Symbol <- reserveLocalModuleSymbol _modulePath
-  resModule :: ReservedModule <- withLocalScope $ do
+  (resModule :: ReservedModule, minfo :: ModuleExportInfo) <- withLocalScope $ do
     -- TODO Q: we only need to change the scopePath, not the scopeSymbols ?
     inheritScope _modulePath
     b <- reserveStatements _moduleBody
     export <- genExportInfo
     reserved <- gets (^. scopeReserved)
-    return
-      ReservedModule
-        { _reservedModuleExportInfo = export,
-          _reservedModuleName = S.unqualifiedSymbol _modulePath',
-          _reservedModuleReserved = reserved,
-          _reservedModuleStatements = b
-        }
+    let mname = S.unqualifiedSymbol _modulePath'
+        resMod =
+          ReservedModule
+            { _reservedModuleName = mname,
+              _reservedModuleReserved = reserved,
+              _reservedModuleStatements = b
+            }
+        nfo =
+          ModuleExportInfo
+            { _moduleExportInfoModuleName = mname,
+              _moduleExportInfo = export
+            }
+    return (resMod, nfo)
   modify (set (scoperReservedModules . at (_modulePath' ^. S.nameId)) (Just resModule))
+  modify (set (scoperExportInfo . at (_modulePath' ^. S.nameId)) (Just minfo))
   registerName True _modulePath'
 
 inheritScope :: (Members '[State Scope] r') => Symbol -> Sem r' ()
@@ -2076,12 +2096,12 @@ checkLocalModule md@Module {..} = do
         modify (set scopeReserved reserved)
         putReservedInScope reserved
         modify (set scopeModuleId mid)
-        b <- checkLocalModuleBody modEntry
+        b <- checkLocalModuleBody reservedModule
         doc' <- mapM checkJudoc _moduleDoc
         e <- genExportInfo
         return (e, b, doc')
   localModules <- getScopedLocalModules exportInfo
-  modify (set (scoperReservedModules . at mid . _Just . reservedModuleExportInfo) exportInfo)
+  modify (set (scoperExportInfo . at mid . _Just . moduleExportInfo) exportInfo)
   let moduleName = S.unqualifiedSymbol _modulePath'
       m =
         Module
@@ -2131,15 +2151,15 @@ getModule ::
   (Members '[State ScoperState] r) =>
   ModuleSymbolEntry ->
   Name ->
-  Sem r ReservedModule
+  Sem r ModuleExportInfo
 getModule e n =
-  set (reservedModuleName . S.nameConcrete) n
-    <$> gets (^?! scoperReservedModules . at (e ^. moduleEntry . S.nameId) . _Just)
+  set (moduleExportInfoModuleName . S.nameConcrete) n
+    <$> getModuleExportInfo e
 
 lookupModuleSymbol ::
   (Members '[Error ScoperError, State Scope, State ScoperState] r) =>
   Name ->
-  Sem r ReservedModule
+  Sem r ModuleExportInfo
 lookupModuleSymbol n = do
   es <- snd3 <$> lookupQualifiedSymbol (path, sym)
   case nonEmpty (resolveShadowing (toList es)) of
@@ -2155,7 +2175,7 @@ lookupModuleSymbol n = do
 checkOpenModuleShort ::
   forall r.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
-  ReservedModule ->
+  ModuleExportInfo ->
   OpenModule 'Parsed 'OpenShort ->
   Sem r (OpenModule 'Scoped 'OpenShort)
 checkOpenModuleShort = checkOpenModuleHelper
@@ -2251,16 +2271,17 @@ checkUsingHiding moduleName exportInfo = \case
 checkOpenModuleHelper ::
   forall r short.
   (Members '[Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen] r, SingI short) =>
-  ReservedModule ->
+  ModuleExportInfo ->
   OpenModule 'Parsed short ->
   Sem r (OpenModule 'Scoped short)
-checkOpenModuleHelper reservedMod OpenModule {..} = do
-  let exportInfo = reservedMod ^. reservedModuleExportInfo
-  registerName False (reservedMod ^. reservedModuleName)
-  usingHiding' <- mapM (checkUsingHiding (reservedMod ^. reservedModuleName) exportInfo) _openModuleUsingHiding
+checkOpenModuleHelper modInfo OpenModule {..} = do
+  let exportInfo = modInfo ^. moduleExportInfo
+      modName = modInfo ^. moduleExportInfoModuleName
+  registerName False modName
+  usingHiding' <- mapM (checkUsingHiding modName exportInfo) _openModuleUsingHiding
   mergeScope (filterExportInfo _openModulePublic usingHiding' exportInfo)
   let openName :: OpenModuleNameType 'Scoped short = case sing :: SIsOpenShort short of
-        SOpenFull -> reservedMod ^. reservedModuleName
+        SOpenFull -> modName
         SOpenShort -> ()
   return
     OpenModule
