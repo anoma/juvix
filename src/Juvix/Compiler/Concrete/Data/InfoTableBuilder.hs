@@ -18,7 +18,7 @@ data InfoTableBuilder :: Effect where
   RegisterName :: (HasLoc c) => Bool -> S.Name' c -> InfoTableBuilder m ()
   RegisterScopedIden :: Bool -> ScopedIden -> InfoTableBuilder m ()
   RegisterModuleDoc :: S.NameId -> Maybe (Judoc 'Scoped) -> InfoTableBuilder m ()
-  RegisterFixity :: FixityDef -> InfoTableBuilder m ()
+  RegisterFixityDef :: FixityDef -> InfoTableBuilder m ()
   RegisterPrecedence :: S.NameId -> S.NameId -> InfoTableBuilder m ()
   RegisterHighlightDoc :: S.NameId -> Maybe (Judoc 'Scoped) -> InfoTableBuilder m ()
   RegisterNameSig :: S.NameId -> NameSignature 'Scoped -> InfoTableBuilder m ()
@@ -68,9 +68,9 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
   RegisterName isTop n -> highlightName (S.anameFromName isTop n)
   RegisterScopedIden isTop n -> highlightName (anameFromScopedIden isTop n)
   RegisterModuleDoc uid doc -> highlightDoc uid doc
-  RegisterFixity f -> do
+  RegisterFixityDef f -> do
     let sid = f ^. fixityDefSymbol . S.nameId
-    modify (over infoFixities (HashMap.insert sid f))
+    modify (set (infoFixities . at sid) (Just f))
     case f ^. fixityDefFixity . fixityId of
       Just fid -> modify (over infoPrecedenceGraph (HashMap.alter (Just . fromMaybe mempty) fid))
       Nothing -> return ()

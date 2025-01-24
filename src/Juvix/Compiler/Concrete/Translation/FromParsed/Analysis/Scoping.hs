@@ -390,7 +390,7 @@ getReservedDefinitionSymbol s = do
   m <- gets (^. scopeReservedSymbols)
   let s' = fromMaybe err (m ^. at s)
       err = impossibleError ("Symbol " <> ppTrace s <> " not found in the scope. Contents of scope:\n" <> ppTrace (toList m))
-  return s'
+  getFixityAndIterator s'
 
 -- | Variables are assumed to never be infix operators
 bindVariableSymbol ::
@@ -1014,11 +1014,15 @@ entryToScopedIden name e = do
   registerScopedIden False si
   return si
 
-getFixityAndIterator :: (Members '[State Scope] r) => S.Name -> Sem r S.Name
+getFixityAndIterator ::
+  forall c r.
+  (Members '[State Scope] r) =>
+  S.Name' c ->
+  Sem r (S.Name' c)
 getFixityAndIterator n = execState n $ do
   let uid = n ^. S.nameId
-  whenJustM (gets (^. scopeFixities . at uid)) (modify @S.Name . set S.nameFixity . Just)
-  whenJustM (gets (^. scopeIterators . at uid)) (modify @S.Name . set S.nameIterator . Just)
+  whenJustM (gets (^. scopeFixities . at uid)) (modify @(S.Name' c) . set S.nameFixity . Just)
+  whenJustM (gets (^. scopeIterators . at uid)) (modify @(S.Name' c) . set S.nameIterator . Just)
 
 -- | We gather all symbols which have been defined or marked to be public in the given scope.
 genExportInfo ::
@@ -1208,7 +1212,7 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
                   Just FI.AssocNone -> OpBinary AssocNone
                 FI.None -> OpNone
           }
-  registerFixity
+  registerFixityDef
     @$> FixityDef
       { _fixityDefSymbol = sym,
         _fixityDefFixity = fx,
