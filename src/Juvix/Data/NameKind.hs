@@ -86,30 +86,6 @@ canBeCompiled k = case getNameKind k of
   KNameFixity -> False
   KNameAlias -> False
 
-canHaveFixity :: (HasNameKind a) => a -> Bool
-canHaveFixity k = case getNameKind k of
-  KNameConstructor -> True
-  KNameInductive -> True
-  KNameFunction -> True
-  KNameAxiom -> True
-  KNameAlias -> True
-  KNameLocal -> False
-  KNameLocalModule -> False
-  KNameTopModule -> False
-  KNameFixity -> False
-
-canBeIterator :: (HasNameKind a) => a -> Bool
-canBeIterator k = case getNameKind k of
-  KNameFunction -> True
-  KNameAxiom -> True
-  KNameConstructor -> False
-  KNameAlias -> False
-  KNameInductive -> False
-  KNameLocal -> False
-  KNameLocalModule -> False
-  KNameTopModule -> False
-  KNameFixity -> False
-
 nameKindAnsi :: NameKind -> AnsiStyle
 nameKindAnsi k = case k of
   KNameConstructor -> colorDull Blue
