@@ -3210,32 +3210,6 @@ checkIterator iter = do
     _iteratorBody <- checkParseExpressionAtoms (iter ^. iteratorBody)
     return Iterator {..}
 
--- checkInitializer ::
---   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId] r) =>
---   Initializer 'Parsed ->
---   Sem r (Initializer 'Scoped)
--- checkInitializer ini = do
---   _initializerPattern <- checkParsePatternAtoms' (ini ^. initializerPattern)
---   _initializerExpression <- checkParseExpressionAtoms (ini ^. initializerExpression)
---   return
---     Initializer
---       { _initializerAssignKw = ini ^. initializerAssignKw,
---         ..
---       }
-
--- checkRange ::
---   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId] r) =>
---   Range 'Parsed ->
---   Sem r (Range 'Scoped)
--- checkRange rng = do
---   _rangePattern <- checkParsePatternAtoms' (rng ^. rangePattern)
---   _rangeExpression <- checkParseExpressionAtoms (rng ^. rangeExpression)
---   return
---     Range
---       { _rangeInKw = rng ^. rangeInKw,
---         ..
---       }
-
 checkHole ::
   (Members '[NameIdGen] r) =>
   HoleType 'Parsed ->
