@@ -26,7 +26,7 @@ data InfoTableBuilder :: Effect where
   RegisterParsedNameSig :: S.NameId -> NameSignature 'Parsed -> InfoTableBuilder m ()
   RegisterParsedConstructorSig :: S.NameId -> RecordNameSignature 'Parsed -> InfoTableBuilder m ()
   RegisterRecordInfo :: S.NameId -> RecordInfo -> InfoTableBuilder m ()
-  RegisterAlias :: S.NameId -> PreSymbolEntry -> InfoTableBuilder m ()
+  RegisterAlias :: S.NameId -> ScopedIden -> InfoTableBuilder m ()
   RegisterLocalModule :: ScopedModule -> InfoTableBuilder m ()
   GetBuilderInfoTable :: InfoTableBuilder m InfoTable
   GetBuiltinSymbol' :: Interval -> BuiltinPrim -> InfoTableBuilder m S.Symbol

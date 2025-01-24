@@ -4,7 +4,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Store.Scoped.Data.SymbolEntry
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 
@@ -28,7 +27,7 @@ data InfoTable = InfoTable
     _infoAxioms :: HashMap NameId (AxiomDef 'Scoped),
     -- | Contains the builtins defined in itself *and* its local modules
     _infoBuiltins :: BuiltinsTable,
-    _infoScoperAlias :: HashMap S.NameId PreSymbolEntry
+    _infoScoperAlias :: HashMap S.NameId ScopedIden
   }
   deriving stock (Generic)
 

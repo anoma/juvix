@@ -95,6 +95,10 @@ instance HasLoc FixitySymbolEntry where
 symbolEntryNameId :: SymbolEntry -> NameId
 symbolEntryNameId = (^. symbolEntry . S.nameId)
 
+instance HasNameKind PreSymbolEntry where
+  getNameKind = S.getNameKind . (^. preSymbolName)
+  getNameKindPretty = S.getNameKindPretty . (^. preSymbolName)
+
 instance HasNameKind SymbolEntry where
   getNameKind = S.getNameKind . (^. symbolEntry)
   getNameKindPretty = S.getNameKindPretty . (^. symbolEntry)

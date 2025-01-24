@@ -956,10 +956,10 @@ lookupQualifiedSymbol sms = do
                 ]
 
 -- | This assumes that alias do not have cycles.
-normalizePreSymbolEntry :: (Members '[State ScoperState] r) => PreSymbolEntry -> Sem r SymbolEntry
+normalizePreSymbolEntry :: (Members '[State ScoperState] r) => PreSymbolEntry -> Sem r S.Name
 normalizePreSymbolEntry = \case
-  PreSymbolFinal a -> return a
-  PreSymbolAlias a -> gets (^. scoperAlias . at (a ^. aliasName . S.nameId)) >>= normalizePreSymbolEntry . fromMaybe err
+  PreSymbolFinal a -> return (a ^. symbolEntry)
+  PreSymbolAlias a -> fromMaybe err <$> gets (^? scoperAlias . at (a ^. aliasName . S.nameId) . _Just . scopedIdenFinal)
     where
       err :: forall a. a
       err = impossibleError ("The alias " <> ppTrace (a ^. aliasName) <> " was not found in the ScoperState ")
@@ -1008,7 +1008,7 @@ entryToScopedIden name e = do
                 return
                   ScopedIden
                     { _scopedIdenAlias = Just scopedName',
-                      _scopedIdenFinal = setConcrete (e' ^. symbolEntry)
+                      _scopedIdenFinal = setConcrete e'
                     }
   si <- traverseOf scopedIdenSrcName getFixityAndIterator si0
   registerScopedIden False si
@@ -3173,7 +3173,7 @@ checkIterator ::
   Sem r (Iterator 'Scoped)
 checkIterator iter = do
   _iteratorName <- checkScopedIden (iter ^. iteratorName)
-  case _iteratorName ^. scopedIdenFinal . S.nameIterator of
+  case _iteratorName ^. scopedIdenSrcName . S.nameIterator of
     Just IteratorInfo {..} -> do
       case _iteratorInfoInitNum of
         Just n
@@ -3349,27 +3349,33 @@ checkAliasDef ::
   AliasDef 'Parsed ->
   Sem r (AliasDef 'Scoped)
 checkAliasDef def@AliasDef {..} = do
-  aliasName' <- reserveAliasDef def
+  asName :: ScopedIden <- checkScopedIden _aliasDefAsName
+  aliasName' <-
+    set S.nameKindPretty (getNameKindPretty asName)
+      . set S.nameKind (getNameKind asName)
+      <$> reserveAliasDef def
+  registerName True aliasName'
   let aliasId = aliasName' ^. S.nameId
-  asName :: PreSymbolEntry <- checkName _aliasDefAsName
   modify' (set (scoperAlias . at aliasId) (Just asName))
-  inheritFixity aliasId asName
+  inheritFixityAndIterator aliasId asName
   registerAlias aliasId asName
   doc' <- maybe (return Nothing) (return . Just <=< checkJudoc) _aliasDefDoc
-  asName' :: ScopedIden <- entryToScopedIden _aliasDefAsName asName
   return
     AliasDef
       { _aliasDefName = aliasName',
-        _aliasDefAsName = asName',
+        _aliasDefAsName = asName,
         _aliasDefDoc = doc',
         ..
       }
   where
-    inheritFixity :: (Members '[State Scope] r') => NameId -> PreSymbolEntry -> Sem r' ()
-    inheritFixity aliasId asName = do
-      let targetId = asName ^. preSymbolName . S.nameId
-      whenJustM (gets (^. scopeFixities . (at targetId))) $ \fx ->
+    inheritFixityAndIterator :: (Members '[State Scope] r') => NameId -> ScopedIden -> Sem r' ()
+    inheritFixityAndIterator aliasId asName = do
+      let targetId = asName ^. scopedIdenSrcName . S.nameId
+      whenJustM (gets (^. scopeFixities . at targetId)) $ \fx ->
         (modify (set (scopeFixities . at aliasId) (Just fx)))
+
+      whenJustM (gets (^. scopeIterators . at targetId)) $ \iter ->
+        (modify (set (scopeIterators . at aliasId) (Just iter)))
 
 reserveAliasDef ::
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader BindingStrategy] r) =>
