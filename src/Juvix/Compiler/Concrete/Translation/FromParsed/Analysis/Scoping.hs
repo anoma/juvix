@@ -360,26 +360,28 @@ reserveSymbolOf k =
     (fromSing k)
     (fromSing k)
 
--- TODO unify  getReservedFixitySymbol, getReservedLocalModuleSymbol, getReservedDefinitionSymbol
+getReservedSymbol ::
+  (HasCallStack, Members '[State Scope] r) =>
+  NameSpace ->
+  Symbol ->
+  Sem r S.Symbol
+getReservedSymbol dns s = withSomeSing dns $ \ns -> do
+  m <- gets (^. scopeReserved . reservedNameSpace ns)
+  let s' = fromMaybe err (m ^. at s)
+      err = impossibleError (nameSpaceElemName dns <> ppTrace s <> " not found in the scope. Contents of scope:\n" <> ppTrace (toList m))
+  getFixityAndIterator s'
+
 getReservedFixitySymbol ::
   (HasCallStack, Members '[State Scope] r) =>
   Symbol ->
   Sem r S.Symbol
-getReservedFixitySymbol s = do
-  m <- gets (^. scopeReservedFixitySymbols)
-  let s' = fromMaybe err (m ^. at s)
-      err = impossibleError ("Fixity " <> ppTrace s <> " not found in the scope. Contents of scope:\n" <> ppTrace (toList m))
-  return s'
+getReservedFixitySymbol = getReservedSymbol NameSpaceFixities
 
 getReservedLocalModuleSymbol ::
   (HasCallStack, Members '[State Scope] r) =>
   Symbol ->
   Sem r S.Symbol
-getReservedLocalModuleSymbol s = do
-  m <- gets (^. scopeReservedLocalModuleSymbols)
-  let s' = fromMaybe err (m ^. at s)
-      err = impossibleError ("Module " <> ppTrace s <> " not found in the scope. Contents of scope:\n" <> ppTrace (toList m))
-  return s'
+getReservedLocalModuleSymbol = getReservedSymbol NameSpaceModules
 
 getReservedDefinitionSymbol ::
   forall r.
@@ -387,11 +389,7 @@ getReservedDefinitionSymbol ::
   (Members '[State Scope] r) =>
   Symbol ->
   Sem r S.Symbol
-getReservedDefinitionSymbol s = do
-  m <- gets (^. scopeReservedSymbols)
-  let s' = fromMaybe err (m ^. at s)
-      err = impossibleError ("Symbol " <> ppTrace s <> " not found in the scope. Contents of scope:\n" <> ppTrace (toList m))
-  getFixityAndIterator s'
+getReservedDefinitionSymbol = getReservedSymbol NameSpaceSymbols
 
 -- | Variables are assumed to never be infix operators
 bindVariableSymbol ::
