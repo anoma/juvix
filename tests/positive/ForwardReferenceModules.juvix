@@ -18,6 +18,7 @@ module List;
       nil : List a
     | --- An element followed by a list
       :: : a → List a → List a;
+
   axiom LA : Type;
 end;
 

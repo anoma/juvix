@@ -43,15 +43,19 @@ module Other;
 
   -- An alias inherits the fixity of the referenced symbol
   p1 : Pair := t ! t;
-  p2 : Pair := t , t;
+
+  p2 : Pair := t, t;
 
   -- When we change the fixity of the referenced symbol, the fixity of the alias
   -- does not change.
   syntax operator , F.none;
+
   p1' : Pair := t ! t;
+
   p2' : Pair := , t t;
 
   -- We can overwrite the alias fixity
   syntax operator ! F.none;
+
   p1'' : Pair := ! t t;
 end;
