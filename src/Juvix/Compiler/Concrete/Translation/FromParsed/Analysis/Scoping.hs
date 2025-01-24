@@ -555,7 +555,6 @@ checkImport i@Import {..} = case _importPublic of
   NoPublic -> checkImportNoPublic i
   Public {} -> checkImportPublic i
 
--- TODO factor common code
 reserveImportPublic ::
   forall r.
   ( Members
@@ -1159,7 +1158,8 @@ checkFixitySyntaxDef ::
   (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, NameIdGen, InfoTableBuilder, Reader InfoTable, Reader PackageId] r) =>
   FixitySyntaxDef 'Parsed ->
   Sem r (FixitySyntaxDef 'Scoped)
-checkFixitySyntaxDef FixitySyntaxDef {..} = topBindings $ do
+checkFixitySyntaxDef def@FixitySyntaxDef {..} = topBindings $ do
+  resolveFixitySyntaxDef def
   sym <- getReservedFixitySymbol _fixitySymbol
   doc <- mapM checkJudoc _fixityDoc
   info' <- checkFixityInfo _fixityInfo
@@ -1824,8 +1824,7 @@ checkReservedStatements = topBindings . mapM goDefinition
       Statement 'Parsed ->
       Sem r' (Statement 'Scoped)
     goDefinition = \case
-      -- TODO probably merge resolveSyntaxDef and checkSyntaxDef
-      StatementSyntax s -> StatementSyntax <$> (resolveSyntaxDef s >> checkSyntaxDef s)
+      StatementSyntax s -> StatementSyntax <$> checkSyntaxDef s
       StatementFunctionDef d -> StatementFunctionDef <$> checkFunctionDef d
       StatementDeriving d -> StatementDeriving <$> checkDeriving d
       StatementAxiom d -> StatementAxiom <$> checkAxiomDef d
@@ -2022,7 +2021,6 @@ reserveLocalModule ::
 reserveLocalModule Module {..} = do
   _modulePath' :: S.Symbol <- reserveLocalModuleSymbol _modulePath
   (resModule :: ReservedModule, minfo :: ModuleExportInfo) <- withLocalScope $ do
-    -- TODO Q: we only need to change the scopePath, not the scopeSymbols ?
     inheritScope _modulePath
     b <- reserveStatements _moduleBody
     export <- genExportInfo
@@ -3391,16 +3389,6 @@ reserveSyntaxDef = \case
   SyntaxIterator {} -> return ()
   -- NOTE we don't reserve alias because we don't allow alias to be forward
   -- referenced. This avoids alias cycles.
-  SyntaxAlias {} -> return ()
-
-resolveSyntaxDef ::
-  (Members '[Reader PackageId, Reader ScopeParameters, Reader InfoTable, InfoTableBuilder, NameIdGen, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader BindingStrategy] r) =>
-  SyntaxDef 'Parsed ->
-  Sem r ()
-resolveSyntaxDef = \case
-  SyntaxFixity fixDef -> resolveFixitySyntaxDef fixDef
-  SyntaxOperator {} -> return ()
-  SyntaxIterator {} -> return ()
   SyntaxAlias {} -> return ()
 
 -------------------------------------------------------------------------------
