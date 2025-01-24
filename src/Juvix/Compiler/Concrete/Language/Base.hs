@@ -3749,12 +3749,14 @@ scopedIdenSrcName f n = case n ^. scopedIdenAlias of
     a' <- f a
     pure (set scopedIdenAlias (Just a') n)
 
-fromParsedIteratorInfo :: ParsedIteratorInfo -> IteratorInfo
-fromParsedIteratorInfo ParsedIteratorInfo {..} =
-  IteratorInfo
-    { _iteratorInfoInitNum = (^. withLocParam) <$> _parsedIteratorInfoInitNum,
-      _iteratorInfoRangeNum = (^. withLocParam) <$> _parsedIteratorInfoRangeNum
-    }
+fromParsedIteratorInfo :: Maybe ParsedIteratorInfo -> IteratorInfo
+fromParsedIteratorInfo = \case
+  Nothing -> emptyIteratorInfo
+  Just ParsedIteratorInfo {..} ->
+    IteratorInfo
+      { _iteratorInfoInitNum = (^. withLocParam) <$> _parsedIteratorInfoInitNum,
+        _iteratorInfoRangeNum = (^. withLocParam) <$> _parsedIteratorInfoRangeNum
+      }
 
 nameBlockSymbols :: forall s. Traversal' (NameBlock s) (SymbolType s)
 nameBlockSymbols = nameBlockItems . each . nameItemSymbol . _Just

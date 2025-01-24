@@ -1010,7 +1010,7 @@ entryToScopedIden name e = do
                     { _scopedIdenAlias = Just scopedName',
                       _scopedIdenFinal = setConcrete e'
                     }
-  si <- traverseOf scopedIdenSrcName getFixityAndIterator si0
+  si <- scopedIdenSrcName getFixityAndIterator si0
   registerScopedIden False si
   return si
 
@@ -1250,15 +1250,14 @@ checkOperatorSyntaxDef OperatorSyntaxDef {..} = do
 checkIteratorSyntaxDef ::
   forall r.
   (Members '[Reader ScopeParameters, Reader InfoTable, Reader PackageId, InfoTableBuilder, NameIdGen, Error ScoperError, State Scope, State ScoperState] r) =>
-  Bool ->
   IteratorSyntaxDef 'Parsed ->
   Sem r (IteratorSyntaxDef 'Scoped)
-checkIteratorSyntaxDef _isTop s@IteratorSyntaxDef {..} = do
+checkIteratorSyntaxDef s@IteratorSyntaxDef {..} = do
   checkAtLeastOneRange
   itername :: ScopedIden <- checkScopedIden _iterSymbol
   let uid = itername ^. scopedIdenSrcName . S.nameId
-      iterNfo = fromParsedIteratorInfo <$> _iterInfo
-  modify (set (scopeIterators . at uid) iterNfo)
+      iterNfo = fromParsedIteratorInfo _iterInfo
+  modify (set (scopeIterators . at uid) (Just iterNfo))
   doc <- mapM checkJudoc _iterDoc
   return
     IteratorSyntaxDef
@@ -1273,7 +1272,7 @@ checkIteratorSyntaxDef _isTop s@IteratorSyntaxDef {..} = do
     checkAtLeastOneRange = unless (maybe True (> 0) num) (throw (ErrInvalidRangeNumber (InvalidRangeNumber s)))
       where
         num :: Maybe Int
-        num = s ^? iterInfo . _Just . to fromParsedIteratorInfo . iteratorInfoRangeNum . _Just
+        num = s ^. iterInfo . to fromParsedIteratorInfo . iteratorInfoRangeNum
 
 -- | Only used as syntactical convenience for registerX functions
 (@$>) :: (Functor m) => (a -> m ()) -> a -> m a
@@ -1550,7 +1549,7 @@ checkInductiveDef InductiveDef {..} = do
             checkRecordSyntaxDef :: RecordSyntaxDef 'Parsed -> Sem r (RecordSyntaxDef 'Scoped)
             checkRecordSyntaxDef = \case
               RecordSyntaxOperator d -> RecordSyntaxOperator <$> checkOperatorSyntaxDef d
-              RecordSyntaxIterator d -> RecordSyntaxIterator <$> checkIteratorSyntaxDef False d
+              RecordSyntaxIterator d -> RecordSyntaxIterator <$> checkIteratorSyntaxDef d
 
             checkRecordStatement :: Reserved -> RecordStatement 'Parsed -> Sem r (RecordStatement 'Scoped)
             checkRecordStatement scopeSyntax = \case
@@ -3315,7 +3314,7 @@ checkSyntaxDef = \case
   SyntaxFixity fixDef -> SyntaxFixity <$> checkFixitySyntaxDef fixDef
   SyntaxAlias a -> SyntaxAlias <$> checkAliasDef a
   SyntaxOperator opDef -> SyntaxOperator <$> checkOperatorSyntaxDef opDef
-  SyntaxIterator iterDef -> SyntaxIterator <$> checkIteratorSyntaxDef True iterDef
+  SyntaxIterator iterDef -> SyntaxIterator <$> checkIteratorSyntaxDef iterDef
 
 checkAliasDef ::
   forall r.
