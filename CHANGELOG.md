@@ -281,7 +281,7 @@
 - Refactor pipeline functions for tests [\#2864](https://github.com/anoma/juvix/pull/2864) ([lukaszcz](https://github.com/lukaszcz))
 - Make `Maybe` a builtin inductive type [\#2860](https://github.com/anoma/juvix/pull/2860) ([paulcadman](https://github.com/paulcadman))
 - Peephole optimization of Cairo assembly [\#2858](https://github.com/anoma/juvix/pull/2858) ([lukaszcz](https://github.com/lukaszcz))
-- Update juvix-stdlib to remove non-ASCII indentifiers [\#2857](https://github.com/anoma/juvix/pull/2857) ([paulcadman](https://github.com/paulcadman))
+- Update juvix-stdlib to remove non-ASCII identifiers [\#2857](https://github.com/anoma/juvix/pull/2857) ([paulcadman](https://github.com/paulcadman))
 - Add an `if` instruction to JuvixReg [\#2855](https://github.com/anoma/juvix/pull/2855) ([lukaszcz](https://github.com/lukaszcz))
 - Cairo: untagged record representation [\#2853](https://github.com/anoma/juvix/pull/2853) ([lukaszcz](https://github.com/lukaszcz))
 - Add lcomposition fixity to support \(\>\>\) in the stdlib [\#2847](https://github.com/anoma/juvix/pull/2847) ([paulcadman](https://github.com/paulcadman))
