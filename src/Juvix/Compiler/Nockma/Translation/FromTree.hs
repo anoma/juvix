@@ -176,9 +176,6 @@ constructorPath = pathFromEnum
 closurePath :: AnomaCallablePathId -> Path
 closurePath = pathFromEnum
 
-anomaGetPath :: Path
-anomaGetPath = [L]
-
 data IndexTupleArgs = IndexTupleArgs
   { _indexTupleArgsLength :: Natural,
     _indexTupleArgsIndex :: Natural
@@ -412,27 +409,6 @@ addressTempRef tr = do
   p <- tempRefPath tr
   return $ opAddress "tempRef" p
 
--- `funsLib` is being quoted in this function
-mainFunctionWrapper :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
-mainFunctionWrapper funslib funCode = do
-  -- 1. The Anoma system expects to receive a function of type `ScryId -> Transaction`
-  --
-  -- 2. The ScryId is only used to construct the argument to the Scry operation
-  --    (i.e the anomaGet builtin in the Juvix frontend),
-  --
-  -- 3. When the Juvix developer writes a function to submit to Anoma they use
-  -- type `() -> Transaction`, this wrapper is used to capture the ScryId
-  -- argument into the subject which is then used to construct OpScry arguments
-  -- when anomaGet is compiled.
-  --
-  -- 4. If the Anoma system expectation changes then this code must be changed.
-  anomaGet <- getFieldInSubject ArgsTuple
-  captureAnomaGetOrder <- replaceSubject $ \case
-    FunCode -> Just (OpQuote # funCode)
-    FunctionsLibrary -> Just (OpReplace # (anomaGetPath # anomaGet) # OpQuote # funslib)
-    _ -> Nothing
-  return $ opCall "mainFunctionWrapper" (closurePath FunCode) captureAnomaGetOrder
-
 compile :: forall r. (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Tree.Node -> Sem r (Term Natural)
 compile = \case
   Tree.Binop b -> goBinop b
@@ -561,7 +537,7 @@ compile = \case
     goAnomaOp Tree.NodeAnoma {..} = do
       args <- mapM compile _nodeAnomaArgs
       case _nodeAnomaOpcode of
-        Tree.OpAnomaGet -> goAnomaGet args
+        Tree.OpAnomaGet -> return (goAnomaGet args)
         Tree.OpAnomaEncode -> goAnomaEncode args
         Tree.OpAnomaDecode -> goAnomaDecode args
         Tree.OpAnomaVerifyDetached -> goAnomaVerifyDetached args
@@ -629,12 +605,8 @@ compile = \case
       Tree.OpIntToUInt8 -> compile arg >>= intToUInt8
       Tree.OpUInt8ToInt -> compile arg
 
-    goAnomaGet :: [Term Natural] -> Sem r (Term Natural)
-    goAnomaGet key = do
-      funlibPath <- stackPath FunctionsLibrary
-      let anomaGet = opAddress "anomaGet" (funlibPath <> anomaGetPath)
-      let arg = remakeList [anomaGet, foldTermsOrQuotedNil key]
-      return (OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # arg)
+    goAnomaGet :: [Term Natural] -> Term Natural
+    goAnomaGet key = OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # (foldTermsOrQuotedNil key)
 
     goAnomaEncode :: [Term Natural] -> Sem r (Term Natural)
     goAnomaEncode = callStdlib StdlibEncode
@@ -1009,13 +981,6 @@ runCompilerWith _opts constrs moduleFuns mainFun =
     libFuns :: [CompilerFunction]
     libFuns = moduleFuns ++ (builtinFunction <$> allElements)
 
-    -- The number of "extra" functions at the front of the functions library
-    -- list which are not defined by the user. Currently, the only such function
-    -- is anomaGet (the `main` function and the functions from `libFuns` are
-    -- defined by the user).
-    libFunShift :: Natural
-    libFunShift = 1
-
     allFuns :: NonEmpty CompilerFunction
     allFuns = mainFun :| libFuns
 
@@ -1035,8 +1000,7 @@ runCompilerWith _opts constrs moduleFuns mainFun =
       where
         compiledFuns :: [Term Natural]
         compiledFuns =
-          (nockNilTagged "anomaGetPlaceholder")
-            : (nockNilTagged "mainFunctionPlaceholder")
+          (nockNilTagged "mainFunctionPlaceholder")
             : ( makeLibraryFunction
                   <$> [(f ^. compilerFunctionName, f ^. compilerFunctionArity, runCompilerFunction compilerCtx f) | f <- libFuns]
               )
@@ -1058,14 +1022,12 @@ runCompilerWith _opts constrs moduleFuns mainFun =
 
     -- The result is not quoted and cannot be evaluated directly.
     makeMainFunction :: Term Natural -> Term Natural
-    makeMainFunction c = makeRawClosure $ \p ->
-      let nockNilHere = nockNilTagged ("makeMainFunction-" <> show p)
-       in case p of
-            FunCode -> run . runReader compilerCtx $ mainFunctionWrapper funcsLib c
-            ArgsTuple -> argsTuplePlaceholder "mainFunction" (mainFun ^. compilerFunctionArity)
-            ClosureRemainingArgsNum -> nockNilHere
-            FunctionsLibrary -> functionsLibraryPlaceHolder
-            AnomaLibrary -> anomaLib
+    makeMainFunction funCode = makeRawClosure $ \case
+      FunCode -> funCode
+      ArgsTuple -> argsTuplePlaceholder "mainFunction" (mainFun ^. compilerFunctionArity)
+      ClosureRemainingArgsNum -> nockNilTagged ("makeMainFunction-ClosureRemainingArgsNum")
+      FunctionsLibrary -> funcsLib
+      AnomaLibrary -> anomaLib
 
     functionInfos :: HashMap FunctionId FunctionInfo
     functionInfos = hashMap (run (runStreamOfNaturals (toList <$> userFunctions)))
@@ -1076,7 +1038,7 @@ runCompilerWith _opts constrs moduleFuns mainFun =
       return
         ( _compilerFunctionId,
           FunctionInfo
-            { _functionInfoPath = pathFromEnum FunctionsLibrary ++ indexStack (i + libFunShift),
+            { _functionInfoPath = pathFromEnum FunctionsLibrary ++ indexStack i,
               _functionInfoArity = _compilerFunctionArity,
               _functionInfoName = _compilerFunctionName
             }
@@ -1153,9 +1115,6 @@ curryClosure f args newArity = do
     -- closure `f`. The environment of `f` is used when evaluating the call.
     FunctionsLibrary -> OpQuote # functionsLibraryPlaceHolder
     AnomaLibrary -> OpQuote # anomaLibPlaceholder
-
-replaceSubject :: (Member (Reader CompilerCtx) r) => (AnomaCallablePathId -> Maybe (Term Natural)) -> Sem r (Term Natural)
-replaceSubject = replaceSubject' "replaceSubject"
 
 replaceSubject' :: (Member (Reader CompilerCtx) r) => Text -> (AnomaCallablePathId -> Maybe (Term Natural)) -> Sem r (Term Natural)
 replaceSubject' tag f = do
@@ -1323,11 +1282,6 @@ getConstructorField = getField
 
 getField :: (Enum field) => field -> Term Natural -> Term Natural
 getField field t = t >># opAddress "getField" (pathFromEnum field)
-
-getFieldInSubject :: (Member (Reader CompilerCtx) r) => (Enum field) => field -> Sem r (Term Natural)
-getFieldInSubject field = do
-  path <- stackPath field
-  return $ opAddress "getFieldInSubject" path
 
 getConstructorMemRep :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r NockmaMemRep
 getConstructorMemRep tag = (^. constructorInfoMemRep) <$> getConstructorInfo tag
