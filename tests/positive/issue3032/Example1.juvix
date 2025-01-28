@@ -1,0 +1,15 @@
+module Example1;
+
+type T :=
+  mkT@{
+    t : R;
+  };
+
+x1 : T -> R := T.t;
+
+type R :=
+  mkR@{
+    r : T;
+  };
+
+y1 : R -> T := R.r;

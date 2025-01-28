@@ -212,6 +212,7 @@ import GHC.Err qualified as Err
 import GHC.Generics (Generic)
 import GHC.Num
 import GHC.Real
+import GHC.Stack qualified as GHC
 import GHC.Stack.Types
 import GHC.Utils.Misc (isSingleton)
 import Language.Haskell.TH.Syntax (Exp, Lift, Q)
@@ -267,6 +268,9 @@ type LazyHashMap = LazyHashMap.HashMap
 type SimpleFold s a = forall r. (Monoid r) => Getting r s a
 
 type SimpleGetter s a = forall r. Getting r s a
+
+ghcCallStack :: (HasCallStack) => Text
+ghcCallStack = pack (GHC.prettyCallStack GHC.callStack)
 
 readJust :: (Read a) => String -> a
 readJust = Text.read

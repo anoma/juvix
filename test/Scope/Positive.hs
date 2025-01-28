@@ -279,6 +279,14 @@ tests =
       $(mkRelDir "issue2929")
       $(mkRelFile "main.juvix"),
     posTest
+      "Forward reference local modules"
+      $(mkRelDir "issue3032")
+      $(mkRelFile "Example.juvix"),
+    posTest
+      "Forward reference local modules (2)"
+      $(mkRelDir ".")
+      $(mkRelFile "ForwardReferenceModules.juvix"),
+    posTest
       "Proper formatting of import module path"
       $(mkRelDir "issue2737")
       $(mkRelFile "main.juvix"),
@@ -286,6 +294,10 @@ tests =
       "Ignore dot files"
       $(mkRelDir "issue3068")
       $(mkRelFile "main.juvix"),
+    posTest
+      "Fixity overwrite"
+      $(mkRelDir ".")
+      $(mkRelFile "FixityOverwrite.juvix"),
     posTest
       "Type signatures"
       $(mkRelDir ".")

@@ -65,6 +65,11 @@ scoperErrorTests =
       $(mkRelFile "QualSymNotInScope.juvix")
       $ wantsError ErrQualSymNotInScope,
     negTest
+      "Qualified not in scope (forward reference)"
+      $(mkRelDir ".")
+      $(mkRelFile "ForwardModuleRef.juvix")
+      $ wantsError ErrQualSymNotInScope,
+    negTest
       "Multiple declarations"
       $(mkRelDir ".")
       $(mkRelFile "MultipleDeclarations.juvix")
@@ -95,11 +100,6 @@ scoperErrorTests =
       $(mkRelFile "InfixErrorP.juvix")
       $ wantsError ErrInfixPattern,
     negTest
-      "Duplicate operator declaration"
-      $(mkRelDir ".")
-      $(mkRelFile "DuplicateOperator.juvix")
-      $ wantsError ErrDuplicateOperator,
-    negTest
       "Multiple export conflict"
       $(mkRelDir ".")
       $(mkRelFile "MultipleExportConflict.juvix")
@@ -109,11 +109,6 @@ scoperErrorTests =
       $(mkRelDir ".")
       $(mkRelFile "ModuleNotInScope.juvix")
       $ wantsError ErrModuleNotInScope,
-    negTest
-      "Unused operator syntax definition"
-      $(mkRelDir ".")
-      $(mkRelFile "UnusedOperatorDef.juvix")
-      $ wantsError ErrUnusedOperatorDef,
     negTest
       "Ambiguous symbol"
       $(mkRelDir ".")
@@ -194,16 +189,6 @@ scoperErrorTests =
       $(mkRelDir ".")
       $(mkRelFile "Iterators3.juvix")
       $ wantsError ErrIteratorUndefined,
-    negTest
-      "Duplicate iterator declaration"
-      $(mkRelDir ".")
-      $(mkRelFile "Iterators4.juvix")
-      $ wantsError ErrDuplicateIterator,
-    negTest
-      "Unused iterator declaration"
-      $(mkRelDir ".")
-      $(mkRelFile "Iterators5.juvix")
-      $ wantsError ErrUnusedIteratorDef,
     negTest
       "Repeated name in named application"
       $(mkRelDir ".")

@@ -23,13 +23,9 @@ data ScoperError
   | ErrSymNotInScope NotInScope
   | ErrQualSymNotInScope QualSymNotInScope
   | ErrModuleNotInScope ModuleNotInScope
-  | ErrDuplicateOperator DuplicateOperator
-  | ErrDuplicateIterator DuplicateIterator
   | ErrMultipleExport MultipleExportConflict
   | ErrAmbiguousSym AmbiguousSym
   | ErrAmbiguousModuleSym AmbiguousModuleSym
-  | ErrUnusedOperatorDef UnusedOperatorDef
-  | ErrUnusedIteratorDef UnusedIteratorDef
   | ErrDoubleBracesPattern DoubleBracesPattern
   | ErrDoubleBinderPattern DoubleBinderPattern
   | ErrAliasBinderPattern AliasBinderPattern
@@ -75,13 +71,9 @@ instance ToGenericError ScoperError where
     ErrSymNotInScope e -> genericError e
     ErrQualSymNotInScope e -> genericError e
     ErrModuleNotInScope e -> genericError e
-    ErrDuplicateOperator e -> genericError e
-    ErrDuplicateIterator e -> genericError e
     ErrMultipleExport e -> genericError e
     ErrAmbiguousSym e -> genericError e
     ErrAmbiguousModuleSym e -> genericError e
-    ErrUnusedOperatorDef e -> genericError e
-    ErrUnusedIteratorDef e -> genericError e
     ErrDoubleBracesPattern e -> genericError e
     ErrDoubleBinderPattern e -> genericError e
     ErrAliasBinderPattern e -> genericError e

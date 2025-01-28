@@ -1,5 +1,6 @@
 module Juvix.Compiler.Concrete.Data.VisibilityAnn where
 
+import Juvix.Data.CodeAnn
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 
@@ -9,6 +10,12 @@ data VisibilityAnn
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Serialize VisibilityAnn
+
+instance PrettyCodeAnn VisibilityAnn where
+  ppCodeAnn k =
+    annotate AnnKeyword $ case k of
+      VisPublic -> "Public"
+      VisPrivate -> "Private"
 
 instance NFData VisibilityAnn
 

@@ -255,37 +255,6 @@ deriving stock instance Ord (Argument 'Parsed)
 
 deriving stock instance Ord (Argument 'Scoped)
 
--- | We group consecutive definitions and reserve symbols in advance, so that we
--- don't need extra syntax for mutually recursive definitions. Also, it allows
--- us to be more flexible with the ordering of the definitions.
-data StatementSections (s :: Stage)
-  = SectionsDefinitions (DefinitionsSection s)
-  | SectionsNonDefinitions (NonDefinitionsSection s)
-  | SectionsEmpty
-
-data DefinitionsSection (s :: Stage) = DefinitionsSection
-  { _definitionsSection :: NonEmpty (Definition s),
-    _definitionsNext :: Maybe (NonDefinitionsSection s)
-  }
-
-data NonDefinitionsSection (s :: Stage) = NonDefinitionsSection
-  { _nonDefinitionsSection :: NonEmpty (NonDefinition s),
-    _nonDefinitionsNext :: Maybe (DefinitionsSection s)
-  }
-
-data Definition (s :: Stage)
-  = DefinitionSyntax (SyntaxDef s)
-  | DefinitionFunctionDef (FunctionDef s)
-  | DefinitionDeriving (Deriving s)
-  | DefinitionInductive (InductiveDef s)
-  | DefinitionAxiom (AxiomDef s)
-  | DefinitionProjectionDef (ProjectionDef s)
-
-data NonDefinition (s :: Stage)
-  = NonDefinitionImport (Import s)
-  | NonDefinitionModule (Module s 'ModuleLocal)
-  | NonDefinitionOpenModule (OpenModule s 'OpenFull)
-
 newtype Statements (s :: Stage) = Statements
   { _statements :: [Statement s]
   }
@@ -417,9 +386,9 @@ deriving stock instance (Ord (SyntaxDef 'Scoped))
 
 data ParsedFixityFields (s :: Stage) = ParsedFixityFields
   { _fixityFieldsAssoc :: Maybe BinaryAssoc,
-    _fixityFieldsPrecSame :: Maybe (SymbolType s),
-    _fixityFieldsPrecBelow :: Maybe [SymbolType s],
-    _fixityFieldsPrecAbove :: Maybe [SymbolType s],
+    _fixityFieldsPrecSame :: Maybe (IdentifierType s),
+    _fixityFieldsPrecBelow :: Maybe [IdentifierType s],
+    _fixityFieldsPrecAbove :: Maybe [IdentifierType s],
     _fixityFieldsBraces :: Irrelevant (KeywordRef, KeywordRef)
   }
 
@@ -486,8 +455,8 @@ instance Serialize FixityDef
 instance NFData FixityDef
 
 data OperatorSyntaxDef (s :: Stage) = OperatorSyntaxDef
-  { _opSymbol :: Symbol,
-    _opFixity :: Symbol,
+  { _opSymbol :: IdentifierType s,
+    _opFixity :: IdentifierType s,
     _opDoc :: Maybe (Judoc s),
     _opKw :: KeywordRef,
     _opSyntaxKw :: KeywordRef
@@ -514,11 +483,8 @@ instance Serialize (OperatorSyntaxDef 'Scoped)
 
 instance NFData (OperatorSyntaxDef 'Scoped)
 
-instance HasLoc (OperatorSyntaxDef s) where
-  getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLoc _opSymbol
-
 data IteratorSyntaxDef (s :: Stage) = IteratorSyntaxDef
-  { _iterSymbol :: Symbol,
+  { _iterSymbol :: IdentifierType s,
     _iterInfo :: Maybe ParsedIteratorInfo,
     _iterDoc :: Maybe (Judoc s),
     _iterSyntaxKw :: KeywordRef,
@@ -545,9 +511,6 @@ instance NFData (IteratorSyntaxDef 'Parsed)
 instance Serialize (IteratorSyntaxDef 'Scoped)
 
 instance NFData (IteratorSyntaxDef 'Scoped)
-
-instance HasLoc (IteratorSyntaxDef s) where
-  getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLoc _iterSymbol
 
 data ArgDefault (s :: Stage) = ArgDefault
   { _argDefaultAssign :: Irrelevant KeywordRef,
@@ -3013,8 +2976,6 @@ makeLenses ''RecordUpdateExtra
 makeLenses ''RecordUpdate
 makeLenses ''RecordUpdateApp
 makeLenses ''RecordUpdateField
-makeLenses ''NonDefinitionsSection
-makeLenses ''DefinitionsSection
 makeLenses ''ProjectionDef
 makeLenses ''ScopedIden
 makeLenses ''FixityDef
@@ -3083,6 +3044,7 @@ makeLenses ''MarkdownInfo
 makeLenses ''Deriving
 
 makePrisms ''NamedArgument
+makePrisms ''Statement
 makePrisms ''ConstructorRhs
 makePrisms ''FunctionDefNameParsed
 
@@ -3110,13 +3072,13 @@ fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)
 fixityAssoc :: SimpleGetter (ParsedFixityInfo s) (Maybe (BinaryAssoc))
 fixityAssoc = fixityFieldHelper fixityFieldsAssoc
 
-fixityPrecSame :: SimpleGetter (ParsedFixityInfo s) (Maybe (SymbolType s))
+fixityPrecSame :: SimpleGetter (ParsedFixityInfo s) (Maybe (IdentifierType s))
 fixityPrecSame = fixityFieldHelper fixityFieldsPrecSame
 
-fixityPrecAbove :: SimpleGetter (ParsedFixityInfo s) (Maybe [SymbolType s])
+fixityPrecAbove :: SimpleGetter (ParsedFixityInfo s) (Maybe [IdentifierType s])
 fixityPrecAbove = fixityFieldHelper fixityFieldsPrecAbove
 
-fixityPrecBelow :: SimpleGetter (ParsedFixityInfo s) (Maybe [SymbolType s])
+fixityPrecBelow :: SimpleGetter (ParsedFixityInfo s) (Maybe [IdentifierType s])
 fixityPrecBelow = fixityFieldHelper fixityFieldsPrecBelow
 
 instance (SingI s) => HasLoc (LetStatement s) where
@@ -3731,11 +3693,6 @@ data ApeLeaf
   | ApeLeafPatternArg PatternArg
   | ApeLeafAtom (AnyStage ExpressionAtom)
 
-_DefinitionSyntax :: Traversal' (Definition s) (SyntaxDef s)
-_DefinitionSyntax f x = case x of
-  DefinitionSyntax r -> DefinitionSyntax <$> f r
-  _ -> pure x
-
 _SyntaxAlias :: Traversal' (SyntaxDef s) (AliasDef s)
 _SyntaxAlias f x = case x of
   SyntaxAlias r -> SyntaxAlias <$> f r
@@ -3757,6 +3714,11 @@ getFunctionSymbol sym = case sing :: SStage s of
     FunctionDefName p -> p
     FunctionDefNamePattern {} -> impossibleError "invalid call"
   SScoped -> sym ^. functionDefNameScoped
+
+modulePathTypeKey :: forall s. (SingI s) => ModulePathType s 'ModuleTop -> TopModulePathKey
+modulePathTypeKey p = case sing :: SStage s of
+  SParsed -> topModulePathKey p
+  SScoped -> topModulePathKey (p ^. S.nameConcrete)
 
 functionSymbolPattern :: forall s. (SingI s) => FunctionSymbolType s -> Maybe (PatternAtomType s)
 functionSymbolPattern f = case sing :: SStage s of
@@ -3787,12 +3749,14 @@ scopedIdenSrcName f n = case n ^. scopedIdenAlias of
     a' <- f a
     pure (set scopedIdenAlias (Just a') n)
 
-fromParsedIteratorInfo :: ParsedIteratorInfo -> IteratorInfo
-fromParsedIteratorInfo ParsedIteratorInfo {..} =
-  IteratorInfo
-    { _iteratorInfoInitNum = (^. withLocParam) <$> _parsedIteratorInfoInitNum,
-      _iteratorInfoRangeNum = (^. withLocParam) <$> _parsedIteratorInfoRangeNum
-    }
+fromParsedIteratorInfo :: Maybe ParsedIteratorInfo -> IteratorInfo
+fromParsedIteratorInfo = \case
+  Nothing -> emptyIteratorInfo
+  Just ParsedIteratorInfo {..} ->
+    IteratorInfo
+      { _iteratorInfoInitNum = (^. withLocParam) <$> _parsedIteratorInfoInitNum,
+        _iteratorInfoRangeNum = (^. withLocParam) <$> _parsedIteratorInfoRangeNum
+      }
 
 nameBlockSymbols :: forall s. Traversal' (NameBlock s) (SymbolType s)
 nameBlockSymbols = nameBlockItems . each . nameItemSymbol . _Just
@@ -3830,3 +3794,9 @@ instance HasAtomicity Pattern where
     PatternList l -> atomicity l
     PatternEmpty {} -> Atom
     PatternRecord r -> atomicity r
+
+instance (SingI s) => HasLoc (OperatorSyntaxDef s) where
+  getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLocIdentifierType _opSymbol
+
+instance (SingI s) => HasLoc (IteratorSyntaxDef s) where
+  getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLocIdentifierType _iterSymbol

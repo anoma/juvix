@@ -20,7 +20,7 @@ import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Compiler.Concrete.Pretty.Options
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
-import Juvix.Compiler.Store.Scoped.Language (Alias, ModuleSymbolEntry, PreSymbolEntry (..), ScopedModule, SymbolEntry, aliasName, moduleEntry, scopedModuleName, symbolEntry)
+import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Data.Ape.Base
 import Juvix.Data.Ape.Print
 import Juvix.Data.CodeAnn (Ann, CodeAnn (..), CodeAnnReference (..), ppCodeAnn, ppStringLit)
@@ -584,6 +584,9 @@ instance PrettyPrint QualifiedName where
     let symbols = _qualifiedPath ^. pathParts NonEmpty.|> _qualifiedSymbol
     dotted (ppSymbolType <$> symbols)
 
+instance PrettyPrint ReservedModule where
+  ppCode m = ppCode (m ^. reservedModuleName)
+
 instance PrettyPrint ScopedModule where
   ppCode m = ppCode (m ^. scopedModuleName)
 
@@ -898,10 +901,10 @@ instance PrettyPrint BinaryAssoc where
     AssocLeft -> Str.left
     AssocRight -> Str.right
 
-ppSymbolList :: (SingI s) => PrettyPrinting [SymbolType s]
-ppSymbolList items = do
+ppIdentifierList :: (SingI s) => PrettyPrinting [IdentifierType s]
+ppIdentifierList items = do
   ppCode Kw.delimBracketL
-  hsepSemicolon (map ppSymbolType items)
+  hsepSemicolon (map ppIdentifierType items)
   ppCode Kw.delimBracketR
 
 instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
@@ -913,13 +916,13 @@ instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
                 return (ppCode Kw.kwAssoc <+> ppCode Kw.kwAssign <+> ppCode a)
               sameItem = do
                 a <- _fixityFieldsPrecSame
-                return (ppCode Kw.kwSame <+> ppCode Kw.kwAssign <+> ppSymbolType a)
+                return (ppCode Kw.kwSame <+> ppCode Kw.kwAssign <+> ppIdentifierType a)
               aboveItem = do
                 a <- _fixityFieldsPrecAbove
-                return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppSymbolList a)
+                return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppIdentifierList a)
               belowItem = do
                 a <- _fixityFieldsPrecBelow
-                return (ppCode Kw.kwBelow <+> ppCode Kw.kwAssign <+> ppSymbolList a)
+                return (ppCode Kw.kwBelow <+> ppCode Kw.kwAssign <+> ppIdentifierList a)
               items = ppBlockOrList' (catMaybes [assocItem, sameItem, aboveItem, belowItem])
               (l, r) = _fixityFieldsBraces ^. unIrrelevant
           return (grouped (ppCode l <> items <> ppCode r))
@@ -932,11 +935,28 @@ instance (SingI s) => PrettyPrint (FixitySyntaxDef s) where
         body' = ppCode _fixityInfo
     doc' ?<> header' <+> ppCode _fixityAssignKw <+> body'
 
+instance PrettyPrint VisibilityAnn where
+  ppCode = noLoc . ppCodeAnn
+
+instance PrettyPrint ExportInfo where
+  ppCode ExportInfo {..} = do
+    header "Export Info"
+    indent $ do
+      itemize
+        [ header "Symbols:"
+            >> ppCode _exportSymbols,
+          header "Module Symbols:"
+            >> ppCode _exportModuleSymbols,
+          header "Fixity Symbols:"
+            >> ppCode _exportFixitySymbols
+        ]
+      hardline
+
 instance (SingI s) => PrettyPrint (OperatorSyntaxDef s) where
   ppCode OperatorSyntaxDef {..} = do
     let doc' = ppCode <$> _opDoc
-        opSymbol' = ppUnkindedSymbol _opSymbol
-        p = ppUnkindedSymbol _opFixity
+        opSymbol' = ppIdentifierType _opSymbol
+        p = ppIdentifierType _opFixity
     doc' ?<> ppCode _opSyntaxKw <+> ppCode _opKw <+> opSymbol' <+> p
 
 instance PrettyPrint PatternApp where
@@ -969,7 +989,7 @@ instance PrettyPrint ParsedIteratorInfo where
 instance (SingI s) => PrettyPrint (IteratorSyntaxDef s) where
   ppCode IteratorSyntaxDef {..} = do
     let doc' = ppCode <$> _iterDoc
-        iterSymbol' = ppUnkindedSymbol _iterSymbol
+        iterSymbol' = ppIdentifierType _iterSymbol
     doc'
       ?<> ppCode _iterSyntaxKw
       <+> ppCode _iterIteratorKw
@@ -1622,6 +1642,21 @@ instance PrettyPrint SymbolEntry where
     noLoc
       ( kindWord
           P.<+> C.code (kindAnn (pretty (ent ^. symbolEntry . S.nameVerbatim)))
+          P.<+> "defined at"
+          P.<+> pretty (getLoc ent)
+      )
+    where
+      pretty' :: Text -> Doc a
+      pretty' = pretty
+      (kindAnn :: Doc Ann -> Doc Ann, kindWord :: Doc Ann) =
+        let k = getNameKind ent
+         in (annotate (AnnKind k), pretty' (nameKindText k))
+
+instance PrettyPrint FixitySymbolEntry where
+  ppCode ent =
+    noLoc
+      ( kindWord
+          P.<+> C.code (kindAnn (pretty (ent ^. fixityEntry . S.nameVerbatim)))
           P.<+> "defined at"
           P.<+> pretty (getLoc ent)
       )

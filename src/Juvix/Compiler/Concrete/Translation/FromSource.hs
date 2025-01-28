@@ -724,18 +724,18 @@ parsedFixityFields = do
   let _fixityFieldsBraces = Irrelevant (l, r)
   return ParsedFixityFields {..}
   where
-    same :: ParsecS r Symbol
+    same :: ParsecS r Name
     same = do
       kw kwSame
       kw kwAssign
-      symbol
+      name
 
-    belowAbove :: Keyword -> ParsecS r [Symbol]
+    belowAbove :: Keyword -> ParsecS r [Name]
     belowAbove aboveOrBelow = do
       kw aboveOrBelow
       kw kwAssign
       kw delimBracketL
-      r <- P.sepEndBy symbol semicolon
+      r <- P.sepEndBy name semicolon
       kw delimBracketR
       return r
 
@@ -777,8 +777,8 @@ operatorSyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Err
 operatorSyntaxDef _opSyntaxKw = P.label "<operator declaration>" $ do
   _opKw <- kw kwOperator
   _opDoc <- getJudoc
-  _opSymbol <- symbol
-  _opFixity <- symbol
+  _opSymbol <- name
+  _opFixity <- name
   return OperatorSyntaxDef {..}
 
 parsedIteratorInfo ::
@@ -811,7 +811,7 @@ iteratorSyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Err
 iteratorSyntaxDef _iterSyntaxKw = do
   _iterIteratorKw <- kw kwIterator
   _iterDoc <- getJudoc
-  _iterSymbol <- symbol
+  _iterSymbol <- name
   _iterInfo <- optional parsedIteratorInfo
   return IteratorSyntaxDef {..}
 

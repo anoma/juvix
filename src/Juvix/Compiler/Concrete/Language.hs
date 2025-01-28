@@ -40,8 +40,8 @@ statementLabel = \case
     goSyntax :: SyntaxDef s -> Maybe Text
     goSyntax = \case
       SyntaxFixity f -> Just (f ^. fixitySymbol . symbolTypeLabel)
-      SyntaxOperator f -> Just (f ^. opSymbol . symbolTypeLabel)
-      SyntaxIterator f -> Just (f ^. iterSymbol . symbolTypeLabel)
+      SyntaxOperator {} -> Nothing
+      SyntaxIterator {} -> Nothing
       SyntaxAlias f -> Just (f ^. aliasDefName . symbolTypeLabel)
 
 -- | Indexes top statements by label

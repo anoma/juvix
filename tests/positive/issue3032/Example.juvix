@@ -1,0 +1,15 @@
+module Example;
+
+module Inner;
+  import Example1 as E public;
+
+  axiom x : Type;
+
+  axiom y : M1.L;
+
+  module M1;
+    axiom L : Type;
+  end;
+
+  open M1;
+end;
