@@ -267,3 +267,12 @@ checkAnomaIsNullifier f = do
   bool_ <- getBuiltinNameScoper l BuiltinBool
   unless (f ^. axiomType == (nat_ --> bool_)) $
     builtinsErrorText l "isNullifier must be of type Nat -> Bool"
+
+checkAnomaSet :: AxiomDef -> Sem r ()
+checkAnomaSet _ = return ()
+
+checkAnomaSetToList :: AxiomDef -> Sem r ()
+checkAnomaSetToList _ = return ()
+
+checkAnomaSetFromList :: AxiomDef -> Sem r ()
+checkAnomaSetFromList _ = return ()

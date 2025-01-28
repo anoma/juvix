@@ -452,6 +452,15 @@ anomaIsCommitment = "anoma-is-commitment"
 anomaIsNullifier :: (IsString s) => s
 anomaIsNullifier = "anoma-is-nullifier"
 
+anomaSet :: (IsString s) => s
+anomaSet = "anoma-set"
+
+anomaSetToList :: (IsString s) => s
+anomaSetToList = "anoma-set-to-list"
+
+anomaSetFromList :: (IsString s) => s
+anomaSetFromList = "anoma-set-from-list"
+
 builtinSeq :: (IsString s) => s
 builtinSeq = "seq"
 

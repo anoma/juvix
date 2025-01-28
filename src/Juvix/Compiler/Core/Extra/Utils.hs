@@ -235,6 +235,8 @@ isDebugOp = \case
       OpAnomaRandomSplit -> False
       OpAnomaIsCommitment -> False
       OpAnomaIsNullifier -> False
+      OpAnomaSetToList -> False
+      OpAnomaSetFromList -> False
       OpEc -> False
       OpFieldAdd -> False
       OpFieldDiv -> False
@@ -538,6 +540,8 @@ builtinOpArgTypes = \case
   OpAnomaRandomSplit -> [mkTypeRandomGenerator']
   OpAnomaIsCommitment -> [mkTypeInteger']
   OpAnomaIsNullifier -> [mkTypeInteger']
+  OpAnomaSetToList -> [mkDynamic']
+  OpAnomaSetFromList -> [mkDynamic']
   OpPoseidonHash -> [mkDynamic']
   OpEc -> [mkDynamic', mkTypeField', mkDynamic']
   OpRandomEcPoint -> []

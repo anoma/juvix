@@ -80,6 +80,8 @@ instance PrettyCode BuiltinOp where
     OpAnomaRandomSplit -> return primRandomSplit
     OpAnomaIsCommitment -> return primIsCommitment
     OpAnomaIsNullifier -> return primIsNullifier
+    OpAnomaSetToList -> return primAnomaSetToList
+    OpAnomaSetFromList -> return primAnomaSetFromList
     OpPoseidonHash -> return primPoseidonHash
     OpEc -> return primEc
     OpRandomEcPoint -> return primRandomEcPoint
@@ -1022,6 +1024,12 @@ primIsCommitment = primitive Str.anomaIsCommitment
 
 primIsNullifier :: Doc Ann
 primIsNullifier = primitive Str.anomaIsNullifier
+
+primAnomaSetToList :: Doc Ann
+primAnomaSetToList = primitive Str.anomaSetToList
+
+primAnomaSetFromList :: Doc Ann
+primAnomaSetFromList = primitive Str.anomaSetFromList
 
 primPoseidonHash :: Doc Ann
 primPoseidonHash = primitive Str.cairoPoseidon

@@ -172,6 +172,8 @@ parseAnoma =
     <|> parseAnoma' kwAnomaRandomSplit OpAnomaRandomSplit
     <|> parseAnoma' kwAnomaIsCommitment OpAnomaIsCommitment
     <|> parseAnoma' kwAnomaIsNullifier OpAnomaIsNullifier
+    <|> parseAnoma' kwAnomaSetToList OpAnomaSetToList
+    <|> parseAnoma' kwAnomaSetFromList OpAnomaSetFromList
 
 parseAnoma' ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

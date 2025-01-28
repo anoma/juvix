@@ -674,6 +674,9 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       Internal.BuiltinAnomaRandomSplit -> return ()
       Internal.BuiltinAnomaIsCommitment -> return ()
       Internal.BuiltinAnomaIsNullifier -> return ()
+      Internal.BuiltinAnomaSet -> registerInductiveAxiom (Just BuiltinAnomaSet) []
+      Internal.BuiltinAnomaSetToList -> return ()
+      Internal.BuiltinAnomaSetFromList -> return ()
       Internal.BuiltinPoseidon -> return ()
       Internal.BuiltinEcOp -> return ()
       Internal.BuiltinRandomEcPoint -> return ()
@@ -1002,6 +1005,19 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
           ( mkLambda'
               natType
               (mkBuiltinApp' OpAnomaIsNullifier [mkVar' 0])
+          )
+      Internal.BuiltinAnomaSet -> return ()
+      Internal.BuiltinAnomaSetToList -> do
+        registerAxiomDef
+          ( mkLambda'
+              mkDynamic'
+              (mkBuiltinApp' OpAnomaSetToList [mkVar' 0])
+          )
+      Internal.BuiltinAnomaSetFromList -> do
+        registerAxiomDef
+          ( mkLambda'
+              mkDynamic'
+              (mkBuiltinApp' OpAnomaSetFromList [mkVar' 0])
           )
       Internal.BuiltinPoseidon -> do
         psName <- getPoseidonStateName
@@ -1460,6 +1476,9 @@ goApplication a = do
         Just Internal.BuiltinAnomaRandomSplit -> app
         Just Internal.BuiltinAnomaIsCommitment -> app
         Just Internal.BuiltinAnomaIsNullifier -> app
+        Just Internal.BuiltinAnomaSet -> app
+        Just Internal.BuiltinAnomaSetToList -> app
+        Just Internal.BuiltinAnomaSetFromList -> app
         Just Internal.BuiltinPoseidon -> app
         Just Internal.BuiltinEcOp -> app
         Just Internal.BuiltinRandomEcPoint -> app

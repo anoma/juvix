@@ -580,6 +580,12 @@ kwAnomaIsCommitment = asciiKw Str.anomaIsCommitment
 kwAnomaIsNullifier :: Keyword
 kwAnomaIsNullifier = asciiKw Str.anomaIsNullifier
 
+kwAnomaSetToList :: Keyword
+kwAnomaSetToList = asciiKw Str.anomaSetToList
+
+kwAnomaSetFromList :: Keyword
+kwAnomaSetFromList = asciiKw Str.anomaSetFromList
+
 delimBraceL :: Keyword
 delimBraceL = mkDelim Str.braceL
 
