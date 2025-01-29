@@ -17,40 +17,6 @@ import Juvix.Extra.Serialize
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
 
-data AbsModulePath = AbsModulePath
-  { _absTopModulePath :: C.TopModulePath,
-    _absLocalPath :: [C.Symbol]
-  }
-  deriving stock (Show, Eq, Generic)
-
-instance Serialize AbsModulePath
-
-instance NFData AbsModulePath
-
-makeLenses ''AbsModulePath
-
-instance HasLoc AbsModulePath where
-  getLoc a = getLoc (a ^. absTopModulePath)
-
-topModulePathToAbsPath :: C.TopModulePath -> AbsModulePath
-topModulePathToAbsPath p = AbsModulePath p []
-
-instance Hashable AbsModulePath
-
--- | Tells whether the first argument is an immediate child of the second argument.
--- In other words, tells whether the first argument is a local module of the second.
-isChildOf :: AbsModulePath -> AbsModulePath -> Bool
-isChildOf child parentMod
-  | null (child ^. absLocalPath) = False
-  | otherwise =
-      init (child ^. absLocalPath) == parentMod ^. absLocalPath
-        && child ^. absTopModulePath == parentMod ^. absTopModulePath
-
--- | Appends a local path to the absolute path
--- e.g. TopMod.Local <.> Inner == TopMod.Local.Inner
-(<.>) :: AbsModulePath -> C.Symbol -> AbsModulePath
-absP <.> localMod = absP {_absLocalPath = absP ^. absLocalPath ++ [localMod]}
-
 -- | Why a symbol is in scope.
 data WhyInScope
   = -- | Inherited from the parent module.
@@ -79,7 +45,10 @@ data Name' n = Name'
     -- | Used to display sensitive colors for builtins. It the name is not a
     -- builtin, then _nameKind == _nameKindPretty
     _nameKindPretty :: NameKind,
-    _nameDefinedIn :: AbsModulePath,
+    -- | True when the name is defined in a top definition (including top
+    -- definitions in local modules).
+    _nameTop :: Bool,
+    _nameDefinedIn :: C.AbsModulePath,
     _nameFixity :: Maybe C.Fixity,
     _nameIterator :: Maybe IteratorInfo,
     _nameWhyInScope :: WhyInScope,

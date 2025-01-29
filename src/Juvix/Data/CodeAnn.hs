@@ -2,15 +2,15 @@ module Juvix.Data.CodeAnn
   ( module Juvix.Data.CodeAnn,
     module Juvix.Data.NameKind,
     module Juvix.Prelude.Pretty,
+    module Juvix.Data.CodeReference,
   )
 where
 
 import Data.Versions (prettySemVer)
-import Juvix.Compiler.Concrete.Data.Name
+import Juvix.Data.CodeReference
 import Juvix.Data.Error.GenericError
 import Juvix.Data.IsImplicit
 import Juvix.Data.Keyword
-import Juvix.Data.NameId
 import Juvix.Data.NameKind
 import Juvix.Data.PackageId
 import Juvix.Data.WithLoc
@@ -18,14 +18,6 @@ import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty hiding (braces, brackets, group, list, parens)
 import Prettyprinter.Render.Terminal (Color (..), bold, colorDull)
-
-data CodeAnnReference = CodeAnnReference
-  { _codeAnnReferenceModule :: TopModulePath,
-    _codeAnnReferenceNameId :: NameId,
-    _codeAnnReferenceNameKindPretty :: NameKind
-  }
-
-makeLenses ''CodeAnnReference
 
 type Ann = CodeAnn
 
@@ -42,14 +34,10 @@ data CodeAnn
   | AnnLiteralString
   | AnnLiteralInteger
   | AnnUnkindedSym
-  | AnnDef CodeAnnReference
-  | AnnRef CodeAnnReference
+  | AnnDef CodeReference
+  | AnnRef CodeReference
 
 type SemanticItem = WithLoc CodeAnn
-
-instance HasNameKind CodeAnnReference where
-  getNameKind = (^. codeAnnReferenceNameKindPretty)
-  getNameKindPretty = (^. codeAnnReferenceNameKindPretty)
 
 instance PrettyCodeAnn PackageId where
   ppCodeAnn pid =

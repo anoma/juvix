@@ -165,16 +165,17 @@ scopeCheckOpenModule ::
 scopeCheckOpenModule = mapError (JuvixError @ScoperError) . checkOpenModule
 
 freshVariable :: (Members '[NameIdGen, State Scope, State ScoperState] r) => Symbol -> Sem r S.Symbol
-freshVariable = freshSymbol KNameLocal KNameLocal
+freshVariable = freshSymbol KNameLocal KNameLocal False
 
 freshSymbol ::
   forall r.
   (Members '[State Scope, State ScoperState, NameIdGen] r) =>
   NameKind ->
   NameKind ->
+  Bool ->
   Symbol ->
   Sem r S.Symbol
-freshSymbol _nameKind _nameKindPretty _nameConcrete = do
+freshSymbol _nameKind _nameKindPretty _nameTop _nameConcrete = do
   _nameId <- freshNameId
   _nameDefinedIn <- gets (^. scopePath)
   let _nameDefined = getLoc _nameConcrete
@@ -269,13 +270,13 @@ reserveSymbolOfNameSpace ::
 reserveSymbolOfNameSpace ns kind kindPretty nameSig builtin s = do
   checkNotBound
   strat <- ask
-  s' <- freshSymbol kind kindPretty s
-  whenJust builtin (`registerBuiltin` s')
-  whenJust nameSig (modify' . set (scoperNameSignatures . at (s' ^. S.nameId)) . Just)
-  whenJust nameSig (registerParsedNameSig (s' ^. S.nameId))
   let isTop = case strat of
         BindingLocal -> False
         BindingTop -> True
+  s' <- freshSymbol kind kindPretty isTop s
+  whenJust builtin (`registerBuiltin` s')
+  whenJust nameSig (modify' . set (scoperNameSignatures . at (s' ^. S.nameId)) . Just)
+  whenJust nameSig (registerParsedNameSig (s' ^. S.nameId))
   registerName isTop s'
   modify (set (scopeReservedNameSpace sns . at s) (Just s'))
   addToScope ns kind s s'
@@ -782,11 +783,11 @@ checkImportNoPublic import_@Import {..} = do
       modify (set (scoperExportInfo . at (m ^. scopedModulePath . S.nameId)) (Just (scopedModuleToModuleExportInfo m)))
       forM_ (m ^. scopedModuleLocalModules) registerScoperModules
 
-getTopModulePath :: Module 'Parsed 'ModuleTop -> S.AbsModulePath
+getTopModulePath :: Module 'Parsed 'ModuleTop -> AbsModulePath
 getTopModulePath Module {..} =
-  S.AbsModulePath
-    { S._absTopModulePath = _modulePath,
-      S._absLocalPath = mempty
+  AbsModulePath
+    { _absTopModulePath = _modulePath,
+      _absLocalPath = mempty
     }
 
 getModuleExportInfo :: forall r. (HasCallStack, Members '[State ScoperState] r) => ModuleSymbolEntry -> Sem r ModuleExportInfo
@@ -862,9 +863,9 @@ lookupSymbolAux modules final = do
     hereOrInLocalModule :: Sem r ()
     hereOrInLocalModule = do
       path0 <- gets (^. scopePath)
-      let topPath = path0 ^. S.absTopModulePath
+      let topPath = path0 ^. absTopModulePath
           path1 = topPath ^. modulePathDir ++ [topPath ^. modulePathName]
-          path2 = path0 ^. S.absLocalPath
+          path2 = path0 ^. absLocalPath
           pref = commonPrefix path2 modules
       when (path1 `isPrefixOf` modules) $ do
         let modules' = drop (length path1) modules
@@ -1056,7 +1057,7 @@ genExportInfo = do
     mkentry ::
       forall ns.
       (SingI ns) =>
-      S.AbsModulePath ->
+      AbsModulePath ->
       (Symbol, SymbolInfo ns) ->
       Sem r (Maybe (Symbol, NameSpaceEntryType ns))
     mkentry _scopePath (s, SymbolInfo {..}) =
@@ -1406,7 +1407,7 @@ checkFunctionDef fdef@FunctionDef {..} = do
             _functionDefNamePattern = Nothing
           }
     FunctionDefNamePattern p -> do
-      name' <- freshSymbol KNameFunction KNameFunction (WithLoc (getLoc p) "__pattern__")
+      name' <- freshSymbol KNameFunction KNameFunction False (WithLoc (getLoc p) "__pattern__")
       p' <- runReader PatternNamesKindFunctions (checkParsePatternAtom p)
       return
         FunctionDefNameScoped
@@ -1648,7 +1649,7 @@ checkTopModule m@Module {..} = checkedModule
       Sem s S.TopModulePath
     freshTopModulePath = do
       _nameId <- freshNameId
-      let _nameDefinedIn = S.topModulePathToAbsPath _modulePath
+      let _nameDefinedIn = topModulePathToAbsPath _modulePath
           _nameConcrete = _modulePath
           _nameDefined = getLoc (_modulePath ^. modulePathName)
           _nameKind = KNameTopModule
@@ -1661,6 +1662,7 @@ checkTopModule m@Module {..} = checkedModule
           _nameVerbatim = N.topModulePathToDottedPath _modulePath
           _nameIterator :: Maybe IteratorInfo
           _nameIterator = Nothing
+          _nameTop = True
           moduleName = S.Name' {..}
       registerName True moduleName
       return moduleName
@@ -2042,7 +2044,7 @@ reserveLocalModule Module {..} = do
 
 inheritScope :: (Members '[State Scope] r') => Symbol -> Sem r' ()
 inheritScope _modulePath = do
-  absPath <- (S.<.> _modulePath) <$> gets (^. scopePath)
+  absPath <- (`appendModulePath` _modulePath) <$> gets (^. scopePath)
   modify (set scopePath absPath)
   modify (over scopeSymbols (fmap inheritSymbol))
   modify (over scopeModuleSymbols (fmap inheritSymbol))

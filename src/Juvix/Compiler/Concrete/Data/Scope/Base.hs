@@ -11,7 +11,7 @@ newtype SymbolInfo (n :: NameSpace) = SymbolInfo
   { -- | This map must have at least one entry. If there are more than one
     -- entry, it means that the same symbol has been brought into scope from two
     -- different places
-    _symbolInfo :: HashMap S.AbsModulePath (NameSpaceEntryType n)
+    _symbolInfo :: HashMap AbsModulePath (NameSpaceEntryType n)
   }
 
 instance (SingI n) => Semigroup (SymbolInfo n) where
@@ -45,7 +45,7 @@ data Reserved = Reserved
   }
 
 data Scope = Scope
-  { _scopePath :: S.AbsModulePath,
+  { _scopePath :: AbsModulePath,
     _scopeFixities :: HashMap NameId Fixity,
     _scopeIterators :: HashMap NameId IteratorInfo,
     _scopeInScope :: InScope,
@@ -150,7 +150,7 @@ emptyInScope =
       _inScopeFixitySymbols = mempty
     }
 
-emptyScopeTop :: NameId -> S.AbsModulePath -> Scope
+emptyScopeTop :: NameId -> AbsModulePath -> Scope
 emptyScopeTop modId absPath =
   Scope
     { _scopePath = absPath,
