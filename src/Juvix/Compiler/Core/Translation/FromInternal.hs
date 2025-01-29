@@ -1010,14 +1010,20 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
       Internal.BuiltinAnomaSetToList -> do
         registerAxiomDef
           ( mkLambda'
-              mkDynamic'
-              (mkBuiltinApp' OpAnomaSetToList [mkVar' 0])
+              mkSmallUniv
+              ( mkLambda'
+                  mkDynamic'
+                  (mkBuiltinApp' OpAnomaSetToList [mkVar' 0])
+              )
           )
       Internal.BuiltinAnomaSetFromList -> do
         registerAxiomDef
           ( mkLambda'
-              mkDynamic'
-              (mkBuiltinApp' OpAnomaSetFromList [mkVar' 0])
+              mkSmallUniv
+              ( mkLambda'
+                  mkDynamic'
+                  (mkBuiltinApp' OpAnomaSetFromList [mkVar' 0])
+              )
           )
       Internal.BuiltinPoseidon -> do
         psName <- getPoseidonStateName
