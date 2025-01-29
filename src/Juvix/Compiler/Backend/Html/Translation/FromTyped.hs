@@ -17,6 +17,7 @@ import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Data.CodeReference
 import Juvix.Extra.Assets
 import Juvix.Prelude hiding (Tree)
 import Juvix.Prelude.Pretty
@@ -609,25 +610,27 @@ defHeader name sig mjudoc = do
     $ funHeader'
       <> judoc'
   where
-    uid :: NameId
-    uid = name ^. S.nameId
-
-    tmp :: TopModulePath
-    tmp = name ^. S.nameDefinedIn . S.absTopModulePath
-
     judoc :: Sem r Html
     judoc = do
       judoc' <- goJudocMay mjudoc
       return (Html.div ! Attr.class_ "doc" $ judoc')
 
+    loc :: TopCodeReference
+    loc =
+      TopCodeReference
+        { _topCodeReferenceAbsModule = name ^. S.nameDefinedIn,
+          _topCodeReferenceVerbatimSymbol = name ^. S.nameVerbatim
+        }
+
     functionHeader :: Sem r Html
     functionHeader = do
-      sourceLink' <- sourceAndSelfLink tmp uid
+      sourceLink' <- sourceAndSelfLink (CodeReferenceLocTop loc)
       return $ noDefHeader (sig <> sourceLink')
 
-sourceAndSelfLink :: (Members '[Reader HtmlOptions] r) => TopModulePath -> NameId -> Sem r Html
-sourceAndSelfLink tmp name = do
-  ref' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef tmp (Just name))
+sourceAndSelfLink :: (Members '[Reader HtmlOptions] r) => CodeReferenceLoc -> Sem r Html
+sourceAndSelfLink loc = do
+  ref' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef (loc ^. codeReferenceLocTopModule) (Just loc))
+  attrId <- nameIdAttr loc
   return $
     ( a
         ! Attr.href ref'
@@ -635,13 +638,7 @@ sourceAndSelfLink tmp name = do
         $ "Source"
     )
       <> ( a
-             ! Attr.href (selfLinkName name)
+             ! Attr.href ("#" <> attrId)
              ! Attr.class_ "selflink"
              $ "#"
          )
-
-tagIden :: (IsString c) => NameId -> c
-tagIden = fromText . prettyText
-
-selfLinkName :: (IsString c) => NameId -> c
-selfLinkName x = fromText $ "#" <> tagIden x

@@ -404,7 +404,7 @@ nameIdAttrRef tp mid = do
   prefixUrl <- fromText <$> asks (^. htmlOptionsUrlPrefix)
   path <- fromString . toFilePath <$> moduleDocRelativePath tp
   noPath <- asks (^. htmlOptionsNoPath)
-  let prefix = prefixUrl <> if noPath then "" else path
+  let prefix = prefixUrl <> if noPath then mempty else path
   attr <- case mid of
     Nothing -> return mempty
     Just uid -> do
