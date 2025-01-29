@@ -185,6 +185,10 @@ tests =
       $(mkRelDir "Internal")
       $(mkRelFile "Lambda.juvix"),
     posTest
+      "AnomaSet"
+      $(mkRelDir "Internal")
+      $(mkRelFile "AnomaSet.juvix"),
+    posTest
       "Simple mutual inference"
       $(mkRelDir "Internal")
       $(mkRelFile "Mutual.juvix"),
