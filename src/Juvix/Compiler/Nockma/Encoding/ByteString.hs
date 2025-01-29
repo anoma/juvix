@@ -5,6 +5,7 @@ import Data.Bit (Bit)
 import Data.Bit qualified as Bit
 import Data.Bits
 import Data.ByteString qualified as BS
+import Data.ByteString.Base64 qualified as Base64
 import Data.ByteString.Builder qualified as BS
 import Juvix.Compiler.Nockma.Encoding.Base
 import Juvix.Compiler.Nockma.Encoding.Effect.BitReader
@@ -31,6 +32,9 @@ byteStringToNatural = fromInteger . byteStringToIntegerLE
 
 naturalToByteString :: Natural -> ByteString
 naturalToByteString = naturalToByteStringLE
+
+naturalToBase64 :: Natural -> Text
+naturalToBase64 = decodeUtf8 . Base64.encode . naturalToByteString
 
 byteStringToIntegerLE :: ByteString -> Integer
 byteStringToIntegerLE = BS.foldr (\b acc -> acc `shiftL` 8 .|. fromIntegral b) 0

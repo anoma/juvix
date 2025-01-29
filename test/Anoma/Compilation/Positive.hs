@@ -102,7 +102,7 @@ mkAnomaNodeTest a@AnomaTest {..} =
           let rinput =
                 RunNockmaInput
                   { _runNockmaProgram = program,
-                    _runNockmaArgs = _anomaArgs
+                    _runNockmaArgs = map RunNockmaArgTerm _anomaArgs
                   }
           out <- runNockma rinput
           runM

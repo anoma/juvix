@@ -46,7 +46,7 @@ proveAndSubmit program proveArgs = do
     runNockma
       RunNockmaInput
         { _runNockmaProgram = program,
-          _runNockmaArgs = proveArgs
+          _runNockmaArgs = map RunNockmaArgTerm proveArgs
         }
   step "Submitting transaction candidate"
   addTransaction
