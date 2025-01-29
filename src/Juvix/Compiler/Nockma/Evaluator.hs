@@ -177,7 +177,19 @@ eval initstack initterm = ignoreOpCounts (evalProfile initstack initterm)
 
 evalProfile ::
   forall s a.
-  (Hashable a, Integral a, Members '[Reader (Storage a), State OpCounts, Reader EvalOptions, Output (Term a), Error (NockEvalError a), Error (ErrNockNatural a)] s, NockNatural a) =>
+  ( Hashable a,
+    Integral a,
+    Members
+      '[ Reader (Storage a),
+         State OpCounts,
+         Reader EvalOptions,
+         Output (Term a),
+         Error (NockEvalError a),
+         Error (ErrNockNatural a)
+       ]
+      s,
+    NockNatural a
+  ) =>
   Term a ->
   Term a ->
   Sem s (Term a)
@@ -284,7 +296,16 @@ evalProfile inistack initerm =
                 TermCell (Cell g (TermAtom n)) -> goRandomNextBytes n g
                 _ -> error "StdlibRandomNextBytes must be called with a cell containing an atom and a term"
               StdlibRandomSplit -> goRandomSplit args'
+              StdlibAnomaSetFromList -> return (goAnomaSetFromList args')
+              StdlibAnomaSetToList -> return args'
           where
+            goAnomaSetFromList :: Term a -> Term a
+            goAnomaSetFromList arg =
+              foldr
+                (\t acc -> TermCell (Cell' t acc emptyCellInfo))
+                (TermAtom nockNil)
+                (nubHashable (checkTermToList arg))
+
             serializeSMGen :: R.SMGen -> Term a
             serializeSMGen s =
               let (seed, gamma) = R.unseedSMGen s

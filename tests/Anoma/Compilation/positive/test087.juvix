@@ -1,0 +1,14 @@
+module test087;
+
+import Stdlib.Prelude open;
+
+builtin anoma-set
+axiom AnomaSet : Type -> Type;
+
+builtin anoma-set-to-list
+axiom anomaSetToList {A} (set : AnomaSet A) : List A;
+
+builtin anoma-set-from-list
+axiom anomaSetFromList {A} (list : List A) : AnomaSet A;
+
+main (xs : List Nat) : List Nat := anomaSetToList (anomaSetFromList xs);

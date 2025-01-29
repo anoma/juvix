@@ -56,6 +56,8 @@ data BuiltinOp
   | OpAnomaRandomSplit
   | OpAnomaIsCommitment
   | OpAnomaIsNullifier
+  | OpAnomaSetToList
+  | OpAnomaSetFromList
   | OpPoseidonHash
   | OpEc
   | OpRandomEcPoint
@@ -146,6 +148,8 @@ builtinOpArgsNum = \case
   OpAnomaRandomSplit -> 1
   OpAnomaIsCommitment -> 1
   OpAnomaIsNullifier -> 1
+  OpAnomaSetToList -> 1
+  OpAnomaSetFromList -> 1
   OpPoseidonHash -> 1
   OpEc -> 3
   OpRandomEcPoint -> 0
@@ -213,6 +217,8 @@ builtinIsFoldable = \case
   OpAnomaRandomSplit -> False
   OpAnomaIsCommitment -> False
   OpAnomaIsNullifier -> False
+  OpAnomaSetToList -> False
+  OpAnomaSetFromList -> False
   OpPoseidonHash -> False
   OpEc -> False
   OpRandomEcPoint -> False
@@ -252,7 +258,9 @@ builtinsAnoma =
     OpAnomaSubDelta,
     OpAnomaRandomGeneratorInit,
     OpAnomaRandomNextBytes,
-    OpAnomaRandomSplit
+    OpAnomaRandomSplit,
+    OpAnomaSetToList,
+    OpAnomaSetFromList
   ]
 
 builtinsUInt8 :: [BuiltinOp]

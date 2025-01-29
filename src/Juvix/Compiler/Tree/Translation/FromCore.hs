@@ -75,6 +75,8 @@ toTreeOp = \case
   Core.OpAnomaRandomSplit -> TreeAnomaOp OpAnomaRandomSplit
   Core.OpAnomaIsCommitment -> TreeAnomaOp OpAnomaIsCommitment
   Core.OpAnomaIsNullifier -> TreeAnomaOp OpAnomaIsNullifier
+  Core.OpAnomaSetToList -> TreeAnomaOp OpAnomaSetToList
+  Core.OpAnomaSetFromList -> TreeAnomaOp OpAnomaSetFromList
   -- TreeCairoOp
   Core.OpPoseidonHash -> TreeCairoOp OpCairoPoseidon
   Core.OpEc -> TreeCairoOp OpCairoEc

@@ -244,6 +244,8 @@ geval opts herr tab env0 = eval' env0
       OpAnomaRandomSplit -> normalizeOrUnsupported opcode
       OpAnomaIsCommitment -> normalizeOrUnsupported opcode
       OpAnomaIsNullifier -> normalizeOrUnsupported opcode
+      OpAnomaSetToList -> normalizeOrUnsupported opcode
+      OpAnomaSetFromList -> normalizeOrUnsupported opcode
       OpPoseidonHash -> poseidonHashOp
       OpEc -> ecOp
       OpRandomEcPoint -> randomEcPointOp

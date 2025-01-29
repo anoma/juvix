@@ -104,6 +104,12 @@ anomaLibPath = \case
     --
     -- =>  rm  !=  |=  [rng=*]  split:`_og`rng
     StdlibRandomSplit -> [nock| [8 [1 0] [1 7 [0 6] 9 21 0 1] 0 1] |]
+    -- obtained from the urbit dojo using:
+    --
+    -- =>  rm  !=  |=  a=(set)  ~(tap in a)
+    StdlibAnomaSetToList -> [nock| [8 [1 0] [1 8 [9 21 0 31] 9 186 10 [6 0 14] 0 2] 0 1] |]
+    -- called silt in hoon
+    StdlibAnomaSetFromList -> [nock| [9 22 0 7] |]
   AnomaLibFunction (AnomaRmFunction f) -> case f of
     RmCommit -> [nock| [9 94 0 1] |]
     RmNullify -> [nock| [9 350 0 1] |]

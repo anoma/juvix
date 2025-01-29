@@ -233,6 +233,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   84 -> ClassWorking
   85 -> ClassWorking
   86 -> ClassExpectedFail
+  87 -> ClassWorking
   _ -> error "non-exhaustive test classification"
 
 allTests :: TestTree
@@ -1041,5 +1042,15 @@ allTests =
               [nock| [3 10689019] |],
               [nock| [2 20159] |],
               [nock| [4 4187579825] |]
-            ]
+            ],
+        let testList :: Term Natural = [nock| [1 2 nil] |]
+            expectedOutput :: Term Natural = [nock| [2 1 nil] |]
+         in mkAnomaTest
+              87
+              AnomaTestModeNodeOnly
+              "AnomaSet"
+              $(mkRelDir ".")
+              $(mkRelFile "test087.juvix")
+              [testList]
+              $ checkOutput [expectedOutput]
       ]

@@ -601,6 +601,8 @@ builtinAppExpr varsNum vars = do
       <|> (kw kwAnomaRandomSplit $> OpAnomaRandomSplit)
       <|> (kw kwAnomaIsCommitment $> OpAnomaIsCommitment)
       <|> (kw kwAnomaIsNullifier $> OpAnomaIsNullifier)
+      <|> (kw kwAnomaSetToList $> OpAnomaSetToList)
+      <|> (kw kwAnomaSetFromList $> OpAnomaSetFromList)
 
   args <- P.many (atom varsNum vars)
   return $ mkBuiltinApp' op args

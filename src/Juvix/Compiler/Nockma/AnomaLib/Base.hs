@@ -37,6 +37,8 @@ data StdlibFunction
   | StdlibRandomInitGen
   | StdlibRandomNextBytes
   | StdlibRandomSplit
+  | StdlibAnomaSetToList
+  | StdlibAnomaSetFromList
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable StdlibFunction
@@ -116,6 +118,8 @@ instance Pretty StdlibFunction where
     StdlibRandomInitGen -> "random-init"
     StdlibRandomNextBytes -> "random-next-bytes"
     StdlibRandomSplit -> "random-split"
+    StdlibAnomaSetToList -> "set-to-list"
+    StdlibAnomaSetFromList -> "set-from-list"
 
 instance Pretty RmFunction where
   pretty = \case

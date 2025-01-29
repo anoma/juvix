@@ -24,6 +24,8 @@ import Juvix.Data.Keyword.All
     kwAnomaResourceDelta,
     kwAnomaResourceKind,
     kwAnomaResourceNullifier,
+    kwAnomaSetFromList,
+    kwAnomaSetToList,
     kwAnomaSha256,
     kwAnomaSign,
     kwAnomaSignDetached,

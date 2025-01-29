@@ -563,6 +563,8 @@ compile = \case
         Tree.OpAnomaRandomSplit -> callStdlib StdlibRandomSplit args
         Tree.OpAnomaIsCommitment -> callRm RmIsCommitment args
         Tree.OpAnomaIsNullifier -> callRm RmIsNullifier args
+        Tree.OpAnomaSetToList -> goAnomaSetToList args
+        Tree.OpAnomaSetFromList -> goAnomaSetFromList args
 
     goByteArrayOp :: Tree.NodeByteArray -> Sem r (Term Natural)
     goByteArrayOp Tree.NodeByteArray {..} = do
@@ -679,6 +681,12 @@ compile = \case
     goAnomaByteArrayFromAnomaContents = \case
       [len, contents] -> mkByteArray len contents
       _ -> impossible
+
+    goAnomaSetToList :: [Term Natural] -> Sem r (Term Natural)
+    goAnomaSetToList arg = callStdlib StdlibAnomaSetToList arg
+
+    goAnomaSetFromList :: [Term Natural] -> Sem r (Term Natural)
+    goAnomaSetFromList arg = callStdlib StdlibAnomaSetFromList arg
 
     goAnomaSha256 :: [Term Natural] -> Sem r (Term Natural)
     goAnomaSha256 arg = do
