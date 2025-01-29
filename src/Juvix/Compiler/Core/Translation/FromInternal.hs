@@ -283,19 +283,19 @@ goMutualBlock (Internal.MutualBlock m) = preMutual m >>= goMutual
             | exprIsType (a ^. Internal.axiomType) -> True
             | otherwise -> False
             where
-                exprIsType :: Internal.Expression -> Bool
-                exprIsType = \case
-                  Internal.ExpressionUniverse {} -> True
-                  Internal.ExpressionFunction (Internal.Function l r) -> exprIsType (l ^. Internal.paramType) && exprIsType r
-                  Internal.ExpressionIden {} -> False
-                  Internal.ExpressionApplication {} -> False
-                  Internal.ExpressionLiteral {} -> False
-                  Internal.ExpressionHole {} -> False
-                  Internal.ExpressionInstanceHole {} -> False
-                  Internal.ExpressionLet {} -> False
-                  Internal.ExpressionSimpleLambda {} -> False
-                  Internal.ExpressionLambda {} -> False
-                  Internal.ExpressionCase {} -> False
+              exprIsType :: Internal.Expression -> Bool
+              exprIsType = \case
+                Internal.ExpressionUniverse {} -> True
+                Internal.ExpressionFunction (Internal.Function l r) -> exprIsType (l ^. Internal.paramType) && exprIsType r
+                Internal.ExpressionIden {} -> False
+                Internal.ExpressionApplication {} -> False
+                Internal.ExpressionLiteral {} -> False
+                Internal.ExpressionHole {} -> False
+                Internal.ExpressionInstanceHole {} -> False
+                Internal.ExpressionLet {} -> False
+                Internal.ExpressionSimpleLambda {} -> False
+                Internal.ExpressionLambda {} -> False
+                Internal.ExpressionCase {} -> False
 
         step :: Internal.MutualStatement -> Sem (State PreMutual ': r) ()
         step = \case
