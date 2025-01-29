@@ -32,26 +32,31 @@ runNock ::
   AppPath File ->
   [ProveArg] ->
   Sem r Anoma.RunNockmaResult
-runNock programFile pargs = do
-  argsfile <- fromAppPathFile programFile
-  parsedTerm <- runAppError @JuvixError (Nockma.cueJammedFileOrPretty argsfile)
-  args <- mapM proveArgToTerm pargs
+runNock programAppPath pargs = do
+  programFile <- fromAppPathFile programAppPath
+  parsedProgram <- runAppError @JuvixError (Nockma.cueJammedFileOrPretty programFile)
+  args <- mapM prepareArg pargs
   Anoma.runNockma
     Anoma.RunNockmaInput
-      { _runNockmaProgram = parsedTerm,
+      { _runNockmaProgram = parsedProgram,
         _runNockmaArgs = args
       }
 
-proveArgToTerm :: forall r. (Members '[Error SimpleError, Files, App] r) => ProveArg -> Sem r (Term Natural)
-proveArgToTerm = \case
-  ProveArgNat n -> return (toNock n)
-  ProveArgBytes n -> fromAppPathFile n >>= readFileBS' >>= fromBytes
+prepareArg :: forall r. (Members '[Error SimpleError, Files, App] r) => ProveArg -> Sem r Anoma.RunNockmaArg
+prepareArg = \case
+  ProveArgNat n -> return (Anoma.RunNockmaArgTerm (toNock n))
+  ProveArgBytes n -> do
+    bs <- readAppFile n
+    Anoma.RunNockmaArgJammed <$> fromBytes bs
   ProveArgBase64 n -> do
-    bs <- Base64.decodeLenient <$> (fromAppPathFile n >>= readFileBS')
-    fromBytes bs
+    bs <- readAppFile n
+    Anoma.RunNockmaArgJammed <$> fromBytes (Base64.decodeLenient bs)
   where
-    fromBytes :: ByteString -> Sem r (Term Natural)
-    fromBytes b = TermAtom <$> asSimpleErrorShow @NockNaturalNaturalError (byteStringToAtom @Natural b)
+    fromBytes :: ByteString -> Sem r (Atom Natural)
+    fromBytes b = asSimpleErrorShow @NockNaturalNaturalError (byteStringToAtom @Natural b)
+
+    readAppFile :: AppPath File -> Sem r ByteString
+    readAppFile f = fromAppPathFile f >>= readFileBS'
 
 -- | Calls Anoma.Protobuf.Mempool.AddTransaction
 addTransaction ::

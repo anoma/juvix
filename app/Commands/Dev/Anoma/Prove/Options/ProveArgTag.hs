@@ -34,8 +34,8 @@ proveArgTagHelp = itemize (tagHelp <$> allElements)
       let mvar, explain :: AnsiDoc
           (mvar, explain) = first sty $ case t of
             ProveArgTagNat -> ("NATURAL", "is passed verbatim as a nockma atom")
-            ProveArgTagBase64 -> ("FILE", "is a file with a base64 encoded nockma atom")
-            ProveArgTagBytes -> ("FILE", "is a file with a byte encoded nockma atom")
+            ProveArgTagBase64 -> ("FILE", "is a file containing a base64 encoded nockma atom that represents a jammed noun")
+            ProveArgTagBytes -> ("FILE", "is a file containing bytes of a nockma atom that represents a jammed noun")
           sty = annotate (bold <> colorDull Blue)
           tagvar :: AnsiDoc
           tagvar = sty (show t <> ":" <> mvar)

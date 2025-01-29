@@ -13,9 +13,16 @@ import Juvix.Prelude
 import Juvix.Prelude.Aeson (Value)
 import Juvix.Prelude.Aeson qualified as Aeson
 
+-- | An argument to a program sent to the RunNock endpoint
+data RunNockmaArg
+  = -- | An argument that must be jammed before it is sent
+    RunNockmaArgTerm (Nockma.Term Natural)
+  | -- | An argument that is already jammed and must not be jammed again before it is sent
+    RunNockmaArgJammed (Nockma.Atom Natural)
+
 data RunNockmaInput = RunNockmaInput
   { _runNockmaProgram :: Nockma.Term Natural,
-    _runNockmaArgs :: [Nockma.Term Natural]
+    _runNockmaArgs :: [RunNockmaArg]
   }
 
 data RunNockmaResult = RunNockmaResult
@@ -33,7 +40,7 @@ runNockma ::
   Sem r RunNockmaResult
 runNockma i = do
   let prog' = encodeJam64 (i ^. runNockmaProgram)
-      args = map (NockInputJammed . encodeJam64) (i ^. runNockmaArgs)
+      args = map prepareArgument (i ^. runNockmaArgs)
       msg =
         RunNock
           { _runNockJammedProgram = prog',
@@ -54,3 +61,9 @@ runNockma i = do
             _runNockmaTraces = traces
           }
     ResponseError err -> throw (SimpleError (mkAnsiText (err ^. errorError)))
+  where
+    prepareArgument :: RunNockmaArg -> NockInput
+    prepareArgument =
+      NockInputJammed . \case
+        RunNockmaArgTerm t -> encodeJam64 t
+        RunNockmaArgJammed a -> naturalToBase64 (a ^. Nockma.atom)
