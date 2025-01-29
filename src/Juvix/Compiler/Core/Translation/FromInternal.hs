@@ -1,3 +1,5 @@
+{-# LANGUAGE ImpredicativeTypes #-}
+
 module Juvix.Compiler.Core.Translation.FromInternal where
 
 import Data.HashMap.Strict qualified as HashMap
@@ -39,6 +41,13 @@ data PreMutual = PreMutual
   { _preInductives :: [PreInductiveDef],
     _preFunctions :: [PreFunctionDef]
   }
+
+emptyPreMutual :: PreMutual
+emptyPreMutual =
+  PreMutual
+    { _preInductives = [],
+      _preFunctions = []
+    }
 
 makeLenses ''PreMutual
 
@@ -260,18 +269,16 @@ goMutualBlock (Internal.MutualBlock m) = preMutual m >>= goMutual
   where
     preMutual :: NonEmpty Internal.MutualStatement -> Sem r PreMutual
     preMutual stmts = do
-      let (inds, funs) = partition isInd (toList stmts)
+      let (inds, funs) = partition isTypDef (toList stmts)
       -- types must be pre-registered first to avoid crashing on unknown types
       -- when pre-registering functions/axioms
-      execState (PreMutual [] []) $ mapM_ step (inds ++ funs)
+      execState emptyPreMutual $ mapM_ step (inds ++ funs)
       where
-        isInd :: Internal.MutualStatement -> Bool
-        isInd = \case
+        isTypDef :: Internal.MutualStatement -> Bool
+        isTypDef = \case
           Internal.StatementInductive {} -> True
           Internal.StatementFunction {} -> False
-          Internal.StatementAxiom Internal.AxiomDef {..}
-            | Internal.ExpressionUniverse {} <- _axiomType -> True
-            | otherwise -> False
+          Internal.StatementAxiom a -> isJust (builtinInductive a)
 
         step :: Internal.MutualStatement -> Sem (State PreMutual ': r) ()
         step = \case
@@ -599,6 +606,7 @@ goLet l = goClauses (toList (l ^. Internal.letClauses))
                   info = setInfoPragma pragmas mempty
                   body = modifyInfo (setInfoPragma pragmas) funBody
               return $ mkLet info (Binder name (Just loc) funTy) body rest
+
           goMutual :: Internal.MutualBlockLet -> Sem r Node
           goMutual (Internal.MutualBlockLet funs) = do
             let lfuns = toList funs
@@ -613,82 +621,79 @@ goLet l = goClauses (toList (l ^. Internal.letClauses))
               rest <- goClauses cs
               return (mkLetRec (setInfoPragmas pragmas mempty) items rest)
 
-goAxiomInductive ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen] r) =>
-  Internal.AxiomDef ->
-  Sem r ()
-goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
+builtinInductive :: Internal.AxiomDef -> Maybe (forall r. (Members '[InfoTableBuilder] r) => Sem r ())
+builtinInductive a =
+  case a ^. Internal.axiomBuiltin of
+    Nothing -> Nothing
+    Just b ->
+      case b of
+        Internal.BuiltinNatPrint -> Nothing
+        Internal.BuiltinStringPrint -> Nothing
+        Internal.BuiltinBoolPrint -> Nothing
+        Internal.BuiltinIOSequence -> Nothing
+        Internal.BuiltinIOReadline -> Nothing
+        Internal.BuiltinField -> Just (registerInductiveAxiom (Just BuiltinField) [])
+        Internal.BuiltinString -> Just (registerInductiveAxiom (Just BuiltinString) [])
+        Internal.BuiltinIO -> Just (registerInductiveAxiom (Just BuiltinIO) builtinIOConstrs)
+        Internal.BuiltinTrace -> Nothing
+        Internal.BuiltinFail -> Nothing
+        Internal.BuiltinStringConcat -> Nothing
+        Internal.BuiltinStringEq -> Nothing
+        Internal.BuiltinStringToNat -> Nothing
+        Internal.BuiltinNatToString -> Nothing
+        Internal.BuiltinIntToString -> Nothing
+        Internal.BuiltinIntPrint -> Nothing
+        Internal.BuiltinFieldEq -> Nothing
+        Internal.BuiltinFieldAdd -> Nothing
+        Internal.BuiltinFieldSub -> Nothing
+        Internal.BuiltinFieldMul -> Nothing
+        Internal.BuiltinFieldDiv -> Nothing
+        Internal.BuiltinFieldFromInt -> Nothing
+        Internal.BuiltinFieldToNat -> Nothing
+        Internal.BuiltinAnomaGet -> Nothing
+        Internal.BuiltinAnomaEncode -> Nothing
+        Internal.BuiltinAnomaDecode -> Nothing
+        Internal.BuiltinAnomaVerifyDetached -> Nothing
+        Internal.BuiltinAnomaSign -> Nothing
+        Internal.BuiltinAnomaSignDetached -> Nothing
+        Internal.BuiltinAnomaVerifyWithMessage -> Nothing
+        Internal.BuiltinAnomaByteArrayToAnomaContents -> Nothing
+        Internal.BuiltinAnomaByteArrayFromAnomaContents -> Nothing
+        Internal.BuiltinAnomaSha256 -> Nothing
+        Internal.BuiltinAnomaDelta -> Just (registerInductiveAxiom (Just BuiltinAnomaDelta) [])
+        Internal.BuiltinAnomaKind -> Just (registerInductiveAxiom (Just BuiltinAnomaKind) [])
+        Internal.BuiltinAnomaResourceCommitment -> Nothing
+        Internal.BuiltinAnomaResourceNullifier -> Nothing
+        Internal.BuiltinAnomaResourceDelta -> Nothing
+        Internal.BuiltinAnomaResourceKind -> Nothing
+        Internal.BuiltinAnomaActionDelta -> Nothing
+        Internal.BuiltinAnomaActionsDelta -> Nothing
+        Internal.BuiltinAnomaProveDelta -> Nothing
+        Internal.BuiltinAnomaProveAction -> Nothing
+        Internal.BuiltinAnomaZeroDelta -> Nothing
+        Internal.BuiltinAnomaAddDelta -> Nothing
+        Internal.BuiltinAnomaSubDelta -> Nothing
+        Internal.BuiltinAnomaRandomGenerator -> Just (registerInductiveAxiom (Just BuiltinAnomaRandomGenerator) [])
+        Internal.BuiltinAnomaRandomGeneratorInit -> Nothing
+        Internal.BuiltinAnomaRandomNextBytes -> Nothing
+        Internal.BuiltinAnomaRandomSplit -> Nothing
+        Internal.BuiltinAnomaIsCommitment -> Nothing
+        Internal.BuiltinAnomaIsNullifier -> Nothing
+        Internal.BuiltinAnomaSet -> Just (registerInductiveAxiom (Just BuiltinAnomaSet) [])
+        Internal.BuiltinAnomaSetToList -> Nothing
+        Internal.BuiltinAnomaSetFromList -> Nothing
+        Internal.BuiltinPoseidon -> Nothing
+        Internal.BuiltinEcOp -> Nothing
+        Internal.BuiltinRandomEcPoint -> Nothing
+        Internal.BuiltinByte -> Just (registerInductiveAxiom (Just BuiltinByte) [])
+        Internal.BuiltinByteEq -> Nothing
+        Internal.BuiltinByteToNat -> Nothing
+        Internal.BuiltinByteFromNat -> Nothing
+        Internal.BuiltinByteArray -> Just (registerInductiveAxiom (Just BuiltinByteArray) [])
+        Internal.BuiltinByteArrayFromListByte -> Nothing
+        Internal.BuiltinByteArrayLength -> Nothing
   where
-    builtinInductive :: Internal.BuiltinAxiom -> Sem r ()
-    builtinInductive = \case
-      Internal.BuiltinNatPrint -> return ()
-      Internal.BuiltinStringPrint -> return ()
-      Internal.BuiltinBoolPrint -> return ()
-      Internal.BuiltinIOSequence -> return ()
-      Internal.BuiltinIOReadline -> return ()
-      Internal.BuiltinField -> registerInductiveAxiom (Just BuiltinField) []
-      Internal.BuiltinString -> registerInductiveAxiom (Just BuiltinString) []
-      Internal.BuiltinIO -> registerInductiveAxiom (Just BuiltinIO) builtinIOConstrs
-      Internal.BuiltinTrace -> return ()
-      Internal.BuiltinFail -> return ()
-      Internal.BuiltinStringConcat -> return ()
-      Internal.BuiltinStringEq -> return ()
-      Internal.BuiltinStringToNat -> return ()
-      Internal.BuiltinNatToString -> return ()
-      Internal.BuiltinIntToString -> return ()
-      Internal.BuiltinIntPrint -> return ()
-      Internal.BuiltinFieldEq -> return ()
-      Internal.BuiltinFieldAdd -> return ()
-      Internal.BuiltinFieldSub -> return ()
-      Internal.BuiltinFieldMul -> return ()
-      Internal.BuiltinFieldDiv -> return ()
-      Internal.BuiltinFieldFromInt -> return ()
-      Internal.BuiltinFieldToNat -> return ()
-      Internal.BuiltinAnomaGet -> return ()
-      Internal.BuiltinAnomaEncode -> return ()
-      Internal.BuiltinAnomaDecode -> return ()
-      Internal.BuiltinAnomaVerifyDetached -> return ()
-      Internal.BuiltinAnomaSign -> return ()
-      Internal.BuiltinAnomaSignDetached -> return ()
-      Internal.BuiltinAnomaVerifyWithMessage -> return ()
-      Internal.BuiltinAnomaByteArrayToAnomaContents -> return ()
-      Internal.BuiltinAnomaByteArrayFromAnomaContents -> return ()
-      Internal.BuiltinAnomaSha256 -> return ()
-      Internal.BuiltinAnomaDelta -> registerInductiveAxiom (Just BuiltinAnomaDelta) []
-      Internal.BuiltinAnomaKind -> registerInductiveAxiom (Just BuiltinAnomaKind) []
-      Internal.BuiltinAnomaResourceCommitment -> return ()
-      Internal.BuiltinAnomaResourceNullifier -> return ()
-      Internal.BuiltinAnomaResourceDelta -> return ()
-      Internal.BuiltinAnomaResourceKind -> return ()
-      Internal.BuiltinAnomaActionDelta -> return ()
-      Internal.BuiltinAnomaActionsDelta -> return ()
-      Internal.BuiltinAnomaProveDelta -> return ()
-      Internal.BuiltinAnomaProveAction -> return ()
-      Internal.BuiltinAnomaZeroDelta -> return ()
-      Internal.BuiltinAnomaAddDelta -> return ()
-      Internal.BuiltinAnomaSubDelta -> return ()
-      Internal.BuiltinAnomaRandomGenerator -> registerInductiveAxiom (Just BuiltinAnomaRandomGenerator) []
-      Internal.BuiltinAnomaRandomGeneratorInit -> return ()
-      Internal.BuiltinAnomaRandomNextBytes -> return ()
-      Internal.BuiltinAnomaRandomSplit -> return ()
-      Internal.BuiltinAnomaIsCommitment -> return ()
-      Internal.BuiltinAnomaIsNullifier -> return ()
-      Internal.BuiltinAnomaSet -> registerInductiveAxiom (Just BuiltinAnomaSet) []
-      Internal.BuiltinAnomaSetToList -> return ()
-      Internal.BuiltinAnomaSetFromList -> return ()
-      Internal.BuiltinPoseidon -> return ()
-      Internal.BuiltinEcOp -> return ()
-      Internal.BuiltinRandomEcPoint -> return ()
-      Internal.BuiltinByte -> registerInductiveAxiom (Just BuiltinByte) []
-      Internal.BuiltinByteEq -> return ()
-      Internal.BuiltinByteToNat -> return ()
-      Internal.BuiltinByteFromNat -> return ()
-      Internal.BuiltinByteArray -> registerInductiveAxiom (Just BuiltinByteArray) []
-      Internal.BuiltinByteArrayFromListByte -> return ()
-      Internal.BuiltinByteArrayLength -> return ()
-
-    registerInductiveAxiom :: Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
+    registerInductiveAxiom :: forall r. (Members '[InfoTableBuilder] r) => Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
     registerInductiveAxiom ax ctrs = do
       sym <- freshSymbol
       let name = a ^. Internal.axiomName . nameText
@@ -709,6 +714,13 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
               }
       registerInductive (mkIdentIndex (a ^. Internal.axiomName)) info
       mapM_ (\ci -> registerConstructor (ci ^. constructorName) ci) ctrs'
+
+goAxiomInductive ::
+  forall r.
+  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen] r) =>
+  Internal.AxiomDef ->
+  Sem r ()
+goAxiomInductive a = whenJust (builtinInductive a) (\m -> m)
 
 fromTopIndex :: Sem (Reader IndexTable ': r) a -> Sem r a
 fromTopIndex = runReader initIndexTable
