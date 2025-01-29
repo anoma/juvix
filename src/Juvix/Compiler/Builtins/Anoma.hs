@@ -268,11 +268,34 @@ checkAnomaIsNullifier f = do
   unless (f ^. axiomType == (nat_ --> bool_)) $
     builtinsErrorText l "isNullifier must be of type Nat -> Bool"
 
-checkAnomaSet :: AxiomDef -> Sem r ()
-checkAnomaSet _ = return ()
+checkAnomaSet :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
+checkAnomaSet t = do
+  let ty = t ^. axiomType
+      l = getLoc t
+      u = ExpressionUniverse smallUniverseNoLoc
+  unless (ty == (u --> u)) $
+    builtinsErrorText l "AnomaSet should have type: Type -> Type"
 
-checkAnomaSetToList :: AxiomDef -> Sem r ()
-checkAnomaSetToList _ = return ()
+checkAnomaSetToList :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkAnomaSetToList f = do
+  let ty = f ^. axiomType
+      u = ExpressionUniverse smallUniverseNoLoc
+      l = getLoc f
+  elemT <- freshVar l "elemT"
+  list_ <- getBuiltinNameScoper l BuiltinList
+  anomaSet <- getBuiltinNameScoper l BuiltinAnomaSet
+  let freeVars = HashSet.fromList [elemT]
+  unless ((ty ==% (u <>--> anomaSet @@ elemT --> list_ @@ elemT)) freeVars) $
+    builtinsErrorText l "anomaSetToList should have type: {A : Type} -> AnomaSet A -> List A"
 
-checkAnomaSetFromList :: AxiomDef -> Sem r ()
-checkAnomaSetFromList _ = return ()
+checkAnomaSetFromList :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkAnomaSetFromList f = do
+  let ty = f ^. axiomType
+      u = ExpressionUniverse smallUniverseNoLoc
+      l = getLoc f
+  elemT <- freshVar l "elemT"
+  list_ <- getBuiltinNameScoper l BuiltinList
+  anomaSet <- getBuiltinNameScoper l BuiltinAnomaSet
+  let freeVars = HashSet.fromList [elemT]
+  unless ((ty ==% (u <>--> list_ @@ elemT --> anomaSet @@ elemT)) freeVars) $
+    builtinsErrorText l "anomaSetFromList should have type: {A : Type} -> List A -> AnomaSet A"
