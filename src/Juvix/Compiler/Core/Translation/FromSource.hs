@@ -108,7 +108,7 @@ statementBuiltin ::
   (Members '[Error CoreError, InfoTableBuilder] r) =>
   ParsecS r ()
 statementBuiltin = do
-  kref <- kw' kwBuiltin
+  ((), i) <- interval $ kw kwBuiltin
   sym <- statementDef
   ii <- lift $ getIdentifierInfo sym
   if
@@ -130,7 +130,7 @@ statementBuiltin = do
           lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatLt}
       | ii ^. identifierName == Str.natEq ->
           lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatEq}
-      | otherwise -> throwCoreError (kref ^. keywordRefInterval) "unrecorgnized builtin definition"
+      | otherwise -> throwCoreError i "unrecorgnized builtin definition"
 
 statementDef ::
   (Members '[Error CoreError, InfoTableBuilder] r) =>
