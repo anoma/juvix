@@ -108,7 +108,7 @@ tests:
           - dot-all
     stdout:
       matches: |
-        .*href="HelloWorld.html#XYZHelloWorld:[0-9]+".*
+        .*href="HelloWorld.html#XYZHelloWorld".*
     exit-status: 0
 
   - name: html-no-path
@@ -122,7 +122,7 @@ tests:
         cat html/HelloWorld.html
     stdout:
       matches: |
-        .*href="#HelloWorld:[0-9]+".*
+        .*href="#HelloWorld".*
     stderr:
       matches:
         regex: .*
