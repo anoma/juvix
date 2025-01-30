@@ -215,7 +215,7 @@ data ExportEntries
   deriving stock (Show)
 
 data MultipleExportConflict = MultipleExportConflict
-  { _multipleExportModule :: S.AbsModulePath,
+  { _multipleExportModule :: AbsModulePath,
     _multipleExportSymbol :: Symbol,
     _multipleExportNameSpace :: NameSpace,
     _multipleExportEntries :: ExportEntries

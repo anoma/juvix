@@ -23,8 +23,9 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Data.Ape.Base
 import Juvix.Data.Ape.Print
-import Juvix.Data.CodeAnn (Ann, CodeAnn (..), CodeAnnReference (..), ppCodeAnn, ppStringLit)
+import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppCodeAnn, ppStringLit)
 import Juvix.Data.CodeAnn qualified as C
+import Juvix.Data.CodeReference
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All qualified as Kw
 import Juvix.Data.NameKind
@@ -173,8 +174,8 @@ ppAnyStage (s :&: p) = case s of
   SParsed -> ppCode p
   SScoped -> ppCode p
 
-instance PrettyPrint S.AbsModulePath where
-  ppCode S.AbsModulePath {..} = do
+instance PrettyPrint AbsModulePath where
+  ppCode AbsModulePath {..} = do
     let absLocalPath' = ppCode <$> _absLocalPath
         absTopModulePath' = ppCode _absTopModulePath
     dotted (absTopModulePath' : absLocalPath')
@@ -766,13 +767,27 @@ annDef nm = case sing :: SStage s of
   SScoped -> annSDef nm
   SParsed -> id
 
-nameReference :: S.Name' n -> CodeAnnReference
+nameReference :: S.Name' n -> CodeReference
 nameReference n@S.Name' {..} =
-  CodeAnnReference
-    { _codeAnnReferenceNameId = _nameId,
-      _codeAnnReferenceModule = _nameDefinedIn ^. S.absTopModulePath,
-      _codeAnnReferenceNameKindPretty = getNameKindPretty n
+  CodeReference
+    { _codeReferenceNameKindPretty = getNameKindPretty n,
+      _codeReferenceLoc = loc
     }
+  where
+    loc :: CodeReferenceLoc
+    loc
+      | _nameTop =
+          CodeReferenceLocTop
+            TopCodeReference
+              { _topCodeReferenceAbsModule = _nameDefinedIn,
+                _topCodeReferenceVerbatimSymbol = _nameVerbatim
+              }
+      | otherwise =
+          CodeReferenceLocLocal
+            LocalCodeReference
+              { _localCodeReferenceModule = _nameDefinedIn ^. absTopModulePath,
+                _localCodeReferenceNameId = _nameId
+              }
 
 annSDef :: (Members '[ExactPrint] r) => S.Name' n -> Sem r () -> Sem r ()
 annSDef = annotated . AnnDef . nameReference

@@ -13,9 +13,9 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (mapReaderT)
 import Data.String.Interpolate (i)
 import HaskelineJB
+import Juvix.Compiler.Concrete.Data.Name (absTopModulePath)
 import Juvix.Compiler.Concrete.Data.Scope (scopePath)
 import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
-import Juvix.Compiler.Concrete.Data.ScopedName (absTopModulePath)
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as Scoped
 import Juvix.Compiler.Concrete.Language qualified as Concrete
 import Juvix.Compiler.Concrete.Pretty qualified as Concrete
