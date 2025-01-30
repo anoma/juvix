@@ -1,0 +1,26 @@
+module AnomaSet;
+
+type Bool :=
+  | false
+  | true;
+
+builtin list
+type List a :=
+  | nil
+  | cons a (List a);
+
+Logic : Type := Instance -> Bool;
+
+builtin anoma-set
+axiom AnomaSet : Type -> Type;
+
+builtin anoma-set-to-list
+axiom anomaSetToList {A} (set : AnomaSet A) : List A;
+
+type Resource :=
+  mkResource@{
+    logic : Logic;
+  };
+
+positive
+type Instance := mkInstance@{};
