@@ -2,33 +2,10 @@ module Core.Print.Base where
 
 import Base
 import Core.Eval.Base
-import Core.Eval.Positive qualified as Eval
 import Juvix.Compiler.Core.Data.Module (computeCombinedInfoTable, moduleFromInfoTable)
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.DisambiguateNames (disambiguateNames)
 import Juvix.Compiler.Core.Translation.FromSource
-
-newtype Test = Test
-  { _testEval :: Eval.PosTest
-  }
-
-fromTest :: Test -> TestTree
-fromTest = mkTest . toTestDescr
-
-root :: Path Abs Dir
-root = relToProject $(mkRelDir "tests/Core/positive/")
-
-toTestDescr :: Test -> TestDescr
-toTestDescr Test {..} =
-  let Eval.PosTest {..} = _testEval
-      tRoot = root <//> _relDir
-      file' = tRoot <//> _file
-      expected' = tRoot <//> _expectedFile
-   in TestDescr
-        { _testName = _name,
-          _testRoot = tRoot,
-          _testAssertion = Steps $ corePrintAssertion file' expected'
-        }
 
 corePrintAssertion ::
   Path Abs File ->

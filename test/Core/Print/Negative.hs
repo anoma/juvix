@@ -1,7 +1,6 @@
 module Core.Print.Negative where
 
 import Base
-import Core.Eval.Base
 import Core.Print.Base
 
 data NegTest = NegTest
