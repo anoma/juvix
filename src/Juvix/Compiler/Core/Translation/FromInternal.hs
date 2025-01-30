@@ -737,7 +737,9 @@ goAxiomInductive ::
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen] r) =>
   Internal.AxiomDef ->
   Sem r ()
-goAxiomInductive a = whenJust (builtinInductive a) (\m -> m)
+goAxiomInductive a = case builtinInductive a of
+  Nothing -> return ()
+  Just m -> m
 
 fromTopIndex :: Sem (Reader IndexTable ': r) a -> Sem r a
 fromTopIndex = runReader initIndexTable
