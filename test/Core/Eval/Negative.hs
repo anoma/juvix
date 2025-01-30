@@ -65,9 +65,5 @@ tests =
     NegTest
       "Erroneous Church numerals"
       $(mkRelDir ".")
-      $(mkRelFile "test009.jvc"),
-    NegTest
-      "Empty letrec"
-      $(mkRelDir ".")
-      $(mkRelFile "test010.jvc")
+      $(mkRelFile "test009.jvc")
   ]

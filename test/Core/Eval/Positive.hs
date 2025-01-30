@@ -367,5 +367,10 @@ tests =
       "Test065: Let / LetRec type inference"
       $(mkRelDir ".")
       $(mkRelFile "test065.jvc")
-      $(mkRelFile "out/test065.out")
+      $(mkRelFile "out/test065.out"),
+    PosTest
+      "Test066: Match side-conditions"
+      $(mkRelDir ".")
+      $(mkRelFile "test066.jvc")
+      $(mkRelFile "out/test066.out")
   ]
