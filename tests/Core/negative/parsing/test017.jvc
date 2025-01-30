@@ -1,0 +1,6 @@
+type Unit {
+  unit : Unit;
+};
+
+case unit of {
+}

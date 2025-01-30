@@ -5,7 +5,7 @@ import Core.Eval.Positive qualified as Eval
 import Core.Print.Base
 
 allTests :: TestTree
-allTests = testGroup "JuvixCore print tests" (map liftTest Eval.tests)
+allTests = testGroup "JuvixCore parse and print positive tests" (map liftTest Eval.tests)
 
 liftTest :: Eval.PosTest -> TestTree
 liftTest _testEval =

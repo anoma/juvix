@@ -162,7 +162,7 @@ coreEvalErrorAssertion mainFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left _ -> assertBool "" True
+    Left _ -> assertFailure "error parsing file"
     Right (_, Nothing) -> assertFailure "no error"
     Right (tab, Just node) -> do
       withTempDir'
@@ -173,7 +173,7 @@ coreEvalErrorAssertion mainFile step = do
             r' <- doEval mainFile hout tab node
             hClose hout
             case r' of
-              Left _ -> assertBool "" True
+              Left _ -> return ()
               Right _ -> assertFailure "no error"
         )
 

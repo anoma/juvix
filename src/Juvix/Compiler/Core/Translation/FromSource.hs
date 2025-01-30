@@ -1,6 +1,8 @@
 module Juvix.Compiler.Core.Translation.FromSource
-  ( module Juvix.Compiler.Core.Translation.FromSource,
-    module Juvix.Parser.Error,
+  ( module Juvix.Parser.Error,
+    runParser,
+    runParserMain,
+    setupMainFunction,
   )
 where
 
@@ -813,17 +815,6 @@ letrecDefs names varsNum0 vars0 varsNum vars = forM names letrecItem
       let ty = fromMaybe mkDynamic' mty
       return $ LetItem (Binder txt (Just i) ty) v
 
-letrecDef ::
-  (Members '[Error CoreError, InfoTableBuilder] r) =>
-  Index ->
-  HashMap Text Level ->
-  ParsecS r (Text, Location, Node)
-letrecDef varsNum vars = do
-  (txt, i) <- identifierL
-  kw kwAssign
-  v <- bracedExpr varsNum vars
-  return (txt, i, v)
-
 exprLet ::
   (Members '[Error CoreError, InfoTableBuilder] r) =>
   Index ->
@@ -847,21 +838,20 @@ exprCase ::
   HashMap Text Level ->
   ParsecS r Node
 exprCase varsNum vars = do
-  off <- P.getOffset
-  kw kwCase
+  ((), i) <- interval $ kw kwCase
   value <- bracedExpr varsNum vars
   kw kwOf
-  braces (exprCase' off value varsNum vars)
-    <|> exprCase' off value varsNum vars
+  braces (exprCase' i value varsNum vars)
+    <|> exprCase' i value varsNum vars
 
 exprCase' ::
   (Members '[Error CoreError, InfoTableBuilder] r) =>
-  Int ->
+  Interval ->
   Node ->
   Index ->
   HashMap Text Level ->
   ParsecS r Node
-exprCase' off value varsNum vars = do
+exprCase' i value varsNum vars = do
   bs <- P.sepEndBy (caseBranchP varsNum vars) (kw delimSemicolon)
   let bss = map fromLeft' $ filter isLeft bs
   let def' = map fromRight' $ filter isRight bs
@@ -875,15 +865,15 @@ exprCase' off value varsNum vars = do
         [] ->
           return $ mkCase' sym value bss Nothing
         _ ->
-          parseFailure off "multiple default branches"
+          throwCoreError i "multiple default branches"
     [] ->
       case def' of
         [_] ->
-          parseFailure off "case with only the default branch not allowed"
+          throwCoreError i "case with only the default branch not allowed"
         [] ->
-          parseFailure off "case without branches not allowed"
+          throwCoreError i "case without branches not allowed"
         _ ->
-          parseFailure off "multiple default branches"
+          throwCoreError i "multiple default branches"
 
 caseBranchP ::
   (Members '[Error CoreError, InfoTableBuilder] r) =>
@@ -1026,35 +1016,28 @@ matchBranch ::
   HashMap Text Level ->
   ParsecS r MatchBranch
 matchBranch patsNum varsNum vars = do
-  off <- P.getOffset
-  pats <- branchPatterns varsNum vars
-  rhs <- branchRhs off pats patsNum varsNum vars
+  (pats, i) <- interval $ branchPatterns varsNum vars
+  rhs <- branchRhs i pats patsNum varsNum vars
   return $ MatchBranch Info.empty (fromList pats) rhs
 
 branchRhs ::
   (Members '[Error CoreError, InfoTableBuilder] r) =>
-  Int ->
+  Interval ->
   [Pattern] ->
   Int ->
   Index ->
   HashMap Text Level ->
   ParsecS r MatchBranchRhs
-branchRhs off pats patsNum varsNum vars =
-  branchRhsExpr off pats patsNum varsNum vars
-    <|> branchRhsIf off pats patsNum varsNum vars
+branchRhs i pats patsNum varsNum vars =
+  branchRhsExpr i pats patsNum varsNum vars
+    <|> branchRhsIf i pats patsNum varsNum vars
 
-branchRhsExpr ::
-  (Members '[Error CoreError, InfoTableBuilder] r) =>
-  Int ->
+updateVarsByPatternBinders ::
   [Pattern] ->
-  Int ->
   Index ->
   HashMap Text Level ->
-  ParsecS r MatchBranchRhs
-branchRhsExpr off pats patsNum varsNum vars = do
-  kw kwAssign
-  unless (length pats == patsNum) $
-    parseFailure off "wrong number of patterns"
+  (Index, HashMap Text Level)
+updateVarsByPatternBinders pats varsNum vars =
   let pis :: [Binder]
       pis = concatMap getPatternBinders pats
       (vars', varsNum') =
@@ -1064,45 +1047,52 @@ branchRhsExpr off pats patsNum varsNum vars = do
           )
           (vars, varsNum)
           (map (^. binderName) pis)
+   in (varsNum', vars')
+
+branchRhsExpr ::
+  (Members '[Error CoreError, InfoTableBuilder] r) =>
+  Interval ->
+  [Pattern] ->
+  Int ->
+  Index ->
+  HashMap Text Level ->
+  ParsecS r MatchBranchRhs
+branchRhsExpr i pats patsNum varsNum vars = do
+  kw kwAssign
+  unless (length pats == patsNum) $
+    throwCoreError i "wrong number of patterns"
+  let (varsNum', vars') = updateVarsByPatternBinders pats varsNum vars
   br <- bracedExpr varsNum' vars'
   return $ MatchBranchRhsExpression br
 
 branchRhsIf ::
   (Members '[Error CoreError, InfoTableBuilder] r) =>
-  Int ->
+  Interval ->
   [Pattern] ->
   Int ->
   Index ->
   HashMap Text Level ->
   ParsecS r MatchBranchRhs
-branchRhsIf off pats patsNum varsNum vars = do
-  ifs <- sideIfs off pats patsNum varsNum vars
+branchRhsIf i pats patsNum varsNum vars = do
+  ifs <- sideIfs i pats patsNum varsNum vars
   return $ MatchBranchRhsIfs ifs
 
 sideIfs ::
   (Members '[Error CoreError, InfoTableBuilder] r) =>
-  Int ->
+  Interval ->
   [Pattern] ->
   Int ->
   Index ->
   HashMap Text Level ->
   ParsecS r (NonEmpty SideIfBranch)
-sideIfs off pats patsNum varsNum vars = do
-  cond <- branchCond varsNum vars
+sideIfs i pats patsNum varsNum vars = do
+  let (varsNum', vars') = updateVarsByPatternBinders pats varsNum vars
+  cond <- branchCond varsNum' vars'
   kw kwAssign
   unless (length pats == patsNum) $
-    parseFailure off "wrong number of patterns"
-  let pis :: [Binder]
-      pis = concatMap getPatternBinders pats
-      (vars', varsNum') =
-        foldl'
-          ( \(vs, k) name ->
-              (HashMap.insert name k vs, k + 1)
-          )
-          (vars, varsNum)
-          (map (^. binderName) pis)
+    throwCoreError i "wrong number of patterns"
   br <- bracedExpr varsNum' vars'
-  conds <- optional (sideIfs off pats patsNum varsNum vars)
+  conds <- optional (sideIfs i pats patsNum varsNum vars)
   return $ SideIfBranch Info.empty cond br :| maybe [] toList conds
 
 branchCond ::

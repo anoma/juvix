@@ -1,3 +1,8 @@
 -- matching on non-data
 
-case \x x of nil -> nil
+type List {
+  nil : List;
+  cons : Any -> List -> List;
+};
+
+case \x x of nil := nil

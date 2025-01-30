@@ -52,3 +52,11 @@ corePrintAssertion mainFile expectedFile step = do
       case r' of
         Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right tab' -> coreEvalAssertion' EvalModePlain tab' mainFile expectedFile step
+
+coreParseErrorAssertion :: Path Abs File -> (String -> IO ()) -> Assertion
+coreParseErrorAssertion mainFile step = do
+  step "Parse"
+  r <- parseFile mainFile
+  case r of
+    Left _ -> return ()
+    Right _ -> assertFailure "no error"

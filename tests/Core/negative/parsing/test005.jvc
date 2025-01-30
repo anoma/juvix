@@ -1,0 +1,7 @@
+type Unit {
+  unit : Unit;
+};
+
+type Unit' {
+  unit : Unit';
+};

@@ -1,19 +1,19 @@
 -- erroneous Church numerals
 
 type product {
-  pair : any -> any -> product;
+  pair : Any -> Any -> product;
 };
 
-def fst := \p case p of { pair x _ -> x };
-def snd := \p case p of { pair _ x -> x };
+def fst := \p case p of { pair x _ := x };
+def snd := \p case p of { pair _ x := x };
 
 def compose := \f \g \x f (g x);
 
-def zero := \f \x x;
+def czero := \f \x x;
 
 def num := \n
   if n = 0 then
-    zero
+    czero
   else
     \f compose f (num (n - 1) f);
 
@@ -28,7 +28,7 @@ def pred := \n
           pair (fst x) (succ (snd x))
         else
           pair (succ (fst x)) (succ (snd x)))
-      (pair zero zero)
+      (pair czero czero)
   );
 
 def toInt := \n n (+ 1) 0;
