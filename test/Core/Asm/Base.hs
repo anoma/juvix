@@ -46,7 +46,7 @@ coreAsmAssertion root' mainFile expectedFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (prettyString err)
+    Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right (_, Nothing) -> do
       step "Empty program: compare expected and actual program output"
       expected <- readFile expectedFile

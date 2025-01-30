@@ -143,7 +143,7 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (prettyString err)
+    Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right (_, Nothing) -> do
       step "Compare expected and actual program output"
       expected <- readFile expectedFile
@@ -177,7 +177,7 @@ coreEvalErrorAssertion mainFile step = do
               Right _ -> assertFailure "no error"
         )
 
-parseFile :: Path Abs File -> IO (Either MegaparsecError (InfoTable, Maybe Node))
+parseFile :: Path Abs File -> IO (Either JuvixError (InfoTable, Maybe Node))
 parseFile f = do
   s <- readFile f
   return (runParser f defaultModuleId mempty s)
