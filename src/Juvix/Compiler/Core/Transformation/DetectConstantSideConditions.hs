@@ -35,7 +35,7 @@ detectConstantSideConditions md = mapAllNodesM (umapM go) md
                 Just ifs0' -> return $ Just $ set matchBranchRhs (MatchBranchRhsIfs ifs0') br
             SideIfBranch {..} : ifs1' -> do
               fCoverage <- asks (^. optCheckCoverage)
-              unless (not fCoverage || null ifs1') $
+              when (fCoverage && not (null ifs1')) $
                 throw
                   CoreError
                     { _coreErrorMsg = "Redundant side condition",

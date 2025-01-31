@@ -406,6 +406,18 @@ isPatConstr = \case
   PatWildcard {} -> False
 
 {------------------------------------------------------------------------}
+{- match branch -}
+
+isMatchBranchRhsExpression :: MatchBranch -> Bool
+isMatchBranchRhsExpression MatchBranch {..} =
+  case _matchBranchRhs of
+    MatchBranchRhsExpression {} -> True
+    MatchBranchRhsIfs {} -> False
+
+isMatchBranchRhsIf :: MatchBranch -> Bool
+isMatchBranchRhsIf = not . isMatchBranchRhsExpression
+
+{------------------------------------------------------------------------}
 {- generic Node destruction -}
 
 data NodeChild = NodeChild
