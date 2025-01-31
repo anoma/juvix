@@ -5,12 +5,13 @@ module Commands.Dev.Anoma.Prove.Options.ProveArgTag where
 import CommonOptions
 import Prelude qualified
 
+-- | Due to parsing, the order of constructors is relevant (because bytes is a prefix of bytes-unjammed)
 data ProveArgTag
   = ProveArgTagNat
-  | ProveArgTagBase64
-  | ProveArgTagBytes
   | ProveArgTagBytesUnJammed
   | ProveArgTagBase64UnJammed
+  | ProveArgTagBase64
+  | ProveArgTagBytes
   deriving stock (Eq, Bounded, Enum, Data)
 
 instance Show ProveArgTag where
