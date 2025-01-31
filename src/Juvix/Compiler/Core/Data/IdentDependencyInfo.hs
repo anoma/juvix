@@ -42,12 +42,16 @@ createSymbolDependencyInfo tab = createDependencyInfo graph startVertices
               <> getSymbols' tab (lookupTabIdentifierNode tab _identifierSymbol)
         )
         (tab ^. infoIdentifiers)
-        <> foldr
-          ( \ConstructorInfo {..} ->
-              HashMap.insertWith (<>) _constructorInductive (getSymbols' tab _constructorType)
+        <> HashMap.unionWith
+          (<>)
+          ( foldr
+              ( \ConstructorInfo {..} ->
+                  HashMap.insertWith (<>) _constructorInductive (getSymbols' tab _constructorType)
+              )
+              mempty
+              (tab ^. infoConstructors)
           )
-          mempty
-          (tab ^. infoConstructors)
+          (fmap (const mempty) (tab ^. infoInductives))
 
     startVertices :: HashSet Symbol
     startVertices = HashSet.fromList syms

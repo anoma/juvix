@@ -65,7 +65,7 @@ lookupSpecialisationInfo Module {..} sym =
     lookupTabSpecialisationInfo' _moduleInfoTable sym
       <|> lookupTabSpecialisationInfo' _moduleImportsTable sym
 
-impossibleSymbolNotFound :: Symbol -> a
+impossibleSymbolNotFound :: (HasCallStack) => Symbol -> a
 impossibleSymbolNotFound sym = impossibleError ("Could not find symbol " <> ppTrace sym)
 
 lookupInductiveInfo :: Module -> Symbol -> InductiveInfo
