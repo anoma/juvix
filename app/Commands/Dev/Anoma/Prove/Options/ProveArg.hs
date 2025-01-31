@@ -1,5 +1,10 @@
 module Commands.Dev.Anoma.Prove.Options.ProveArg
   ( ProveArg (..),
+    ArgFileSpec (..),
+    EncodingLayout (..),
+    Encoding (..),
+    encodingLayout,
+    encodingJammed,
     parseProveArg,
   )
 where
@@ -16,10 +21,28 @@ newtype ProveArg' = ProveArg'
   { _proveArg :: Sigma ProveArgTag ProveArgTypeSym0
   }
 
+data Encoding = Encoding
+  { _encodingLayout :: EncodingLayout,
+    _encodingJammed :: Bool
+  }
+  deriving stock (Data)
+
+data EncodingLayout
+  = EncodingBytes
+  | EncodingBase64
+  deriving stock (Data)
+
+makeLenses ''Encoding
+
+data ArgFileSpec = ArgFileSpec
+  { _argFileSpecEncoding :: Encoding,
+    _argFileSpecFile :: AppPath File
+  }
+  deriving stock (Data)
+
 data ProveArg
   = ProveArgNat Natural
-  | ProveArgBase64 (AppPath File)
-  | ProveArgBytes (AppPath File)
+  | ProveArgFile ArgFileSpec
   deriving stock (Data)
 
 parseProveArg :: Parser ProveArg
@@ -28,8 +51,22 @@ parseProveArg = fromProveArg' <$> parseProveArg'
     fromProveArg' :: ProveArg' -> ProveArg
     fromProveArg' (ProveArg' (ty :&: a)) = case ty of
       SProveArgTagNat -> ProveArgNat a
-      SProveArgTagBase64 -> ProveArgBase64 a
-      SProveArgTagBytes -> ProveArgBytes a
+      SProveArgTagBase64 -> fileHelper a EncodingBase64 True
+      SProveArgTagBytes -> fileHelper a EncodingBytes True
+      SProveArgTagBase64UnJammed -> fileHelper a EncodingBase64 False
+      SProveArgTagBytesUnJammed -> fileHelper a EncodingBytes False
+      where
+        fileHelper :: AppPath File -> EncodingLayout -> Bool -> ProveArg
+        fileHelper f l jammed =
+          ProveArgFile
+            ArgFileSpec
+              { _argFileSpecEncoding =
+                  Encoding
+                    { _encodingLayout = l,
+                      _encodingJammed = jammed
+                    },
+                _argFileSpecFile = f
+              }
 
 parseProveArg' :: Parser ProveArg'
 parseProveArg' =
@@ -70,6 +107,8 @@ parseProveArg' =
       ret <- case p of
         SProveArgTagBytes -> pAppPath
         SProveArgTagBase64 -> pAppPath
+        SProveArgTagBase64UnJammed -> pAppPath
+        SProveArgTagBytesUnJammed -> pAppPath
         SProveArgTagNat -> do
           off <- getOffset
           i <- (^. withLocParam . integerWithBaseValue) <$> integerWithBase'
