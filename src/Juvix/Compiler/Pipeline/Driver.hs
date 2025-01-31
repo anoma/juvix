@@ -237,7 +237,7 @@ processModuleCacheMissDecide entryIx = do
     info :: Store.ModuleInfo <- loadFromJvoFile absPath >>= errorMaybe RecompileNoJvoFile
 
     unless (info ^. Store.moduleInfoSHA256 == sha256) (throw RecompileSourceChanged)
-    unless (info ^. Store.moduleInfoOptions == opts) (throw RecompileSourceChanged)
+    unless (info ^. Store.moduleInfoOptions == opts) (throw RecompileOptionsChanged)
     unless (info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize) (throw RecompileFieldSizeChanged)
     CompileResult {..} <- runReader entry (processImports (info ^. Store.moduleInfoImports))
     if
