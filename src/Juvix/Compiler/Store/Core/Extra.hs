@@ -15,7 +15,6 @@ toCore InfoTable {..} =
       _infoIdentifiers = fmap goIdentifierInfo _infoIdentifiers,
       _infoInductives = fmap goInductiveInfo _infoInductives,
       _infoConstructors = fmap goConstructorInfo _infoConstructors,
-      _infoAxioms = fmap goAxiomInfo _infoAxioms,
       _infoSpecialisations = fmap (map goSpecialisationInfo) _infoSpecialisations,
       _infoLiteralIntToNat,
       _infoLiteralIntToInt,
@@ -48,13 +47,6 @@ toCore InfoTable {..} =
     goConstructorInfo ConstructorInfo {..} =
       Core.ConstructorInfo
         { _constructorType = toCoreNode _constructorType,
-          ..
-        }
-
-    goAxiomInfo :: AxiomInfo -> Core.AxiomInfo
-    goAxiomInfo AxiomInfo {..} =
-      Core.AxiomInfo
-        { _axiomType = toCoreNode _axiomType,
           ..
         }
 
@@ -102,7 +94,6 @@ fromCore Core.InfoTable {..} =
       _infoIdentifiers = fmap goIdentifierInfo _infoIdentifiers,
       _infoInductives = fmap goInductiveInfo _infoInductives,
       _infoConstructors = fmap goConstructorInfo _infoConstructors,
-      _infoAxioms = fmap goAxiomInfo _infoAxioms,
       _infoSpecialisations = fmap (map goSpecialisationInfo) _infoSpecialisations,
       _infoLiteralIntToNat,
       _infoLiteralIntToInt,
@@ -135,13 +126,6 @@ fromCore Core.InfoTable {..} =
     goConstructorInfo Core.ConstructorInfo {..} =
       ConstructorInfo
         { _constructorType = fromCoreNode _constructorType,
-          ..
-        }
-
-    goAxiomInfo :: Core.AxiomInfo -> AxiomInfo
-    goAxiomInfo Core.AxiomInfo {..} =
-      AxiomInfo
-        { _axiomType = fromCoreNode _axiomType,
           ..
         }
 

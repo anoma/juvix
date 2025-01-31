@@ -152,9 +152,6 @@ convertInductive md ii =
     tyargs = typeArgs (ii ^. inductiveKind)
     ty' = convertNode md (ii ^. inductiveKind)
 
-convertAxiom :: Module -> AxiomInfo -> AxiomInfo
-convertAxiom md = over axiomType (convertNode md)
-
 -- | Remove type arguments and type abstractions.
 --
 -- Also adjusts the types, removing quantification over types and replacing all
@@ -176,7 +173,6 @@ convertAxiom md = over axiomType (convertNode md)
 removeTypeArgs :: Module -> Module
 removeTypeArgs md =
   filterOutTypeSynonyms
-    . mapAxioms (convertAxiom md)
     . mapInductives (convertInductive md)
     . mapConstructors (convertConstructor md)
     . mapIdents (convertIdent md)

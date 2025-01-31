@@ -15,8 +15,6 @@ type InductiveInfo = InductiveInfo' Node
 
 type ConstructorInfo = ConstructorInfo' Node
 
-type AxiomInfo = AxiomInfo' Node
-
 type ParameterInfo = ParameterInfo' Node
 
 type SpecialisationInfo = SpecialisationInfo' Node
