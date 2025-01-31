@@ -581,7 +581,6 @@ instance PrettyCode InfoTable where
     tys <- ppInductives (sortOn (^. inductiveSymbol) $ toList (tbl ^. infoInductives))
     sigs <- ppSigs (sortOn (^. identifierSymbol) $ toList (tbl ^. infoIdentifiers))
     ctx' <- ppContext (tbl ^. identContext)
-    axioms <- vsep <$> mapM ppCode (tbl ^. infoAxioms)
     main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (identName' tbl s)) (tbl ^. infoMain)
     return
       ( header "Inductives:"
@@ -589,9 +588,6 @@ instance PrettyCode InfoTable where
           <> line
           <> header "Identifiers:"
           <> sigs
-          <> line
-          <> header "Axioms:"
-          <> axioms
           <> line
           <> header "Context:"
           <> ctx'
@@ -672,12 +668,6 @@ instance PrettyCode InfoTable where
               BuiltinBool -> False
             Just _ -> False
             Nothing -> True
-
-instance PrettyCode AxiomInfo where
-  ppCode ii = do
-    name <- ppName KNameAxiom (ii ^. axiomName)
-    ty <- ppCode (ii ^. axiomType)
-    return (kwAxiom <+> name <+> kwColon <+> ty <> kwSemicolon)
 
 instance PrettyCode Stripped.ArgumentInfo where
   ppCode :: (Member (Reader Options) r) => Stripped.ArgumentInfo -> Sem r (Doc Ann)
