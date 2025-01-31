@@ -45,18 +45,27 @@ runNock programAppPath pargs = do
 prepareArg :: forall r. (Members '[Error SimpleError, Files, App] r) => ProveArg -> Sem r Anoma.RunNockmaArg
 prepareArg = \case
   ProveArgNat n -> return (Anoma.RunNockmaArgTerm (toNock n))
-  ProveArgBytes n -> do
-    bs <- readAppFile n
-    Anoma.RunNockmaArgJammed <$> fromBytes bs
-  ProveArgBase64 n -> do
-    bs <- readAppFile n
-    Anoma.RunNockmaArgJammed <$> fromBytes (Base64.decodeLenient bs)
-  where
-    fromBytes :: ByteString -> Sem r (Atom Natural)
-    fromBytes b = asSimpleErrorShow @NockNaturalNaturalError (byteStringToAtom @Natural b)
+  ProveArgFile ArgFileSpec {..} ->
+    readAppFile _argFileSpecFile >>= fmap toArg . fromBytes
+    where
+      toArg :: Atom Natural -> Anoma.RunNockmaArg
+      toArg
+        | _argFileSpecEncoding ^. encodingJammed = Anoma.RunNockmaArgJammed
+        | otherwise = Anoma.RunNockmaArgTerm . toNock
 
-    readAppFile :: AppPath File -> Sem r ByteString
-    readAppFile f = fromAppPathFile f >>= readFileBS'
+      fromBytes :: ByteString -> Sem r (Atom Natural)
+      fromBytes b =
+        asSimpleErrorShow @NockNaturalNaturalError
+          . byteStringToAtom @Natural
+          . decode
+          $ b
+        where
+          decode = case _argFileSpecEncoding ^. encodingLayout of
+            EncodingBytes -> id
+            EncodingBase64 -> Base64.decodeLenient
+
+      readAppFile :: AppPath File -> Sem r ByteString
+      readAppFile f = fromAppPathFile f >>= readFileBS'
 
 -- | Calls Anoma.Protobuf.Mempool.AddTransaction
 addTransaction ::
