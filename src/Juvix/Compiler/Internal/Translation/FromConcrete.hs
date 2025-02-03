@@ -326,7 +326,7 @@ goModuleBody stmts = evalState emptyLocalTable $ do
 
     mkFunctionLike :: Statement 'Scoped -> Sem (State LocalTable ': r) [Internal.FunctionDef]
     mkFunctionLike s = case s of
-      StatementFunctionDef d -> goFunctionDef d
+      StatementFunctionDef d -> toList <$> goFunctionDef d
       StatementProjectionDef d -> pure <$> goProjectionDef d
       StatementDeriving d -> pure <$> goDeriving d
       StatementSyntax {} -> return []
@@ -890,7 +890,7 @@ goFunctionDef ::
   forall r.
   (Members '[Reader DefaultArgsStack, Reader Pragmas, Error ScoperError, NameIdGen, Reader S.InfoTable] r) =>
   FunctionDef 'Scoped ->
-  Sem r [Internal.FunctionDef]
+  Sem r (NonEmpty Internal.FunctionDef)
 goFunctionDef def@FunctionDef {..} = do
   let _funDefName = goSymbol (def ^. functionDefName . functionDefNameScoped)
       _funDefTerminating = isJust (def ^. functionDefTerminating)
@@ -910,9 +910,9 @@ goFunctionDef def@FunctionDef {..} = do
   case def ^. functionDefName . functionDefNamePattern of
     Just pat -> do
       pat' <- goPatternArg pat
-      (fun :) <$> Internal.genPatternDefs _funDefName pat'
+      (fun :|) <$> Internal.genPatternDefs _funDefName pat'
     Nothing ->
-      return [fun]
+      return (pure fun)
   where
     goBody :: Sem r Internal.Expression
     goBody = do
@@ -1434,10 +1434,10 @@ goExpression = \case
             Internal.clone expr
             where
               funDefsToClauses :: NonEmpty (NamedArgumentFunctionDef 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
-              funDefsToClauses args = (mkLetClauses . nonEmpty') <$> concatMapM goArg (toList args)
+              funDefsToClauses args = mkLetClauses <$> sconcatMapM goArg args
                 where
-                  goArg :: NamedArgumentFunctionDef 'Scoped -> Sem r [Internal.PreLetStatement]
-                  goArg = fmap (map Internal.PreLetFunctionDef) . goFunctionDef . (^. namedArgumentFunctionDef)
+                  goArg :: NamedArgumentFunctionDef 'Scoped -> Sem r (NonEmpty Internal.PreLetStatement)
+                  goArg = fmap (fmap Internal.PreLetFunctionDef) . goFunctionDef . (^. namedArgumentFunctionDef)
 
     goDesugaredNamedApplication :: DesugaredNamedApplication -> Sem r Internal.Expression
     goDesugaredNamedApplication a = do
@@ -1720,7 +1720,7 @@ goLetFunDefs clauses = maybe [] (toList . mkLetClauses) . nonEmpty <$> preLetSta
       where
         preLetStatement :: LetStatement 'Scoped -> Sem r [Internal.PreLetStatement]
         preLetStatement = \case
-          LetFunctionDef f -> map Internal.PreLetFunctionDef <$> goFunctionDef f
+          LetFunctionDef f -> map Internal.PreLetFunctionDef . toList <$> goFunctionDef f
           LetAliasDef {} -> return []
           LetOpen {} -> return []
 
