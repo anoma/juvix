@@ -6,6 +6,7 @@ where
 
 import Anoma.Effect.Base
 import Anoma.Rpc.RunNock
+import Data.ByteString.Base64 qualified as Base64
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Language qualified as Nockma
 import Juvix.Data.CodeAnn
@@ -18,7 +19,7 @@ data RunNockmaArg
   = -- | An argument that must be jammed before it is sent
     RunNockmaArgTerm (Nockma.Term Natural)
   | -- | An argument that is already jammed and must not be jammed again before it is sent
-    RunNockmaArgJammed (Nockma.Atom Natural)
+    RunNockmaArgJammed ByteString
 
 data RunNockmaInput = RunNockmaInput
   { _runNockmaProgram :: Nockma.Term Natural,
@@ -66,4 +67,4 @@ runNockma i = do
     prepareArgument =
       NockInputJammed . \case
         RunNockmaArgTerm t -> encodeJam64 t
-        RunNockmaArgJammed a -> naturalToBase64 (a ^. Nockma.atom)
+        RunNockmaArgJammed a -> decodeUtf8 (Base64.encode a)
