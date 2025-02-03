@@ -4,6 +4,7 @@ import Anoma.Effect (Anoma)
 import Anoma.Effect qualified as Anoma
 import Commands.Base hiding (Atom)
 import Commands.Dev.Anoma.Prove.Options.ProveArg
+import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as Base64
 import Juvix.Compiler.Nockma.Encoding.ByteString
 import Juvix.Compiler.Nockma.Pretty
@@ -45,24 +46,28 @@ runNock programAppPath pargs = do
 prepareArg :: forall r. (Members '[Error SimpleError, Files, App] r) => ProveArg -> Sem r Anoma.RunNockmaArg
 prepareArg = \case
   ProveArgNat n -> return (Anoma.RunNockmaArgTerm (toNock n))
-  ProveArgFile ArgFileSpec {..} ->
-    readAppFile _argFileSpecFile >>= fmap toArg . fromBytes
+  ProveArgFile ArgFileSpec {..} -> do
+    bs <- asBytes <$> readAppFile _argFileSpecFile
+    toArg bs
     where
-      toArg :: Atom Natural -> Anoma.RunNockmaArg
-      toArg
-        | _argFileSpecEncoding ^. encodingJammed = Anoma.RunNockmaArgJammed
-        | otherwise = Anoma.RunNockmaArgTerm . toNock
+      toArg :: ByteString -> Sem r Anoma.RunNockmaArg
+      toArg = case _argFileSpecDecoding of
+        DecodingAtom -> fmap (Anoma.RunNockmaArgTerm . toNock) . decodeAtom
+        DecodingJammed -> return . Anoma.RunNockmaArgJammed
+        DecodingByteArray -> \bs -> do
+          payload <- decodeAtom bs
+          let cell :: Nockma.Term Natural = (fromIntegral @_ @Natural (BS.length bs)) # payload
+          return (Anoma.RunNockmaArgTerm cell)
 
-      fromBytes :: ByteString -> Sem r (Atom Natural)
-      fromBytes b =
+      decodeAtom :: ByteString -> Sem r (Nockma.Atom Natural)
+      decodeAtom =
         asSimpleErrorShow @NockNaturalNaturalError
           . byteStringToAtom @Natural
-          . decode
-          $ b
-        where
-          decode = case _argFileSpecEncoding ^. encodingLayout of
-            EncodingBytes -> id
-            EncodingBase64 -> Base64.decodeLenient
+
+      asBytes :: ByteString -> ByteString
+      asBytes = case _argFileSpecEncoding of
+        EncodingBytes -> id
+        EncodingBase64 -> Base64.decodeLenient
 
       readAppFile :: AppPath File -> Sem r ByteString
       readAppFile f = fromAppPathFile f >>= readFileBS'
