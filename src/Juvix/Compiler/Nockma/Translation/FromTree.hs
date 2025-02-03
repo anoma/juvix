@@ -11,6 +11,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     FunctionCtx (..),
     FunctionId (..),
     closurePath,
+    foldTermsOrNil,
     foldTermsOrQuotedNil,
     sub,
     nockNatLiteral,

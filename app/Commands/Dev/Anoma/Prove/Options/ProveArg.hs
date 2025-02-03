@@ -2,9 +2,7 @@ module Commands.Dev.Anoma.Prove.Options.ProveArg
   ( ProveArg (..),
     ArgFileSpec (..),
     EncodingLayout (..),
-    Encoding (..),
-    encodingLayout,
-    encodingJammed,
+    DecodingLayout (..),
     parseProveArg,
   )
 where
@@ -21,27 +19,30 @@ newtype ProveArg' = ProveArg'
   { _proveArg :: Sigma ProveArgTag ProveArgTypeSym0
   }
 
-data Encoding = Encoding
-  { _encodingLayout :: EncodingLayout,
-    _encodingJammed :: Bool
-  }
-  deriving stock (Data)
-
 data EncodingLayout
   = EncodingBytes
   | EncodingBase64
   deriving stock (Data)
 
-makeLenses ''Encoding
+data DecodingLayout
+  = -- | Argument should be decoded as an Atom
+    DecodingAtom
+  | -- | Argument is jammed and should not be decoded
+    DecodingJammed
+  | -- | Argument should be decoded as a ByteArray
+    DecodingByteArray
+  deriving stock (Data)
 
 data ArgFileSpec = ArgFileSpec
-  { _argFileSpecEncoding :: Encoding,
+  { _argFileSpecEncoding :: EncodingLayout,
+    _argFileSpecDecoding :: DecodingLayout,
     _argFileSpecFile :: AppPath File
   }
   deriving stock (Data)
 
 data ProveArg
   = ProveArgNat Natural
+  | ProveArgList (AppPath File)
   | ProveArgFile ArgFileSpec
   deriving stock (Data)
 
@@ -51,21 +52,20 @@ parseProveArg = fromProveArg' <$> parseProveArg'
     fromProveArg' :: ProveArg' -> ProveArg
     fromProveArg' (ProveArg' (ty :&: a)) = case ty of
       SProveArgTagNat -> ProveArgNat a
-      SProveArgTagBase64 -> fileHelper a EncodingBase64 True
-      SProveArgTagBytes -> fileHelper a EncodingBytes True
-      SProveArgTagBase64UnJammed -> fileHelper a EncodingBase64 False
-      SProveArgTagBytesUnJammed -> fileHelper a EncodingBytes False
+      SProveArgTagList -> ProveArgList a
+      SProveArgTagByteArray -> fileHelper a EncodingBytes DecodingByteArray
+      SProveArgTagBase64 -> fileHelper a EncodingBase64 DecodingJammed
+      SProveArgTagBytes -> fileHelper a EncodingBytes DecodingJammed
+      SProveArgTagBase64UnJammed -> fileHelper a EncodingBase64 DecodingAtom
+      SProveArgTagBytesUnJammed -> fileHelper a EncodingBytes DecodingAtom
       where
-        fileHelper :: AppPath File -> EncodingLayout -> Bool -> ProveArg
-        fileHelper f l jammed =
+        fileHelper :: AppPath File -> EncodingLayout -> DecodingLayout -> ProveArg
+        fileHelper f l d =
           ProveArgFile
             ArgFileSpec
-              { _argFileSpecEncoding =
-                  Encoding
-                    { _encodingLayout = l,
-                      _encodingJammed = jammed
-                    },
-                _argFileSpecFile = f
+              { _argFileSpecEncoding = l,
+                _argFileSpecFile = f,
+                _argFileSpecDecoding = d
               }
 
 parseProveArg' :: Parser ProveArg'
@@ -105,7 +105,9 @@ parseProveArg' =
     pProveArgType :: SProveArgTag t -> Parse (ProveArgType t)
     pProveArgType p = do
       ret <- case p of
+        SProveArgTagByteArray -> pAppPath
         SProveArgTagBytes -> pAppPath
+        SProveArgTagList -> pAppPath
         SProveArgTagBase64 -> pAppPath
         SProveArgTagBase64UnJammed -> pAppPath
         SProveArgTagBytesUnJammed -> pAppPath
