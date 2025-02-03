@@ -49,8 +49,8 @@ proveArgTagHelp = itemize (tagHelp <$> allElements)
           unjammedAtom :: AnsiDoc = annotate bold "unjammed atom"
           (mvar, explain) = first sty $ case t of
             ProveArgTagNat -> ("NATURAL", "is passed verbatim as a nockma atom")
-            ProveArgTagByteArray -> ("FILE", "is a file containing bytes that respresent a ByteArray")
-            ProveArgTagList -> ("FILE", "is a file containing a newline delimited list of byte64 bytes that respresents a list of jammed nouns")
+            ProveArgTagByteArray -> ("FILE", "is a file containing bytes that represent a ByteArray")
+            ProveArgTagList -> ("FILE", "is a file containing a newline delimited list of byte64 bytes that represents a list of jammed nouns")
             ProveArgTagBase64 -> ("FILE", "is a file containing a base64 encoded nockma atom that represents a" <+> jammedNoun)
             ProveArgTagBytes -> ("FILE", "is a file containing bytes of a nockma atom that represents a" <+> jammedNoun)
             ProveArgTagBase64UnJammed -> ("FILE", "is a file containing a base64 encoded nockma atom that represents an" <+> unjammedAtom)
