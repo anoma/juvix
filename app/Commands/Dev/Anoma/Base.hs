@@ -6,9 +6,11 @@ import Commands.Base hiding (Atom)
 import Commands.Dev.Anoma.Prove.Options.ProveArg
 import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as Base64
+import Data.ByteString.Char8 qualified as BC
 import Juvix.Compiler.Nockma.Encoding.ByteString
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Nockma.Translation.FromSource qualified as Nockma
+import Juvix.Compiler.Nockma.Translation.FromTree (foldTermsOrNil)
 
 cellOrFail ::
   forall x r a.
@@ -46,6 +48,11 @@ runNock programAppPath pargs = do
 prepareArg :: forall r. (Members '[Error SimpleError, Files, App] r) => ProveArg -> Sem r Anoma.RunNockmaArg
 prepareArg = \case
   ProveArgNat n -> return (Anoma.RunNockmaArgTerm (toNock n))
+  ProveArgList f -> do
+    bs <- readAppFile f
+    let bss = map Base64.decodeLenient (BC.split '\n' bs)
+    atoms <- map TermAtom <$> mapM decodeAtom bss
+    return (Anoma.RunNockmaArgTerm (foldTermsOrNil atoms))
   ProveArgFile ArgFileSpec {..} -> do
     bs <- asBytes <$> readAppFile _argFileSpecFile
     toArg bs
@@ -59,18 +66,18 @@ prepareArg = \case
           let cell :: Nockma.Term Natural = (fromIntegral @_ @Natural (BS.length bs)) # payload
           return (Anoma.RunNockmaArgTerm cell)
 
-      decodeAtom :: ByteString -> Sem r (Nockma.Atom Natural)
-      decodeAtom =
-        asSimpleErrorShow @NockNaturalNaturalError
-          . byteStringToAtom @Natural
-
       asBytes :: ByteString -> ByteString
       asBytes = case _argFileSpecEncoding of
         EncodingBytes -> id
         EncodingBase64 -> Base64.decodeLenient
+  where
+    readAppFile :: AppPath File -> Sem r ByteString
+    readAppFile f = fromAppPathFile f >>= readFileBS'
 
-      readAppFile :: AppPath File -> Sem r ByteString
-      readAppFile f = fromAppPathFile f >>= readFileBS'
+    decodeAtom :: ByteString -> Sem r (Nockma.Atom Natural)
+    decodeAtom =
+      asSimpleErrorShow @NockNaturalNaturalError
+        . byteStringToAtom @Natural
 
 -- | Calls Anoma.Protobuf.Mempool.AddTransaction
 addTransaction ::

@@ -42,6 +42,7 @@ data ArgFileSpec = ArgFileSpec
 
 data ProveArg
   = ProveArgNat Natural
+  | ProveArgList (AppPath File)
   | ProveArgFile ArgFileSpec
   deriving stock (Data)
 
@@ -51,6 +52,7 @@ parseProveArg = fromProveArg' <$> parseProveArg'
     fromProveArg' :: ProveArg' -> ProveArg
     fromProveArg' (ProveArg' (ty :&: a)) = case ty of
       SProveArgTagNat -> ProveArgNat a
+      SProveArgTagList -> ProveArgList a
       SProveArgTagByteArray -> fileHelper a EncodingBytes DecodingByteArray
       SProveArgTagBase64 -> fileHelper a EncodingBase64 DecodingJammed
       SProveArgTagBytes -> fileHelper a EncodingBytes DecodingJammed
@@ -105,6 +107,7 @@ parseProveArg' =
       ret <- case p of
         SProveArgTagByteArray -> pAppPath
         SProveArgTagBytes -> pAppPath
+        SProveArgTagList -> pAppPath
         SProveArgTagBase64 -> pAppPath
         SProveArgTagBase64UnJammed -> pAppPath
         SProveArgTagBytesUnJammed -> pAppPath
