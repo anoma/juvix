@@ -1,0 +1,16 @@
+type Unit {
+  unit : Unit;
+};
+
+type Box {
+  box : Any -> Box;
+};
+
+def f := \x
+  match x with {
+    box y := 1;
+    box y, unit := 0;
+    _ := 11;
+  };
+
+f (box 10)

@@ -18,7 +18,7 @@ coreVampIRAssertion transforms mainFile expectedFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (prettyString err)
+    Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right (_, Nothing) -> assertFailure "Empty program"
     Right (tabIni, Just node) -> do
       coreVampIRAssertion' (setupMainFunction defaultModuleId tabIni node) transforms mainFile expectedFile step

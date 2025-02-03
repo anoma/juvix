@@ -22,7 +22,7 @@ runCommand opts = do
   showReplWelcome
   runRepl opts mempty
 
-parseText :: Core.InfoTable -> Text -> Either Core.MegaparsecError (Core.InfoTable, Maybe Core.Node)
+parseText :: Core.InfoTable -> Text -> Either JuvixError (Core.InfoTable, Maybe Core.Node)
 parseText = Core.runParser replPath defaultModuleId
 
 runRepl :: forall r. (Members '[EmbedIO, App] r) => CoreReplOptions -> Core.InfoTable -> Sem r ()
@@ -40,7 +40,7 @@ runRepl opts tab = do
       ':' : 'p' : ' ' : s' ->
         case parseText tab (fromString s') of
           Left err -> do
-            printJuvixError (JuvixError err)
+            printJuvixError err
             runRepl opts tab
           Right (tab', Just node) -> do
             renderStdOut (Core.ppOut opts node)
@@ -51,7 +51,7 @@ runRepl opts tab = do
       ':' : 'e' : ' ' : s' ->
         case parseText tab (fromString s') of
           Left err -> do
-            printJuvixError (JuvixError err)
+            printJuvixError err
             runRepl opts tab
           Right (tab', Just node) ->
             replEval True tab' node
@@ -60,7 +60,7 @@ runRepl opts tab = do
       ':' : 'n' : ' ' : s' ->
         case parseText tab (fromString s') of
           Left err -> do
-            printJuvixError (JuvixError err)
+            printJuvixError err
             runRepl opts tab
           Right (tab', Just node) ->
             replNormalize tab' node
@@ -69,7 +69,7 @@ runRepl opts tab = do
       ':' : 't' : ' ' : s' ->
         case parseText tab (fromString s') of
           Left err -> do
-            printJuvixError (JuvixError err)
+            printJuvixError err
             runRepl opts tab
           Right (tab', Just node) ->
             replType tab' node
@@ -80,7 +80,7 @@ runRepl opts tab = do
         sf <- someBaseToAbs' (someFile f)
         case Core.runParser sf defaultModuleId mempty s' of
           Left err -> do
-            printJuvixError (JuvixError err)
+            printJuvixError err
             runRepl opts tab
           Right (tab', mnode) -> case mnode of
             Nothing -> runRepl opts tab'
@@ -90,7 +90,7 @@ runRepl opts tab = do
       _ ->
         case parseText tab s of
           Left err -> do
-            printJuvixError (JuvixError err)
+            printJuvixError err
             runRepl opts tab
           Right (tab', Just node) ->
             replEval False tab' node

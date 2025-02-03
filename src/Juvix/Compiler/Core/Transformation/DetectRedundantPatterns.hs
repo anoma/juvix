@@ -40,7 +40,7 @@ goDetectRedundantPatterns md node = case node of
     defaultLoc = singletonInterval (mkInitialLoc mockFile)
 
     checkMatch :: Match -> Sem r ()
-    checkMatch Match {..} = case _matchBranches of
+    checkMatch Match {..} = case dropWhile isMatchBranchRhsIf $ _matchBranches of
       [] -> return ()
       MatchBranch {..} : brs -> go [toList _matchBranchPatterns] brs
       where

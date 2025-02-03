@@ -1,0 +1,5 @@
+letrec [a b']
+  a := 0;
+  b := 0;
+in
+a + b
