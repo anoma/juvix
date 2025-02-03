@@ -52,7 +52,6 @@ data RecompileReason
   | RecompileNoJvoFile
   | RecompileSourceChanged
   | RecompileOptionsChanged
-  | RecompileFieldSizeChanged
 
 data Recompile (r :: [Effect]) = Recompile
   { _recompileDo :: Sem r (PipelineResult Store.ModuleInfo),
