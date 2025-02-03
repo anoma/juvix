@@ -95,7 +95,7 @@ checkAnomaByteArrayToAnomaContents f = do
   byteArray <- getBuiltinNameScoper l BuiltinByteArray
   nat_ <- getBuiltinNameScoper l BuiltinNat
   unless
-    (ftype == (byteArray --> nat_))
+    (ftype === (byteArray --> nat_))
     $ builtinsErrorText l "toAnomaContents must be of type ByteArray -> Nat"
 
 checkAnomaByteArrayFromAnomaContents :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
@@ -105,7 +105,7 @@ checkAnomaByteArrayFromAnomaContents f = do
   byteArray <- getBuiltinNameScoper l BuiltinByteArray
   nat_ <- getBuiltinNameScoper l BuiltinNat
   unless
-    (ftype == (nat_ --> nat_ --> byteArray))
+    (ftype === (nat_ --> nat_ --> byteArray))
     $ builtinsErrorText l "fromAnomaContents must be of type Nat -> Nat -> ByteArray"
 
 checkAnomaSha256 :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
@@ -115,7 +115,7 @@ checkAnomaSha256 f = do
   byteArray <- getBuiltinNameScoper l BuiltinByteArray
   nat_ <- getBuiltinNameScoper l BuiltinNat
   unless
-    (ftype == (nat_ --> byteArray))
+    (ftype === (nat_ --> byteArray))
     $ builtinsErrorText l "anomaSha256 must be of type Nat -> ByteArray"
 
 checkResource :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
@@ -257,7 +257,7 @@ checkAnomaIsCommitment f = do
   let l = getLoc f
   nat_ <- getBuiltinNameScoper l BuiltinNat
   bool_ <- getBuiltinNameScoper l BuiltinBool
-  unless (f ^. axiomType == (nat_ --> bool_)) $
+  unless (f ^. axiomType === (nat_ --> bool_)) $
     builtinsErrorText l "isCommitment must be of type Nat -> Bool"
 
 checkAnomaIsNullifier :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
@@ -265,7 +265,7 @@ checkAnomaIsNullifier f = do
   let l = getLoc f
   nat_ <- getBuiltinNameScoper l BuiltinNat
   bool_ <- getBuiltinNameScoper l BuiltinBool
-  unless (f ^. axiomType == (nat_ --> bool_)) $
+  unless (f ^. axiomType === (nat_ --> bool_)) $
     builtinsErrorText l "isNullifier must be of type Nat -> Bool"
 
 checkAnomaSet :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
@@ -273,7 +273,7 @@ checkAnomaSet t = do
   let ty = t ^. axiomType
       l = getLoc t
       u = ExpressionUniverse smallUniverseNoLoc
-  unless (ty == (u --> u)) $
+  unless (ty === (u --> u)) $
     builtinsErrorText l "AnomaSet should have type: Type -> Type"
 
 checkAnomaSetToList :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()

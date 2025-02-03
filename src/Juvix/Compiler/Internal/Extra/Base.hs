@@ -711,6 +711,7 @@ matchExpressions = go
     -- Soft free vars are allowed to be matched
     isSoftFreeVar :: VarName -> Sem r Bool
     isSoftFreeVar = asks . HashSet.member
+
     go :: Expression -> Expression -> Sem r ()
     go a b = case (a, b) of
       (ExpressionIden ia, ExpressionIden ib) -> case (ia, ib) of
@@ -805,8 +806,10 @@ matchFunctionParameter pa pb = do
   where
     goParamType :: Expression -> Expression -> Sem r ()
     goParamType ua ub = matchExpressions ua ub
+
     goParamImplicit :: IsImplicit -> IsImplicit -> Sem r ()
     goParamImplicit ua ub = unless (ua == ub) (throw @Text "implicit mismatch")
+
     goParamName :: Maybe VarName -> Maybe VarName -> Sem r ()
     goParamName (Just va) (Just vb) = addName va vb
     goParamName _ _ = return ()
