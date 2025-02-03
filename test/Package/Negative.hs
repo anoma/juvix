@@ -22,9 +22,11 @@ testDescr NegTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
+            entry <- testDefaultEntryPointNoFileIO tRoot
             res <-
               withTempDir'
                 ( runM
+                    . runReader entry
                     . runError
                     . runFilesIO
                     . mapError (JuvixError @PackageLoaderError)

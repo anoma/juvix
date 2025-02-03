@@ -53,7 +53,11 @@ runAppIO ::
   RunAppIOArgs ->
   Sem (App ': r) a ->
   Sem r a
-runAppIO args = evalSingletonCache (readPackageRootIO root) . reAppIO args
+runAppIO args a = do
+  entry <- getEntryPointStdin' args
+  evalSingletonCache (runReader entry $ readPackageRootIO root)
+    . reAppIO args
+    $ a
   where
     root = args ^. runAppIOArgsRoot
 

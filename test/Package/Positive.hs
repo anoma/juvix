@@ -25,10 +25,12 @@ testDescr root PosTest {..} =
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
+            entry <- testDefaultEntryPointNoFileIO tRoot
             withTempDir' $ \d -> do
               let buildDir = CustomBuildDir (Abs d)
               res <-
                 runM
+                  . runReader entry
                   . runError @JuvixError
                   . runFilesIO
                   . mapError (JuvixError @PackageLoaderError)

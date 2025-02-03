@@ -201,42 +201,28 @@ entryPointFromGlobalOptions ::
   GlobalOptions ->
   Sem r EntryPoint
 entryPointFromGlobalOptions root mainFile opts = do
-  mabsBuildDir :: Maybe (Path Abs Dir) <- liftIO (mapM (prepathToAbsDir cwd) optBuildDir)
-  def <- defaultEntryPointIO (root ^. rootRootDir) mainFile
-  return
-    def
-      { _entryPointNoTermination = opts ^. globalNoTermination,
-        _entryPointNoPositivity = opts ^. globalNoPositivity,
-        _entryPointNoCoverage = opts ^. globalNoCoverage,
-        _entryPointNoStdlib = opts ^. globalNoStdlib,
-        _entryPointNoCheck = opts ^. globalNoCheck,
-        _entryPointGenericOptions = project opts,
-        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
-        _entryPointOffline = opts ^. globalOffline,
-        _entryPointFieldSize = fromMaybe defaultFieldSize $ opts ^. globalFieldSize
-      }
+  mabsBuildDir :: Maybe (Path Abs Dir) <- mapM (prepathToAbsDir cwd) optBuildDir
+  let def0 = updateEntryPoint mabsBuildDir $ defaultEntryPoint packageBaseId root mainFile
+  def <- runReader def0 $ defaultEntryPointIO (root ^. rootRootDir) mainFile
+  return $ updateEntryPoint mabsBuildDir def
   where
     optBuildDir :: Maybe (Prepath Dir)
     optBuildDir = fmap (^. pathPath) (opts ^. globalBuildDir)
     cwd = root ^. rootInvokeDir
 
-entryPointFromGlobalOptionsNoFile :: (Members '[EmbedIO, TaggedLock] r, MonadIO (Sem r)) => Root -> GlobalOptions -> Sem r EntryPoint
-entryPointFromGlobalOptionsNoFile root opts = do
-  mabsBuildDir :: Maybe (Path Abs Dir) <- mapM (prepathToAbsDir cwd) optBuildDir
-  def <- defaultEntryPointIO (root ^. rootRootDir) Nothing
-  return
-    def
-      { _entryPointNoTermination = opts ^. globalNoTermination,
-        _entryPointNoPositivity = opts ^. globalNoPositivity,
-        _entryPointNoCoverage = opts ^. globalNoCoverage,
-        _entryPointNoStdlib = opts ^. globalNoStdlib,
-        _entryPointNoCheck = opts ^. globalNoCheck,
-        _entryPointGenericOptions = project opts,
-        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
-        _entryPointOffline = opts ^. globalOffline,
-        _entryPointFieldSize = fromMaybe defaultFieldSize $ opts ^. globalFieldSize
-      }
-  where
-    optBuildDir :: Maybe (Prepath Dir)
-    optBuildDir = fmap (^. pathPath) (opts ^. globalBuildDir)
-    cwd = root ^. rootInvokeDir
+    updateEntryPoint :: Maybe (Path Abs Dir) -> EntryPoint -> EntryPoint
+    updateEntryPoint mabsBuildDir e =
+      e
+        { _entryPointNoTermination = opts ^. globalNoTermination,
+          _entryPointNoPositivity = opts ^. globalNoPositivity,
+          _entryPointNoCoverage = opts ^. globalNoCoverage,
+          _entryPointNoStdlib = opts ^. globalNoStdlib,
+          _entryPointNoCheck = opts ^. globalNoCheck,
+          _entryPointGenericOptions = project opts,
+          _entryPointBuildDir = maybe (e ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
+          _entryPointOffline = opts ^. globalOffline,
+          _entryPointFieldSize = fromMaybe defaultFieldSize $ opts ^. globalFieldSize
+        }
+
+entryPointFromGlobalOptionsNoFile :: (Members '[EmbedIO, TaggedLock] r) => Root -> GlobalOptions -> Sem r EntryPoint
+entryPointFromGlobalOptionsNoFile root opts = entryPointFromGlobalOptions root Nothing opts

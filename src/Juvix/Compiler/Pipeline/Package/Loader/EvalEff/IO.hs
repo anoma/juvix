@@ -29,7 +29,7 @@ makeLenses ''LoaderResource
 
 runEvalFileEffIO ::
   forall r a.
-  (Members '[TaggedLock, Files, EmbedIO, Error PackageLoaderError] r) =>
+  (Members '[TaggedLock, Reader EntryPoint, Files, EmbedIO, Error PackageLoaderError] r) =>
   Sem (EvalFileEff ': r) a ->
   Sem r a
 runEvalFileEffIO = runProvider_ helper
@@ -120,8 +120,9 @@ runEvalFileEffIO = runProvider_ helper
                   Just l -> l ^. intervalFile == f
                   Nothing -> False
 
-loadPackage' :: (Members '[TaggedLock, Files, EmbedIO, Error PackageLoaderError] r) => Path Abs File -> Sem r CoreResult
+loadPackage' :: (Members '[TaggedLock, Reader EntryPoint, Files, EmbedIO, Error PackageLoaderError] r) => Path Abs File -> Sem r CoreResult
 loadPackage' packagePath = do
+  entry <- ask @EntryPoint
   mapError toPackageError
     . runConcurrent
     . ignoreLogger
@@ -136,7 +137,7 @@ loadPackage' packagePath = do
     . runPackagePathResolver rootPath
     . runTopModuleNameChecker
     . evalModuleInfoCachePackageDotJuvix
-    $ (^. pipelineResult) <$> processFileToStoredCore packageEntryPoint
+    $ (^. pipelineResult) <$> processFileToStoredCore (packageEntryPoint entry)
   where
     toPackageError :: JuvixError -> PackageLoaderError
     toPackageError e =
@@ -148,8 +149,15 @@ loadPackage' packagePath = do
     rootPath :: Path Abs Dir
     rootPath = parent packagePath
 
-    packageEntryPoint :: EntryPoint
-    packageEntryPoint = defaultEntryPoint rootPkg root (Just packagePath)
+    packageEntryPoint :: EntryPoint -> EntryPoint
+    packageEntryPoint entry =
+      entry
+        { _entryPointRoot = root ^. rootRootDir,
+          _entryPointResolverRoot = root ^. rootRootDir,
+          _entryPointSomeRoot = root ^. rootSomeRoot,
+          _entryPointPackageId = rootPkg,
+          _entryPointModulePath = Just packagePath
+        }
       where
         sroot :: SomeRoot
         sroot =
