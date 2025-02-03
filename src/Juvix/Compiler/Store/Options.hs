@@ -13,7 +13,8 @@ data Options = Options
     _optionsUnsafe :: Bool,
     _optionsUnrollLimit :: Int,
     _optionsOptimizationLevel :: Int,
-    _optionsInliningDepth :: Int
+    _optionsInliningDepth :: Int,
+    _optionsFieldSize :: Natural
   }
   deriving stock (Show, Eq, Generic)
 
@@ -34,5 +35,6 @@ fromEntryPoint EntryPoint {..} =
       _optionsUnsafe = _entryPointUnsafe,
       _optionsUnrollLimit = _entryPointUnrollLimit,
       _optionsOptimizationLevel = _entryPointOptimizationLevel,
-      _optionsInliningDepth = _entryPointInliningDepth
+      _optionsInliningDepth = _entryPointInliningDepth,
+      _optionsFieldSize = _entryPointFieldSize
     }
