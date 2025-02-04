@@ -60,7 +60,7 @@ runPackagePathResolver rootPath sem = do
       let _pathInfoTopModule = m
           _pathInfoRootInfo =
             --  A Package file is a member of a package by definition.
-            fromMaybe (error ("runPackagePathResolver: expected root info: " <> show m <> ", " <> prettyText m <> ", " <> prettyText (topModulePathToRelativePath' m))) $
+            fromMaybe (error "runPackagePathResolver: expected root info") $
               mkRootInfo' (topModulePathToRelativePath' m)
       return PathInfoTopModule {..}
     WithResolverRoot _root' m ->
@@ -178,13 +178,7 @@ runPackagePathResolver rootPath sem = do
       return RootInfoFiles {..}
 
     mkRootInfo :: RootInfoDirs -> RootInfoFiles -> Path Rel File -> Maybe RootInfo
-    mkRootInfo ds fs relPath = do
-      --      traceM ("relPath: " <> prettyText relPath)
-      {-       traceM ("preludePath: " <> prettyText preludePath)
-            traceM ("packageFilePath: " <> prettyText packageFilePath)
-            traceM ("filesPackage: " <> show (fs ^. rootInfoFilesPackage))
-            traceM ("filesPackageBase: " <> show (fs ^. rootInfoFilesPackageBase))
-       -} mkInfo <$> mrootInfoPath
+    mkRootInfo ds fs relPath = mkInfo <$> mrootInfoPath
       where
         mrootInfoPath :: Maybe (Path Abs Dir)
         mrootInfoPath
