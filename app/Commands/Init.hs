@@ -63,7 +63,7 @@ checkNotInProject =
 checkPackage :: forall r. (Members '[EmbedIO, App] r) => Sem r ()
 checkPackage = do
   cwd <- getCurrentDir
-  entry <- runTaggedLockPermissive getEntryPointStdin
+  entry <- runTaggedLockPermissive getEntryPointPackage
   ep <- runError @JuvixError (runTaggedLockPermissive (runReader entry $ loadPackageFileIO cwd DefaultBuildDir))
   case ep of
     Left {} -> do

@@ -54,7 +54,7 @@ runAppIO ::
   Sem (App ': r) a ->
   Sem r a
 runAppIO args a = do
-  entry <- getEntryPointStdin' args
+  entry <- getEntryPointPackage' args
   evalSingletonCache (runReader entry $ readPackageRootIO root)
     . reAppIO args
     $ a
@@ -193,6 +193,12 @@ getEntryPointStdin' RunAppIOArgs {..} = do
         | otherwise -> return Nothing
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsNoFile root opts
 
+getEntryPointPackage' :: (Members '[EmbedIO, TaggedLock] r) => RunAppIOArgs -> Sem r EntryPoint
+getEntryPointPackage' RunAppIOArgs {..} = do
+  let opts = _runAppIOArgsGlobalOptions
+      root = _runAppIOArgsRoot
+  entryPointFromGlobalOptionsNoFile root opts
+
 askPackageDotJuvixPath :: (Members '[App] r) => Sem r (Path Abs File)
 askPackageDotJuvixPath = mkPackagePath . (^. rootRootDir) <$> askRoot
 
@@ -232,6 +238,12 @@ getEntryPointStdin = do
   _runAppIOArgsGlobalOptions <- askGlobalOptions
   _runAppIOArgsRoot <- askRoot
   getEntryPointStdin' RunAppIOArgs {..}
+
+getEntryPointPackage :: (Members '[EmbedIO, App, TaggedLock] r) => Sem r EntryPoint
+getEntryPointPackage = do
+  _runAppIOArgsGlobalOptions <- askGlobalOptions
+  _runAppIOArgsRoot <- askRoot
+  getEntryPointPackage' RunAppIOArgs {..}
 
 runPipelineTermination ::
   (Members '[EmbedIO, App, Logger, TaggedLock] r) =>
