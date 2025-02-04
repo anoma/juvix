@@ -451,6 +451,8 @@ processRecursivelyUpTo shouldRecurse upto = do
       let entry' =
             entry
               { _entryPointStdin = Nothing,
+                _entryPointResolverRoot = node ^. importNodePackageRoot,
+                _entryPointRoot = node ^. importNodePackageRoot,
                 _entryPointPackageId = pid,
                 _entryPointModulePath = Just (node ^. importNodeAbsFile)
               }

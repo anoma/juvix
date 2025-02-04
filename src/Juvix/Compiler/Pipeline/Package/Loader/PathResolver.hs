@@ -26,7 +26,7 @@ makeLenses ''RootInfoDirs
 makeLenses ''RootInfoFiles
 
 -- | A PackageResolver interpreter intended to be used to load a Package file.
--- It aggregates the package.juvix file in `rootPath` and the package-base,
+-- It aggregates the Package.juvix file in `rootPath` and the package-base,
 -- package and global standard library (currently under global-package/.juvix-build)
 runPackagePathResolver ::
   forall r a.
@@ -60,7 +60,7 @@ runPackagePathResolver rootPath sem = do
       let _pathInfoTopModule = m
           _pathInfoRootInfo =
             --  A Package file is a member of a package by definition.
-            fromMaybe (error "runPackagePathResolver: expected root info") $
+            fromMaybe (error ("runPackagePathResolver: expected root info: " <> show m <> ", " <> prettyText m <> ", " <> prettyText (topModulePathToRelativePath' m))) $
               mkRootInfo' (topModulePathToRelativePath' m)
       return PathInfoTopModule {..}
     WithResolverRoot _root' m ->
@@ -178,7 +178,13 @@ runPackagePathResolver rootPath sem = do
       return RootInfoFiles {..}
 
     mkRootInfo :: RootInfoDirs -> RootInfoFiles -> Path Rel File -> Maybe RootInfo
-    mkRootInfo ds fs relPath = mkInfo <$> mrootInfoPath
+    mkRootInfo ds fs relPath = do
+      --      traceM ("relPath: " <> prettyText relPath)
+      {-       traceM ("preludePath: " <> prettyText preludePath)
+            traceM ("packageFilePath: " <> prettyText packageFilePath)
+            traceM ("filesPackage: " <> show (fs ^. rootInfoFilesPackage))
+            traceM ("filesPackageBase: " <> show (fs ^. rootInfoFilesPackageBase))
+       -} mkInfo <$> mrootInfoPath
       where
         mrootInfoPath :: Maybe (Path Abs Dir)
         mrootInfoPath

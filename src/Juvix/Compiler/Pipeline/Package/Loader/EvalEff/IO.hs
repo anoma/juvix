@@ -155,8 +155,10 @@ loadPackage' packagePath = do
         { _entryPointRoot = root ^. rootRootDir,
           _entryPointResolverRoot = root ^. rootRootDir,
           _entryPointSomeRoot = root ^. rootSomeRoot,
+          _entryPointBuildDir = root ^. rootBuildDir,
           _entryPointPackageId = rootPkg,
-          _entryPointModulePath = Just packagePath
+          _entryPointModulePath = Just packagePath,
+          _entryPointStdin = Nothing
         }
       where
         sroot :: SomeRoot
