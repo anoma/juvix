@@ -58,7 +58,7 @@ toTypecheckTransformations :: [TransformationId]
 toTypecheckTransformations = [DetectConstantSideConditions, DetectRedundantPatterns, MatchToCase]
 
 toStoredTransformations :: [TransformationId]
-toStoredTransformations = [EtaExpandApps, DetectConstantSideConditions, DetectRedundantPatterns, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, OptPhaseEval, DisambiguateNames]
+toStoredTransformations = [EtaExpandApps, DetectConstantSideConditions, DetectRedundantPatterns, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, OptPhaseEval, DisambiguateNames, OptPhasePreLifting, LambdaLetRecLifting, TopEtaExpand]
 
 combineInfoTablesTransformations :: [TransformationId]
 combineInfoTablesTransformations = [CombineInfoTables, FilterUnreachable]
@@ -68,7 +68,7 @@ toNormalizeTransformations = [CombineInfoTables, LetRecLifting, LetFolding, Unro
 
 toStrippedTransformations :: TransformationId -> [TransformationId]
 toStrippedTransformations checkId =
-  combineInfoTablesTransformations ++ [checkId, OptPhasePreLifting, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs, DisambiguateNames]
+  combineInfoTablesTransformations ++ [checkId, OptPhaseExec, MoveApps, RemoveTypeArgs, DisambiguateNames]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
