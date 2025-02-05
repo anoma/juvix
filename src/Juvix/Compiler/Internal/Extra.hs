@@ -170,7 +170,7 @@ genPatternDefs ::
   PatternArg ->
   Sem r [FunctionDef]
 genPatternDefs valueName pat =
-  execOutputList $ goPatternArg pat
+  execOutputList (goPatternArg pat)
   where
     goPatternArg :: PatternArg -> Sem (Output FunctionDef ': r) ()
     goPatternArg PatternArg {..} = do

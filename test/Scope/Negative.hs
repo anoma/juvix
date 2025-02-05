@@ -283,5 +283,10 @@ scoperErrorTests =
       "Deriving statement wrong form"
       $(mkRelDir ".")
       $(mkRelFile "WrongDeriving.juvix")
-      $ wantsError ErrDerivingTypeWrongForm
+      $ wantsError ErrDerivingTypeWrongForm,
+    negTest
+      "Arg name not in scope in default value"
+      $(mkRelDir ".")
+      $(mkRelFile "ArgNameDefaultValue.juvix")
+      $ wantsError ErrSymNotInScope
   ]

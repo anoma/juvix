@@ -1355,8 +1355,6 @@ checkTypeSig TypeSig {..} = do
       SigArg 'Parsed ->
       Sem r (SigArg 'Scoped)
     checkSigArg arg@SigArg {..} = do
-      names' <- checkSigArgNames _sigArgNames
-      ty' <- mapM checkParseExpressionAtoms _sigArgType
       default' <- case _sigArgDefault of
         Nothing -> return Nothing
         Just ArgDefault {..} ->
@@ -1367,6 +1365,8 @@ checkTypeSig TypeSig {..} = do
                 Implicit -> do
                   val' <- checkParseExpressionAtoms _argDefaultValue
                   return (Just ArgDefault {_argDefaultValue = val', ..})
+      ty' <- mapM checkParseExpressionAtoms _sigArgType
+      names' <- checkSigArgNames _sigArgNames
       return
         SigArg
           { _sigArgNames = names',
