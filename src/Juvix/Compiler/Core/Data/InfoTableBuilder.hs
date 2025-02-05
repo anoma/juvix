@@ -98,7 +98,7 @@ mkBuilderState m =
       _builderStateNextTagId = nextTagId tab
     }
   where
-    tab = computeCombinedInfoTable m
+    tab = m ^. moduleInfoTable
 
 runInfoTableBuilder' :: BuilderState -> forall r a. Sem (InfoTableBuilder ': r) a -> Sem r (BuilderState, a)
 runInfoTableBuilder' st = reinterpret (runState st) interp
