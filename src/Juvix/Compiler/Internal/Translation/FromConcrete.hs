@@ -37,6 +37,7 @@ import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Store.Scoped.Data.InfoTable qualified as S
 import Juvix.Compiler.Store.Scoped.Language (createExportsTable)
 import Juvix.Compiler.Store.Scoped.Language qualified as S
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Safe (lastMay)
 
@@ -394,7 +395,7 @@ goProjectionDef ProjectionDef {..} = do
   fun <-
     Internal.genFieldProjection
       _projectionKind
-      field
+      (over Internal.nameText quoteMain field)
       projType
       ( (^. withLocParam)
           <$> _projectionFieldBuiltin
@@ -405,6 +406,11 @@ goProjectionDef ProjectionDef {..} = do
       _projectionFieldIx
   whenJust (fun ^. Internal.funDefBuiltin) (checkBuiltinFunction fun)
   return fun
+  where
+    quoteMain :: Text -> Text
+    quoteMain txt
+      | txt == Str.main = prime txt
+      | otherwise = txt
 
 goNameSignature ::
   forall r.

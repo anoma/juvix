@@ -50,7 +50,7 @@ coreCompileAssertion' ::
   Assertion
 coreCompileAssertion' entryPoint optLevel tab mainFile expectedFile stdinText step = do
   step "Translate to JuvixAsm"
-  case run . runReader entryPoint' . runError $ toStored (moduleFromInfoTable tab) >>= toStripped CheckExec of
+  case run . runReader entryPoint' . runError $ toStripped CheckExec (moduleFromInfoTable tab) of
     Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right m -> do
       let tab0 = computeCombinedInfoTable m
@@ -79,4 +79,10 @@ coreCompileAssertion root' mainFile expectedFile stdinText step = do
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
       entryPoint <- testDefaultEntryPointIO root' mainFile
-      coreCompileAssertion' entryPoint 3 (setupMainFunction defaultModuleId tabIni node) mainFile expectedFile stdinText step
+      step "Transform JuvixCore"
+      let tab0 = setupMainFunction defaultModuleId tabIni node
+      case run . runReader entryPoint . runError $ toStored (moduleFromInfoTable tab0) of
+        Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
+        Right m -> do
+          let tab = computeCombinedInfoTable m
+          coreCompileAssertion' entryPoint 3 tab mainFile expectedFile stdinText step
