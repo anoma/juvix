@@ -26,7 +26,7 @@ makeLenses ''RootInfoDirs
 makeLenses ''RootInfoFiles
 
 -- | A PackageResolver interpreter intended to be used to load a Package file.
--- It aggregates the package.juvix file in `rootPath` and the package-base,
+-- It aggregates the Package.juvix file in `rootPath` and the package-base,
 -- package and global standard library (currently under global-package/.juvix-build)
 runPackagePathResolver ::
   forall r a.

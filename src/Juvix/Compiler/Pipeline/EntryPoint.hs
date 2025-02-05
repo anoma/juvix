@@ -55,6 +55,19 @@ getEntryPointTarget e = fromMaybe defaultTarget (e ^. entryPointTarget)
     -- TODO is having a default target a good idea?
     defaultTarget = TargetCore
 
+entryPointPackageType :: Lens' EntryPoint PackageType
+entryPointPackageType = entryPointSomeRoot . someRootType
+
+defaultUnrollLimit :: Int
+defaultUnrollLimit = 140
+
+defaultOptimizationLevel :: Int
+defaultOptimizationLevel = 1
+
+defaultInliningDepth :: Int
+defaultInliningDepth = 3
+
+-- | Don't use this without updating the options
 defaultEntryPoint :: PackageId -> Root -> Maybe (Path Abs File) -> EntryPoint
 defaultEntryPoint pkg root mainFile =
   (defaultEntryPointNoFile pkg root)
@@ -88,15 +101,3 @@ defaultEntryPointNoFile pkg root =
       _entryPointFieldSize = defaultFieldSize,
       _entryPointIsabelleOnlyTypes = False
     }
-
-entryPointPackageType :: Lens' EntryPoint PackageType
-entryPointPackageType = entryPointSomeRoot . someRootType
-
-defaultUnrollLimit :: Int
-defaultUnrollLimit = 140
-
-defaultOptimizationLevel :: Int
-defaultOptimizationLevel = 1
-
-defaultInliningDepth :: Int
-defaultInliningDepth = 3

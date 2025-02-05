@@ -5,7 +5,12 @@ import Juvix.Compiler.Pipeline.Root
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
 
-defaultEntryPointIO :: forall r. (Members '[EmbedIO, TaggedLock, EmbedIO] r) => Path Abs Dir -> Maybe (Path Abs File) -> Sem r EntryPoint
+defaultEntryPointIO' :: forall r. (Members '[EmbedIO, TaggedLock] r) => Path Abs Dir -> Maybe (Path Abs File) -> Sem r EntryPoint
+defaultEntryPointIO' cwd mainFile = do
+  root <- findRootAndChangeDir (parent <$> mainFile) Nothing cwd
+  runReader (defaultEntryPoint packageBaseId root mainFile) (defaultEntryPointIO cwd mainFile)
+
+defaultEntryPointIO :: forall r. (Members '[EmbedIO, TaggedLock, Reader EntryPoint] r) => Path Abs Dir -> Maybe (Path Abs File) -> Sem r EntryPoint
 defaultEntryPointIO cwd mainFile = do
   root <- findRootAndChangeDir (parent <$> mainFile) Nothing cwd
   let pkgIdFromPackageFile :: Sem r PackageId

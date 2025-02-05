@@ -216,7 +216,11 @@ processModuleCacheMissDecide entryIx = do
           . replaceExtension ".jvo"
           . fromJust
           $ stripProperPrefix $(mkAbsDir "/") sourcePath
-      absPath = buildDir Path.</> relPath
+      subdir :: Path Rel Dir =
+        if
+            | opts ^. StoredOptions.optionsDebug -> $(mkRelDir "debug")
+            | otherwise -> $(mkRelDir "release")
+      absPath = buildDir Path.</> subdir Path.</> relPath
   sha256 <- SHA256.digestFile sourcePath
 
   let recompile :: Sem rrecompile (PipelineResult Store.ModuleInfo)
@@ -447,6 +451,8 @@ processRecursivelyUpTo shouldRecurse upto = do
       let entry' =
             entry
               { _entryPointStdin = Nothing,
+                _entryPointResolverRoot = node ^. importNodePackageRoot,
+                _entryPointRoot = node ^. importNodePackageRoot,
                 _entryPointPackageId = pid,
                 _entryPointModulePath = Just (node ^. importNodeAbsFile)
               }

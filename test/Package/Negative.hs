@@ -18,13 +18,34 @@ root = relToProject $(mkRelDir "tests/negative/Package")
 testDescr :: (Typeable a) => NegTest a -> TestDescr
 testDescr NegTest {..} =
   let tRoot = root <//> _relDir
+      sroot :: SomeRoot
+      sroot =
+        SomeRoot
+          { _someRootDir = tRoot,
+            _someRootType = GlobalPackageDescription
+          }
+      root' :: Root
+      root' =
+        Root
+          { _rootSomeRoot = sroot,
+            _rootInvokeDir = tRoot,
+            _rootBuildDir = DefaultBuildDir
+          }
+      rootPkg :: PackageId
+      rootPkg =
+        PackageId
+          { _packageIdVersion = defaultVersion,
+            _packageIdName = "Package"
+          }
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
+            let entry = defaultEntryPoint rootPkg root' Nothing
             res <-
               withTempDir'
                 ( runM
+                    . runReader entry
                     . runError
                     . runFilesIO
                     . mapError (JuvixError @PackageLoaderError)
