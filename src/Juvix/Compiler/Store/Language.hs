@@ -14,8 +14,7 @@ data ModuleInfo = ModuleInfo
     _moduleInfoCoreTable :: Core.InfoTable,
     _moduleInfoImports :: [TopModulePath],
     _moduleInfoOptions :: Options,
-    _moduleInfoSHA256 :: Text,
-    _moduleInfoFieldSize :: Natural
+    _moduleInfoSHA256 :: Text
   }
   deriving stock (Generic)
 

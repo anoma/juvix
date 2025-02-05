@@ -171,7 +171,6 @@ logDecision _logItemThreadId _logItemModule dec = do
           RecompileImportsChanged -> Just "Because an imported module changed"
           RecompileSourceChanged -> Just "Because the source changed"
           RecompileOptionsChanged -> Just "Because compilation options changed"
-          RecompileFieldSizeChanged -> Just "Because the field size changed"
 
       msg :: Doc CodeAnn =
         docNoCommentsDefault (_logItemModule ^. importNodeTopModulePathKey)
@@ -242,7 +241,6 @@ processModuleCacheMissDecide entryIx = do
 
     unless (info ^. Store.moduleInfoSHA256 == sha256) (throw RecompileSourceChanged)
     unless (info ^. Store.moduleInfoOptions == opts) (throw RecompileOptionsChanged)
-    unless (info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize) (throw RecompileFieldSizeChanged)
     CompileResult {..} <- runReader entry (processImports (info ^. Store.moduleInfoImports))
     if
         | _compileResultChanged -> throw RecompileImportsChanged
@@ -556,8 +554,7 @@ processModuleToStoredCore sha256 entry = over pipelineResult mkModuleInfo <$> pr
           _moduleInfoCoreTable = fromCore (_coreResultModule ^. Core.moduleInfoTable),
           _moduleInfoImports = map (^. importModulePath) $ scoperResult ^. Scoper.resultParserResult . Parser.resultParserState . parserStateImports,
           _moduleInfoOptions = StoredOptions.fromEntryPoint entry,
-          _moduleInfoSHA256 = sha256,
-          _moduleInfoFieldSize = entry ^. entryPointFieldSize
+          _moduleInfoSHA256 = sha256
         }
       where
         scoperResult = _coreResultInternalTypedResult ^. InternalTyped.resultInternal . Internal.resultScoper
