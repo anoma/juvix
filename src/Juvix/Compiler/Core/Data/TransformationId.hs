@@ -16,7 +16,6 @@ data TransformationId
   | IdentityTrans
   | UnrollRecursion
   | ComputeTypeInfo
-  | ComputeCaseANF
   | DetectConstantSideConditions
   | DetectRedundantPatterns
   | MatchToCase
@@ -35,7 +34,6 @@ data TransformationId
   | LoopHoisting
   | Inlining
   | MandatoryInlining
-  | FoldTypeSynonyms
   | CaseCallLifting
   | SimplifyIfs
   | SimplifyComparisons
@@ -98,7 +96,6 @@ instance TransformationId' TransformationId where
     IntToPrimInt -> strIntToPrimInt
     ConvertBuiltinTypes -> strConvertBuiltinTypes
     ComputeTypeInfo -> strComputeTypeInfo
-    ComputeCaseANF -> strComputeCaseANF
     UnrollRecursion -> strUnrollRecursion
     DisambiguateNames -> strDisambiguateNames
     CombineInfoTables -> strCombineInfoTables
@@ -114,7 +111,6 @@ instance TransformationId' TransformationId where
     LoopHoisting -> strLoopHoisting
     Inlining -> strInlining
     MandatoryInlining -> strMandatoryInlining
-    FoldTypeSynonyms -> strFoldTypeSynonyms
     CaseCallLifting -> strCaseCallLifting
     SimplifyIfs -> strSimplifyIfs
     SimplifyComparisons -> strSimplifyComparisons
