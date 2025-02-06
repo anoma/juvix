@@ -40,7 +40,6 @@ extra-source-files:
   - runtime/c/**/*.a
   - runtime/rust/juvix/target/**/*.rlib
   - runtime/tree/*.jvt
-  - runtime/vampir/*.pir
   - runtime/casm/*.casm
   - runtime/nockma/*.nockma
   - config/config.json
