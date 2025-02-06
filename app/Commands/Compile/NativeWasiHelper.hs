@@ -86,5 +86,6 @@ inputCFile inputFileCompile = do
 
 instance EntryPointOptions (HelperOptions k) where
   applyOptions opts =
-    set entryPointTarget (Just (opts ^. helperTarget))
+    set entryPointPipeline (Just PipelineExec)
+      . set entryPointTarget (Just (opts ^. helperTarget))
       . applyOptions (opts ^. helperCompileCommonOptions)

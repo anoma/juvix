@@ -24,5 +24,6 @@ parseAnoma = do
 
 instance EntryPointOptions (AnomaOptions k) where
   applyOptions opts =
-    set entryPointTarget (Just TargetAnoma)
+    set entryPointPipeline (Just PipelineExec)
+      . set entryPointTarget (Just TargetAnoma)
       . applyOptions (opts ^. anomaCompileCommonOptions)

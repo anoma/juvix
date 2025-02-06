@@ -24,5 +24,6 @@ parseCairo = do
 
 instance EntryPointOptions (CairoOptions k) where
   applyOptions opts =
-    set entryPointTarget (Just TargetCairo)
+    set entryPointPipeline (Just PipelineExec)
+      . set entryPointTarget (Just TargetCairo)
       . applyOptions (opts ^. cairoCompileCommonOptions)

@@ -2,7 +2,7 @@ module Commands.Dev.Repl.Options where
 
 import Commands.Repl.Options
 import CommonOptions
-import Juvix.Compiler.Core.Data.TransformationId (toStoredTransformations)
+import Juvix.Compiler.Core.Data.TransformationId (toEvalTransformations)
 
 parseDevRepl :: Parser ReplOptions
 parseDevRepl = do
@@ -13,7 +13,7 @@ parseDevRepl = do
     ts <- optCoreTransformationIds
     pure $
       if
-          | null ts -> toStoredTransformations
+          | null ts -> toEvalTransformations
           | otherwise -> ts
   _replNoDisambiguate <- optNoDisambiguate
   _replShowDeBruijn <-

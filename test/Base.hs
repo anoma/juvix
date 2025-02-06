@@ -228,7 +228,9 @@ compileMain :: Bool -> Path Rel Dir -> Path Rel File -> Path Abs Dir -> IO Anoma
 compileMain enableDebug relRoot mainFile rootCopyDir = do
   let testRootDir = rootCopyDir <//> relRoot
   entryPoint <-
-    set entryPointTarget (Just TargetAnoma) . set entryPointDebug enableDebug
+    set entryPointPipeline (Just PipelineExec)
+      . set entryPointTarget (Just TargetAnoma)
+      . set entryPointDebug enableDebug
       <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
   (over anomaClosure removeInfoUnlessDebug) . (^. pipelineResult) . snd <$> testRunIO entryPoint upToAnoma
   where

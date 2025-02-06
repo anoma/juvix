@@ -46,19 +46,23 @@ data TransformationId
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
-  = PipelineStored
+  = PipelineEval
+  | PipelineExec
+  | PipelineTypecheck
   | PipelineNormalize
   | PipelineStripped
-  | PipelineExec
   deriving stock (Data, Bounded, Enum)
 
 type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
 
+toEvalTransformations :: [TransformationId]
+toEvalTransformations = [EtaExpandApps, DetectConstantSideConditions, DetectRedundantPatterns, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, OptPhaseEval, DisambiguateNames]
+
+toExecTransformations :: [TransformationId]
+toExecTransformations = toEvalTransformations ++ [OptPhasePreLifting, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps]
+
 toTypecheckTransformations :: [TransformationId]
 toTypecheckTransformations = [DetectConstantSideConditions, DetectRedundantPatterns, MatchToCase]
-
-toStoredTransformations :: [TransformationId]
-toStoredTransformations = [EtaExpandApps, DetectConstantSideConditions, DetectRedundantPatterns, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, OptPhaseEval, DisambiguateNames, OptPhasePreLifting, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps]
 
 combineInfoTablesTransformations :: [TransformationId]
 combineInfoTablesTransformations = [CombineInfoTables, FilterUnreachable]
@@ -115,14 +119,16 @@ instance TransformationId' TransformationId where
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text
   pipelineText = \case
-    PipelineStored -> strStoredPipeline
+    PipelineEval -> strEvalPipeline
+    PipelineExec -> strExecPipeline
+    PipelineTypecheck -> strTypecheckPipeline
     PipelineNormalize -> strNormalizePipeline
     PipelineStripped -> strStrippedPipeline
-    PipelineExec -> strExecPipeline
 
   pipeline :: PipelineId -> [TransformationId]
   pipeline = \case
-    PipelineStored -> toStoredTransformations
+    PipelineEval -> toEvalTransformations
+    PipelineExec -> toExecTransformations
+    PipelineTypecheck -> toTypecheckTransformations
     PipelineNormalize -> toNormalizeTransformations
     PipelineStripped -> toStrippedTransformations IdentityTrans
-    PipelineExec -> toStrippedTransformations CheckExec

@@ -9,12 +9,11 @@ import Juvix.Prelude
 storedCoreToTree ::
   (Members '[Error JuvixError, Reader EntryPoint] r) =>
   Core.TransformationId ->
-  [Core.TransformationId] ->
   Core.Module ->
   Sem r Tree.InfoTable
-storedCoreToTree checkId extraTransforms md = do
+storedCoreToTree checkId md = do
   fsize <- asks (^. entryPointFieldSize)
   Tree.fromCore
     . Stripped.fromCore fsize
     . Core.computeCombinedInfoTable
-    <$> (Core.toStripped checkId md >>= Core.applyExtraTransformations extraTransforms)
+    <$> (Core.toStripped checkId md)

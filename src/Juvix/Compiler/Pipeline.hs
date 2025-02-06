@@ -153,35 +153,44 @@ upToStoredCore = do
   md <- Core.toStored (r ^. Core.coreResultModule)
   return r {Core._coreResultModule = md}
 
+upToStoredCore' ::
+  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
+  Core.PipelineId ->
+  Sem r Core.CoreResult
+upToStoredCore' p = do
+  r <- upToCore
+  md <- Core.toStored' p (r ^. Core.coreResultModule)
+  return r {Core._coreResultModule = md}
+
 upToReg ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Reg.InfoTable
 upToReg =
-  upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToReg _coreResultModule
+  upToStoredCore' Core.PipelineExec >>= \Core.CoreResult {..} -> storedCoreToReg _coreResultModule
 
 upToTree ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Tree.InfoTable
 upToTree =
-  upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToTree Core.IdentityTrans [] _coreResultModule
+  upToStoredCore' Core.PipelineExec >>= \Core.CoreResult {..} -> storedCoreToTree Core.IdentityTrans _coreResultModule
 
 upToAsm ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Asm.InfoTable
 upToAsm =
-  upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToAsm _coreResultModule
+  upToStoredCore' Core.PipelineExec >>= \Core.CoreResult {..} -> storedCoreToAsm _coreResultModule
 
 upToCasm ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Casm.Result
 upToCasm =
-  upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToCasm _coreResultModule
+  upToStoredCore' Core.PipelineExec >>= \Core.CoreResult {..} -> storedCoreToCasm _coreResultModule
 
 upToCairo ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r Cairo.Result
 upToCairo =
-  upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToCairo _coreResultModule
+  upToStoredCore' Core.PipelineExec >>= \Core.CoreResult {..} -> storedCoreToCairo _coreResultModule
 
 upToMiniC ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
@@ -191,17 +200,17 @@ upToMiniC = upToAsm >>= asmToMiniC
 upToAnoma ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r NockmaTree.AnomaResult
-upToAnoma = upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToAnoma _coreResultModule
+upToAnoma = upToStoredCore' Core.PipelineExec >>= \Core.CoreResult {..} -> storedCoreToAnoma _coreResultModule
 
 upToRust ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r Rust.Result
-upToRust = upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToRust _coreResultModule
+upToRust = upToStoredCore' Core.PipelineExec >>= \Core.CoreResult {..} -> storedCoreToRust _coreResultModule
 
 upToRiscZeroRust ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError, PathResolver] r) =>
   Sem r Rust.Result
-upToRiscZeroRust = upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToRiscZeroRust _coreResultModule
+upToRiscZeroRust = upToStoredCore' Core.PipelineExec >>= \Core.CoreResult {..} -> storedCoreToRiscZeroRust _coreResultModule
 
 upToCoreTypecheck ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
@@ -218,21 +227,20 @@ upToCoreTypecheck = do
 storedCoreToTree ::
   (Members '[Error JuvixError, Reader EntryPoint] r) =>
   Core.TransformationId ->
-  [Core.TransformationId] ->
   Core.Module ->
   Sem r Tree.InfoTable
-storedCoreToTree checkId extraTransforms md = do
+storedCoreToTree checkId md = do
   fsize <- asks (^. entryPointFieldSize)
   Tree.fromCore
     . Stripped.fromCore fsize
     . Core.computeCombinedInfoTable
-    <$> (Core.toStripped checkId md >>= Core.applyExtraTransformations extraTransforms)
+    <$> Core.toStripped checkId md
 
 storedCoreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r NockmaTree.AnomaResult
-storedCoreToAnoma = storedCoreToTree Core.CheckAnoma Core.extraAnomaTransformations >=> treeToAnoma
+storedCoreToAnoma = storedCoreToTree Core.CheckAnoma >=> treeToAnoma
 
 storedCoreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
-storedCoreToAsm = storedCoreToTree Core.CheckExec [] >=> treeToAsm
+storedCoreToAsm = storedCoreToTree Core.CheckExec >=> treeToAsm
 
 storedCoreToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Reg.InfoTable
 storedCoreToReg = storedCoreToAsm >=> asmToReg
@@ -241,13 +249,13 @@ storedCoreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.
 storedCoreToMiniC = storedCoreToAsm >=> asmToMiniC
 
 storedCoreToRust :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Rust.Result
-storedCoreToRust = storedCoreToTree Core.CheckRust [] >=> treeToReg >=> regToRust
+storedCoreToRust = storedCoreToTree Core.CheckRust >=> treeToReg >=> regToRust
 
 storedCoreToRiscZeroRust :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Rust.Result
-storedCoreToRiscZeroRust = storedCoreToTree Core.CheckRust [] >=> treeToReg >=> regToRiscZeroRust
+storedCoreToRiscZeroRust = storedCoreToTree Core.CheckRust >=> treeToReg >=> regToRiscZeroRust
 
 storedCoreToCasm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Casm.Result
-storedCoreToCasm = local (set entryPointFieldSize cairoFieldSize) . storedCoreToTree Core.CheckCairo [] >=> treeToCasm
+storedCoreToCasm = local (set entryPointFieldSize cairoFieldSize) . storedCoreToTree Core.CheckCairo >=> treeToCasm
 
 storedCoreToCairo :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Cairo.Result
 storedCoreToCairo = storedCoreToCasm >=> casmToCairo
@@ -256,8 +264,8 @@ storedCoreToCairo = storedCoreToCasm >=> casmToCairo
 -- Workflows from Core
 --------------------------------------------------------------------------------
 
-coreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.TransformationId -> [Core.TransformationId] -> Core.Module -> Sem r Tree.InfoTable
-coreToTree checkId extraTransforms = Core.toStored >=> storedCoreToTree checkId extraTransforms
+coreToTree :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.TransformationId -> Core.Module -> Sem r Tree.InfoTable
+coreToTree checkId = Core.toStored >=> storedCoreToTree checkId
 
 coreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Asm.InfoTable
 coreToAsm = Core.toStored >=> storedCoreToAsm
@@ -272,7 +280,7 @@ coreToCairo :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module
 coreToCairo = Core.toStored >=> storedCoreToCairo
 
 coreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r NockmaTree.AnomaResult
-coreToAnoma = coreToTree Core.CheckAnoma Core.extraAnomaTransformations >=> treeToAnoma
+coreToAnoma = coreToTree Core.CheckAnoma >=> treeToAnoma
 
 coreToRust :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Rust.Result
 coreToRust = Core.toStored >=> storedCoreToRust
@@ -333,13 +341,13 @@ regToMiniC :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r C.MiniCRe
 regToMiniC tab = do
   tab' <- Reg.toC tab
   e <- ask
-  return $ C.fromReg (Backend.getLimits (getEntryPointTarget e) (e ^. entryPointDebug)) tab'
+  return $ C.fromReg (Backend.getLimits (fromJust (e ^. entryPointTarget)) (e ^. entryPointDebug)) tab'
 
 regToRust' :: (Member (Reader EntryPoint) r) => Rust.Backend -> Reg.InfoTable -> Sem r Rust.Result
 regToRust' backend tab = do
   tab' <- Reg.toRust tab
   e <- ask
-  return $ Rust.fromReg backend (Backend.getLimits (getEntryPointTarget e) (e ^. entryPointDebug)) tab'
+  return $ Rust.fromReg backend (Backend.getLimits (fromJust (e ^. entryPointTarget)) (e ^. entryPointDebug)) tab'
 
 regToRust :: (Member (Reader EntryPoint) r) => Reg.InfoTable -> Sem r Rust.Result
 regToRust = regToRust' Rust.BackendRust
