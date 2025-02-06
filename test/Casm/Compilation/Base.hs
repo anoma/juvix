@@ -43,7 +43,7 @@ compileAssertionEntry adjustEntry root' bInterp bRunVM optLevel mainFile inputFi
           { _entryPointOptimizationLevel = optLevel,
             _entryPointPipeline = Just PipelineExec
           }
-  PipelineResult {..} <- snd <$> testRunIO entryPoint upToStoredCore
+  PipelineResult {..} <- snd <$> testRunIO entryPoint' upToStoredCore
   step "Translate to CASM"
   case run $ runError @JuvixError $ runReader entryPoint' $ storedCoreToCasm (_pipelineResult ^. Core.coreResultModule) of
     Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
