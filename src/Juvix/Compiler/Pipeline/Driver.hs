@@ -490,13 +490,13 @@ processImport p = withPathFile p getCachedImport
 
 processFileUpToParsing ::
   forall r.
-  (Members '[ModuleInfoCache, Reader EntryPoint, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[ModuleInfoCache, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
 processFileUpToParsing entry = do
   res <- runReader entry upToParsing
   let imports :: [Import 'Parsed] = res ^. Parser.resultParserState . Parser.parserStateImports
-  mtab <- (^. compileResultModuleTable) <$> processImports (map (^. importModulePath) imports)
+  mtab <- (^. compileResultModuleTable) <$> runReader entry (processImports (map (^. importModulePath) imports))
   return
     PipelineResult
       { _pipelineResult = res,
@@ -564,12 +564,13 @@ processFileToStoredCore ::
   (Members '[ModuleInfoCache, HighlightBuilder, PathResolver, TopModuleNameChecker, Error JuvixError, Files] r) =>
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
-processFileToStoredCore entry = runReader entry $ do
+processFileToStoredCore entry = do
   res <- processFileUpToParsing entry
   let pkg = entry ^. entryPointPackageId
   mid <- runReader pkg (getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath . to topModulePathKey))
   r <-
     evalTopNameIdGen mid
+      . runReader entry
       . runReader (res ^. pipelineResultImports)
       . runReader (res ^. pipelineResult)
       $ upToStoredCore

@@ -24,7 +24,7 @@ coreNormalizeAssertion mainFile expectedFile step = do
     Right (tabIni, Just node) -> do
       step "Transform"
       let tab = setupMainFunction defaultModuleId tabIni node
-          transforms = toStoredTransformations ++ toNormalizeTransformations
+          transforms = toNormalizeTransformations
       case run $ runReader defaultCoreOptions $ runError @JuvixError $ applyTransformations transforms (moduleFromInfoTable tab) of
         Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right m -> do

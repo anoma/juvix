@@ -127,7 +127,7 @@ evalRepl artif ep n = do
       . runReader ep
       . runError @JuvixError
       . runState artif
-      . runTransformations True toStoredTransformations
+      . runTransformations True toEvalTransformations
       $ n
   doEvalIO' artif' n' >>= assertNoJuvixError
   where

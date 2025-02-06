@@ -55,24 +55,34 @@ data PipelineId
 
 type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
 
+toTypecheckTransformations :: [TransformationId]
+toTypecheckTransformations =
+  [DetectConstantSideConditions, DetectRedundantPatterns, MatchToCase]
+
 toEvalTransformations :: [TransformationId]
-toEvalTransformations = [EtaExpandApps, DetectConstantSideConditions, DetectRedundantPatterns, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, OptPhaseEval, DisambiguateNames]
+toEvalTransformations =
+  [ EtaExpandApps,
+    DetectConstantSideConditions,
+    DetectRedundantPatterns,
+    MatchToCase,
+    NatToPrimInt,
+    IntToPrimInt,
+    ConvertBuiltinTypes,
+    OptPhaseEval,
+    DisambiguateNames
+  ]
 
 toExecTransformations :: [TransformationId]
-toExecTransformations = toEvalTransformations ++ [OptPhasePreLifting, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps]
-
-toTypecheckTransformations :: [TransformationId]
-toTypecheckTransformations = [DetectConstantSideConditions, DetectRedundantPatterns, MatchToCase]
-
-combineInfoTablesTransformations :: [TransformationId]
-combineInfoTablesTransformations = [CombineInfoTables, FilterUnreachable]
+toExecTransformations =
+  toEvalTransformations ++ [OptPhasePreLifting, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps]
 
 toNormalizeTransformations :: [TransformationId]
-toNormalizeTransformations = [CombineInfoTables, LetRecLifting, LetFolding, UnrollRecursion]
+toNormalizeTransformations =
+  toEvalTransformations ++ [CombineInfoTables, LetRecLifting, LetFolding, UnrollRecursion]
 
 toStrippedTransformations :: TransformationId -> [TransformationId]
 toStrippedTransformations checkId =
-  combineInfoTablesTransformations ++ [checkId, RemoveTypeArgs, DisambiguateNames]
+  [CombineInfoTables, FilterUnreachable, checkId, RemoveTypeArgs, DisambiguateNames]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
