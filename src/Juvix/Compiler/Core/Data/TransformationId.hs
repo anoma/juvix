@@ -25,7 +25,6 @@ data TransformationId
   | CombineInfoTables
   | CheckExec
   | CheckRust
-  | CheckVampIR
   | CheckAnoma
   | CheckCairo
   | Normalize
@@ -46,7 +45,6 @@ data TransformationId
   | FilterUnreachable
   | OptPhaseEval
   | OptPhaseExec
-  | OptPhaseVampIR
   | OptPhaseMain
   | OptPhasePreLifting
   deriving stock (Data, Bounded, Enum, Show)
@@ -54,7 +52,6 @@ data TransformationId
 data PipelineId
   = PipelineStored
   | PipelineNormalize
-  | PipelineVampIR
   | PipelineStripped
   | PipelineExec
   deriving stock (Data, Bounded, Enum)
@@ -72,10 +69,6 @@ combineInfoTablesTransformations = [CombineInfoTables, FilterUnreachable]
 
 toNormalizeTransformations :: [TransformationId]
 toNormalizeTransformations = [CombineInfoTables, LetRecLifting, LetFolding, UnrollRecursion]
-
-toVampIRTransformations :: [TransformationId]
-toVampIRTransformations =
-  combineInfoTablesTransformations ++ [CheckVampIR, LetRecLifting, OptPhaseVampIR, UnrollRecursion, Normalize, LetHoisting]
 
 toStrippedTransformations :: TransformationId -> [TransformationId]
 toStrippedTransformations checkId =
@@ -104,7 +97,6 @@ instance TransformationId' TransformationId where
     CombineInfoTables -> strCombineInfoTables
     CheckExec -> strCheckExec
     CheckRust -> strCheckRust
-    CheckVampIR -> strCheckVampIR
     CheckAnoma -> strCheckAnoma
     CheckCairo -> strCheckCairo
     Normalize -> strNormalize
@@ -125,7 +117,6 @@ instance TransformationId' TransformationId where
     FilterUnreachable -> strFilterUnreachable
     OptPhaseEval -> strOptPhaseEval
     OptPhaseExec -> strOptPhaseExec
-    OptPhaseVampIR -> strOptPhaseVampIR
     OptPhaseMain -> strOptPhaseMain
     OptPhasePreLifting -> strOptPhasePreLifting
 
@@ -134,7 +125,6 @@ instance PipelineId' TransformationId PipelineId where
   pipelineText = \case
     PipelineStored -> strStoredPipeline
     PipelineNormalize -> strNormalizePipeline
-    PipelineVampIR -> strVampIRPipeline
     PipelineStripped -> strStrippedPipeline
     PipelineExec -> strExecPipeline
 
@@ -142,6 +132,5 @@ instance PipelineId' TransformationId PipelineId where
   pipeline = \case
     PipelineStored -> toStoredTransformations
     PipelineNormalize -> toNormalizeTransformations
-    PipelineVampIR -> toVampIRTransformations
     PipelineStripped -> toStrippedTransformations IdentityTrans
     PipelineExec -> toStrippedTransformations CheckExec

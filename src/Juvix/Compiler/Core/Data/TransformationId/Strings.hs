@@ -14,9 +14,6 @@ strStoredPipeline = "pipeline-stored"
 strNormalizePipeline :: Text
 strNormalizePipeline = "pipeline-normalize"
 
-strVampIRPipeline :: Text
-strVampIRPipeline = "pipeline-vampir"
-
 strStrippedPipeline :: Text
 strStrippedPipeline = "pipeline-stripped"
 
@@ -83,9 +80,6 @@ strCheckExec = "check-exec"
 strCheckRust :: Text
 strCheckRust = "check-rust"
 
-strCheckVampIR :: Text
-strCheckVampIR = "check-vampir"
-
 strCheckAnoma :: Text
 strCheckAnoma = "check-anoma"
 
@@ -139,9 +133,6 @@ strOptPhaseEval = "opt-phase-eval"
 
 strOptPhaseExec :: Text
 strOptPhaseExec = "opt-phase-exec"
-
-strOptPhaseVampIR :: Text
-strOptPhaseVampIR = "opt-phase-vampir"
 
 strOptPhaseMain :: Text
 strOptPhaseMain = "opt-phase-main"
