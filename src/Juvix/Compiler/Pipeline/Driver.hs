@@ -215,10 +215,7 @@ processModuleCacheMissDecide entryIx = do
           . replaceExtension ".jvo"
           . fromJust
           $ stripProperPrefix $(mkAbsDir "/") sourcePath
-      subdir :: Path Rel Dir =
-        if
-            | opts ^. StoredOptions.optionsDebug -> $(mkRelDir "debug")
-            | otherwise -> $(mkRelDir "release")
+      subdir = StoredOptions.getOptionsSubdir opts
       absPath = buildDir Path.</> subdir Path.</> relPath
   sha256 <- SHA256.digestFile sourcePath
 

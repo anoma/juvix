@@ -20,7 +20,11 @@ data Pipeline
   = PipelineEval
   | PipelineExec
   | PipelineTypecheck
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+
+instance Serialize Pipeline
+
+instance NFData Pipeline
 
 -- | A module in _entryModulePath is the unit of compilation
 data EntryPoint = EntryPoint
