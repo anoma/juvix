@@ -30,7 +30,6 @@ data TransformationId
   | Normalize
   | LetFolding
   | LambdaFolding
-  | LetHoisting
   | LoopHoisting
   | Inlining
   | MandatoryInlining
@@ -101,7 +100,6 @@ instance TransformationId' TransformationId where
     Normalize -> strNormalize
     LetFolding -> strLetFolding
     LambdaFolding -> strLambdaFolding
-    LetHoisting -> strLetHoisting
     LoopHoisting -> strLoopHoisting
     Inlining -> strInlining
     MandatoryInlining -> strMandatoryInlining

@@ -29,7 +29,6 @@ import Juvix.Compiler.Core.Transformation.FoldTypeSynonyms
 import Juvix.Compiler.Core.Transformation.IdentityTrans
 import Juvix.Compiler.Core.Transformation.IntToPrimInt
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
-import Juvix.Compiler.Core.Transformation.LetHoisting
 import Juvix.Compiler.Core.Transformation.MatchToCase
 import Juvix.Compiler.Core.Transformation.MoveApps
 import Juvix.Compiler.Core.Transformation.NatToPrimInt
@@ -89,7 +88,6 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       Normalize -> normalize
       LetFolding -> return . letFolding
       LambdaFolding -> return . lambdaFolding
-      LetHoisting -> return . letHoisting
       LoopHoisting -> return . loopHoisting
       Inlining -> inlining
       MandatoryInlining -> return . mandatoryInlining
