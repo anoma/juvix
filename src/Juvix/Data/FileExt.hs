@@ -16,8 +16,6 @@ data FileExt
   | FileExtJuvixTree
   | FileExtCasm
   | FileExtJson
-  | FileExtVampIR
-  | FileExtVampIRParams
   | FileExtPlonk
   | FileExtHalo
   | FileExtLisp
@@ -79,12 +77,6 @@ casmFileExt = ".casm"
 jsonFileExt :: (IsString a) => a
 jsonFileExt = ".json"
 
-vampIRFileExt :: (IsString a) => a
-vampIRFileExt = ".pir"
-
-vampIRParamsFileExt :: (IsString a) => a
-vampIRParamsFileExt = ".pp"
-
 plonkFileExt :: (IsString a) => a
 plonkFileExt = ".plonk"
 
@@ -131,8 +123,6 @@ fileExtToIsString = \case
   FileExtJuvixTree -> juvixTreeFileExt
   FileExtCasm -> casmFileExt
   FileExtJson -> jsonFileExt
-  FileExtVampIR -> vampIRFileExt
-  FileExtVampIRParams -> vampIRParamsFileExt
   FileExtPlonk -> plonkFileExt
   FileExtHalo -> haloFileExt
   FileExtLisp -> lispFileExt
@@ -157,8 +147,6 @@ toMetavar = \case
   FileExtJuvixTree -> "JUVIX_TREE_FILE"
   FileExtCasm -> "CASM_FILE"
   FileExtJson -> "JSON_FILE"
-  FileExtVampIR -> "VAMPIR_FILE"
-  FileExtVampIRParams -> "VAMPIR_PARAMS_FILE"
   FileExtPlonk -> "PLONK_FILE"
   FileExtHalo -> "HALO_FILE"
   FileExtLisp -> "LISP_FILE"
@@ -192,12 +180,6 @@ isJuvixMarkdownFile p = case splitExtension p of
 
 isJuvixCoreFile :: Path b File -> Bool
 isJuvixCoreFile = (== Just juvixCoreFileExt) . fileExtension
-
-isVampIRFile :: Path b File -> Bool
-isVampIRFile = (== Just vampIRFileExt) . fileExtension
-
-isVampIRParamsFile :: Path b File -> Bool
-isVampIRParamsFile = (== Just vampIRParamsFileExt) . fileExtension
 
 isPlonkFile :: Path b File -> Bool
 isPlonkFile = (== Just plonkFileExt) . fileExtension
@@ -247,8 +229,6 @@ toFileExt p
   | isJuvixRegFile p = Just FileExtJuvixReg
   | isJuvixTreeFile p = Just FileExtJuvixTree
   | isCasmFile p = Just FileExtCasm
-  | isVampIRFile p = Just FileExtVampIR
-  | isVampIRParamsFile p = Just FileExtVampIRParams
   | isPlonkFile p = Just FileExtPlonk
   | isHaloFile p = Just FileExtHalo
   | isLispFile p = Just FileExtLisp

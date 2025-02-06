@@ -25,10 +25,6 @@ toStripped checkId md = do
   mapReader fromEntryPoint $
     applyTransformations (toStrippedTransformations checkId') md
 
--- | Perform transformations on stored Core necessary before the translation to VampIR
-toVampIR :: (Members '[Error JuvixError, Reader EntryPoint] r) => Module -> Sem r Module
-toVampIR = mapReader fromEntryPoint . applyTransformations toVampIRTransformations
-
 extraAnomaTransformations :: [TransformationId]
 extraAnomaTransformations = []
 

@@ -6,7 +6,6 @@ import Juvix.Prelude
 data Target
   = TargetCWasm32Wasi
   | TargetCNative64
-  | TargetVampIR
   | TargetCore
   | TargetAsm
   | TargetReg
@@ -68,8 +67,6 @@ getLimits tgt debug = case tgt of
         _limitsBuiltinUIDsNum = 8,
         _limitsSpecialisedApply = 3
       }
-  TargetVampIR ->
-    defaultLimits
   TargetCore ->
     defaultLimits
   TargetAsm ->

@@ -1,7 +1,0 @@
-module test001;
-
-import Stdlib.Prelude open;
-
-{-# argnames: [a, b
-                c] #-}
-main (x y z : Nat) : Bool := x + y == z;

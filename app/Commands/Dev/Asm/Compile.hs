@@ -81,7 +81,6 @@ runCommand opts = do
       AppTargetRiscZeroRust -> err "RISC0 Rust"
       AppTargetAnoma -> err "Anoma"
       AppTargetTree -> err "JuvixTree"
-      AppTargetVampIR -> err "VampIR"
       AppTargetCore -> err "JuvixCore"
       AppTargetAsm -> err "JuvixAsm"
       where
