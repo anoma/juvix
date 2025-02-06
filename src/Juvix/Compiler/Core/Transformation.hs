@@ -18,14 +18,12 @@ import Juvix.Compiler.Core.Transformation.Check.Cairo
 import Juvix.Compiler.Core.Transformation.Check.Exec
 import Juvix.Compiler.Core.Transformation.Check.Rust
 import Juvix.Compiler.Core.Transformation.CombineInfoTables (combineInfoTables)
-import Juvix.Compiler.Core.Transformation.ComputeCaseANF
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo
 import Juvix.Compiler.Core.Transformation.ConvertBuiltinTypes
 import Juvix.Compiler.Core.Transformation.DetectConstantSideConditions
 import Juvix.Compiler.Core.Transformation.DetectRedundantPatterns
 import Juvix.Compiler.Core.Transformation.DisambiguateNames
 import Juvix.Compiler.Core.Transformation.Eta
-import Juvix.Compiler.Core.Transformation.FoldTypeSynonyms
 import Juvix.Compiler.Core.Transformation.IdentityTrans
 import Juvix.Compiler.Core.Transformation.IntToPrimInt
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
@@ -73,7 +71,6 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       IntToPrimInt -> return . intToPrimInt
       ConvertBuiltinTypes -> return . convertBuiltinTypes
       ComputeTypeInfo -> return . computeTypeInfo
-      ComputeCaseANF -> return . computeCaseANF
       UnrollRecursion -> unrollRecursion
       DetectConstantSideConditions -> mapError (JuvixError @CoreError) . detectConstantSideConditions
       DetectRedundantPatterns -> mapError (JuvixError @CoreError) . detectRedundantPatterns
@@ -91,7 +88,6 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       LoopHoisting -> return . loopHoisting
       Inlining -> inlining
       MandatoryInlining -> return . mandatoryInlining
-      FoldTypeSynonyms -> return . foldTypeSynonyms
       SimplifyIfs -> return . simplifyIfs
       SimplifyComparisons -> return . simplifyComparisons
       SpecializeArgs -> return . specializeArgs
