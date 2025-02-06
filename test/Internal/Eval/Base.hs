@@ -14,7 +14,9 @@ import Juvix.Compiler.Core.Translation.FromInternal.Data.Context qualified as Co
 internalCoreAssertion :: Path Abs Dir -> Path Abs File -> Path Abs File -> (String -> IO ()) -> Assertion
 internalCoreAssertion root' mainFile expectedFile step = do
   step "Translate to Core"
-  entryPoint <- testDefaultEntryPointIO root' mainFile
+  entryPoint <-
+    set entryPointPipeline (Just PipelineEval)
+      <$> testDefaultEntryPointIO root' mainFile
   PipelineResult {..} <- snd <$> testRunIO entryPoint upToStoredCore
   let m = etaExpansionApps (_pipelineResult ^. Core.coreResultModule)
       tab = computeCombinedInfoTable m

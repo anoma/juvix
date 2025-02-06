@@ -10,6 +10,7 @@ import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation.FromSource
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
+import Juvix.Compiler.Pipeline.EntryPoint qualified as EntryPoint
 import Juvix.Compiler.Tree.Translation.FromCore qualified as Tree
 import Juvix.Data.Field
 import Juvix.Data.PPOutput
@@ -53,7 +54,9 @@ coreAsmAssertion root' mainFile expectedFile step = do
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
       step "Translate"
-      entryPoint <- testDefaultEntryPointIO root' mainFile
+      entryPoint <-
+        set entryPointPipeline (Just EntryPoint.PipelineExec)
+          <$> testDefaultEntryPointIO root' mainFile
       case run
         . runReader entryPoint
         . runError
