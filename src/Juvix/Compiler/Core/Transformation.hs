@@ -34,7 +34,6 @@ import Juvix.Compiler.Core.Transformation.MatchToCase
 import Juvix.Compiler.Core.Transformation.MoveApps
 import Juvix.Compiler.Core.Transformation.NatToPrimInt
 import Juvix.Compiler.Core.Transformation.Normalize
-import Juvix.Compiler.Core.Transformation.Optimize.CaseCallLifting
 import Juvix.Compiler.Core.Transformation.Optimize.CaseFolding
 import Juvix.Compiler.Core.Transformation.Optimize.CasePermutation (casePermutation)
 import Juvix.Compiler.Core.Transformation.Optimize.ConstantFolding
@@ -95,7 +94,6 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       Inlining -> inlining
       MandatoryInlining -> return . mandatoryInlining
       FoldTypeSynonyms -> return . foldTypeSynonyms
-      CaseCallLifting -> return . caseCallLifting
       SimplifyIfs -> return . simplifyIfs
       SimplifyComparisons -> return . simplifyComparisons
       SpecializeArgs -> return . specializeArgs

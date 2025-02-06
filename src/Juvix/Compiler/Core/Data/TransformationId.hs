@@ -35,7 +35,6 @@ data TransformationId
   | Inlining
   | MandatoryInlining
   | FoldTypeSynonyms
-  | CaseCallLifting
   | SimplifyIfs
   | SimplifyComparisons
   | SpecializeArgs
@@ -107,7 +106,6 @@ instance TransformationId' TransformationId where
     Inlining -> strInlining
     MandatoryInlining -> strMandatoryInlining
     FoldTypeSynonyms -> strFoldTypeSynonyms
-    CaseCallLifting -> strCaseCallLifting
     SimplifyIfs -> strSimplifyIfs
     SimplifyComparisons -> strSimplifyComparisons
     SpecializeArgs -> strSpecializeArgs
