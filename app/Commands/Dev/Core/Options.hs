@@ -105,4 +105,4 @@ parseCoreCommand =
     compileInfo =
       info
         (CoreCompile <$> parseCoreCompileOptions)
-        (progDesc "Compile a JuvixCore file to native code, WebAssembly, or VampIR")
+        (progDesc "Compile a JuvixCore file to Nock, Cairo, native code, or WebAssembly")

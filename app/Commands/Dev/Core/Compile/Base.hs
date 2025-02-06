@@ -9,7 +9,6 @@ import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Rust.Data.Result qualified as Rust
-import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Casm.Data.Result qualified as Casm
 import Juvix.Compiler.Casm.Pretty qualified as Casm
 import Juvix.Compiler.Core.Data.Module qualified as Core
@@ -38,7 +37,6 @@ getEntry PipelineArg {..} = do
     getTarget = \case
       AppTargetWasm32Wasi -> Backend.TargetCWasm32Wasi
       AppTargetNative64 -> Backend.TargetCNative64
-      AppTargetVampIR -> Backend.TargetVampIR
       AppTargetCore -> Backend.TargetCore
       AppTargetAsm -> Backend.TargetAsm
       AppTargetReg -> Backend.TargetReg
@@ -81,22 +79,6 @@ runCPipeline pa@PipelineArg {..} = do
       buildDir <- askBuildDir
       ensureDir buildDir
       return (buildDir <//> replaceExtension' ".c" (filename inputFileCompile))
-
-runVampIRPipeline ::
-  forall r.
-  (Members '[EmbedIO, App, TaggedLock] r) =>
-  PipelineArg ->
-  Sem r ()
-runVampIRPipeline pa@PipelineArg {..} = do
-  entryPoint <- getEntry pa
-  vampirFile <- Compile.outputFile _pipelineArgOptions
-  VampIR.Result {..} <-
-    getRight
-      . run
-      . runReader entryPoint
-      . runError @JuvixError
-      $ coreToVampIR _pipelineArgModule
-  writeFileEnsureLn vampirFile _resultCode
 
 runAsmPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runAsmPipeline pa@PipelineArg {..} = do

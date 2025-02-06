@@ -17,7 +17,6 @@ import Juvix.Compiler.Core.Transformation.Check.Anoma
 import Juvix.Compiler.Core.Transformation.Check.Cairo
 import Juvix.Compiler.Core.Transformation.Check.Exec
 import Juvix.Compiler.Core.Transformation.Check.Rust
-import Juvix.Compiler.Core.Transformation.Check.VampIR
 import Juvix.Compiler.Core.Transformation.CombineInfoTables (combineInfoTables)
 import Juvix.Compiler.Core.Transformation.ComputeCaseANF
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo
@@ -30,12 +29,10 @@ import Juvix.Compiler.Core.Transformation.FoldTypeSynonyms
 import Juvix.Compiler.Core.Transformation.IdentityTrans
 import Juvix.Compiler.Core.Transformation.IntToPrimInt
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
-import Juvix.Compiler.Core.Transformation.LetHoisting
 import Juvix.Compiler.Core.Transformation.MatchToCase
 import Juvix.Compiler.Core.Transformation.MoveApps
 import Juvix.Compiler.Core.Transformation.NatToPrimInt
 import Juvix.Compiler.Core.Transformation.Normalize
-import Juvix.Compiler.Core.Transformation.Optimize.CaseCallLifting
 import Juvix.Compiler.Core.Transformation.Optimize.CaseFolding
 import Juvix.Compiler.Core.Transformation.Optimize.CasePermutation (casePermutation)
 import Juvix.Compiler.Core.Transformation.Optimize.ConstantFolding
@@ -49,7 +46,6 @@ import Juvix.Compiler.Core.Transformation.Optimize.Phase.Eval qualified as Phase
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Exec qualified as Phase.Exec
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Main qualified as Phase.Main
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.PreLifting qualified as Phase.PreLifting
-import Juvix.Compiler.Core.Transformation.Optimize.Phase.VampIR qualified as Phase.VampIR
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyComparisons (simplifyComparisons)
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyIfs
 import Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs
@@ -87,18 +83,15 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       CombineInfoTables -> return . combineInfoTables
       CheckExec -> mapError (JuvixError @CoreError) . checkExec
       CheckRust -> mapError (JuvixError @CoreError) . checkRust
-      CheckVampIR -> mapError (JuvixError @CoreError) . checkVampIR
       CheckAnoma -> mapError (JuvixError @CoreError) . checkAnoma
       CheckCairo -> mapError (JuvixError @CoreError) . checkCairo
       Normalize -> normalize
       LetFolding -> return . letFolding
       LambdaFolding -> return . lambdaFolding
-      LetHoisting -> return . letHoisting
       LoopHoisting -> return . loopHoisting
       Inlining -> inlining
       MandatoryInlining -> return . mandatoryInlining
       FoldTypeSynonyms -> return . foldTypeSynonyms
-      CaseCallLifting -> return . caseCallLifting
       SimplifyIfs -> return . simplifyIfs
       SimplifyComparisons -> return . simplifyComparisons
       SpecializeArgs -> return . specializeArgs
@@ -108,6 +101,5 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       FilterUnreachable -> return . filterUnreachable
       OptPhaseEval -> Phase.Eval.optimize
       OptPhaseExec -> Phase.Exec.optimize
-      OptPhaseVampIR -> Phase.VampIR.optimize
       OptPhaseMain -> Phase.Main.optimize
       OptPhasePreLifting -> Phase.PreLifting.optimize

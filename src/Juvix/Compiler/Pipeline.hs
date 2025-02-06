@@ -17,7 +17,6 @@ import Juvix.Compiler.Backend.Cairo qualified as Cairo
 import Juvix.Compiler.Backend.Isabelle.Data.Result qualified as Isabelle
 import Juvix.Compiler.Backend.Isabelle.Translation.FromTyped qualified as Isabelle
 import Juvix.Compiler.Backend.Rust.Translation.FromReg qualified as Rust
-import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Casm.Data.Builtins qualified as Casm
 import Juvix.Compiler.Casm.Data.Result qualified as Casm
 import Juvix.Compiler.Casm.Pipeline qualified as Casm
@@ -189,12 +188,6 @@ upToMiniC ::
   Sem r C.MiniCResult
 upToMiniC = upToAsm >>= asmToMiniC
 
-upToVampIR ::
-  (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
-  Sem r VampIR.Result
-upToVampIR =
-  upToStoredCore >>= \Core.CoreResult {..} -> storedCoreToVampIR _coreResultModule
-
 upToAnoma ::
   (Members '[HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
   Sem r NockmaTree.AnomaResult
@@ -259,9 +252,6 @@ storedCoreToCasm = local (set entryPointFieldSize cairoFieldSize) . storedCoreTo
 storedCoreToCairo :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r Cairo.Result
 storedCoreToCairo = storedCoreToCasm >=> casmToCairo
 
-storedCoreToVampIR :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r VampIR.Result
-storedCoreToVampIR = Core.toVampIR >=> VampIR.fromCore . Core.computeCombinedInfoTable
-
 --------------------------------------------------------------------------------
 -- Workflows from Core
 --------------------------------------------------------------------------------
@@ -292,9 +282,6 @@ coreToRiscZeroRust = Core.toStored >=> storedCoreToRiscZeroRust
 
 coreToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r C.MiniCResult
 coreToMiniC = coreToAsm >=> asmToMiniC
-
-coreToVampIR :: (Members '[Error JuvixError, Reader EntryPoint] r) => Core.Module -> Sem r VampIR.Result
-coreToVampIR = Core.toStored >=> storedCoreToVampIR
 
 --------------------------------------------------------------------------------
 -- Other workflows
