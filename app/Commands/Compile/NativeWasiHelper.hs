@@ -11,7 +11,6 @@ import Commands.Compile.CommonOptions
 import Commands.Compile.NativeWasiHelper.RuntimeWriter
 import Commands.Extra.Clang
 import Commands.Extra.Clang.Backend
-import Commands.Extra.NewCompile
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Extra.Paths
 
@@ -46,15 +45,8 @@ concreteToC ::
   Sem r C.MiniCResult
 concreteToC opts = do
   let opts' = opts ^. helperCompileCommonOptions
-  coreRes <- fromCompileCommonOptionsMain opts' >>= compileToCore
-  entryPoint <-
-    applyOptions opts
-      <$> getEntryPoint (opts' ^. compileInputFile)
-  getRight
-    . run
-    . runReader entryPoint
-    . runError @JuvixError
-    $ coreToMiniC (coreRes ^. coreResultModule)
+  r <- runError @JuvixError $ runPipeline opts (opts' ^. compileInputFile) upToMiniC
+  getRight r
 
 fromC :: forall k r. (SingI k, Members '[App, EmbedIO] r) => HelperOptions k -> C.MiniCResult -> Sem r ()
 fromC opts cResult = do

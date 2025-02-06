@@ -13,6 +13,7 @@ import Juvix.Compiler.Core.Extra.Utils
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation.FromSource
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
+import Juvix.Compiler.Pipeline.EntryPoint qualified as EntryPoint
 import Juvix.Compiler.Tree.Translation.FromCore qualified as Tree
 import Juvix.Data.Field
 import Juvix.Data.PPOutput
@@ -78,7 +79,9 @@ coreCompileAssertion root' mainFile expectedFile stdinText step = do
       expected <- readFile expectedFile
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
-      entryPoint <- testDefaultEntryPointIO root' mainFile
+      entryPoint <-
+        set entryPointPipeline (Just EntryPoint.PipelineExec)
+          <$> testDefaultEntryPointIO root' mainFile
       step "Transform JuvixCore"
       let tab0 = setupMainFunction defaultModuleId tabIni node
       case run . runReader entryPoint . runError $ toStored (moduleFromInfoTable tab0) of

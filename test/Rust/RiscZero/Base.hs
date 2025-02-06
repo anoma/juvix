@@ -26,7 +26,10 @@ compileAssertion ::
 compileAssertion tmpDir' root' optLevel mainFile expectedFile step = do
   tmpDir <- tmpDir'
   step "Translate to JuvixCore"
-  entryPoint <- set entryPointOptimizationLevel optLevel <$> testDefaultEntryPointIO root' mainFile
+  entryPoint <-
+    set entryPointPipeline (Just PipelineExec)
+      . set entryPointOptimizationLevel optLevel
+      <$> testDefaultEntryPointIO root' mainFile
   PipelineResult {..} <- snd <$> testRunIO entryPoint upToStoredCore
   step "Translate to RISC0 Rust"
   case run $ runError @JuvixError $ runReader entryPoint $ storedCoreToRiscZeroRust (_pipelineResult ^. Core.coreResultModule) of
