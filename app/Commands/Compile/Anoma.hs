@@ -26,8 +26,10 @@ compileAnoma inputFile = do
   compileAnomaOpts opts
 
 compileAnomaOpts :: (Members AppEffects r) => AnomaOptions 'InputMain -> Sem r Nockma.AnomaResult
-compileAnomaOpts opts = do
-  r <- runError @JuvixError $ runPipeline opts (opts ^. anomaCompileCommonOptions . compileInputFile) upToAnoma
+compileAnomaOpts AnomaOptions {..} = do
+  copts <- fromCompileCommonOptionsMain _anomaCompileCommonOptions
+  let opts' = AnomaOptions {_anomaCompileCommonOptions = copts, ..}
+  r <- runError @JuvixError $ runPipeline opts' (_anomaCompileCommonOptions ^. compileInputFile) upToAnoma
   getRight r
 
 outputAnomaResult :: (Members '[EmbedIO, App, Files] r) => Bool -> Path Abs File -> Nockma.AnomaResult -> Sem r ()

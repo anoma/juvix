@@ -43,9 +43,10 @@ concreteToC ::
   (Members AppEffects r) =>
   HelperOptions 'InputMain ->
   Sem r C.MiniCResult
-concreteToC opts = do
-  let opts' = opts ^. helperCompileCommonOptions
-  r <- runError @JuvixError $ runPipeline opts (opts' ^. compileInputFile) upToMiniC
+concreteToC HelperOptions {..} = do
+  copts <- fromCompileCommonOptionsMain _helperCompileCommonOptions
+  let opts' = HelperOptions {_helperCompileCommonOptions = copts, ..}
+  r <- runError @JuvixError $ runPipeline opts' (_helperCompileCommonOptions ^. compileInputFile) upToMiniC
   getRight r
 
 fromC :: forall k r. (SingI k, Members '[App, EmbedIO] r) => HelperOptions k -> C.MiniCResult -> Sem r ()
