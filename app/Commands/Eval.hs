@@ -4,6 +4,7 @@ import Commands.Base
 import Commands.Eval.Options
 import Evaluator qualified as Eval
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Extra.Strings qualified as Str
 
 runCommand :: (Members AppEffects r) => EvalOptions -> Sem r ()
@@ -17,7 +18,9 @@ runCommand opts@EvalOptions {..} = do
   case mevalNode of
     Just evalNode -> do
       evopts <- evalOptionsToEvalOptions opts
-      Eval.evalAndPrint' (project gopts) (project opts) evopts tab evalNode
+      md <- getRight . run . runError @JuvixError . runReader @Core.CoreOptions (project gopts) $ Core.applyTransformations Core.toEvalTransformations (Core.moduleFromInfoTable tab)
+      let tab' = Core.computeCombinedInfoTable md
+      Eval.evalAndPrint' (project gopts) (project opts) evopts tab' evalNode
     Nothing -> do
       let name = fromMaybe Str.main _evalSymbolName
       exitFailMsg ("function not found: " <> name)

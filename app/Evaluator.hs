@@ -8,7 +8,6 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo qualified as Info
 import Juvix.Compiler.Core.Normalizer
 import Juvix.Compiler.Core.Pretty qualified as Core
-import Juvix.Compiler.Core.Transformation qualified as Core
 import Juvix.Compiler.Core.Transformation.DisambiguateNames qualified as Core
 
 data EvalOptions = EvalOptions
@@ -29,9 +28,7 @@ evalAndPrint' ::
   Core.InfoTable ->
   Core.Node ->
   Sem r ()
-evalAndPrint' gopts copts eopts tab0 node = do
-  md <- getRight . run . runError @JuvixError . runReader gopts $ Core.applyTransformations Core.toEvalTransformations (Core.moduleFromInfoTable tab0)
-  let tab = Core.computeCombinedInfoTable md
+evalAndPrint' gopts copts eopts tab node = do
   loc <- defaultLoc
   r <- Core.doEval (Just $ project gopts ^. Core.optFieldSize) (eopts ^. evalNoIO) loc tab node
   case r of
