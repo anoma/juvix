@@ -10,4 +10,4 @@ checkAnoma md = do
   checkMainExists md
   checkNoAxioms md
   mapAllNodesM checkNoIO md
-  mapAllNodesM (checkBuiltins' ([OpStrToInt, OpShow] ++ builtinsCairo) [PrimField]) md
+  mapAllNodesM (checkBuiltins' ([OpStrToInt, OpShow] ++ builtinsCairo) [PrimField, PrimString]) md
