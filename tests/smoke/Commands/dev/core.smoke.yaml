@@ -9,7 +9,7 @@ tests:
       - from-concrete
       - --eval
       - --transforms
-      - pipeline-stored
+      - pipeline-eval
     args:
       - positive/Internal/LiteralInt.juvix
     stdout: |
