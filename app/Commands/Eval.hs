@@ -8,19 +8,12 @@ import Juvix.Extra.Strings qualified as Str
 
 runCommand :: (Members AppEffects r) => EvalOptions -> Sem r ()
 runCommand opts@EvalOptions {..} = do
-  gopts <- askGlobalOptions
-  root <- askRoot
-  entryPoint <- maybe (entryPointFromGlobalOptionsNoFile root gopts) (fromAppPathFile >=> \f -> entryPointFromGlobalOptions root (Just f) gopts) _evalInputFile
-  Core.CoreResult {..} <- silenceProgressLog (runPipelineLogger () _evalInputFile upToCore)
-  let r =
-        run
-          . runReader entryPoint
-          . runError @JuvixError
-          $ (Core.toStored _coreResultModule :: Sem '[Error JuvixError, Reader EntryPoint] Core.Module)
-  tab <- Core.computeCombinedInfoTable <$> getRight r
-  let mevalNode
+  Core.CoreResult {..} <- silenceProgressLog (runPipelineLogger opts _evalInputFile upToStoredCore)
+  let tab = Core.computeCombinedInfoTable _coreResultModule
+      mevalNode
         | isJust _evalSymbolName = getNode tab (selInfo tab)
         | otherwise = getNode tab (mainInfo tab)
+  gopts <- askGlobalOptions
   case mevalNode of
     Just evalNode -> do
       evopts <- evalOptionsToEvalOptions opts
