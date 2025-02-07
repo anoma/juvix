@@ -2,6 +2,7 @@ module Rust.Compilation.Base where
 
 import Base
 import Data.FileEmbed
+import Juvix.Compiler.Backend (Target (TargetRust))
 import Juvix.Compiler.Backend.Rust.Data.Result
 import Juvix.Compiler.Backend.Rust.Pretty
 import Juvix.Compiler.Core qualified as Core
@@ -21,7 +22,8 @@ compileAssertion ::
 compileAssertion root' optLevel mainFile expectedFile step = do
   step "Translate to JuvixCore"
   entryPoint <-
-    set entryPointPipeline (Just PipelineExec)
+    set entryPointTarget (Just TargetRust)
+      . set entryPointPipeline (Just PipelineExec)
       . set entryPointOptimizationLevel optLevel
       <$> testDefaultEntryPointIO root' mainFile
   PipelineResult {..} <- snd <$> testRunIO entryPoint upToStoredCore

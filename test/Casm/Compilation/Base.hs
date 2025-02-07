@@ -6,6 +6,7 @@ where
 
 import Base
 import Casm.Run.Base
+import Juvix.Compiler.Backend
 import Juvix.Compiler.Casm.Data.Result
 import Juvix.Compiler.Casm.Pretty
 import Juvix.Compiler.Core qualified as Core
@@ -41,7 +42,8 @@ compileAssertionEntry adjustEntry root' bInterp bRunVM optLevel mainFile inputFi
   let entryPoint' =
         entryPoint
           { _entryPointOptimizationLevel = optLevel,
-            _entryPointPipeline = Just PipelineExec
+            _entryPointPipeline = Just PipelineExec,
+            _entryPointTarget = Just TargetCairo
           }
   PipelineResult {..} <- snd <$> testRunIO entryPoint' upToStoredCore
   step "Translate to CASM"
