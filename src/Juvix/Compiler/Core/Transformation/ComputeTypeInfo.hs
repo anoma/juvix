@@ -101,7 +101,7 @@ computeNodeTypeInfo md = umapL go
           OpAnomaAddDelta -> mkDynamic'
           OpAnomaSubDelta -> mkDynamic'
           OpAnomaRandomGeneratorInit -> mkTypeRandomGenerator'
-          OpAnomaRandomNextBytes -> mkDynamic'
+          OpAnomaRandomNextBits -> mkDynamic'
           OpAnomaRandomSplit -> mkDynamic'
           OpAnomaIsCommitment -> mkTypeBool'
           OpAnomaIsNullifier -> mkTypeBool'

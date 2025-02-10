@@ -694,7 +694,7 @@ builtinInductive a =
         Internal.BuiltinAnomaSubDelta -> Nothing
         Internal.BuiltinAnomaRandomGenerator -> Just (registerInductiveAxiom (Just BuiltinAnomaRandomGenerator) [])
         Internal.BuiltinAnomaRandomGeneratorInit -> Nothing
-        Internal.BuiltinAnomaRandomNextBytes -> Nothing
+        Internal.BuiltinAnomaRandomNextBits -> Nothing
         Internal.BuiltinAnomaRandomSplit -> Nothing
         Internal.BuiltinAnomaIsCommitment -> Nothing
         Internal.BuiltinAnomaIsNullifier -> Nothing
@@ -1009,14 +1009,14 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               natType
               (mkBuiltinApp' OpAnomaRandomGeneratorInit [mkVar' 0])
           )
-      Internal.BuiltinAnomaRandomNextBytes -> do
+      Internal.BuiltinAnomaRandomNextBits -> do
         natType <- getNatType
         registerAxiomDef
           ( mkLambda'
               natType
               ( mkLambda'
                   mkDynamic'
-                  (mkBuiltinApp' OpAnomaRandomNextBytes [mkVar' 1, mkVar' 0])
+                  (mkBuiltinApp' OpAnomaRandomNextBits [mkVar' 1, mkVar' 0])
               )
           )
       Internal.BuiltinAnomaRandomSplit -> do
@@ -1505,7 +1505,7 @@ goApplication a = do
         Just Internal.BuiltinAnomaProveDelta -> app
         Just Internal.BuiltinAnomaRandomGenerator -> app
         Just Internal.BuiltinAnomaRandomGeneratorInit -> app
-        Just Internal.BuiltinAnomaRandomNextBytes -> app
+        Just Internal.BuiltinAnomaRandomNextBits -> app
         Just Internal.BuiltinAnomaRandomSplit -> app
         Just Internal.BuiltinAnomaIsCommitment -> app
         Just Internal.BuiltinAnomaIsNullifier -> app

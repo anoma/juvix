@@ -52,7 +52,7 @@ data BuiltinOp
   | OpAnomaAddDelta
   | OpAnomaSubDelta
   | OpAnomaRandomGeneratorInit
-  | OpAnomaRandomNextBytes
+  | OpAnomaRandomNextBits
   | OpAnomaRandomSplit
   | OpAnomaIsCommitment
   | OpAnomaIsNullifier
@@ -144,7 +144,7 @@ builtinOpArgsNum = \case
   OpAnomaAddDelta -> 2
   OpAnomaSubDelta -> 2
   OpAnomaRandomGeneratorInit -> 1
-  OpAnomaRandomNextBytes -> 2
+  OpAnomaRandomNextBits -> 2
   OpAnomaRandomSplit -> 1
   OpAnomaIsCommitment -> 1
   OpAnomaIsNullifier -> 1
@@ -213,7 +213,7 @@ builtinIsFoldable = \case
   OpAnomaSubDelta -> False
   OpAnomaSha256 -> False
   OpAnomaRandomGeneratorInit -> False
-  OpAnomaRandomNextBytes -> False
+  OpAnomaRandomNextBits -> False
   OpAnomaRandomSplit -> False
   OpAnomaIsCommitment -> False
   OpAnomaIsNullifier -> False
@@ -257,7 +257,7 @@ builtinsAnoma =
     OpAnomaAddDelta,
     OpAnomaSubDelta,
     OpAnomaRandomGeneratorInit,
-    OpAnomaRandomNextBytes,
+    OpAnomaRandomNextBits,
     OpAnomaRandomSplit,
     OpAnomaSetToList,
     OpAnomaSetFromList

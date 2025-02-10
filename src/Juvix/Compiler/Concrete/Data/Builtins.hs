@@ -276,7 +276,7 @@ data BuiltinAxiom
   | BuiltinAnomaProveDelta
   | BuiltinAnomaRandomGenerator
   | BuiltinAnomaRandomGeneratorInit
-  | BuiltinAnomaRandomNextBytes
+  | BuiltinAnomaRandomNextBits
   | BuiltinAnomaRandomSplit
   | BuiltinAnomaIsCommitment
   | BuiltinAnomaIsNullifier
@@ -345,7 +345,7 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaProveDelta -> KNameFunction
     BuiltinAnomaRandomGenerator -> KNameInductive
     BuiltinAnomaRandomGeneratorInit -> KNameFunction
-    BuiltinAnomaRandomNextBytes -> KNameFunction
+    BuiltinAnomaRandomNextBits -> KNameFunction
     BuiltinAnomaRandomSplit -> KNameFunction
     BuiltinAnomaIsCommitment -> KNameFunction
     BuiltinAnomaIsNullifier -> KNameFunction
@@ -421,7 +421,7 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaProveAction -> Str.anomaProveAction
     BuiltinAnomaRandomGenerator -> Str.anomaRandomGenerator
     BuiltinAnomaRandomGeneratorInit -> Str.anomaRandomGeneratorInit
-    BuiltinAnomaRandomNextBytes -> Str.anomaRandomNextBytes
+    BuiltinAnomaRandomNextBits -> Str.anomaRandomNextBits
     BuiltinAnomaRandomSplit -> Str.anomaRandomSplit
     BuiltinAnomaIsCommitment -> Str.anomaIsCommitment
     BuiltinAnomaIsNullifier -> Str.anomaIsNullifier

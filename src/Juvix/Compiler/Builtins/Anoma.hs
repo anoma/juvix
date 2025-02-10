@@ -234,8 +234,8 @@ checkAnomaRandomGeneratorInit f = do
   unless (f ^. axiomType === (nat_ --> gen)) $
     builtinsErrorText l "initRandomGenerator must be of type Nat -> AnomaRandomGenerator"
 
-checkAnomaRandomNextBytes :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
-checkAnomaRandomNextBytes f = do
+checkAnomaRandomNextBits :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkAnomaRandomNextBits f = do
   let l = getLoc f
   gen <- getBuiltinNameScoper l BuiltinAnomaRandomGenerator
   nat_ <- getBuiltinNameScoper l BuiltinNat

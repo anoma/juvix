@@ -560,7 +560,7 @@ compile = \case
         Tree.OpAnomaAddDelta -> callRm RmDeltaAdd args
         Tree.OpAnomaSubDelta -> callRm RmDeltaSub args
         Tree.OpAnomaRandomGeneratorInit -> callStdlib StdlibRandomInitGen args
-        Tree.OpAnomaRandomNextBytes -> goAnomaRandomNextBytes args
+        Tree.OpAnomaRandomNextBits -> goAnomaRandomNextBits args
         Tree.OpAnomaRandomSplit -> callStdlib StdlibRandomSplit args
         Tree.OpAnomaIsCommitment -> callRm RmIsCommitment args
         Tree.OpAnomaIsNullifier -> callRm RmIsNullifier args
@@ -697,8 +697,8 @@ compile = \case
         sha256HashLength :: Integer
         sha256HashLength = 32
 
-    goAnomaRandomNextBytes :: [Term Natural] -> Sem r (Term Natural)
-    goAnomaRandomNextBytes args = case args of
+    goAnomaRandomNextBits :: [Term Natural] -> Sem r (Term Natural)
+    goAnomaRandomNextBits args = case args of
       [n, g] -> do
         withTemp (n # g) $ \argsRef -> do
           argRefAddress <- tempRefPath argsRef

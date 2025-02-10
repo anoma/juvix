@@ -134,7 +134,7 @@ fromCore fsize tab =
         BuiltinAnomaProveDelta -> False
         BuiltinAnomaRandomGenerator -> False
         BuiltinAnomaRandomGeneratorInit -> False
-        BuiltinAnomaRandomNextBytes -> False
+        BuiltinAnomaRandomNextBits -> False
         BuiltinAnomaRandomSplit -> False
         BuiltinAnomaIsCommitment -> False
         BuiltinAnomaIsNullifier -> False
