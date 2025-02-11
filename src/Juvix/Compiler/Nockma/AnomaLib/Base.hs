@@ -35,7 +35,7 @@ data StdlibFunction
   | StdlibCurry
   | StdlibSha256
   | StdlibRandomInitGen
-  | StdlibRandomNextBytes
+  | StdlibRandomNextBits
   | StdlibRandomSplit
   | StdlibAnomaSetToList
   | StdlibAnomaSetFromList
@@ -116,7 +116,7 @@ instance Pretty StdlibFunction where
     StdlibCurry -> "curry"
     StdlibSha256 -> "sha256"
     StdlibRandomInitGen -> "random-init"
-    StdlibRandomNextBytes -> "random-next-bytes"
+    StdlibRandomNextBits -> "random-next-bits"
     StdlibRandomSplit -> "random-split"
     StdlibAnomaSetToList -> "set-to-list"
     StdlibAnomaSetFromList -> "set-from-list"

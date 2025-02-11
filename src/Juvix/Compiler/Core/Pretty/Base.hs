@@ -76,7 +76,7 @@ instance PrettyCode BuiltinOp where
     OpAnomaAddDelta -> return primAddDelta
     OpAnomaSubDelta -> return primSubDelta
     OpAnomaRandomGeneratorInit -> return primRandomGeneratorInit
-    OpAnomaRandomNextBits -> return primRandomNextBytes
+    OpAnomaRandomNextBits -> return primRandomNextBits
     OpAnomaRandomSplit -> return primRandomSplit
     OpAnomaIsCommitment -> return primIsCommitment
     OpAnomaIsNullifier -> return primIsNullifier
@@ -1003,8 +1003,8 @@ primSubDelta = primitive Str.anomaSubDelta
 primRandomGeneratorInit :: Doc Ann
 primRandomGeneratorInit = primitive Str.anomaRandomGeneratorInit
 
-primRandomNextBytes :: Doc Ann
-primRandomNextBytes = primitive Str.anomaRandomNextBits
+primRandomNextBits :: Doc Ann
+primRandomNextBits = primitive Str.anomaRandomNextBits
 
 primRandomSplit :: Doc Ann
 primRandomSplit = primitive Str.anomaRandomSplit

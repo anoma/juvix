@@ -292,9 +292,9 @@ evalProfile inistack initerm =
               StdlibRandomInitGen -> case args' of
                 TermAtom a -> goRandomInitGen a
                 _ -> error "StdlibRandomInitGen must be called with an atom"
-              StdlibRandomNextBytes -> case args' of
-                TermCell (Cell g (TermAtom n)) -> goRandomNextBytes n g
-                _ -> error "StdlibRandomNextBytes must be called with a cell containing an atom and a term"
+              StdlibRandomNextBits -> case args' of
+                TermCell (Cell g (TermAtom n)) -> goRandomNextBits n g
+                _ -> error "StdlibRandomNextBits must be called with a cell containing an atom and a term"
               StdlibRandomSplit -> goRandomSplit args'
               StdlibAnomaSetFromList -> return (goAnomaSetFromList args')
               StdlibAnomaSetToList -> return args'
@@ -321,8 +321,8 @@ evalProfile inistack initerm =
                 return (R.seedSMGen' (seed, gamma))
               _ -> error "deserializeSMGen must be called with a cell containing two atoms"
 
-            goRandomNextBytes :: Atom a -> Term a -> Sem r (Term a)
-            goRandomNextBytes n g = do
+            goRandomNextBits :: Atom a -> Term a -> Sem r (Term a)
+            goRandomNextBits n g = do
               gen <- deserializeSMGen g
               len :: Int <- fromIntegral <$> nockNatural n
               let (bs, newGen) = R.genByteString len gen

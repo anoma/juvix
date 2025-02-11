@@ -704,7 +704,7 @@ compile = \case
           argRefAddress <- tempRefPath argsRef
           next <-
             callStdlib
-              StdlibRandomNextBytes
+              StdlibRandomNextBits
               [ opAddress "args-g" (argRefAddress ++ [R]),
                 opAddress "args-n" (argRefAddress ++ [L])
               ]

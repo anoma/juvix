@@ -412,8 +412,8 @@ anomaStdlibInterceptOnlyTests =
              "call next bytes in sequence"
              ( do
                  gen <- callStdlib StdlibRandomInitGen [nockNatLiteral 777]
-                 rgen1 <- callStdlib StdlibRandomNextBytes [gen, nockNatLiteral 1]
-                 rgen2 <- callStdlib StdlibRandomNextBytes [rgen1 >># OpAddress # [R], nockNatLiteral 1]
+                 rgen1 <- callStdlib StdlibRandomNextBits [gen, nockNatLiteral 1]
+                 rgen2 <- callStdlib StdlibRandomNextBits [rgen1 >># OpAddress # [R], nockNatLiteral 1]
                  return ((rgen1 >># OpAddress # [L]) # (rgen2 >># OpAddress # [L]))
              )
              (eqNock [nock| [44 251] |]),
@@ -422,8 +422,8 @@ anomaStdlibInterceptOnlyTests =
              ( do
                  gen <- callStdlib StdlibRandomInitGen [nockNatLiteral 777]
                  g1g2 <- callStdlib StdlibRandomSplit [gen]
-                 n1 <- callStdlib StdlibRandomNextBytes [g1g2 >># OpAddress # [L], nockNatLiteral 1]
-                 n2 <- callStdlib StdlibRandomNextBytes [g1g2 >># OpAddress # [R], nockNatLiteral 1]
+                 n1 <- callStdlib StdlibRandomNextBits [g1g2 >># OpAddress # [L], nockNatLiteral 1]
+                 n2 <- callStdlib StdlibRandomNextBits [g1g2 >># OpAddress # [R], nockNatLiteral 1]
                  return ((n1 >># OpAddress # [L]) # (n2 >># OpAddress # [L]))
              )
              ( eqNock
