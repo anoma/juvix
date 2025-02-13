@@ -292,6 +292,6 @@ scoperErrorTests =
     negTest
       "Repeeated named arguments with puns"
       $(mkRelDir ".")
-      $(mkRelFile "RepeatedNamedArgumentsPuns")
+      $(mkRelFile "RepeatedNamedArgumentsPuns.juvix")
       $ wantsError ErrMultipleDeclarations
   ]
