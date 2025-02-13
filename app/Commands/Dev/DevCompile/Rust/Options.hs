@@ -24,5 +24,6 @@ parseRust = do
 
 instance EntryPointOptions (RustOptions k) where
   applyOptions opts =
-    set entryPointTarget (Just TargetRust)
+    set entryPointPipeline (Just PipelineExec)
+      . set entryPointTarget (Just TargetRust)
       . applyOptions (opts ^. rustCompileCommonOptions)

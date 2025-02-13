@@ -5,16 +5,29 @@ module Juvix.Compiler.Core.Pipeline
 where
 
 import Juvix.Compiler.Core.Data.InfoTable
+import Juvix.Compiler.Core.Data.TransformationId.Base (pipeline)
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation
-import Juvix.Compiler.Pipeline.EntryPoint (EntryPoint, entryPointNoCheck)
+import Juvix.Compiler.Pipeline.EntryPoint (EntryPoint, entryPointNoCheck, entryPointPipeline)
+import Juvix.Compiler.Pipeline.EntryPoint qualified as EntryPoint
 
 toTypechecked :: (Members '[Error JuvixError, Reader EntryPoint] r) => Module -> Sem r Module
 toTypechecked = mapReader fromEntryPoint . applyTransformations toTypecheckTransformations
 
--- | Perform transformations on Core necessary for storage
+-- | Perform transformations on Core before storage
+toStored' :: (Members '[Error JuvixError, Reader EntryPoint] r) => PipelineId -> Module -> Sem r Module
+toStored' pid = mapReader fromEntryPoint . applyTransformations (pipeline pid)
+
 toStored :: (Members '[Error JuvixError, Reader EntryPoint] r) => Module -> Sem r Module
-toStored = mapReader fromEntryPoint . applyTransformations toStoredTransformations
+toStored md = do
+  pid <- asks (^. entryPointPipeline)
+  toStored' (maybe PipelineTypecheck toCorePipeline pid) md
+  where
+    toCorePipeline :: EntryPoint.Pipeline -> PipelineId
+    toCorePipeline = \case
+      EntryPoint.PipelineEval -> PipelineEval
+      EntryPoint.PipelineExec -> PipelineExec
+      EntryPoint.PipelineTypecheck -> PipelineTypecheck
 
 -- | Perform transformations on stored Core necessary before the translation to
 -- Core.Stripped
@@ -24,9 +37,3 @@ toStripped checkId md = do
   let checkId' = if noCheck then IdentityTrans else checkId
   mapReader fromEntryPoint $
     applyTransformations (toStrippedTransformations checkId') md
-
-extraAnomaTransformations :: [TransformationId]
-extraAnomaTransformations = []
-
-applyExtraTransformations :: (Members '[Error JuvixError, Reader EntryPoint] r) => [TransformationId] -> Module -> Sem r Module
-applyExtraTransformations transforms = mapReader fromEntryPoint . applyTransformations transforms

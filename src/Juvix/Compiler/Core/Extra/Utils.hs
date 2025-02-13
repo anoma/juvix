@@ -612,9 +612,9 @@ checkInfoTable tab =
 -- | Checks if the `n`th argument (zero-based) is passed without modification to
 -- direct recursive calls.
 isArgRecursiveInvariant :: Module -> Symbol -> Int -> Bool
-isArgRecursiveInvariant tab sym argNum = run $ execState True $ dmapNRM go body
+isArgRecursiveInvariant md sym argNum = run $ execState True $ dmapNRM go body
   where
-    nodeSym = lookupIdentifierNode tab sym
+    nodeSym = lookupIdentifierNode md sym
     (lams, body) = unfoldLambdas nodeSym
     n = length lams
 

@@ -19,7 +19,7 @@ compileAssertion ::
   Path Abs File ->
   (String -> IO ()) ->
   Assertion
-compileAssertion = compileAssertionEntry id
+compileAssertion = compileAssertionEntry (set entryPointPipeline (Just PipelineExec))
 
 compileAssertionEntry ::
   (EntryPoint -> EntryPoint) ->

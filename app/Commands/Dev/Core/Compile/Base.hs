@@ -113,7 +113,7 @@ runTreePipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
-      . coreToTree Core.IdentityTrans []
+      . coreToTree Core.IdentityTrans
       $ _pipelineArgModule
   tab' <- getRight r
   let code = Tree.ppPrint tab' tab'

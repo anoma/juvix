@@ -171,7 +171,6 @@ logDecision _logItemThreadId _logItemModule dec = do
           RecompileImportsChanged -> Just "Because an imported module changed"
           RecompileSourceChanged -> Just "Because the source changed"
           RecompileOptionsChanged -> Just "Because compilation options changed"
-          RecompileFieldSizeChanged -> Just "Because the field size changed"
 
       msg :: Doc CodeAnn =
         docNoCommentsDefault (_logItemModule ^. importNodeTopModulePathKey)
@@ -216,10 +215,7 @@ processModuleCacheMissDecide entryIx = do
           . replaceExtension ".jvo"
           . fromJust
           $ stripProperPrefix $(mkAbsDir "/") sourcePath
-      subdir :: Path Rel Dir =
-        if
-            | opts ^. StoredOptions.optionsDebug -> $(mkRelDir "debug")
-            | otherwise -> $(mkRelDir "release")
+      subdir = StoredOptions.getOptionsSubdir opts
       absPath = buildDir Path.</> subdir Path.</> relPath
   sha256 <- SHA256.digestFile sourcePath
 
@@ -242,7 +238,6 @@ processModuleCacheMissDecide entryIx = do
 
     unless (info ^. Store.moduleInfoSHA256 == sha256) (throw RecompileSourceChanged)
     unless (info ^. Store.moduleInfoOptions == opts) (throw RecompileOptionsChanged)
-    unless (info ^. Store.moduleInfoFieldSize == entry ^. entryPointFieldSize) (throw RecompileFieldSizeChanged)
     CompileResult {..} <- runReader entry (processImports (info ^. Store.moduleInfoImports))
     if
         | _compileResultChanged -> throw RecompileImportsChanged
@@ -492,13 +487,13 @@ processImport p = withPathFile p getCachedImport
 
 processFileUpToParsing ::
   forall r.
-  (Members '[ModuleInfoCache, Reader EntryPoint, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[ModuleInfoCache, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
 processFileUpToParsing entry = do
   res <- runReader entry upToParsing
   let imports :: [Import 'Parsed] = res ^. Parser.resultParserState . Parser.parserStateImports
-  mtab <- (^. compileResultModuleTable) <$> processImports (map (^. importModulePath) imports)
+  mtab <- (^. compileResultModuleTable) <$> runReader entry (processImports (map (^. importModulePath) imports))
   return
     PipelineResult
       { _pipelineResult = res,
@@ -556,8 +551,7 @@ processModuleToStoredCore sha256 entry = over pipelineResult mkModuleInfo <$> pr
           _moduleInfoCoreTable = fromCore (_coreResultModule ^. Core.moduleInfoTable),
           _moduleInfoImports = map (^. importModulePath) $ scoperResult ^. Scoper.resultParserResult . Parser.resultParserState . parserStateImports,
           _moduleInfoOptions = StoredOptions.fromEntryPoint entry,
-          _moduleInfoSHA256 = sha256,
-          _moduleInfoFieldSize = entry ^. entryPointFieldSize
+          _moduleInfoSHA256 = sha256
         }
       where
         scoperResult = _coreResultInternalTypedResult ^. InternalTyped.resultInternal . Internal.resultScoper
@@ -567,12 +561,13 @@ processFileToStoredCore ::
   (Members '[ModuleInfoCache, HighlightBuilder, PathResolver, TopModuleNameChecker, Error JuvixError, Files] r) =>
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
-processFileToStoredCore entry = runReader entry $ do
+processFileToStoredCore entry = do
   res <- processFileUpToParsing entry
   let pkg = entry ^. entryPointPackageId
   mid <- runReader pkg (getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath . to topModulePathKey))
   r <-
     evalTopNameIdGen mid
+      . runReader entry
       . runReader (res ^. pipelineResultImports)
       . runReader (res ^. pipelineResult)
       $ upToStoredCore

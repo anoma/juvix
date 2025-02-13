@@ -8,17 +8,20 @@ strLetHoisting = "let-hoisting"
 strLoopHoisting :: Text
 strLoopHoisting = "loop-hoisting"
 
-strStoredPipeline :: Text
-strStoredPipeline = "pipeline-stored"
-
 strNormalizePipeline :: Text
 strNormalizePipeline = "pipeline-normalize"
 
 strStrippedPipeline :: Text
 strStrippedPipeline = "pipeline-stripped"
 
+strEvalPipeline :: Text
+strEvalPipeline = "pipeline-eval"
+
 strExecPipeline :: Text
 strExecPipeline = "pipeline-exec"
+
+strTypecheckPipeline :: Text
+strTypecheckPipeline = "pipeline-typecheck"
 
 strLifting :: Text
 strLifting = "lifting"

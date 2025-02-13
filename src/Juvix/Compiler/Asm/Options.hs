@@ -32,6 +32,6 @@ fromEntryPoint :: EntryPoint -> Options
 fromEntryPoint e@EntryPoint {..} =
   Options
     { _optDebug = _entryPointDebug,
-      _optLimits = getLimits (getEntryPointTarget e) _entryPointDebug,
+      _optLimits = getLimits (fromJust (e ^. entryPointTarget)) _entryPointDebug,
       _optTreeOptions = Tree.fromEntryPoint e
     }

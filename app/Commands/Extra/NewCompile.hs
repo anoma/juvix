@@ -8,7 +8,6 @@ module Commands.Extra.NewCompile
 where
 
 import Commands.Base
-import Commands.Compile.CommonOptions
 import Commands.Extra.Clang
 import Commands.Extra.Compile.Options (CompileTarget (..), compileTargetDescription)
 import Juvix.Compiler.Core.Translation.FromInternal.Data.Context
@@ -40,12 +39,6 @@ getOutputDir ext inp = \case
     invokeDir <- askInvokeDir
     let baseOutputDir = invokeDir <//> filename (replaceExtension' (fileExtToString ext) mainFile)
     return $ pathFileToPathDir baseOutputDir
-
-compileToCore ::
-  (Members '[App, EmbedIO, Logger, TaggedLock] r) =>
-  CompileCommonOptions ('InputExtension 'FileExtJuvix) ->
-  Sem r CoreResult
-compileToCore opts = runPipeline opts (Just (opts ^. compileInputFile)) upToCore
 
 commandTargetHelper :: CompileTarget -> Parser a -> Mod CommandFields a
 commandTargetHelper t parseCommand =

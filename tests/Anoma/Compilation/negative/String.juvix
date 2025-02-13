@@ -2,4 +2,7 @@ module String;
 
 import Stdlib.Prelude open;
 
-main : String := intToString 1;
+{-# eval: false, inline: false #-}
+f (x : Int) : String := intToString x;
+
+main : String := f 1;

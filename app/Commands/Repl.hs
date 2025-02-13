@@ -13,6 +13,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (mapReaderT)
 import Data.String.Interpolate (i)
 import HaskelineJB
+import Juvix.Compiler.Backend
 import Juvix.Compiler.Concrete.Data.Name (absTopModulePath)
 import Juvix.Compiler.Concrete.Data.Scope (scopePath)
 import Juvix.Compiler.Concrete.Data.Scope qualified as Scoped
@@ -138,7 +139,12 @@ getReplEntryPoint :: (Root -> a -> GlobalOptions -> IO EntryPoint) -> a -> Repl 
 getReplEntryPoint f inputFile = do
   root <- Reader.asks (^. replRoot)
   gopts <- State.gets (^. replStateGlobalOptions)
-  liftIO (set entryPointSymbolPruningMode KeepAll <$> f root inputFile gopts)
+  liftIO
+    ( set entryPointTarget (Just TargetCore)
+        . set entryPointPipeline (Just PipelineEval)
+        . set entryPointSymbolPruningMode KeepAll
+        <$> f root inputFile gopts
+    )
 
 getReplEntryPointFromPrepath :: Prepath File -> Repl EntryPoint
 getReplEntryPointFromPrepath = getReplEntryPoint (\r x -> runM . runTaggedLockPermissive . entryPointFromGlobalOptionsPre r (Just x))

@@ -9,7 +9,7 @@ allTests :: TestTree
 allTests = testGroup "Transformation pipeline (to Stripped)" (map liftTest Eval.compilableTests)
 
 pipe :: [TransformationId]
-pipe = toStoredTransformations ++ toStrippedTransformations IdentityTrans
+pipe = toExecTransformations ++ toStrippedTransformations IdentityTrans
 
 liftTest :: Eval.PosTest -> TestTree
 liftTest _testEval =

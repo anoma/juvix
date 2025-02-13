@@ -3,6 +3,7 @@ module Rust.RiscZero.Base where
 import Base
 import Data.FileEmbed qualified as FE
 import Data.Text qualified as T
+import Juvix.Compiler.Backend
 import Juvix.Compiler.Backend.Rust.Data.Result
 import Juvix.Compiler.Backend.Rust.Pretty
 import Juvix.Compiler.Core qualified as Core
@@ -26,7 +27,11 @@ compileAssertion ::
 compileAssertion tmpDir' root' optLevel mainFile expectedFile step = do
   tmpDir <- tmpDir'
   step "Translate to JuvixCore"
-  entryPoint <- set entryPointOptimizationLevel optLevel <$> testDefaultEntryPointIO root' mainFile
+  entryPoint <-
+    set entryPointTarget (Just TargetRust)
+      . set entryPointPipeline (Just PipelineExec)
+      . set entryPointOptimizationLevel optLevel
+      <$> testDefaultEntryPointIO root' mainFile
   PipelineResult {..} <- snd <$> testRunIO entryPoint upToStoredCore
   step "Translate to RISC0 Rust"
   case run $ runError @JuvixError $ runReader entryPoint $ storedCoreToRiscZeroRust (_pipelineResult ^. Core.coreResultModule) of

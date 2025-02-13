@@ -13,6 +13,7 @@ import Juvix.Compiler.Core.Extra.Utils
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation.FromSource
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
+import Juvix.Compiler.Pipeline.EntryPoint qualified as EntryPoint
 import Juvix.Compiler.Tree.Translation.FromCore qualified as Tree
 import Juvix.Data.Field
 import Juvix.Data.PPOutput
@@ -50,7 +51,7 @@ coreCompileAssertion' ::
   Assertion
 coreCompileAssertion' entryPoint optLevel tab mainFile expectedFile stdinText step = do
   step "Translate to JuvixAsm"
-  case run . runReader entryPoint' . runError $ toStored (moduleFromInfoTable tab) >>= toStripped CheckExec of
+  case run . runReader entryPoint' . runError $ toStripped CheckExec (moduleFromInfoTable tab) of
     Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right m -> do
       let tab0 = computeCombinedInfoTable m
@@ -78,5 +79,13 @@ coreCompileAssertion root' mainFile expectedFile stdinText step = do
       expected <- readFile expectedFile
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
-      entryPoint <- testDefaultEntryPointIO root' mainFile
-      coreCompileAssertion' entryPoint 3 (setupMainFunction defaultModuleId tabIni node) mainFile expectedFile stdinText step
+      entryPoint <-
+        set entryPointPipeline (Just EntryPoint.PipelineExec)
+          <$> testDefaultEntryPointIO root' mainFile
+      step "Transform JuvixCore"
+      let tab0 = setupMainFunction defaultModuleId tabIni node
+      case run . runReader entryPoint . runError $ toStored (moduleFromInfoTable tab0) of
+        Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
+        Right m -> do
+          let tab = computeCombinedInfoTable m
+          coreCompileAssertion' entryPoint 3 tab mainFile expectedFile stdinText step

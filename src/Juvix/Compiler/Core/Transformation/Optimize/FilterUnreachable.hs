@@ -5,10 +5,12 @@ import Juvix.Compiler.Core.Data.IdentDependencyInfo
 import Juvix.Compiler.Core.Transformation.Base
 
 filterUnreachable :: Module -> Module
-filterUnreachable md =
-  pruneInfoTable $
-    over (moduleInfoTable . infoInductives) goFilter $
-      over (moduleInfoTable . infoIdentifiers) goFilter md
+filterUnreachable md
+  | isJust (md ^. moduleInfoTable . infoMain) =
+      pruneInfoTable $
+        over (moduleInfoTable . infoInductives) goFilter $
+          over (moduleInfoTable . infoIdentifiers) goFilter md
+  | otherwise = md
   where
     depInfo = createSymbolDependencyInfo (md ^. moduleInfoTable)
 

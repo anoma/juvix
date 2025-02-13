@@ -16,6 +16,16 @@ data SymbolPruningMode
   | KeepAll
   deriving stock (Eq, Show)
 
+data Pipeline
+  = PipelineEval
+  | PipelineExec
+  | PipelineTypecheck
+  deriving stock (Eq, Show, Generic)
+
+instance Serialize Pipeline
+
+instance NFData Pipeline
+
 -- | A module in _entryModulePath is the unit of compilation
 data EntryPoint = EntryPoint
   { _entryPointRoot :: Path Abs Dir,
@@ -43,17 +53,12 @@ data EntryPoint = EntryPoint
     _entryPointSymbolPruningMode :: SymbolPruningMode,
     _entryPointOffline :: Bool,
     _entryPointFieldSize :: Natural,
-    _entryPointIsabelleOnlyTypes :: Bool
+    _entryPointIsabelleOnlyTypes :: Bool,
+    _entryPointPipeline :: Maybe Pipeline
   }
   deriving stock (Eq, Show)
 
 makeLenses ''EntryPoint
-
-getEntryPointTarget :: EntryPoint -> Target
-getEntryPointTarget e = fromMaybe defaultTarget (e ^. entryPointTarget)
-  where
-    -- TODO is having a default target a good idea?
-    defaultTarget = TargetCore
 
 entryPointPackageType :: Lens' EntryPoint PackageType
 entryPointPackageType = entryPointSomeRoot . someRootType
@@ -99,5 +104,6 @@ defaultEntryPointNoFile pkg root =
       _entryPointSymbolPruningMode = FilterUnreachable,
       _entryPointOffline = False,
       _entryPointFieldSize = defaultFieldSize,
-      _entryPointIsabelleOnlyTypes = False
+      _entryPointIsabelleOnlyTypes = False,
+      _entryPointPipeline = Nothing
     }

@@ -158,7 +158,8 @@ loadPackage' packagePath = do
           _entryPointBuildDir = root ^. rootBuildDir,
           _entryPointPackageId = rootPkg,
           _entryPointModulePath = Just packagePath,
-          _entryPointStdin = Nothing
+          _entryPointStdin = Nothing,
+          _entryPointPipeline = Just PipelineEval
         }
       where
         sroot :: SomeRoot

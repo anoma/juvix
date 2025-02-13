@@ -344,7 +344,8 @@ preFunctionDef f = do
       | isIgnoredBuiltin b -> return ()
     _ -> do
       registerIdent (mkIdentIndex (f ^. Internal.funDefName)) info
-      when (f ^. Internal.funDefName . Internal.nameText == Str.main) (registerMain sym)
+      when (f ^. Internal.funDefName . Internal.nameText == Str.main) $
+        registerMain sym
   return
     PreFunctionDef
       { _preFunInternal = f,

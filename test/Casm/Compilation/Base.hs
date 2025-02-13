@@ -6,6 +6,7 @@ where
 
 import Base
 import Casm.Run.Base
+import Juvix.Compiler.Backend
 import Juvix.Compiler.Casm.Data.Result
 import Juvix.Compiler.Casm.Pretty
 import Juvix.Compiler.Core qualified as Core
@@ -38,9 +39,14 @@ compileAssertionEntry ::
 compileAssertionEntry adjustEntry root' bInterp bRunVM optLevel mainFile inputFile expectedFile step = do
   step "Translate to JuvixCore"
   entryPoint <- adjustEntry <$> testDefaultEntryPointIO root' mainFile
-  PipelineResult {..} <- snd <$> testRunIO entryPoint upToStoredCore
+  let entryPoint' =
+        entryPoint
+          { _entryPointOptimizationLevel = optLevel,
+            _entryPointPipeline = Just PipelineExec,
+            _entryPointTarget = Just TargetCairo
+          }
+  PipelineResult {..} <- snd <$> testRunIO entryPoint' upToStoredCore
   step "Translate to CASM"
-  let entryPoint' = entryPoint {_entryPointOptimizationLevel = optLevel}
   case run $ runError @JuvixError $ runReader entryPoint' $ storedCoreToCasm (_pipelineResult ^. Core.coreResultModule) of
     Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right Result {..} -> do

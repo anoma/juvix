@@ -24,5 +24,6 @@ parseCasm = do
 
 instance EntryPointOptions (CasmOptions k) where
   applyOptions opts =
-    set entryPointTarget (Just TargetCairo)
+    set entryPointPipeline (Just PipelineExec)
+      . set entryPointTarget (Just TargetCairo)
       . applyOptions (opts ^. casmCompileCommonOptions)
