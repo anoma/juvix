@@ -66,7 +66,7 @@ parseJuvixMarkdown = do
   _markdownFolderStructure <-
     switch
       ( long "folder-structure"
-          <> help "Generate HTML following the module's folder structure"
+          <> help "Generate Markdown following the module's folder structure"
       )
   _markdownStripPrefix <-
     strOption
