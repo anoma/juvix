@@ -60,9 +60,9 @@ allTests =
       testGroup "Anoma stldib intercept-only" (map mkNockmaTest anomaStdlibInterceptOnlyTests),
       testGroup "Anoma serialization tests" (map mkNockmaTest serializationTests)
     ]
-  where
-    mkNockmaTest :: Test -> TestTree
-    mkNockmaTest t = testCase (unpack (t ^. testName)) (mkNockmaAssertion t)
+
+mkNockmaTest :: Test -> TestTree
+mkNockmaTest t = testCase (unpack (t ^. testName)) (mkNockmaAssertion t)
 
 eqNock :: Term Natural -> Check ()
 eqNock expected = do
