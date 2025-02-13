@@ -697,28 +697,38 @@ compile = \case
         sha256HashLength :: Integer
         sha256HashLength = 32
 
+    -- FIXME rename to bytes
     goAnomaRandomNextBits :: [Term Natural] -> Sem r (Term Natural)
     goAnomaRandomNextBits args = case args of
       [n, g] -> do
         withTemp (n # g) $ \argsRef -> do
           argRefAddress <- tempRefPath argsRef
-          next <-
+          numBytes <-
             callStdlib
-              StdlibRandomNextBits
-              [ opAddress "args-g" (argRefAddress ++ [R]),
-                opAddress "args-n" (argRefAddress ++ [L])
+              StdlibMul
+              [ opAddress "args-n" (argRefAddress ++ [L]),
+                nockNatLiteral 8
               ]
-          withTemp next $ \nextRef -> do
-            nextRefPath <- tempRefPath nextRef
+          withTemp numBytes $ \numBytesRef -> do
+            numBytesRefAddress <- tempRefPath numBytesRef
             argRefAddress' <- tempRefPath argsRef
-            return
-              ( mkPair
-                  ( mkByteArray
-                      (opAddress "args-n" (argRefAddress' ++ [L]))
-                      (opAddress "nextbytes-result-fst" (nextRefPath ++ [L]))
-                  )
-                  (opAddress "nextBytes-result-snd" (nextRefPath ++ [R]))
-              )
+            next <-
+              callStdlib
+                StdlibRandomNextBits
+                [ opAddress "args-g" (argRefAddress' ++ [R]),
+                  opAddress "numbytes" numBytesRefAddress
+                ]
+            withTemp next $ \nextRef -> do
+              numBytesRefAddress' <- tempRefPath numBytesRef
+              nextRefPath <- tempRefPath nextRef
+              return
+                ( mkPair
+                    ( mkByteArray
+                        (opAddress "args-n" numBytesRefAddress')
+                        (opAddress "nextbytes-result-fst" (nextRefPath ++ [L]))
+                    )
+                    (opAddress "nextBytes-result-snd" (nextRefPath ++ [R]))
+                )
       _ -> impossible
 
     -- Conceptually this function is:

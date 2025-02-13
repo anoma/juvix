@@ -321,11 +321,21 @@ evalProfile inistack initerm =
                 return (R.seedSMGen' (seed, gamma))
               _ -> error "deserializeSMGen must be called with a cell containing two atoms"
 
+            -- NOTE It will report an error if the number of bits is not divisible by 8
             goRandomNextBits :: Atom a -> Term a -> Sem r (Term a)
             goRandomNextBits n g = do
               gen <- deserializeSMGen g
-              len :: Int <- fromIntegral <$> nockNatural n
-              let (bs, newGen) = R.genByteString len gen
+              numBits :: Int <- fromIntegral <$> nockNatural n
+              numBytes <- case numBits `quotRem` 8 of
+                (b, 0) -> return b
+                _ ->
+                  throw $
+                    ErrCantGenerateRandomBits
+                      CantGenerateRandomBits
+                        { _cantGenerateRandomBitsAtom = n,
+                          _cantGenerateRandomBitsNumBits = numBits
+                        }
+              let (bs, newGen) = R.genByteString numBytes gen
                   newGenTerm = serializeSMGen newGen
               atomBs <- TermAtom <$> byteStringToAtom bs
               return (TermCell (Cell atomBs newGenTerm))
