@@ -3030,8 +3030,9 @@ checkNamedApplication napp = do
           . concatMap (^.. nameBlockSymbols)
           . filter (not . isImplicitOrInstance . (^. nameBlockImplicit))
           $ sig ^. nameSignatureArgs
-      givenNames :: HashSet Symbol = hashSet (map (^. namedArgumentSymbol) nargs)
-      missingArgs = HashSet.difference signatureExplicitNames givenNames
+      givenNames :: [Symbol] = map (^. namedArgumentSymbol) nargs
+  checkRepeated givenNames
+  let missingArgs = HashSet.difference signatureExplicitNames (hashSet givenNames)
   unless (null missingArgs) $
     throw (ErrMissingArgs (MissingArgs (aname ^. scopedIdenFinal . nameConcrete) missingArgs))
   return
@@ -3041,6 +3042,17 @@ checkNamedApplication napp = do
         _namedApplicationAtKw = napp ^. namedApplicationAtKw
       }
   where
+    checkRepeated :: [Symbol] -> Sem r ()
+    checkRepeated syms = whenJust (findRepeatedOn id syms ^? _head . _1) $
+      \(x, y :| _) ->
+        throw $
+          ErrMultipleDeclarations
+            MultipleDeclarations
+              { _multipleDeclFirst = getLoc x,
+                _multipleDeclSecond = y
+              }
+
+    -- findRepeatedOn :: forall a b. (Ord b) => (a -> b) -> [a] -> [(NonEmpty a, b)]
     checkNameInSignature :: HashSet Symbol -> Symbol -> Sem r ()
     checkNameInSignature namesInSig fname =
       unless (HashSet.member fname namesInSig) $

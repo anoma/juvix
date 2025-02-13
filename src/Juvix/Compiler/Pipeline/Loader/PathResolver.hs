@@ -48,14 +48,14 @@ checkConflicts pkgs = do
     Just (rep :| _) -> errRep rep
     Nothing -> return ()
   where
-    errRep :: (NonEmpty PackageInfo, PackageId) -> Sem r' ()
-    errRep (l, pid) =
+    errRep :: ((PackageInfo, NonEmpty PackageInfo), PackageId) -> Sem r' ()
+    errRep ((p, ps), pid) =
       throw
         . JuvixError
         $ ErrAmbiguousPackageId
           AmbiguousPackageId
             { _ambiguousPackageId = pid,
-              _ambiguousPackageIdPackages = l
+              _ambiguousPackageIdPackages = NonEmpty.cons p ps
             }
 
 mkPackage ::

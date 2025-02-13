@@ -288,5 +288,10 @@ scoperErrorTests =
       "Arg name not in scope in default value"
       $(mkRelDir ".")
       $(mkRelFile "ArgNameDefaultValue.juvix")
-      $ wantsError ErrSymNotInScope
+      $ wantsError ErrSymNotInScope,
+    negTest
+      "Repeeated named arguments with puns"
+      $(mkRelDir ".")
+      $(mkRelFile "RepeatedNamedArgumentsPuns")
+      $ wantsError ErrMultipleDeclarations
   ]
