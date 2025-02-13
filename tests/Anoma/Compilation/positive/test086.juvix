@@ -20,19 +20,24 @@ axiom randomGeneratorSplit : RandomGenerator
   -> Pair RandomGenerator RandomGenerator;
 
 builtin anoma-random-next-bits
-axiom randomNextBytes : Nat
+axiom randomNextBits : Nat
   -> RandomGenerator
   -> Pair ByteArray RandomGenerator;
+
+randomNextBytes (numBytes : Nat) :
+  RandomGenerator
+  -> Pair ByteArray RandomGenerator := randomNextBits (numBytes * 8);
+
 
 main : ByteArray :=
   let
     gen : RandomGenerator := randomGeneratorInit 777;
-    next1 : Pair ByteArray RandomGenerator := randomNextBits 2 gen;
-    next2 : Pair ByteArray RandomGenerator := randomNextBits 3 (snd next1);
+    next1 : Pair ByteArray RandomGenerator := randomNextBytes 2 gen;
+    next2 : Pair ByteArray RandomGenerator := randomNextBytes 3 (snd next1);
     split : Pair RandomGenerator RandomGenerator :=
       randomGeneratorSplit (snd next2);
-    next3 : Pair ByteArray RandomGenerator := randomNextBits 2 (snd split);
-    next4 : Pair ByteArray RandomGenerator := randomNextBits 4 (fst split);
+    next3 : Pair ByteArray RandomGenerator := randomNextBytes 2 (snd split);
+    next4 : Pair ByteArray RandomGenerator := randomNextBytes 4 (fst split);
   in trace (fst next1)
     >-> trace (fst next2)
     >-> trace (fst next3)
