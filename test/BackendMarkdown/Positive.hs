@@ -38,7 +38,7 @@ testDescr PosTest {..} =
         step "Parsing & Scoping"
         PipelineResult {..} <- snd <$> testRunIO entryPoint upToScopingEntry
         let m = _pipelineResult ^. Scoper.resultModule
-        let opts =
+            opts =
               ProcessJuvixBlocksArgs
                 { _processJuvixBlocksArgsConcreteOpts = Concrete.defaultOptions,
                   _processJuvixBlocksArgsUrlPrefix = _UrlPrefix,
