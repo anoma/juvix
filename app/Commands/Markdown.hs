@@ -100,4 +100,5 @@ goScoperResult scopedM = do
                       absPath :: Path Abs File
                       absPath = outputDir <//> mdFile
 
+                  ensureDir (parent absPath)
                   writeFileEnsureLn absPath md
