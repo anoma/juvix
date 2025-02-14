@@ -440,8 +440,8 @@ anomaRandomGenerator = "anoma-random-generator"
 anomaRandomGeneratorInit :: (IsString s) => s
 anomaRandomGeneratorInit = "anoma-random-generator-init"
 
-anomaRandomNextBits :: (IsString s) => s
-anomaRandomNextBits = "anoma-random-next-bits"
+anomaRandomNextBytes :: (IsString s) => s
+anomaRandomNextBytes = "anoma-random-next-bytes"
 
 anomaRandomSplit :: (IsString s) => s
 anomaRandomSplit = "anoma-random-generator-split"

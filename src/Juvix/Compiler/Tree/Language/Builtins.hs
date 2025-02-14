@@ -126,8 +126,8 @@ data AnomaOp
     OpAnomaSubDelta
   | -- | Initialize a pseudorandom number generator
     OpAnomaRandomGeneratorInit
-  | -- | Generate the n random bytes using the pseudorandom number generator
-    OpAnomaRandomNextBits
+  | -- | Generate n random bytes using the pseudorandom number generator
+    OpAnomaRandomNextBytes
   | -- | Split a pseudorandom number generator into two uncorrelated generators
     OpAnomaRandomSplit
   | -- | Returns true if its argument is a commitment

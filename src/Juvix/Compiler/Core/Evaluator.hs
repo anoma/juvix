@@ -240,7 +240,7 @@ geval opts herr tab env0 = eval' env0
       OpAnomaAddDelta -> normalizeOrUnsupported opcode
       OpAnomaSubDelta -> normalizeOrUnsupported opcode
       OpAnomaRandomGeneratorInit -> normalizeOrUnsupported opcode
-      OpAnomaRandomNextBits -> normalizeOrUnsupported opcode
+      OpAnomaRandomNextBytes -> normalizeOrUnsupported opcode
       OpAnomaRandomSplit -> normalizeOrUnsupported opcode
       OpAnomaIsCommitment -> normalizeOrUnsupported opcode
       OpAnomaIsNullifier -> normalizeOrUnsupported opcode

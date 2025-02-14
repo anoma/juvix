@@ -694,7 +694,7 @@ builtinInductive a =
         Internal.BuiltinAnomaSubDelta -> Nothing
         Internal.BuiltinAnomaRandomGenerator -> Just (registerInductiveAxiom (Just BuiltinAnomaRandomGenerator) [])
         Internal.BuiltinAnomaRandomGeneratorInit -> Nothing
-        Internal.BuiltinAnomaRandomNextBits -> Nothing
+        Internal.BuiltinAnomaRandomNextBytes -> Nothing
         Internal.BuiltinAnomaRandomSplit -> Nothing
         Internal.BuiltinAnomaIsCommitment -> Nothing
         Internal.BuiltinAnomaIsNullifier -> Nothing
@@ -1009,14 +1009,14 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               natType
               (mkBuiltinApp' OpAnomaRandomGeneratorInit [mkVar' 0])
           )
-      Internal.BuiltinAnomaRandomNextBits -> do
+      Internal.BuiltinAnomaRandomNextBytes -> do
         natType <- getNatType
         registerAxiomDef
           ( mkLambda'
               natType
               ( mkLambda'
                   mkDynamic'
-                  (mkBuiltinApp' OpAnomaRandomNextBits [mkVar' 1, mkVar' 0])
+                  (mkBuiltinApp' OpAnomaRandomNextBytes [mkVar' 1, mkVar' 0])
               )
           )
       Internal.BuiltinAnomaRandomSplit -> do
@@ -1449,15 +1449,14 @@ goApplication a = do
         Just Internal.BuiltinIOSequence -> do
           ioSym <- getIOSymbol
           as <- exprArgs
-          case as of
+          return $ case as of
             (arg1 : arg2 : xs) ->
-              return $
-                mkApps'
-                  ( mkConstr'
-                      (BuiltinTag TagBind)
-                      [arg1, mkLambda' (mkTypeConstr (setInfoName Str.io mempty) ioSym []) (shift 1 arg2)]
-                  )
-                  xs
+              mkApps'
+                ( mkConstr'
+                    (BuiltinTag TagBind)
+                    [arg1, mkLambda' (mkTypeConstr (setInfoName Str.io mempty) ioSym []) (shift 1 arg2)]
+                )
+                xs
             _ -> error "internal to core: >> must be called with 2 arguments"
         Just Internal.BuiltinIOReadline -> app
         Just Internal.BuiltinStringConcat -> app
@@ -1505,7 +1504,7 @@ goApplication a = do
         Just Internal.BuiltinAnomaProveDelta -> app
         Just Internal.BuiltinAnomaRandomGenerator -> app
         Just Internal.BuiltinAnomaRandomGeneratorInit -> app
-        Just Internal.BuiltinAnomaRandomNextBits -> app
+        Just Internal.BuiltinAnomaRandomNextBytes -> app
         Just Internal.BuiltinAnomaRandomSplit -> app
         Just Internal.BuiltinAnomaIsCommitment -> app
         Just Internal.BuiltinAnomaIsNullifier -> app

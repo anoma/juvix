@@ -22,7 +22,7 @@ import Juvix.Data.Keyword.All
     kwAnomaProveAction,
     kwAnomaProveDelta,
     kwAnomaRandomGeneratorInit,
-    kwAnomaRandomNextBits,
+    kwAnomaRandomNextBytes,
     kwAnomaRandomSplit,
     kwAnomaResourceCommitment,
     kwAnomaResourceDelta,

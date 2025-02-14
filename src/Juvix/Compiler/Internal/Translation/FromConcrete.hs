@@ -1145,7 +1145,7 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinAnomaProveAction -> checkProveAction d
   BuiltinAnomaRandomGenerator -> checkAnomaRandomGenerator d
   BuiltinAnomaRandomGeneratorInit -> checkAnomaRandomGeneratorInit d
-  BuiltinAnomaRandomNextBits -> checkAnomaRandomNextBits d
+  BuiltinAnomaRandomNextBytes -> checkAnomaRandomNextBytes d
   BuiltinAnomaRandomSplit -> checkAnomaRandomSplit d
   BuiltinAnomaIsCommitment -> checkAnomaIsCommitment d
   BuiltinAnomaIsNullifier -> checkAnomaIsNullifier d

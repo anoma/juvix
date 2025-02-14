@@ -231,7 +231,7 @@ isDebugOp = \case
       OpAnomaAddDelta -> False
       OpAnomaSubDelta -> False
       OpAnomaRandomGeneratorInit -> False
-      OpAnomaRandomNextBits -> False
+      OpAnomaRandomNextBytes -> False
       OpAnomaRandomSplit -> False
       OpAnomaIsCommitment -> False
       OpAnomaIsNullifier -> False
@@ -536,7 +536,7 @@ builtinOpArgTypes = \case
   OpAnomaAddDelta -> [mkDynamic', mkDynamic']
   OpAnomaSubDelta -> [mkDynamic', mkDynamic']
   OpAnomaRandomGeneratorInit -> [mkTypeInteger']
-  OpAnomaRandomNextBits -> [mkTypeInteger', mkTypeRandomGenerator']
+  OpAnomaRandomNextBytes -> [mkTypeInteger', mkTypeRandomGenerator']
   OpAnomaRandomSplit -> [mkTypeRandomGenerator']
   OpAnomaIsCommitment -> [mkTypeInteger']
   OpAnomaIsNullifier -> [mkTypeInteger']

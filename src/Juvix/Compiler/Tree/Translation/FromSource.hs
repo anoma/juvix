@@ -168,7 +168,7 @@ parseAnoma =
     <|> parseAnoma' kwAnomaAddDelta OpAnomaAddDelta
     <|> parseAnoma' kwAnomaSubDelta OpAnomaSubDelta
     <|> parseAnoma' kwAnomaRandomGeneratorInit OpAnomaRandomGeneratorInit
-    <|> parseAnoma' kwAnomaRandomNextBits OpAnomaRandomNextBits
+    <|> parseAnoma' kwAnomaRandomNextBytes OpAnomaRandomNextBytes
     <|> parseAnoma' kwAnomaRandomSplit OpAnomaRandomSplit
     <|> parseAnoma' kwAnomaIsCommitment OpAnomaIsCommitment
     <|> parseAnoma' kwAnomaIsNullifier OpAnomaIsNullifier

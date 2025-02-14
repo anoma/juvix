@@ -16,18 +16,15 @@ builtin anoma-random-generator-init
 axiom randomGeneratorInit : Nat -> RandomGenerator;
 
 builtin anoma-random-generator-split
-axiom randomGeneratorSplit : RandomGenerator
-  -> Pair RandomGenerator RandomGenerator;
+axiom randomGeneratorSplit
+  : RandomGenerator -> Pair RandomGenerator RandomGenerator;
 
 builtin anoma-random-next-bits
-axiom randomNextBits : Nat
-  -> RandomGenerator
-  -> Pair ByteArray RandomGenerator;
+axiom randomNextBits : Nat -> RandomGenerator -> Pair ByteArray RandomGenerator;
 
-randomNextBytes (numBytes : Nat) :
-  RandomGenerator
-  -> Pair ByteArray RandomGenerator := randomNextBits (numBytes * 8);
-
+randomNextBytes
+  (numBytes : Nat) : RandomGenerator -> Pair ByteArray RandomGenerator :=
+  randomNextBits (numBytes * 8);
 
 main : ByteArray :=
   let

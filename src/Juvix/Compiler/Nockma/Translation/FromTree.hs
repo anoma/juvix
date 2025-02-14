@@ -236,6 +236,13 @@ withTemp value f = do
   body' <- local (over compilerStackHeight (+ 1)) $ f (TempRef stackHeight)
   return $ OpPush # value # body'
 
+withTempM ::
+  (Member (Reader CompilerCtx) r) =>
+  Sem r (Term Natural) ->
+  (TempRef -> Sem r (Term Natural)) ->
+  Sem r (Term Natural)
+withTempM valueM f = valueM >>= (`withTemp` f)
+
 -- | Pushes a temporary value onto the subject stack, associates the resulting
 -- stack reference with the next JuvixTree temporary variable, and continues
 -- compilation.
@@ -560,7 +567,7 @@ compile = \case
         Tree.OpAnomaAddDelta -> callRm RmDeltaAdd args
         Tree.OpAnomaSubDelta -> callRm RmDeltaSub args
         Tree.OpAnomaRandomGeneratorInit -> callStdlib StdlibRandomInitGen args
-        Tree.OpAnomaRandomNextBits -> goAnomaRandomNextBits args
+        Tree.OpAnomaRandomNextBytes -> goAnomaRandomNextBytes args
         Tree.OpAnomaRandomSplit -> callStdlib StdlibRandomSplit args
         Tree.OpAnomaIsCommitment -> callRm RmIsCommitment args
         Tree.OpAnomaIsNullifier -> callRm RmIsNullifier args
@@ -697,36 +704,39 @@ compile = \case
         sha256HashLength :: Integer
         sha256HashLength = 32
 
-    goAnomaRandomNextBits :: [Term Natural] -> Sem r (Term Natural)
-    goAnomaRandomNextBits args = case args of
+    goAnomaRandomNextBytes :: [Term Natural] -> Sem r (Term Natural)
+    goAnomaRandomNextBytes args = case args of
       [n, g] -> do
         withTemp (n # g) $ \argsRef -> do
           argRefAddress <- tempRefPath argsRef
-          next <-
-            callStdlib
-              StdlibRandomNextBits
-              [ opAddress "args-g" (argRefAddress ++ [R]),
-                opAddress "numbits" (argRefAddress ++ [L])
-              ]
-          withTemp next $ \nextRef -> do
-            argRefAddress'' <- tempRefPath argsRef
-            numBytes <-
-              callStdlib
-                StdlibDiv
-                [ opAddress "args-n" (argRefAddress'' ++ [L]),
+          withTempM
+            ( callStdlib
+                StdlibMul
+                [ opAddress "args-n" (argRefAddress ++ [L]),
                   nockNatLiteral 8
                 ]
-            withTemp numBytes $ \numBytesRef -> do
-              numBytesRefAddress' <- tempRefPath numBytesRef
-              nextRefPath <- tempRefPath nextRef
-              return
-                ( mkPair
-                    ( mkByteArray
-                        (opAddress "args-n" numBytesRefAddress')
-                        (opAddress "nextbytes-result-fst" (nextRefPath ++ [L]))
-                    )
-                    (opAddress "nextBytes-result-snd" (nextRefPath ++ [R]))
+            )
+            $ \numBitsRef -> do
+              argRefAddress' <- tempRefPath argsRef
+              numBits <- tempRefPath numBitsRef
+              withTempM
+                ( callStdlib
+                    StdlibRandomNextBits
+                    [ opAddress "args-g" numBits,
+                      opAddress "numbits" (argRefAddress' ++ [L])
+                    ]
                 )
+                $ \nextRef -> do
+                  argRefAddress'' <- tempRefPath argsRef
+                  nextRefPath <- tempRefPath nextRef
+                  return
+                    ( mkPair
+                        ( mkByteArray
+                            (opAddress "args-n" (argRefAddress'' ++ [L]))
+                            (opAddress "nextbytes-result-fst" (nextRefPath ++ [L]))
+                        )
+                        (opAddress "nextBytes-result-snd" (nextRefPath ++ [R]))
+                    )
       _ -> impossible
 
     -- Conceptually this function is:

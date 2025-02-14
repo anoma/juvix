@@ -276,7 +276,7 @@ data BuiltinAxiom
   | BuiltinAnomaProveDelta
   | BuiltinAnomaRandomGenerator
   | BuiltinAnomaRandomGeneratorInit
-  | BuiltinAnomaRandomNextBits
+  | BuiltinAnomaRandomNextBytes
   | BuiltinAnomaRandomSplit
   | BuiltinAnomaIsCommitment
   | BuiltinAnomaIsNullifier
@@ -345,7 +345,7 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaProveDelta -> KNameFunction
     BuiltinAnomaRandomGenerator -> KNameInductive
     BuiltinAnomaRandomGeneratorInit -> KNameFunction
-    BuiltinAnomaRandomNextBits -> KNameFunction
+    BuiltinAnomaRandomNextBytes -> KNameFunction
     BuiltinAnomaRandomSplit -> KNameFunction
     BuiltinAnomaIsCommitment -> KNameFunction
     BuiltinAnomaIsNullifier -> KNameFunction
@@ -360,8 +360,8 @@ instance HasNameKind BuiltinAxiom where
     BuiltinByteArrayFromListByte -> KNameFunction
     BuiltinByteArrayLength -> KNameFunction
     BuiltinAnomaSet -> KNameInductive
-    BuiltinAnomaSetToList -> KNameInductive
-    BuiltinAnomaSetFromList -> KNameInductive
+    BuiltinAnomaSetToList -> KNameFunction
+    BuiltinAnomaSetFromList -> KNameFunction
   getNameKindPretty :: BuiltinAxiom -> NameKind
   getNameKindPretty = getNameKind
 
@@ -421,7 +421,7 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaProveAction -> Str.anomaProveAction
     BuiltinAnomaRandomGenerator -> Str.anomaRandomGenerator
     BuiltinAnomaRandomGeneratorInit -> Str.anomaRandomGeneratorInit
-    BuiltinAnomaRandomNextBits -> Str.anomaRandomNextBits
+    BuiltinAnomaRandomNextBytes -> Str.anomaRandomNextBytes
     BuiltinAnomaRandomSplit -> Str.anomaRandomSplit
     BuiltinAnomaIsCommitment -> Str.anomaIsCommitment
     BuiltinAnomaIsNullifier -> Str.anomaIsNullifier

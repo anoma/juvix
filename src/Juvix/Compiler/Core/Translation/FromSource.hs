@@ -607,7 +607,7 @@ builtinAppExpr varsNum vars = do
       <|> (kw kwAnomaAddDelta $> OpAnomaAddDelta)
       <|> (kw kwAnomaSubDelta $> OpAnomaSubDelta)
       <|> (kw kwAnomaRandomGeneratorInit $> OpAnomaRandomGeneratorInit)
-      <|> (kw kwAnomaRandomNextBits $> OpAnomaRandomNextBits)
+      <|> (kw kwAnomaRandomNextBytes $> OpAnomaRandomNextBytes)
       <|> (kw kwAnomaRandomSplit $> OpAnomaRandomSplit)
       <|> (kw kwAnomaIsCommitment $> OpAnomaIsCommitment)
       <|> (kw kwAnomaIsNullifier $> OpAnomaIsNullifier)

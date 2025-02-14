@@ -301,7 +301,7 @@ instance PrettyCode AnomaOp where
     OpAnomaAddDelta -> Str.anomaAddDelta
     OpAnomaSubDelta -> Str.anomaSubDelta
     OpAnomaRandomGeneratorInit -> Str.anomaRandomGeneratorInit
-    OpAnomaRandomNextBits -> Str.anomaRandomNextBits
+    OpAnomaRandomNextBytes -> Str.anomaRandomNextBytes
     OpAnomaRandomSplit -> Str.anomaRandomSplit
     OpAnomaIsCommitment -> Str.anomaIsCommitment
     OpAnomaIsNullifier -> Str.anomaIsNullifier

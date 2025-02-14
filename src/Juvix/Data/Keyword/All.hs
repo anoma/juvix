@@ -568,8 +568,8 @@ kwAnomaSubDelta = asciiKw Str.anomaSubDelta
 kwAnomaRandomGeneratorInit :: Keyword
 kwAnomaRandomGeneratorInit = asciiKw Str.anomaRandomGeneratorInit
 
-kwAnomaRandomNextBits :: Keyword
-kwAnomaRandomNextBits = asciiKw Str.anomaRandomNextBits
+kwAnomaRandomNextBytes :: Keyword
+kwAnomaRandomNextBytes = asciiKw Str.anomaRandomNextBytes
 
 kwAnomaRandomSplit :: Keyword
 kwAnomaRandomSplit = asciiKw Str.anomaRandomSplit

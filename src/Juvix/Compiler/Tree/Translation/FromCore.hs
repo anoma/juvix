@@ -71,7 +71,7 @@ toTreeOp = \case
   Core.OpAnomaAddDelta -> TreeAnomaOp OpAnomaAddDelta
   Core.OpAnomaSubDelta -> TreeAnomaOp OpAnomaSubDelta
   Core.OpAnomaRandomGeneratorInit -> TreeAnomaOp OpAnomaRandomGeneratorInit
-  Core.OpAnomaRandomNextBits -> TreeAnomaOp OpAnomaRandomNextBits
+  Core.OpAnomaRandomNextBytes -> TreeAnomaOp OpAnomaRandomNextBytes
   Core.OpAnomaRandomSplit -> TreeAnomaOp OpAnomaRandomSplit
   Core.OpAnomaIsCommitment -> TreeAnomaOp OpAnomaIsCommitment
   Core.OpAnomaIsNullifier -> TreeAnomaOp OpAnomaIsNullifier
