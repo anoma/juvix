@@ -697,28 +697,26 @@ compile = \case
         sha256HashLength :: Integer
         sha256HashLength = 32
 
-    -- FIXME rename to bytes
     goAnomaRandomNextBits :: [Term Natural] -> Sem r (Term Natural)
     goAnomaRandomNextBits args = case args of
       [n, g] -> do
         withTemp (n # g) $ \argsRef -> do
           argRefAddress <- tempRefPath argsRef
-          numBytes <-
+          next <-
             callStdlib
-              StdlibMul
-              [ opAddress "args-n" (argRefAddress ++ [L]),
-                nockNatLiteral 8
+              StdlibRandomNextBits
+              [ opAddress "args-g" (argRefAddress ++ [R]),
+                opAddress "numbits" (argRefAddress ++ [L])
               ]
-          withTemp numBytes $ \numBytesRef -> do
-            numBytesRefAddress <- tempRefPath numBytesRef
-            argRefAddress' <- tempRefPath argsRef
-            next <-
+          withTemp next $ \nextRef -> do
+            argRefAddress'' <- tempRefPath argsRef
+            numBytes <-
               callStdlib
-                StdlibRandomNextBits
-                [ opAddress "args-g" (argRefAddress' ++ [R]),
-                  opAddress "numbytes" numBytesRefAddress
+                StdlibDiv
+                [ opAddress "args-n" (argRefAddress'' ++ [L]),
+                  nockNatLiteral 8
                 ]
-            withTemp next $ \nextRef -> do
+            withTemp numBytes $ \numBytesRef -> do
               numBytesRefAddress' <- tempRefPath numBytesRef
               nextRefPath <- tempRefPath nextRef
               return
