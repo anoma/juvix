@@ -10,7 +10,6 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Info.PragmaInfo
-import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Int
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat
 import Juvix.Compiler.Core.Translation.FromInternal.Data
@@ -95,9 +94,13 @@ fromInternal i = mapError (JuvixError . ErrBadScope) $ do
                 <> i ^. InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
         runReader resultTable $
           goModule resultModule
-        tab <- getModule
+        md' <- getModule
+        when (InternalTyped.getInternalTypedResultIsMainFile i) $
+          forM_ (md' ^. moduleInfoTable . infoIdentifiers) $ \f -> do
+            when (f ^. identifierName == Str.main) $
+              registerMain (f ^. identifierSymbol)
         when
-          (isNothing (lookupBuiltinInductive tab BuiltinBool))
+          (isNothing (lookupBuiltinInductive md' BuiltinBool))
           declareBoolBuiltins
         when (isNothing (coreImportsTab ^. infoLiteralIntToNat)) $
           setupLiteralIntToNat literalIntToNatNode
@@ -344,8 +347,6 @@ preFunctionDef f = do
       | isIgnoredBuiltin b -> return ()
     _ -> do
       registerIdent (mkIdentIndex (f ^. Internal.funDefName)) info
-      when (f ^. Internal.funDefName . Internal.nameText == Str.main) $
-        registerMain sym
   return
     PreFunctionDef
       { _preFunInternal = f,
@@ -1300,18 +1301,12 @@ goIden ::
   Internal.Iden ->
   Sem r Node
 goIden i = do
-  importsTableDebug <- Core.ppTrace . (^. moduleImportsTable) <$> getModule
-  infoTableDebug <- Core.ppTrace . (^. moduleInfoTable) <$> getModule
   let undeclared =
         error
           ( "internal to core: undeclared identifier: "
               <> txt
               <> "\nat "
               <> Internal.ppTrace (getLoc i)
-              <> "\nModule:\n-------\n\n"
-              <> infoTableDebug
-              <> "\nImports:\n--------\n\n"
-              <> importsTableDebug
           )
   case i of
     Internal.IdenVar n -> do

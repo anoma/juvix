@@ -6,7 +6,8 @@ import Juvix.Prelude
 
 data ParserResult = ParserResult
   { _resultModule :: Module 'Parsed 'ModuleTop,
-    _resultParserState :: ParserState
+    _resultParserState :: ParserState,
+    _resultIsMainFile :: Bool
   }
 
 makeLenses ''ParserResult

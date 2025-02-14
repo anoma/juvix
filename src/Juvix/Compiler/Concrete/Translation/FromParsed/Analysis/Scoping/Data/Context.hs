@@ -20,5 +20,8 @@ makeLenses ''ScoperResult
 mainModule :: Lens' ScoperResult (Module 'Scoped 'ModuleTop)
 mainModule = resultModule
 
+getScoperResultIsMainFile :: ScoperResult -> Bool
+getScoperResultIsMainFile = (^. resultParserResult . Parsed.resultIsMainFile)
+
 getScoperResultComments :: ScoperResult -> Comments
 getScoperResultComments = Parsed.getParserResultComments . (^. resultParserResult)

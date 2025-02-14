@@ -50,6 +50,7 @@ data EntryPoint = EntryPoint
     _entryPointInliningDepth :: Int,
     _entryPointGenericOptions :: GenericOptions,
     _entryPointModulePath :: Maybe (Path Abs File),
+    _entryPointMainFile :: Maybe (Path Abs File),
     _entryPointSymbolPruningMode :: SymbolPruningMode,
     _entryPointOffline :: Bool,
     _entryPointFieldSize :: Natural,
@@ -76,7 +77,8 @@ defaultInliningDepth = 3
 defaultEntryPoint :: PackageId -> Root -> Maybe (Path Abs File) -> EntryPoint
 defaultEntryPoint pkg root mainFile =
   (defaultEntryPointNoFile pkg root)
-    { _entryPointModulePath = mainFile
+    { _entryPointModulePath = mainFile,
+      _entryPointMainFile = mainFile
     }
 
 defaultEntryPointNoFile :: PackageId -> Root -> EntryPoint
@@ -101,6 +103,7 @@ defaultEntryPointNoFile pkg root =
       _entryPointOptimizationLevel = defaultOptimizationLevel,
       _entryPointInliningDepth = defaultInliningDepth,
       _entryPointModulePath = Nothing,
+      _entryPointMainFile = Nothing,
       _entryPointSymbolPruningMode = FilterUnreachable,
       _entryPointOffline = False,
       _entryPointFieldSize = defaultFieldSize,

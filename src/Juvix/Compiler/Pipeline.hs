@@ -100,7 +100,7 @@ upToParsing ::
   Sem r Parser.ParserResult
 upToParsing = do
   e <- ask
-  Parser.fromSource (e ^. entryPointStdin) (e ^. entryPointModulePath)
+  Parser.fromSource (e ^. entryPointModulePath == e ^. entryPointMainFile) (e ^. entryPointStdin) (e ^. entryPointModulePath)
 
 --------------------------------------------------------------------------------
 -- Workflows from parsed source
