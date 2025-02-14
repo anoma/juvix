@@ -71,10 +71,11 @@ type PragmasStash = State (Maybe ParsedPragmas)
 
 fromSource ::
   (Members '[HighlightBuilder, TopModuleNameChecker, Files, Error JuvixError] r) =>
+  Bool ->
   Maybe Text ->
   Maybe (Path Abs File) ->
   Sem r ParserResult
-fromSource mstdin minputfile = mapError (JuvixError @ParserError) $ do
+fromSource _resultIsMainFile mstdin minputfile = mapError (JuvixError @ParserError) $ do
   (_resultParserState, _resultModule) <- runParserResultBuilder mempty getParsedModuleTop
   return ParserResult {..}
   where

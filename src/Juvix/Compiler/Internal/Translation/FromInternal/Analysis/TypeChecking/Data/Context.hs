@@ -27,5 +27,8 @@ newtype ImportContext = ImportContext
 makeLenses ''InternalTypedResult
 makeLenses ''ImportContext
 
+getInternalTypedResultIsMainFile :: InternalTypedResult -> Bool
+getInternalTypedResultIsMainFile = Internal.getInternalResultIsMainFile . (^. resultInternal)
+
 getInternalTypedResultComments :: InternalTypedResult -> Comments
 getInternalTypedResultComments = Internal.getInternalResultComments . (^. resultInternal)

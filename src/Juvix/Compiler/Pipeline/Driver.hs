@@ -381,7 +381,7 @@ processNodeUpToParsing ::
   Sem r ParserResult
 processNodeUpToParsing node =
   runTopModuleNameChecker $
-    fromSource Nothing (Just (node ^. processedNode . importNodeAbsFile))
+    fromSource False Nothing (Just (node ^. processedNode . importNodeAbsFile))
 
 processNodeUpToScoping ::
   ( Members
