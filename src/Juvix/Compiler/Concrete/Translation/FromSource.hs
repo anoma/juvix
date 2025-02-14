@@ -312,7 +312,10 @@ pipeSep1 :: (Member ParserResultBuilder r) => (Irrelevant (Maybe KeywordRef) -> 
 pipeSep1 e = do
   p <- Irrelevant <$> optional (kw kwPipe)
   h <- e p
-  (h :|) <$> many (kw kwPipe >>= e . Irrelevant . Just)
+  (h :|) <$> many (kwPipeLenient >>= e . Irrelevant . Just)
+
+kwPipeLenient :: (Member ParserResultBuilder r) => ParsecS r KeywordRef
+kwPipeLenient = P.try (optional semicolon >> kw kwPipe)
 
 top ::
   (Member ParserResultBuilder r) =>
@@ -1213,7 +1216,7 @@ sideIfBranch isFirst = do
     let opt
           | isFirst = optional
           | otherwise = fmap Just
-    pipe' <- Irrelevant <$> opt (kw kwPipe)
+    pipe' <- Irrelevant <$> opt kwPipeLenient
     condKw' <- ifElseKw
     return (pipe', condKw')
   _sideIfBranchCondition <- case sing :: SIfBranchKind k of
@@ -1274,8 +1277,8 @@ ifBranch = do
   where
     pipeHelper :: ParsecS r KeywordRef
     pipeHelper = case sing :: SIfBranchKind k of
-      SBranchIfBool -> P.try (kw kwPipe <* P.notFollowedBy (kw kwElse))
-      SBranchIfElse -> kw kwPipe
+      SBranchIfBool -> P.try (kwPipeLenient <* P.notFollowedBy (kw kwElse))
+      SBranchIfElse -> kwPipeLenient
 
 multiwayIf :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (If 'Parsed)
 multiwayIf = do
@@ -1449,7 +1452,7 @@ functionDefinition opts _functionDefBuiltin = P.label "<function definition>" $ 
       where
         bodyClause :: ParsecS r (FunctionClause 'Parsed)
         bodyClause = do
-          _clausenPipeKw <- Irrelevant <$> kw kwPipe
+          _clausenPipeKw <- Irrelevant <$> kwPipeLenient
           _clausenPatterns <- some1 patternAtom
           _clausenAssignKw <- Irrelevant <$> kw kwAssign
           _clausenBody <- parseExpressionAtoms
