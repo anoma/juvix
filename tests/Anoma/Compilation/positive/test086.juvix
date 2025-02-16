@@ -19,7 +19,7 @@ builtin anoma-random-generator-split
 axiom randomGeneratorSplit
   : RandomGenerator -> Pair RandomGenerator RandomGenerator;
 
-builtin anoma-random-next-bits
+builtin anoma-random-next-bytes
 axiom randomNextBits : Nat -> RandomGenerator -> Pair ByteArray RandomGenerator;
 
 randomNextBytes
