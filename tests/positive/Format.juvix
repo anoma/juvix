@@ -534,6 +534,27 @@ module MultiIf;
       | else := 2;
 end;
 
+module TypeModule;
+  -- type Pair := mkPair
+
+  type Rec :=
+    mk@{
+      a : Nat;
+    }
+  with
+    fromNat : Nat -> Rec
+      | a :=
+        mk@{
+          a;
+        };
+
+    toNat : Rec -> Nat
+      | (mk a) := a;
+  end;
+
+  recId : Nat -> Nat := Rec.fromNat >> Rec.toNat;
+end;
+
 {-hi
 
 -}
