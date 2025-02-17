@@ -725,7 +725,7 @@ compile = \case
               withTempPath
                 ( callStdlib
                     StdlibRandomNextBits
-                    [ opAddress "args-g" (argRefAddress' ++ [L]),
+                    [ opAddress "args-g" (argRefAddress' ++ [R]),
                       opAddress "numbits" numBitsPath
                     ]
                 )

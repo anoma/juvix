@@ -20,11 +20,7 @@ axiom randomGeneratorSplit
   : RandomGenerator -> Pair RandomGenerator RandomGenerator;
 
 builtin anoma-random-next-bytes
-axiom randomNextBits : Nat -> RandomGenerator -> Pair ByteArray RandomGenerator;
-
-randomNextBytes
-  (numBytes : Nat) : RandomGenerator -> Pair ByteArray RandomGenerator :=
-  randomNextBits (numBytes * 8);
+axiom randomNextBytes : Nat -> RandomGenerator -> Pair ByteArray RandomGenerator;
 
 main : ByteArray :=
   let
