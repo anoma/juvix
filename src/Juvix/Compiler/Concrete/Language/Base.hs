@@ -269,6 +269,11 @@ data Statement (s :: Stage)
   | StatementOpenModule (OpenModule s 'OpenFull)
   | StatementAxiom (AxiomDef s)
   | StatementProjectionDef (ProjectionDef s)
+  deriving stock (Generic)
+
+instance Serialize (Statement 'Scoped)
+
+instance NFData (Statement 'Scoped)
 
 deriving stock instance Show (Statement 'Parsed)
 
@@ -292,6 +297,11 @@ data ProjectionDef s = ProjectionDef
     _projectionDoc :: Maybe (Judoc s),
     _projectionPragmas :: Maybe ParsedPragmas
   }
+  deriving stock (Generic)
+
+instance Serialize (ProjectionDef 'Scoped)
+
+instance NFData (ProjectionDef 'Scoped)
 
 deriving stock instance Show (ProjectionDef 'Parsed)
 
@@ -313,6 +323,11 @@ data Import (s :: Stage) = Import
     _importPublic :: PublicAnn,
     _importOpen :: Maybe (OpenModule s 'OpenShort)
   }
+  deriving stock (Generic)
+
+instance Serialize (Import 'Scoped)
+
+instance NFData (Import 'Scoped)
 
 deriving stock instance Show (Import 'Parsed)
 
@@ -371,6 +386,11 @@ data SyntaxDef (s :: Stage)
   | SyntaxOperator (OperatorSyntaxDef s)
   | SyntaxIterator (IteratorSyntaxDef s)
   | SyntaxAlias (AliasDef s)
+  deriving stock (Generic)
+
+instance NFData (SyntaxDef 'Scoped)
+
+instance Serialize (SyntaxDef 'Scoped)
 
 deriving stock instance (Show (SyntaxDef 'Parsed))
 
@@ -391,6 +411,11 @@ data ParsedFixityFields (s :: Stage) = ParsedFixityFields
     _fixityFieldsPrecAbove :: Maybe [IdentifierType s],
     _fixityFieldsBraces :: Irrelevant (KeywordRef, KeywordRef)
   }
+  deriving stock (Generic)
+
+instance NFData (ParsedFixityFields 'Scoped)
+
+instance Serialize (ParsedFixityFields 'Scoped)
 
 deriving stock instance (Show (ParsedFixityFields 'Parsed))
 
@@ -408,6 +433,11 @@ data ParsedFixityInfo (s :: Stage) = ParsedFixityInfo
   { _fixityParsedArity :: WithLoc Arity,
     _fixityFields :: Maybe (ParsedFixityFields s)
   }
+  deriving stock (Generic)
+
+instance NFData (ParsedFixityInfo 'Scoped)
+
+instance Serialize (ParsedFixityInfo 'Scoped)
 
 deriving stock instance (Show (ParsedFixityInfo 'Parsed))
 
@@ -429,6 +459,11 @@ data FixitySyntaxDef (s :: Stage) = FixitySyntaxDef
     _fixityAssignKw :: KeywordRef,
     _fixitySyntaxKw :: KeywordRef
   }
+  deriving stock (Generic)
+
+instance NFData (FixitySyntaxDef 'Scoped)
+
+instance Serialize (FixitySyntaxDef 'Scoped)
 
 deriving stock instance (Show (FixitySyntaxDef 'Parsed))
 
@@ -1351,7 +1386,11 @@ data MarkdownInfo = MarkdownInfo
   { _markdownInfo :: Mk,
     _markdownInfoBlockLengths :: [Int]
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize MarkdownInfo
+
+instance NFData MarkdownInfo
 
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { _moduleKw :: KeywordRef,
@@ -1364,6 +1403,11 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
     _moduleId :: ModuleIdType s t,
     _moduleMarkdownInfo :: Maybe MarkdownInfo
   }
+  deriving stock (Generic)
+
+instance NFData (Module 'Scoped 'ModuleLocal)
+
+instance Serialize (Module 'Scoped 'ModuleLocal)
 
 deriving stock instance Show (Module 'Parsed 'ModuleTop)
 
@@ -1388,6 +1432,28 @@ deriving stock instance Ord (Module 'Scoped 'ModuleTop)
 deriving stock instance Ord (Module 'Parsed 'ModuleLocal)
 
 deriving stock instance Ord (Module 'Scoped 'ModuleLocal)
+
+data WithModule (s :: Stage) = WithModule
+  { _withModuleKw :: Irrelevant KeywordRef,
+    _withModuleBody :: [Statement s]
+  }
+  deriving stock (Generic)
+
+instance Serialize (WithModule 'Scoped)
+
+instance NFData (WithModule 'Scoped)
+
+deriving stock instance Show (WithModule 'Parsed)
+
+deriving stock instance Show (WithModule 'Scoped)
+
+deriving stock instance Eq (WithModule 'Parsed)
+
+deriving stock instance Eq (WithModule 'Scoped)
+
+deriving stock instance Ord (WithModule 'Parsed)
+
+deriving stock instance Ord (WithModule 'Scoped)
 
 data HidingItem (s :: Stage) = HidingItem
   { _hidingSymbol :: SymbolType s,
@@ -2997,6 +3063,7 @@ makeLenses ''Judoc
 makeLenses ''JudocBlockParagraph
 makeLenses ''Function
 makeLenses ''InductiveDef
+makeLenses ''WithModule
 makeLenses ''PostfixApplication
 makeLenses ''InfixApplication
 makeLenses ''Application

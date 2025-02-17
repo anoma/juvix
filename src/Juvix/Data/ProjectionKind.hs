@@ -8,3 +8,7 @@ data ProjectionKind
   | -- | Projection for instance fields
     ProjectionCoercion
   deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize ProjectionKind
+
+instance NFData ProjectionKind
