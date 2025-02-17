@@ -12,15 +12,11 @@ module Test;
 Certain blocks can be hidden from the output by adding the `hide` attribute, as shown below.
 
 ```juvix hide
-import Stdlib.Prelude open;
+import Lib open;
 ```
 
 ```juvix
-fib : Nat → Nat → Nat → Nat
-  | zero x1 _ := x1
-  | (suc n) x1 x2 := fib n x2 (x1 + x2);
-
-fibonacci (n : Nat) : Nat := fib n 0 1;
+axiom X : L;
 ```
 
 The `extract-module-statements` attribute can be used to display only the statements contained in a module in the output.
@@ -43,7 +39,7 @@ end;
 Commands like `typecheck` and `compile` can be used with Juvix Markdown files.
 
 ```juvix
-main : IO := readLn (printNatLn << fibonacci << stringToNat);
+main : Nat := zero;
 ```
 
 Other code blocks are not touched, e.g:
@@ -90,7 +86,7 @@ We also use other markup for documentation such as:
 
     ```juvix
     module move-to-left;
-      import Stdlib.Data.Nat open;
+      import Lib open;
 
       add (n : Nat) : Nat -> Nat
         | zero := n
@@ -102,7 +98,7 @@ We also use other markup for documentation such as:
 
     ```juvix
       module example-add;
-        import Stdlib.Data.Nat open;
+        import Lib open;
         add : Nat -> Nat -> Nat
           | n zero := n
           | n (suc m) := suc (add n m);

@@ -11,6 +11,7 @@ import Juvix.Compiler.Concrete.Pretty as Concrete
 import Juvix.Compiler.Concrete.Print.Base qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
+import Juvix.Compiler.Pipeline.Loader.PathResolver.Paths
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Assets (writeAssets)
 
@@ -88,12 +89,16 @@ goScoperResult scopedM = do
 
                   let mdFile :: Path Rel File
                       mdFile =
-                        relFile
-                          ( Concrete.topModulePathToDottedPath
-                              (m ^. Concrete.modulePath . S.nameConcrete)
-                              <.> markdownFileExt
-                          )
+                        let withoutExt
+                              | opts ^. markdownFolderStructure = topModulePathToRelativePathNoExt (m ^. Concrete.modulePath . S.nameConcrete)
+                              | otherwise =
+                                  relFile
+                                    ( Concrete.topModulePathToDottedPath
+                                        (m ^. Concrete.modulePath . S.nameConcrete)
+                                    )
+                         in addFileExt FileExtMarkdown withoutExt
                       absPath :: Path Abs File
                       absPath = outputDir <//> mdFile
 
+                  ensureDir (parent absPath)
                   writeFileEnsureLn absPath md
