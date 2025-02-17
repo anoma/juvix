@@ -50,6 +50,11 @@ type family RecordUpdateExtraType s = res | res -> s where
   RecordUpdateExtraType 'Parsed = ()
   RecordUpdateExtraType 'Scoped = RecordUpdateExtra
 
+type ReservedInductiveDefType :: Stage -> GHCType
+type family ReservedInductiveDefType s = res | res -> s where
+  ReservedInductiveDefType 'Parsed = ReservedInductiveDef
+  ReservedInductiveDefType 'Scoped = Void
+
 type FieldArgIxType :: Stage -> GHCType
 type family FieldArgIxType s = res | res -> s where
   FieldArgIxType 'Parsed = ()
@@ -265,6 +270,7 @@ data Statement (s :: Stage)
   | StatementDeriving (Deriving s)
   | StatementImport (Import s)
   | StatementInductive (InductiveDef s)
+  | StatementReservedInductive (ReservedInductiveDefType s)
   | StatementModule (Module s 'ModuleLocal)
   | StatementOpenModule (OpenModule s 'OpenFull)
   | StatementAxiom (AxiomDef s)
@@ -286,6 +292,12 @@ deriving stock instance Eq (Statement 'Scoped)
 deriving stock instance Ord (Statement 'Parsed)
 
 deriving stock instance Ord (Statement 'Scoped)
+
+data ReservedInductiveDef = ReservedInductiveDef
+  { _reservedInductiveDef :: InductiveDef 'Parsed,
+    _reservedInductiveDefModule :: Module 'Parsed 'ModuleLocal
+  }
+  deriving stock (Show, Eq, Ord)
 
 data ProjectionDef s = ProjectionDef
   { _projectionConstructor :: S.Symbol,
@@ -1073,7 +1085,8 @@ data InductiveDef (s :: Stage) = InductiveDef
     _inductiveTypeApplied :: ExpressionType s,
     _inductiveConstructors :: NonEmpty (ConstructorDef s),
     _inductivePositive :: Maybe KeywordRef,
-    _inductiveTrait :: Maybe KeywordRef
+    _inductiveTrait :: Maybe KeywordRef,
+    _inductiveWithModule :: Maybe (WithModule s)
   }
   deriving stock (Generic)
 
@@ -1434,7 +1447,8 @@ deriving stock instance Ord (Module 'Parsed 'ModuleLocal)
 deriving stock instance Ord (Module 'Scoped 'ModuleLocal)
 
 data WithModule (s :: Stage) = WithModule
-  { _withModuleKw :: Irrelevant KeywordRef,
+  { _withModuleWithKw :: Irrelevant KeywordRef,
+    _withModuleEndKw :: Irrelevant KeywordRef,
     _withModuleBody :: [Statement s]
   }
   deriving stock (Generic)
@@ -3021,6 +3035,7 @@ deriving stock instance Ord (FunctionLhs 'Parsed)
 deriving stock instance Ord (FunctionLhs 'Scoped)
 
 makeLenses ''SideIfs
+makeLenses ''ReservedInductiveDef
 makeLenses ''RecordUpdatePun
 makeLenses ''RecordUpdateFieldItemAssign
 makeLenses ''FunctionDefNameScoped
@@ -3303,8 +3318,15 @@ instance (SingI s) => HasLoc (ConstructorDef s) where
               <>? getLocConstructorRhs _constructorRhs
           )
 
+instance HasLoc (WithModule s) where
+  getLoc WithModule {..} = getLoc _withModuleWithKw <> getLoc _withModuleEndKw
+
 instance HasLoc (InductiveDef s) where
-  getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
+  getLoc i =
+    ( (getLoc <$> i ^. inductivePositive)
+        ?<> getLoc (i ^. inductiveKw)
+    )
+      <>? (getLoc <$> i ^. inductiveWithModule)
 
 instance (SingI s) => HasLoc (AxiomDef s) where
   getLoc m = getLoc (m ^. axiomKw) <> getLocExpressionType (fromJust (m ^. axiomTypeSig . typeSigRetType))
@@ -3353,6 +3375,7 @@ instance HasLoc (Statement 'Scoped) where
   getLoc :: Statement 'Scoped -> Interval
   getLoc = \case
     StatementSyntax t -> getLoc t
+    StatementReservedInductive t -> absurd t
     StatementDeriving t -> getLoc t
     StatementFunctionDef t -> getLoc t
     StatementImport t -> getLoc t

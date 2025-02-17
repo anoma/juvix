@@ -514,6 +514,10 @@ _nonEmpty f x = maybe [] toList <$> f (nonEmpty x)
 error :: (HasCallStack) => Text -> a
 error = Err.error . unpack
 
+{-# DEPRECATED todo "todo" #-}
+todo :: (HasCallStack) => a
+todo = Err.error "TODO"
+
 {-# DEPRECATED undefined "undefined" #-}
 undefined :: (HasCallStack) => a
 undefined = Err.error "undefined"
@@ -685,6 +689,8 @@ instance CanonicalProjection Void a where
 
 instance CanonicalProjection a () where
   project = const ()
+
+instance Serialize Void
 
 -- | 'project' with type arguments swapped. Useful for type application
 project' :: forall b a. (CanonicalProjection a b) => a -> b

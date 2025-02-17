@@ -34,6 +34,9 @@ statementLabel = \case
   StatementDeriving f -> withFunctionSymbol Nothing (Just . (^. symbolTypeLabel)) (f ^. derivingFunLhs . funLhsName)
   StatementImport i -> Just (i ^. importModulePath . to modulePathTypeLabel)
   StatementInductive i -> Just (i ^. inductiveName . symbolTypeLabel)
+  StatementReservedInductive i -> case sing :: SStage s of
+    SParsed -> Just (i ^. reservedInductiveDef . inductiveName . symbolTypeLabel)
+    SScoped -> absurd i
   StatementModule i -> Just (i ^. modulePath . to modulePathTypeLabel)
   StatementAxiom a -> Just (a ^. axiomName . symbolTypeLabel)
   where

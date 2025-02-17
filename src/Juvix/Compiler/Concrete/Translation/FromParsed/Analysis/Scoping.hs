@@ -1500,6 +1500,9 @@ checkInductiveDef InductiveDef {..} = do
             | (cname, cdef) <- zipExact (toList constructorNames') (toList _inductiveConstructors)
           ]
     return (inductiveParameters', inductiveType', inductiveTypeApplied', inductiveDoc', inductiveConstructors')
+  let withModule' = case _inductiveWithModule of
+        Just w -> Just (set (withModuleBody) [] w)
+        Nothing -> Nothing
   let indDef =
         InductiveDef
           { _inductiveName = inductiveName',
@@ -1509,6 +1512,7 @@ checkInductiveDef InductiveDef {..} = do
             _inductiveType = inductiveType',
             _inductiveTypeApplied = inductiveTypeApplied',
             _inductiveConstructors = inductiveConstructors',
+            _inductiveWithModule = withModule',
             _inductiveBuiltin,
             _inductivePositive,
             _inductiveTrait,
@@ -1766,7 +1770,7 @@ reserveStatements ::
   ) =>
   [Statement 'Parsed] ->
   Sem r [Statement 'Parsed]
-reserveStatements = topBindings . concatMapM (fmap toList . reserveDefinition)
+reserveStatements = topBindings . mapM reserveDefinition
   where
     reserveDefinition ::
       ( Members
@@ -1784,29 +1788,35 @@ reserveStatements = topBindings . concatMapM (fmap toList . reserveDefinition)
           r'
       ) =>
       Statement 'Parsed ->
-      Sem r' (NonEmpty (Statement 'Parsed))
+      Sem r' (Statement 'Parsed)
     reserveDefinition def = case def of
-      StatementSyntax s -> reserveSyntaxDef s $> pure def
-      StatementFunctionDef d -> reserveFunctionLikeSymbol d $> pure def
-      StatementDeriving d -> reserveDerivingSymbol d $> pure def
-      StatementAxiom d -> void (reserveAxiomSymbol d) $> pure def
-      StatementModule d -> void (reserveLocalModule d) $> pure def
-      StatementProjectionDef d -> void (reserveProjectionSymbol d) $> pure def
-      StatementImport i -> reserveImport i $> pure def
-      StatementOpenModule {} -> return (pure def)
+      StatementSyntax s -> reserveSyntaxDef s $> def
+      StatementFunctionDef d -> reserveFunctionLikeSymbol d $> def
+      StatementDeriving d -> reserveDerivingSymbol d $> def
+      StatementAxiom d -> void (reserveAxiomSymbol d) $> def
+      StatementModule d -> void (reserveLocalModule d) $> def
+      StatementProjectionDef d -> void (reserveProjectionSymbol d) $> def
+      StatementImport i -> reserveImport i $> def
+      StatementOpenModule {} -> return def
+      StatementReservedInductive {} -> impossible
       StatementInductive d -> do
         m <- reserveInductive d
         reserveLocalModule m
-        return (def :| [StatementModule m])
+        let r =
+              ReservedInductiveDef
+                { _reservedInductiveDef = d,
+                  _reservedInductiveDefModule = m
+                }
+        return (StatementReservedInductive r)
 
 checkReservedStatements ::
   forall r.
   (Members '[HighlightBuilder, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader PackageId] r) =>
   [Statement 'Parsed] ->
   Sem r [Statement 'Scoped]
-checkReservedStatements = topBindings . mapM goDefinition
+checkReservedStatements = topBindings . concatMapM (fmap toList . scopeDefinition)
   where
-    goDefinition ::
+    scopeDefinition ::
       ( Members
           '[ Error ScoperError,
              State Scope,
@@ -1822,17 +1832,41 @@ checkReservedStatements = topBindings . mapM goDefinition
           r'
       ) =>
       Statement 'Parsed ->
-      Sem r' (Statement 'Scoped)
-    goDefinition = \case
-      StatementSyntax s -> StatementSyntax <$> checkSyntaxDef s
-      StatementFunctionDef d -> StatementFunctionDef <$> checkFunctionDef d
-      StatementDeriving d -> StatementDeriving <$> checkDeriving d
-      StatementAxiom d -> StatementAxiom <$> checkAxiomDef d
-      StatementModule d -> StatementModule <$> checkLocalModule d
-      StatementImport i -> StatementImport <$> checkImport i
-      StatementOpenModule i -> StatementOpenModule <$> checkOpenModule i
-      StatementInductive d -> StatementInductive <$> checkInductiveDef d
-      StatementProjectionDef d -> StatementProjectionDef <$> checkProjectionDef d
+      Sem r' (NonEmpty (Statement 'Scoped))
+    scopeDefinition = \case
+      StatementSyntax s -> pure . StatementSyntax <$> checkSyntaxDef s
+      StatementFunctionDef d -> pure . StatementFunctionDef <$> checkFunctionDef d
+      StatementDeriving d -> pure . StatementDeriving <$> checkDeriving d
+      StatementAxiom d -> pure . StatementAxiom <$> checkAxiomDef d
+      StatementModule d -> pure . StatementModule <$> checkLocalModule d
+      StatementImport i -> pure . StatementImport <$> checkImport i
+      StatementOpenModule i -> pure . StatementOpenModule <$> checkOpenModule i
+      StatementInductive {} -> impossible
+      StatementReservedInductive d -> checkReservedInductive d
+      StatementProjectionDef d -> pure . StatementProjectionDef <$> checkProjectionDef d
+
+checkReservedInductive ::
+  ( Members
+      '[ Error ScoperError,
+         State Scope,
+         State ScoperState,
+         Reader PackageId,
+         Reader ScopeParameters,
+         InfoTableBuilder,
+         NameIdGen,
+         Reader BindingStrategy,
+         HighlightBuilder,
+         Reader InfoTable
+       ]
+      r
+  ) =>
+  ReservedInductiveDef ->
+  Sem r (NonEmpty (Statement 'Scoped))
+checkReservedInductive r = do
+  tyDef <- StatementInductive <$> checkInductiveDef (r ^. reservedInductiveDef)
+  modDef <- checkLocalModule (r ^. reservedInductiveDefModule)
+  let withDefs :: [Statement 'Scoped] = todo
+  return (tyDef :| [StatementModule modDef])
 
 defineInductiveModule :: forall r. (Members '[Reader PackageId] r) => S.Symbol -> InductiveDef 'Parsed -> Sem r (Module 'Parsed 'ModuleLocal)
 defineInductiveModule headConstr i =
@@ -1855,12 +1889,13 @@ defineInductiveModule headConstr i =
           }
       where
         genBody :: Sem s' [Statement 'Parsed]
-        genBody = fromMaybe [] <$> runFail genFieldProjections
+        genBody = do
+          projections <- genFieldProjections
+          return (projections ++ i ^.. inductiveWithModule . _Just . withModuleBody . each)
           where
-            genFieldProjections :: Sem (Fail ': s') [Statement 'Parsed]
+            genFieldProjections :: Sem s' [Statement 'Parsed]
             genFieldProjections = do
-              fs <- toList <$> getFields
-              return . run . evalState 0 $ mapM goRecordStatement fs
+              return . run . evalState 0 $ mapM goRecordStatement fields
               where
                 goRecordStatement :: RecordStatement 'Parsed -> Sem '[State Int] (Statement 'Parsed)
                 goRecordStatement = \case
@@ -1874,13 +1909,12 @@ defineInductiveModule headConstr i =
 
                     goField :: RecordField 'Parsed -> Sem '[State Int] (Statement 'Parsed)
                     goField f = do
-                      idx <- get
+                      idx <- popFieldIx
                       let s = mkProjection (Indexed idx f)
-                      incFieldIx
                       return (StatementProjectionDef s)
                       where
-                        incFieldIx :: Sem '[State Int] ()
-                        incFieldIx = modify' @Int succ
+                        popFieldIx :: Sem '[State Int] Int
+                        popFieldIx = get <* modify' @Int succ
 
                 mkProjection ::
                   Indexed (RecordField 'Parsed) ->
@@ -1915,14 +1949,14 @@ defineInductiveModule headConstr i =
                               p2'
                           )
 
-                getFields :: Sem (Fail ': s') [RecordStatement 'Parsed]
-                getFields = case i ^. inductiveConstructors of
+                fields :: [RecordStatement 'Parsed]
+                fields = case i ^. inductiveConstructors of
                   c :| [] -> case c ^. constructorRhs of
-                    ConstructorRhsRecord r -> return (r ^. rhsRecordStatements)
-                    _ -> fail
-                  _ -> fail
+                    ConstructorRhsRecord r -> (r ^. rhsRecordStatements)
+                    _ -> []
+                  _ -> []
 
--- returns the module generated for the inductive definition
+-- | Returns the module generated for the inductive definition
 reserveInductive ::
   forall r.
   ( Members
@@ -2423,6 +2457,7 @@ checkLetStatements =
           StatementSyntax syn -> fromSyn syn
           StatementOpenModule o -> LetOpen o
           StatementInductive {} -> impossible
+          StatementReservedInductive {} -> impossible
           StatementModule {} -> impossible
           StatementDeriving {} -> impossible
           StatementProjectionDef {} -> impossible

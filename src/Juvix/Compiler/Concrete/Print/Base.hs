@@ -1624,9 +1624,19 @@ instance (SingI s) => PrettyPrint (ProjectionDef s) where
       <+> noLoc "for"
       <+> ppCode _projectionConstructor
 
+ppReservedInductiveDefType :: forall s. (SingI s) => PrettyPrinting (ReservedInductiveDefType s)
+ppReservedInductiveDefType x = case sing :: SStage s of
+  SParsed -> ppCode x
+  SScoped -> absurd x
+
+instance PrettyPrint ReservedInductiveDef where
+  ppCode ReservedInductiveDef {..} = do
+    ppStatements [StatementInductive _reservedInductiveDef, StatementModule _reservedInductiveDefModule]
+
 instance (SingI s) => PrettyPrint (Statement s) where
   ppCode = \case
     StatementSyntax s -> ppCode s
+    StatementReservedInductive s -> ppReservedInductiveDefType s
     StatementFunctionDef f -> ppCode f
     StatementDeriving f -> ppCode f
     StatementImport i -> ppCode i

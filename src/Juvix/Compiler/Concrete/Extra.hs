@@ -49,6 +49,8 @@ groupStatements = \case
     -- blank line
     g :: Statement s -> Statement s -> Bool
     g a b = case (a, b) of
+      (StatementReservedInductive _, _) -> False
+      (_, StatementReservedInductive _) -> False
       (StatementDeriving _, _) -> False
       (StatementSyntax _, StatementSyntax _) -> True
       (StatementSyntax (SyntaxFixity _), _) -> False
