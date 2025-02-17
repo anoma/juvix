@@ -18,7 +18,7 @@ space :: (Members '[ExactPrint] r) => Sem r ()
 space = noLoc P.space
 
 (<+>) :: (Members '[ExactPrint] r) => Sem r () -> Sem r () -> Sem r ()
-a <+> b = a >> noLoc P.space >> b
+a <+> b = a >> space >> b
 
 infixr 7 ?<>
 

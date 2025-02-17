@@ -1863,10 +1863,15 @@ checkReservedInductive ::
   ReservedInductiveDef ->
   Sem r (NonEmpty (Statement 'Scoped))
 checkReservedInductive r = do
-  tyDef <- StatementInductive <$> checkInductiveDef (r ^. reservedInductiveDef)
+  tyDef0 <- checkInductiveDef (r ^. reservedInductiveDef)
   modDef <- checkLocalModule (r ^. reservedInductiveDefModule)
-  let withDefs :: [Statement 'Scoped] = todo
-  return (tyDef :| [StatementModule modDef])
+  let withDefs :: [Statement 'Scoped] =
+        getDefs (modDef ^. moduleBody)
+      tyDef = set (inductiveWithModule . _Just . withModuleBody) withDefs tyDef0
+  return (StatementInductive tyDef :| [StatementModule modDef])
+  where
+    getDefs :: [Statement 'Scoped] -> [Statement 'Scoped]
+    getDefs = dropWhile (has _StatementProjectionDef)
 
 defineInductiveModule :: forall r. (Members '[Reader PackageId] r) => S.Symbol -> InductiveDef 'Parsed -> Sem r (Module 'Parsed 'ModuleLocal)
 defineInductiveModule headConstr i =

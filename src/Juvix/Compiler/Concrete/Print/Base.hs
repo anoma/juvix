@@ -1596,6 +1596,16 @@ ppInductiveSignature InductiveDef {..} = do
     <+?> params'
     <+?> ty'
 
+instance (SingI s) => PrettyPrint (WithModule s) where
+  ppCode :: (Members '[ExactPrint, Reader Options] r) => WithModule s -> Sem r ()
+  ppCode WithModule {..} = do
+    let moduleBody' = indent (ppStatements _withModuleBody)
+    ppCode _withModuleWithKw
+      <> hardline
+      <> moduleBody'
+      <> hardline
+      <> ppCode _withModuleEndKw
+
 instance (SingI s) => PrettyPrint (InductiveDef s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => InductiveDef s -> Sem r ()
   ppCode d@InductiveDef {..} = do
@@ -1603,11 +1613,13 @@ instance (SingI s) => PrettyPrint (InductiveDef s) where
         pragmas' = ppCode <$> _inductivePragmas
         constrs' = ppConstructorBlock (insertFirstPipe1 (constructorPipe . unIrrelevant) _inductiveConstructors)
         sig' = ppInductiveSignature d
+        withModule' = ppCode <$> _inductiveWithModule
     doc'
       ?<> pragmas'
       ?<> sig'
       <+> ppCode _inductiveAssignKw
         <> constrs'
+        <>? ((line <>) <$> withModule')
     where
       ppConstructorBlock :: NonEmpty (ConstructorDef s) -> Sem r ()
       ppConstructorBlock = \case
