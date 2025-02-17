@@ -30,20 +30,20 @@ groupSortOn f = map fst . groupSortOnWith f
 groupSortOn' :: (Ord b) => (a -> b) -> [a] -> [[a]]
 groupSortOn' f = map toList . groupSortOn f
 
-findRepeatedOnM :: forall a b m. (Ord b, Monad m) => (a -> m b) -> [a] -> m [(NonEmpty a, b)]
+findRepeatedOnM :: forall a b m. (Ord b, Monad m) => (a -> m b) -> [a] -> m [((a, NonEmpty a), b)]
 findRepeatedOnM f = fmap (mapMaybe rep) . groupSortOnWithM f
   where
-    rep :: (NonEmpty a, b) -> Maybe (NonEmpty a, b)
+    rep :: (NonEmpty a, b) -> Maybe ((a, NonEmpty a), b)
     rep = \case
-      (n@(_ :| _ : _), b) -> Just (n, b)
+      ((x :| y : zs), b) -> Just ((x, y :| zs), b)
       _ -> Nothing
 
-findRepeatedOn :: forall a b. (Ord b) => (a -> b) -> [a] -> [(NonEmpty a, b)]
+findRepeatedOn :: forall a b. (Ord b) => (a -> b) -> [a] -> [((a, NonEmpty a), b)]
 findRepeatedOn f = runIdentity . findRepeatedOnM (return . f)
 
 -- | Returns the repeated elements
 findRepeated :: forall a. (Ord a) => [a] -> [a]
-findRepeated = map (head . fst) . findRepeatedOn id
+findRepeated = map (head . snd . fst) . findRepeatedOn id
 
 allDifferent :: forall a. (Ord a) => [a] -> Bool
 allDifferent = null . findRepeated
