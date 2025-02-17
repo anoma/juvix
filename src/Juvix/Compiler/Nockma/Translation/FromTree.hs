@@ -236,12 +236,18 @@ withTemp value f = do
   body' <- local (over compilerStackHeight (+ 1)) $ f (TempRef stackHeight)
   return $ OpPush # value # body'
 
-withTempM ::
+-- | The given path is only valid for the current temp level. If you need to get
+-- the path for a nested temp level, you should use `withTemp` instead
+withTempPath ::
   (Member (Reader CompilerCtx) r) =>
   Sem r (Term Natural) ->
-  (TempRef -> Sem r (Term Natural)) ->
+  (Path -> Sem r (Term Natural)) ->
   Sem r (Term Natural)
-withTempM valueM f = valueM >>= (`withTemp` f)
+withTempPath valueM f = do
+  val <- valueM
+  withTemp val $ \ref -> do
+    path <- tempRefPath ref
+    f path
 
 -- | Pushes a temporary value onto the subject stack, associates the resulting
 -- stack reference with the next JuvixTree temporary variable, and continues
@@ -607,9 +613,7 @@ compile = \case
     goPrimUnop op arg = case op of
       Tree.OpShow -> stringsErr "show"
       Tree.OpStrToInt -> stringsErr "strToInt"
-      Tree.OpArgsNum ->
-        compile arg
-          >>= return . getClosureField ClosureRemainingArgsNum
+      Tree.OpArgsNum -> getClosureField ClosureRemainingArgsNum <$> compile arg
       Tree.OpIntToField -> fieldErr
       Tree.OpFieldToInt -> fieldErr
       Tree.OpIntToUInt8 -> compile arg >>= intToUInt8
@@ -709,33 +713,31 @@ compile = \case
       [n, g] -> do
         withTemp (n # g) $ \argsRef -> do
           argRefAddress <- tempRefPath argsRef
-          withTempM
+          withTempPath
             ( callStdlib
                 StdlibMul
                 [ opAddress "args-n" (argRefAddress ++ [L]),
                   nockNatLiteral 8
                 ]
             )
-            $ \numBitsRef -> do
+            $ \numBitsPath -> do
               argRefAddress' <- tempRefPath argsRef
-              numBits <- tempRefPath numBitsRef
-              withTempM
+              withTempPath
                 ( callStdlib
                     StdlibRandomNextBits
-                    [ opAddress "args-g" numBits,
-                      opAddress "numbits" (argRefAddress' ++ [L])
+                    [ opAddress "args-g" (argRefAddress' ++ [L]),
+                      opAddress "numbits" numBitsPath
                     ]
                 )
-                $ \nextRef -> do
+                $ \nextPath -> do
                   argRefAddress'' <- tempRefPath argsRef
-                  nextRefPath <- tempRefPath nextRef
                   return
                     ( mkPair
                         ( mkByteArray
                             (opAddress "args-n" (argRefAddress'' ++ [L]))
-                            (opAddress "nextbytes-result-fst" (nextRefPath ++ [L]))
+                            (opAddress "nextbytes-result-fst" (nextPath ++ [L]))
                         )
-                        (opAddress "nextBytes-result-snd" (nextRefPath ++ [R]))
+                        (opAddress "nextBytes-result-snd" (nextPath ++ [R]))
                     )
       _ -> impossible
 
