@@ -3052,7 +3052,6 @@ checkNamedApplication napp = do
                 _multipleDeclSecond = y
               }
 
-    -- findRepeatedOn :: forall a b. (Ord b) => (a -> b) -> [a] -> [(NonEmpty a, b)]
     checkNameInSignature :: HashSet Symbol -> Symbol -> Sem r ()
     checkNameInSignature namesInSig fname =
       unless (HashSet.member fname namesInSig) $
