@@ -7,7 +7,7 @@ import Stdlib.Data.Pair open;
 import Stdlib.Trait.Ord open;
 import Stdlib.System.IO open;
 
-syntax alias compare := Ord.cmp;
+syntax alias compare := Ord.compare;
 
 type T :=
   | One
