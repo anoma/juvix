@@ -13,7 +13,7 @@ type Symbol :=
 instance
 eqSymbolI : Eq Symbol :=
   mkEq@{
-    eq (sym1 sym2 : Symbol) : Bool :=
+    isEqual (sym1 sym2 : Symbol) : Bool :=
       case sym1, sym2 of
         | O, O := true
         | X, X := true
