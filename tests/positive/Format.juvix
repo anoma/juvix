@@ -551,6 +551,11 @@ module TypeModule;
   end;
 
   recId : Nat -> Nat := Rec.fromNat >> Rec.toNat;
+
+  type S := mS
+  -- empty with module
+  with
+  end;
 end;
 
 {-hi

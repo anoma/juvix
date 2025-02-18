@@ -113,5 +113,6 @@ reservedKeywords =
     kwType,
     kwUsing,
     kwWhere,
+    kwWith,
     kwWildcard
   ]

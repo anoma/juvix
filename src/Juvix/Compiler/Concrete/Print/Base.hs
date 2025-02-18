@@ -1599,11 +1599,12 @@ ppInductiveSignature InductiveDef {..} = do
 instance (SingI s) => PrettyPrint (WithModule s) where
   ppCode :: (Members '[ExactPrint, Reader Options] r) => WithModule s -> Sem r ()
   ppCode WithModule {..} = do
-    let moduleBody' = indent (ppStatements _withModuleBody)
+    let moduleBody' = unless (null _withModuleBody) $ do
+          indent (ppStatements _withModuleBody)
+          hardline
     ppCode _withModuleWithKw
       <> hardline
       <> moduleBody'
-      <> hardline
       <> ppCode _withModuleEndKw
 
 instance (SingI s) => PrettyPrint (InductiveDef s) where
