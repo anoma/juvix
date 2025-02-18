@@ -535,8 +535,6 @@ module MultiIf;
 end;
 
 module TypeModule;
-  -- type Pair := mkPair
-
   type Rec :=
     mk@{
       a : Nat;
@@ -548,8 +546,8 @@ module TypeModule;
           a;
         };
 
-    toNat : Rec -> Nat
-      | (mk a) := a;
+    -- can access fields unqualified
+    toNat : Rec -> Nat := a;
   end;
 
   recId : Nat -> Nat := Rec.fromNat >> Rec.toNat;
