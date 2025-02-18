@@ -8,7 +8,7 @@ import Stdlib.Data.Pair open;
 import Stdlib.Trait.Eq open;
 import Stdlib.System.IO open;
 
-syntax alias isEqual := Eq.eq;
+syntax alias isEqual := Eq.isEqual;
 
 type NTree :=
   | NLeaf
