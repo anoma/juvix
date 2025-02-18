@@ -99,7 +99,7 @@ anomaLibPath = \case
     -- obtained from the urbit dojo using:
     --
     -- =>  rm  !=  |=  [rng=* width=@]   (raws:`_og`rng width)
-    StdlibRandomNextBytes -> [nock| [8 [1 0 0] [1 8 [7 [0 12] 9 4 0 1] 9 2 10 [6 0 29] 0 2] 0 1] |]
+    StdlibRandomNextBits -> [nock| [8 [1 0 0] [1 8 [7 [0 12] 9 4 0 1] 9 2 10 [6 0 29] 0 2] 0 1] |]
     -- obtained from the urbit dojo using:
     --
     -- =>  rm  !=  |=  [rng=*]  split:`_og`rng

@@ -60,9 +60,9 @@ allTests =
       testGroup "Anoma stldib intercept-only" (map mkNockmaTest anomaStdlibInterceptOnlyTests),
       testGroup "Anoma serialization tests" (map mkNockmaTest serializationTests)
     ]
-  where
-    mkNockmaTest :: Test -> TestTree
-    mkNockmaTest t = testCase (unpack (t ^. testName)) (mkNockmaAssertion t)
+
+mkNockmaTest :: Test -> TestTree
+mkNockmaTest t = testCase (unpack (t ^. testName)) (mkNockmaAssertion t)
 
 eqNock :: Term Natural -> Check ()
 eqNock expected = do
@@ -96,9 +96,11 @@ compilerTest :: Text -> Term Natural -> Check () -> Bool -> Test
 compilerTest n mainFun _testCheck _evalInterceptAnomaLibCalls =
   anomaTest n mainFun [] _testCheck _evalInterceptAnomaLibCalls
 
+compileTerm :: Sem '[Reader CompilerCtx] (Term Natural) -> Term Natural
+compileTerm = run . runReader emptyCompilerCtx
+
 compilerTestM :: Text -> Sem '[Reader CompilerCtx] (Term Natural) -> Check () -> Bool -> Test
-compilerTestM n mainFun =
-  compilerTest n (run . runReader emptyCompilerCtx $ mainFun)
+compilerTestM n mainFun = compilerTest n (compileTerm mainFun)
 
 serializationTest :: Term Natural -> Term Natural -> [Test]
 serializationTest jamTerm cueTerm = run . runReader emptyCompilerCtx $ do
@@ -412,8 +414,8 @@ anomaStdlibInterceptOnlyTests =
              "call next bytes in sequence"
              ( do
                  gen <- callStdlib StdlibRandomInitGen [nockNatLiteral 777]
-                 rgen1 <- callStdlib StdlibRandomNextBytes [gen, nockNatLiteral 1]
-                 rgen2 <- callStdlib StdlibRandomNextBytes [rgen1 >># OpAddress # [R], nockNatLiteral 1]
+                 rgen1 <- callStdlib StdlibRandomNextBits [gen, nockNatLiteral 8]
+                 rgen2 <- callStdlib StdlibRandomNextBits [rgen1 >># OpAddress # [R], nockNatLiteral 8]
                  return ((rgen1 >># OpAddress # [L]) # (rgen2 >># OpAddress # [L]))
              )
              (eqNock [nock| [44 251] |]),
@@ -422,8 +424,8 @@ anomaStdlibInterceptOnlyTests =
              ( do
                  gen <- callStdlib StdlibRandomInitGen [nockNatLiteral 777]
                  g1g2 <- callStdlib StdlibRandomSplit [gen]
-                 n1 <- callStdlib StdlibRandomNextBytes [g1g2 >># OpAddress # [L], nockNatLiteral 1]
-                 n2 <- callStdlib StdlibRandomNextBytes [g1g2 >># OpAddress # [R], nockNatLiteral 1]
+                 n1 <- callStdlib StdlibRandomNextBits [g1g2 >># OpAddress # [L], nockNatLiteral 8]
+                 n2 <- callStdlib StdlibRandomNextBits [g1g2 >># OpAddress # [R], nockNatLiteral 8]
                  return ((n1 >># OpAddress # [L]) # (n2 >># OpAddress # [L]))
              )
              ( eqNock

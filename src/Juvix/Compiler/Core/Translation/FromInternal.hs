@@ -1449,15 +1449,14 @@ goApplication a = do
         Just Internal.BuiltinIOSequence -> do
           ioSym <- getIOSymbol
           as <- exprArgs
-          case as of
+          return $ case as of
             (arg1 : arg2 : xs) ->
-              return $
-                mkApps'
-                  ( mkConstr'
-                      (BuiltinTag TagBind)
-                      [arg1, mkLambda' (mkTypeConstr (setInfoName Str.io mempty) ioSym []) (shift 1 arg2)]
-                  )
-                  xs
+              mkApps'
+                ( mkConstr'
+                    (BuiltinTag TagBind)
+                    [arg1, mkLambda' (mkTypeConstr (setInfoName Str.io mempty) ioSym []) (shift 1 arg2)]
+                )
+                xs
             _ -> error "internal to core: >> must be called with 2 arguments"
         Just Internal.BuiltinIOReadline -> app
         Just Internal.BuiltinStringConcat -> app

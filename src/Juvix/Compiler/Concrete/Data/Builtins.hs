@@ -360,8 +360,8 @@ instance HasNameKind BuiltinAxiom where
     BuiltinByteArrayFromListByte -> KNameFunction
     BuiltinByteArrayLength -> KNameFunction
     BuiltinAnomaSet -> KNameInductive
-    BuiltinAnomaSetToList -> KNameInductive
-    BuiltinAnomaSetFromList -> KNameInductive
+    BuiltinAnomaSetToList -> KNameFunction
+    BuiltinAnomaSetFromList -> KNameFunction
   getNameKindPretty :: BuiltinAxiom -> NameKind
   getNameKindPretty = getNameKind
 
