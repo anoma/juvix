@@ -14,6 +14,10 @@ data Arity
   | None
   deriving stock (Show, Eq, Ord, Generic)
 
+instance Serialize Arity
+
+instance NFData Arity
+
 -- TODO consider using sum type for Same | Below && Above
 data FixityInfo = FixityInfo
   { _fixityArity :: Arity,

@@ -534,6 +534,30 @@ module MultiIf;
       | else := 2;
 end;
 
+module TypeModule;
+  type Rec :=
+    mk@{
+      a : Nat;
+    }
+  with
+    fromNat : Nat -> Rec
+      | a :=
+        mk@{
+          a;
+        };
+
+    -- can access fields unqualified
+    toNat : Rec -> Nat := a;
+  end;
+
+  recId : Nat -> Nat := Rec.fromNat >> Rec.toNat;
+
+  type S := mS
+  -- empty with module
+  with
+  end;
+end;
+
 {-hi
 
 -}

@@ -429,6 +429,7 @@ goStatement = \case
   StatementImport t -> goImport t
   StatementModule m -> goLocalModule m
   StatementProjectionDef {} -> mempty
+  StatementReservedInductive x -> absurd x
   where
     goSyntax :: SyntaxDef 'Scoped -> Sem r Html
     goSyntax = \case

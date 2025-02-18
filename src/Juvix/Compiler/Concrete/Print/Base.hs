@@ -1596,6 +1596,17 @@ ppInductiveSignature InductiveDef {..} = do
     <+?> params'
     <+?> ty'
 
+instance (SingI s) => PrettyPrint (WithModule s) where
+  ppCode :: (Members '[ExactPrint, Reader Options] r) => WithModule s -> Sem r ()
+  ppCode WithModule {..} = do
+    let moduleBody' = unless (null _withModuleBody) $ do
+          indent (ppStatements _withModuleBody)
+          hardline
+    ppCode _withModuleWithKw
+      <> hardline
+      <> moduleBody'
+      <> ppCode _withModuleEndKw
+
 instance (SingI s) => PrettyPrint (InductiveDef s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => InductiveDef s -> Sem r ()
   ppCode d@InductiveDef {..} = do
@@ -1603,11 +1614,13 @@ instance (SingI s) => PrettyPrint (InductiveDef s) where
         pragmas' = ppCode <$> _inductivePragmas
         constrs' = ppConstructorBlock (insertFirstPipe1 (constructorPipe . unIrrelevant) _inductiveConstructors)
         sig' = ppInductiveSignature d
+        withModule' = ppCode <$> _inductiveWithModule
     doc'
       ?<> pragmas'
       ?<> sig'
       <+> ppCode _inductiveAssignKw
         <> constrs'
+        <>? ((line <>) <$> withModule')
     where
       ppConstructorBlock :: NonEmpty (ConstructorDef s) -> Sem r ()
       ppConstructorBlock = \case
@@ -1624,9 +1637,19 @@ instance (SingI s) => PrettyPrint (ProjectionDef s) where
       <+> noLoc "for"
       <+> ppCode _projectionConstructor
 
+ppReservedInductiveDefType :: forall s. (SingI s) => PrettyPrinting (ReservedInductiveDefType s)
+ppReservedInductiveDefType x = case sing :: SStage s of
+  SParsed -> ppCode x
+  SScoped -> absurd x
+
+instance PrettyPrint ReservedInductiveDef where
+  ppCode ReservedInductiveDef {..} = do
+    ppStatements [StatementInductive _reservedInductiveDef, StatementModule _reservedInductiveDefModule]
+
 instance (SingI s) => PrettyPrint (Statement s) where
   ppCode = \case
     StatementSyntax s -> ppCode s
+    StatementReservedInductive s -> ppReservedInductiveDefType s
     StatementFunctionDef f -> ppCode f
     StatementDeriving f -> ppCode f
     StatementImport i -> ppCode i

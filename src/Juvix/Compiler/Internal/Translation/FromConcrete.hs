@@ -336,6 +336,7 @@ goModuleBody stmts = evalState emptyLocalTable $ do
       StatementModule {} -> return []
       StatementOpenModule {} -> return []
       StatementAxiom {} -> return []
+      StatementReservedInductive x -> absurd x
 
 scanImports :: [Statement 'Scoped] -> [Import 'Scoped]
 scanImports = mconcatMap go
@@ -351,6 +352,7 @@ scanImports = mconcatMap go
       StatementFunctionDef {} -> []
       StatementDeriving {} -> []
       StatementProjectionDef {} -> []
+      StatementReservedInductive x -> absurd x
 
 goImport ::
   forall r.
@@ -379,6 +381,7 @@ goAxiomInductive = \case
   StatementSyntax {} -> return []
   StatementOpenModule {} -> return []
   StatementProjectionDef {} -> return []
+  StatementReservedInductive x -> absurd x
 
 goProjectionDef ::
   forall r.

@@ -10,3 +10,7 @@ data LocalModuleOrigin
   | -- | The local module was inserted because of a public import
     LocalModulePublicImport
   deriving stock (Eq, Ord, Show, Generic, Data, Enum, Bounded)
+
+instance NFData LocalModuleOrigin
+
+instance Serialize LocalModuleOrigin

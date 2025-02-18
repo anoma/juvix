@@ -50,6 +50,11 @@ type family RecordUpdateExtraType s = res | res -> s where
   RecordUpdateExtraType 'Parsed = ()
   RecordUpdateExtraType 'Scoped = RecordUpdateExtra
 
+type ReservedInductiveDefType :: Stage -> GHCType
+type family ReservedInductiveDefType s = res | res -> s where
+  ReservedInductiveDefType 'Parsed = ReservedInductiveDef
+  ReservedInductiveDefType 'Scoped = Void
+
 type FieldArgIxType :: Stage -> GHCType
 type family FieldArgIxType s = res | res -> s where
   FieldArgIxType 'Parsed = ()
@@ -265,10 +270,16 @@ data Statement (s :: Stage)
   | StatementDeriving (Deriving s)
   | StatementImport (Import s)
   | StatementInductive (InductiveDef s)
+  | StatementReservedInductive (ReservedInductiveDefType s)
   | StatementModule (Module s 'ModuleLocal)
   | StatementOpenModule (OpenModule s 'OpenFull)
   | StatementAxiom (AxiomDef s)
   | StatementProjectionDef (ProjectionDef s)
+  deriving stock (Generic)
+
+instance Serialize (Statement 'Scoped)
+
+instance NFData (Statement 'Scoped)
 
 deriving stock instance Show (Statement 'Parsed)
 
@@ -282,6 +293,12 @@ deriving stock instance Ord (Statement 'Parsed)
 
 deriving stock instance Ord (Statement 'Scoped)
 
+data ReservedInductiveDef = ReservedInductiveDef
+  { _reservedInductiveDef :: InductiveDef 'Parsed,
+    _reservedInductiveDefModule :: Module 'Parsed 'ModuleLocal
+  }
+  deriving stock (Show, Eq, Ord)
+
 data ProjectionDef s = ProjectionDef
   { _projectionConstructor :: S.Symbol,
     _projectionField :: SymbolType s,
@@ -292,6 +309,11 @@ data ProjectionDef s = ProjectionDef
     _projectionDoc :: Maybe (Judoc s),
     _projectionPragmas :: Maybe ParsedPragmas
   }
+  deriving stock (Generic)
+
+instance Serialize (ProjectionDef 'Scoped)
+
+instance NFData (ProjectionDef 'Scoped)
 
 deriving stock instance Show (ProjectionDef 'Parsed)
 
@@ -313,6 +335,11 @@ data Import (s :: Stage) = Import
     _importPublic :: PublicAnn,
     _importOpen :: Maybe (OpenModule s 'OpenShort)
   }
+  deriving stock (Generic)
+
+instance Serialize (Import 'Scoped)
+
+instance NFData (Import 'Scoped)
 
 deriving stock instance Show (Import 'Parsed)
 
@@ -371,6 +398,11 @@ data SyntaxDef (s :: Stage)
   | SyntaxOperator (OperatorSyntaxDef s)
   | SyntaxIterator (IteratorSyntaxDef s)
   | SyntaxAlias (AliasDef s)
+  deriving stock (Generic)
+
+instance NFData (SyntaxDef 'Scoped)
+
+instance Serialize (SyntaxDef 'Scoped)
 
 deriving stock instance (Show (SyntaxDef 'Parsed))
 
@@ -391,6 +423,11 @@ data ParsedFixityFields (s :: Stage) = ParsedFixityFields
     _fixityFieldsPrecAbove :: Maybe [IdentifierType s],
     _fixityFieldsBraces :: Irrelevant (KeywordRef, KeywordRef)
   }
+  deriving stock (Generic)
+
+instance NFData (ParsedFixityFields 'Scoped)
+
+instance Serialize (ParsedFixityFields 'Scoped)
 
 deriving stock instance (Show (ParsedFixityFields 'Parsed))
 
@@ -408,6 +445,11 @@ data ParsedFixityInfo (s :: Stage) = ParsedFixityInfo
   { _fixityParsedArity :: WithLoc Arity,
     _fixityFields :: Maybe (ParsedFixityFields s)
   }
+  deriving stock (Generic)
+
+instance NFData (ParsedFixityInfo 'Scoped)
+
+instance Serialize (ParsedFixityInfo 'Scoped)
 
 deriving stock instance (Show (ParsedFixityInfo 'Parsed))
 
@@ -429,6 +471,11 @@ data FixitySyntaxDef (s :: Stage) = FixitySyntaxDef
     _fixityAssignKw :: KeywordRef,
     _fixitySyntaxKw :: KeywordRef
   }
+  deriving stock (Generic)
+
+instance NFData (FixitySyntaxDef 'Scoped)
+
+instance Serialize (FixitySyntaxDef 'Scoped)
 
 deriving stock instance (Show (FixitySyntaxDef 'Parsed))
 
@@ -1038,7 +1085,8 @@ data InductiveDef (s :: Stage) = InductiveDef
     _inductiveTypeApplied :: ExpressionType s,
     _inductiveConstructors :: NonEmpty (ConstructorDef s),
     _inductivePositive :: Maybe KeywordRef,
-    _inductiveTrait :: Maybe KeywordRef
+    _inductiveTrait :: Maybe KeywordRef,
+    _inductiveWithModule :: Maybe (WithModule s)
   }
   deriving stock (Generic)
 
@@ -1351,7 +1399,11 @@ data MarkdownInfo = MarkdownInfo
   { _markdownInfo :: Mk,
     _markdownInfoBlockLengths :: [Int]
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize MarkdownInfo
+
+instance NFData MarkdownInfo
 
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { _moduleKw :: KeywordRef,
@@ -1364,6 +1416,11 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
     _moduleId :: ModuleIdType s t,
     _moduleMarkdownInfo :: Maybe MarkdownInfo
   }
+  deriving stock (Generic)
+
+instance NFData (Module 'Scoped 'ModuleLocal)
+
+instance Serialize (Module 'Scoped 'ModuleLocal)
 
 deriving stock instance Show (Module 'Parsed 'ModuleTop)
 
@@ -1388,6 +1445,29 @@ deriving stock instance Ord (Module 'Scoped 'ModuleTop)
 deriving stock instance Ord (Module 'Parsed 'ModuleLocal)
 
 deriving stock instance Ord (Module 'Scoped 'ModuleLocal)
+
+data WithModule (s :: Stage) = WithModule
+  { _withModuleWithKw :: Irrelevant KeywordRef,
+    _withModuleEndKw :: Irrelevant KeywordRef,
+    _withModuleBody :: [Statement s]
+  }
+  deriving stock (Generic)
+
+instance Serialize (WithModule 'Scoped)
+
+instance NFData (WithModule 'Scoped)
+
+deriving stock instance Show (WithModule 'Parsed)
+
+deriving stock instance Show (WithModule 'Scoped)
+
+deriving stock instance Eq (WithModule 'Parsed)
+
+deriving stock instance Eq (WithModule 'Scoped)
+
+deriving stock instance Ord (WithModule 'Parsed)
+
+deriving stock instance Ord (WithModule 'Scoped)
 
 data HidingItem (s :: Stage) = HidingItem
   { _hidingSymbol :: SymbolType s,
@@ -2955,6 +3035,7 @@ deriving stock instance Ord (FunctionLhs 'Parsed)
 deriving stock instance Ord (FunctionLhs 'Scoped)
 
 makeLenses ''SideIfs
+makeLenses ''ReservedInductiveDef
 makeLenses ''RecordUpdatePun
 makeLenses ''RecordUpdateFieldItemAssign
 makeLenses ''FunctionDefNameScoped
@@ -2997,6 +3078,7 @@ makeLenses ''Judoc
 makeLenses ''JudocBlockParagraph
 makeLenses ''Function
 makeLenses ''InductiveDef
+makeLenses ''WithModule
 makeLenses ''PostfixApplication
 makeLenses ''InfixApplication
 makeLenses ''Application
@@ -3236,8 +3318,15 @@ instance (SingI s) => HasLoc (ConstructorDef s) where
               <>? getLocConstructorRhs _constructorRhs
           )
 
+instance HasLoc (WithModule s) where
+  getLoc WithModule {..} = getLoc _withModuleWithKw <> getLoc _withModuleEndKw
+
 instance HasLoc (InductiveDef s) where
-  getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
+  getLoc i =
+    ( (getLoc <$> i ^. inductivePositive)
+        ?<> getLoc (i ^. inductiveKw)
+    )
+      <>? (getLoc <$> i ^. inductiveWithModule)
 
 instance (SingI s) => HasLoc (AxiomDef s) where
   getLoc m = getLoc (m ^. axiomKw) <> getLocExpressionType (fromJust (m ^. axiomTypeSig . typeSigRetType))
@@ -3286,6 +3375,7 @@ instance HasLoc (Statement 'Scoped) where
   getLoc :: Statement 'Scoped -> Interval
   getLoc = \case
     StatementSyntax t -> getLoc t
+    StatementReservedInductive t -> absurd t
     StatementDeriving t -> getLoc t
     StatementFunctionDef t -> getLoc t
     StatementImport t -> getLoc t

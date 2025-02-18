@@ -75,6 +75,7 @@ import Juvix.Data.Keyword.All
     kwUsing,
     kwWhere,
     kwWildcard,
+    kwWith,
   )
 import Juvix.Prelude
 
@@ -112,5 +113,6 @@ reservedKeywords =
     kwType,
     kwUsing,
     kwWhere,
+    kwWith,
     kwWildcard
   ]

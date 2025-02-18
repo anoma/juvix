@@ -1573,7 +1573,15 @@ inductiveDef _inductiveBuiltin = do
   _inductiveConstructors <-
     pipeSep1 (constructorDef _inductiveName)
       P.<?> "<constructor definition>"
+  _inductiveWithModule <- optional withModule
   return InductiveDef {..}
+
+withModule :: (Members '[Error ParserError, ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (WithModule 'Parsed)
+withModule = do
+  _withModuleWithKw <- Irrelevant <$> kw kwWith
+  _withModuleBody <- P.sepEndBy statement semicolon
+  _withModuleEndKw <- Irrelevant <$> kw kwEnd
+  return WithModule {..}
 
 inductiveParamsLong :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (InductiveParameters 'Parsed)
 inductiveParamsLong = parens $ do

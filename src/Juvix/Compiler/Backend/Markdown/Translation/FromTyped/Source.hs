@@ -206,17 +206,17 @@ goRender xs = do
   concreteOpts <- asks @ProcessJuvixBlocksArgs (^. processJuvixBlocksArgsConcreteOpts)
   HtmlRender.ppCodeHtml concreteOpts xs
 
-indModuleFilter :: forall s. [Concrete.Statement s] -> [Concrete.Statement s]
+indModuleFilter :: [Concrete.Statement 'Concrete.Scoped] -> [Concrete.Statement 'Concrete.Scoped]
 indModuleFilter =
-  filter
-    ( \case
-        Concrete.StatementModule o -> o ^. Concrete.moduleOrigin == LocalModuleSource
-        Concrete.StatementSyntax {} -> True
-        Concrete.StatementFunctionDef {} -> True
-        Concrete.StatementDeriving {} -> True
-        Concrete.StatementImport {} -> True
-        Concrete.StatementInductive {} -> True
-        Concrete.StatementOpenModule {} -> True
-        Concrete.StatementAxiom {} -> True
-        Concrete.StatementProjectionDef {} -> True
-    )
+  filter $
+    \case
+      Concrete.StatementModule o -> o ^. Concrete.moduleOrigin == LocalModuleSource
+      Concrete.StatementSyntax {} -> True
+      Concrete.StatementFunctionDef {} -> True
+      Concrete.StatementDeriving {} -> True
+      Concrete.StatementImport {} -> True
+      Concrete.StatementInductive {} -> True
+      Concrete.StatementOpenModule {} -> True
+      Concrete.StatementAxiom {} -> True
+      Concrete.StatementProjectionDef {} -> True
+      Concrete.StatementReservedInductive x -> absurd x
