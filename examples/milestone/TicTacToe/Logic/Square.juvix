@@ -18,7 +18,7 @@ type Square :=
 instance
 eqSquareI : Eq Square :=
   mkEq@{
-    eq (square1 square2 : Square) : Bool :=
+    isEqual (square1 square2 : Square) : Bool :=
       case square1, square2 of
         | empty m, empty n := m == n
         | occupied s, occupied t := s == t
