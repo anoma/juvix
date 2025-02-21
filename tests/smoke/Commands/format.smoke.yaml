@@ -147,7 +147,7 @@ tests:
     stdout:
       contains: 'Foo.juvix'
     stderr: ''
-    exit-status: 1
+    exit-status: 0
 
   - name: format-project-containing-unformatted-and-unformatted
     command:
@@ -166,7 +166,7 @@ tests:
     stdout:
       contains: 'Foo.juvix'
     stderr: ''
-    exit-status: 1
+    exit-status: 0
 
   - name: format-project-package-dot-juvix
     command:
@@ -182,7 +182,7 @@ tests:
     stderr: ''
     stdout:
       contains: 'Package.juvix'
-    exit-status: 1
+    exit-status: 0
 
   - name: format-project-containing-unformatted-from-subdir
     command:
@@ -201,7 +201,7 @@ tests:
     stderr: ''
     stdout:
       contains: 'Foo.juvix'
-    exit-status: 1
+    exit-status: 0
 
   - name: format-ignore-subproject
     command:

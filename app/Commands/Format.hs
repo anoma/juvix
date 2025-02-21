@@ -77,13 +77,11 @@ runCommand opts = do
         entry <- getEntryPointStdin
         runReader entry formatStdin
     case res of
-      FormatResultFail -> exitFailure
       FormatResultNotFormatted ->
         {- use exit code 1 for
          * unformatted files when using --check
-         * when running the formatter on a Juvix project
         -}
-        when (opts ^. formatCheck || isTargetProject target) exitFailure
+        when (opts ^. formatCheck) exitFailure
       FormatResultOK -> pure ()
 
 renderModeFromOptions :: FormatTarget -> FormatOptions -> FormattedFileInfo -> FormatRenderMode

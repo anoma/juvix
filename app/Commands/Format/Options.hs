@@ -29,7 +29,7 @@ parseFormat = do
   _formatCheck <-
     switch
       ( long "check"
-          <> help "Do not print reformatted sources or unformatted file paths to standard output."
+          <> help "Do not print reformatted sources or unformatted file paths to standard output. Exit code 1 if a file wasn't already formatted."
       )
   _formatInPlace <-
     switch

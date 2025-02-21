@@ -31,7 +31,6 @@ makeFormatTest' Scope.PosTest {..} =
             case d of
               Right (_, FormatResultOK) -> return ()
               Right (_, FormatResultNotFormatted) -> assertFailure ("File: " <> show file' <> " is not formatted")
-              Right (_, FormatResultFail) -> assertFailure ("File: " <> show file' <> " is failed to format")
               Left {} -> assertFailure ("Error: ")
         }
 

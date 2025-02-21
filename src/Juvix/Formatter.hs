@@ -31,7 +31,6 @@ makeSem ''ScopeEff
 data FormatResult
   = FormatResultOK
   | FormatResultNotFormatted
-  | FormatResultFail
   deriving stock (Eq)
 
 data SourceCode = SourceCode
@@ -42,8 +41,6 @@ data SourceCode = SourceCode
 makeLenses ''SourceCode
 
 instance Semigroup FormatResult where
-  FormatResultFail <> _ = FormatResultFail
-  _ <> FormatResultFail = FormatResultFail
   FormatResultNotFormatted <> _ = FormatResultNotFormatted
   _ <> FormatResultNotFormatted = FormatResultNotFormatted
   _ <> _ = FormatResultOK
