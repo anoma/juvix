@@ -240,7 +240,8 @@ jobs:
         shell: bash
         run: |
           curl -L https://risczero.com/install | bash
-          bash -c "rzup install"
+          source ${{ env.HOME }}/.bashrc
+          rzup install
 
       - name: Checkout CairoVM
         uses: actions/checkout@v4
