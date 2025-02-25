@@ -239,9 +239,8 @@ jobs:
       - name: Install RISC0 VM
         shell: bash
         run: |
-          cargo install cargo-binstall@1.6.9 --force
-          cargo binstall cargo-risczero@1.2.0 --no-confirm --force
-          cargo risczero install
+          curl -L https://risczero.com/install | bash
+          rzup install
 
       - name: Checkout CairoVM
         uses: actions/checkout@v4
