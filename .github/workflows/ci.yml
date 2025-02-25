@@ -234,14 +234,11 @@ jobs:
           toolchain: 1.81.0
           cache-on-failure: false
 
-      # cargo-risczero version needs to be updated to the latest version if the
-      # CI reports a version inconsistency error
       - name: Install RISC0 VM
         shell: bash
         run: |
-          cargo install cargo-binstall@1.6.9 --force
-          cargo binstall cargo-risczero@1.2.0 --no-confirm --force
-          cargo risczero install
+          curl -L https://risczero.com/install | bash
+          ~/.risc0/bin/rzup install
 
       - name: Checkout CairoVM
         uses: actions/checkout@v4
