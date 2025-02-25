@@ -234,8 +234,6 @@ jobs:
           toolchain: 1.81.0
           cache-on-failure: false
 
-      # cargo-risczero version needs to be updated to the latest version if the
-      # CI reports a version inconsistency error
       - name: Install RISC0 VM
         shell: bash
         run: |
