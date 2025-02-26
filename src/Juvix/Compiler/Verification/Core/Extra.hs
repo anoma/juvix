@@ -24,3 +24,27 @@ mkCase scrutinee branches defaultBranch =
               _branchBody = branch,
               _branchNext = go rest
             }
+
+mkInt :: Integer -> Expr
+mkInt = ExprConst . ConstantInteger
+
+mkApp :: Expr -> Expr -> Expr
+mkApp left right = ExprApp App {_appLeft = left, _appRight = right}
+
+mkConstrApp :: Expr -> Expr -> Expr
+mkConstrApp left right = ExprConstrApp ConstrApp {_constrAppLeft = left, _constrAppRight = right}
+
+mkConstrApps :: Name -> [Expr] -> Expr
+mkConstrApps name args = foldl' mkConstrApp (ExprConstr name) args
+
+mkLambda :: Expr -> Expr
+mkLambda = ExprLambda . Lambda
+
+mkSave :: Expr -> Expr -> Expr
+mkSave value body = ExprSave Save {_saveValue = value, _saveBody = body}
+
+mkBranch :: Name -> Expr -> Expr -> Expr
+mkBranch name body next = ExprBranch Branch {_branchConstr = name, _branchBody = body, _branchNext = next}
+
+mkRecur :: Expr -> Expr
+mkRecur = ExprRecur . Recur

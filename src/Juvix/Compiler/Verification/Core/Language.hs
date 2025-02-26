@@ -2,7 +2,7 @@ module Juvix.Compiler.Verification.Core.Language where
 
 import Juvix.Prelude
 
-data Constant = ConstantInt Int
+data Constant = ConstantInteger Integer
 
 type Name = Text
 
@@ -23,7 +23,6 @@ data Expr
   | ExprLambda Lambda
   | ExprSave Save
   | ExprBranch Branch
-  | ExprDefault Default
   | ExprRecur Recur
   | ExprFail
 
@@ -62,10 +61,6 @@ data Branch = Branch
     _branchNext :: Expr
   }
 
-data Default = Default
-  { _defaultBody :: Expr
-  }
-
 data Recur = Recur
   { _recurBody :: Expr
   }
@@ -77,5 +72,4 @@ makeLenses ''Binop
 makeLenses ''Lambda
 makeLenses ''Save
 makeLenses ''Branch
-makeLenses ''Default
 makeLenses ''Recur
