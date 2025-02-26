@@ -73,3 +73,45 @@ makeLenses ''Lambda
 makeLenses ''Save
 makeLenses ''Branch
 makeLenses ''Recur
+
+instance HasAtomicity Var where
+  atomicity _ = Aggregate appFixity
+
+instance HasAtomicity Constant where
+  atomicity _ = Atom
+
+instance HasAtomicity App where
+  atomicity _ = Aggregate appFixity
+
+instance HasAtomicity ConstrApp where
+  atomicity _ = Aggregate appFixity
+
+instance HasAtomicity Binop where
+  atomicity _ = Aggregate appFixity
+
+instance HasAtomicity Lambda where
+  atomicity _ = Aggregate appFixity
+
+instance HasAtomicity Save where
+  atomicity _ = Aggregate appFixity
+
+instance HasAtomicity Branch where
+  atomicity _ = Aggregate appFixity
+
+instance HasAtomicity Recur where
+  atomicity _ = Aggregate appFixity
+
+instance HasAtomicity Expr where
+  atomicity = \case
+    ExprVar v -> atomicity v
+    ExprUnit -> Atom
+    ExprConst c -> atomicity c
+    ExprConstr _ -> Atom
+    ExprApp a -> atomicity a
+    ExprConstrApp c -> atomicity c
+    ExprBinop b -> atomicity b
+    ExprLambda l -> atomicity l
+    ExprSave s -> atomicity s
+    ExprBranch b -> atomicity b
+    ExprRecur r -> atomicity r
+    ExprFail -> Atom
