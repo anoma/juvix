@@ -78,7 +78,7 @@ instance HasAtomicity Var where
   atomicity _ = Aggregate appFixity
 
 instance HasAtomicity Constant where
-  atomicity _ = Atom
+  atomicity _ = Aggregate appFixity
 
 instance HasAtomicity App where
   atomicity _ = Aggregate appFixity
@@ -106,7 +106,7 @@ instance HasAtomicity Expr where
     ExprVar v -> atomicity v
     ExprUnit -> Atom
     ExprConst c -> atomicity c
-    ExprConstr _ -> Atom
+    ExprConstr _ -> Aggregate appFixity
     ExprApp a -> atomicity a
     ExprConstrApp c -> atomicity c
     ExprBinop b -> atomicity b

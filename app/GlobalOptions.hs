@@ -237,7 +237,8 @@ entryPointFromGlobalOptions root mainFile opts = do
           _entryPointGenericOptions = project opts,
           _entryPointBuildDir = maybe (e ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
           _entryPointOffline = opts ^. globalOffline,
-          _entryPointFieldSize = fromMaybe defaultFieldSize $ opts ^. globalFieldSize
+          _entryPointFieldSize = fromMaybe defaultFieldSize $ opts ^. globalFieldSize,
+          _entryPointVerify = opts ^. globalVerify
         }
 
 entryPointFromGlobalOptionsNoFile :: (Members '[EmbedIO, TaggedLock] r) => Root -> GlobalOptions -> Sem r EntryPoint

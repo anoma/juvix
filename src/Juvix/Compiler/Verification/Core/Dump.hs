@@ -15,7 +15,7 @@ import Juvix.Compiler.Verification.Dumper qualified as Dumper
 import Juvix.Prelude
 
 ppModule :: Core.Module -> Text
-ppModule = ppTrace . fromCore . (^. Core.moduleInfoTable) . Core.filterUnreachable . Core.combineInfoTables
+ppModule = ppPrint . fromCore . (^. Core.moduleInfoTable) . Core.filterUnreachable . Core.combineInfoTables
 
 dump :: (Member Dumper r) => Text -> Core.Module -> Sem r ()
 dump phase = Dumper.dump . DumpInfo LangCore phase . ppModule

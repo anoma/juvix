@@ -10,7 +10,6 @@ where
 
 import Juvix.Compiler.Core.Data.Module
 import Juvix.Compiler.Core.Data.TransformationId
-import Juvix.Compiler.Core.Data.TransformationId.Base
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Transformation.Base
@@ -50,7 +49,6 @@ import Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
-import Juvix.Compiler.Verification.Core.Dump qualified as Dump
 import Juvix.Compiler.Verification.Dumper (Dumper, ignoreDumper)
 
 applyTransformations' ::
@@ -67,23 +65,10 @@ applyTransformations ::
   [TransformationId] ->
   Module ->
   Sem r Module
-applyTransformations ts = dump IdentityTrans >=> flip (foldM (flip appTrans)) ts
+applyTransformations ts = flip (foldM (flip appTrans)) ts
   where
-    dump :: TransformationId -> Module -> Sem r Module
-    dump tid md = do
-      v <- asks (^. optVerify)
-      if
-          | v -> Dump.dump' (quote (transformationText tid)) md
-          | otherwise -> return md
-      where
-        quote :: Text -> Text
-        quote = replaceSubtext [("-", "_")]
-
     appTrans :: TransformationId -> Module -> Sem r Module
-    appTrans tid = appTrans' tid >=> dump tid
-
-    appTrans' :: TransformationId -> Module -> Sem r Module
-    appTrans' = \case
+    appTrans = \case
       LambdaLetRecLifting -> return . lambdaLetRecLifting
       LetRecLifting -> return . letRecLifting
       IdentityTrans -> return . identity
