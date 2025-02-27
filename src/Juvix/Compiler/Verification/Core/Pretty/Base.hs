@@ -29,8 +29,11 @@ instance PrettyCode Var where
     pure $ "Expr.var" <+> pretty x
 
 instance PrettyCode Constant where
-  ppCode (ConstantInteger x) = do
-    pure $ "Expr.const" <+> pretty x
+  ppCode = \case
+    ConstantInteger x ->
+      pure $ "Expr.const (Constant.int " <> pretty x <> ")"
+    ConstantString x ->
+      pure $ "Expr.const (Constant.string \"" <> pretty x <> "\")"
 
 instance PrettyCode App where
   ppCode (App l r) = do

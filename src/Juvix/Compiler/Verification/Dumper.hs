@@ -34,7 +34,7 @@ makeLenses ''DumperState
 
 ppImport :: Lang -> Text
 ppImport = \case
-  LangCore -> "import Juvix.Core.Main"
+  LangCore -> "import Juvix.Core.Main\nopen Juvix.Core.Main"
 
 ppEquiv :: DumpInfo -> DumpInfo -> Text
 ppEquiv di1 di2 =
@@ -51,13 +51,13 @@ ppDumps dumps = Text.unlines imports <> "\n" <> go 0 dumps
       [] -> ""
       [_] -> ""
       d1 : d2 : rest ->
-        "lemma step_equiv_"
+        "lemma step_"
           <> show n
           <> "_"
           <> d2 ^. dumpInfoPhase
           <> " : "
           <> ppEquiv d1 d2
-          <> " := by sorry\n\n"
+          <> " := by\n  sorry\n\n"
           <> go (n + 1) (d2 : rest)
 
 dumperEnabled :: EntryPoint -> Bool
@@ -77,7 +77,7 @@ runDumper' :: forall r a. (Member Files r) => Path Abs File -> Sem (Dumper ': r)
 runDumper' path a = do
   (st, res) <- reinterpret (runState (DumperState [])) interp a
   when (not . null $ st ^. dumperStateDumps) $
-    writeFileEnsureLn' path (ppDumps (st ^. dumperStateDumps))
+    writeFileEnsureLn' path (ppDumps (reverse (st ^. dumperStateDumps)))
   return res
   where
     interp :: forall m b. Dumper m b -> Sem (State DumperState ': r) b
