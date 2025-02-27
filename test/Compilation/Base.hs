@@ -7,6 +7,7 @@ import Juvix.Compiler.Backend
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Pipeline.Modular (modularCoreToTree)
 import Juvix.Compiler.Tree.Data.Module qualified as Tree
+import Juvix.Compiler.Verification.Dumper
 import Juvix.Prelude.Pretty
 import Tree.Compile.Base
 
@@ -79,6 +80,7 @@ compileErrorAssertion root' mainFile step = do
             run
               . runError @JuvixError
               . runReader entryPoint
+              . ignoreDumper
               $ Core.toStored (core ^. pipelineResult . Core.coreResultModule)
                 >>= Core.toStripped Core.CheckExec
       case res' of
