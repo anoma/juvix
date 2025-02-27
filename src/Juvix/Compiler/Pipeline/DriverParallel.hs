@@ -18,6 +18,7 @@ import Juvix.Compiler.Pipeline.JvoCache
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.ModuleInfoCache
 import Juvix.Compiler.Store.Language qualified as Store
+import Juvix.Compiler.Verification.Dumper
 import Juvix.Prelude
 import Parallel.ParallelTemplate
 import Parallel.ProgressLog
@@ -139,7 +140,8 @@ evalModuleInfoCacheParallel ::
          Reader NumThreads,
          Reader PipelineOptions,
          Logger,
-         Files
+         Files,
+         Dumper
        ]
       r
   ) =>
