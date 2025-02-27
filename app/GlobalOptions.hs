@@ -14,7 +14,8 @@ import Juvix.Data.Error.GenericError qualified as E
 import Juvix.Data.Field
 
 data GlobalOptions = GlobalOptions
-  { _globalNoColors :: Bool,
+  { _globalVerify :: Bool,
+    _globalNoColors :: Bool,
     _globalVSCode :: Bool,
     _globalShowNameIds :: Bool,
     _globalBuildDir :: Maybe (AppPath Dir),
@@ -56,13 +57,14 @@ instance CanonicalProjection GlobalOptions Core.CoreOptions where
         Core._optFieldSize = fromMaybe defaultFieldSize _globalFieldSize,
         Core._optOptimizationLevel = defaultOptimizationLevel,
         Core._optInliningDepth = defaultInliningDepth,
-        Core._optVerify = False
+        Core._optVerify = _globalVerify
       }
 
 defaultGlobalOptions :: GlobalOptions
 defaultGlobalOptions =
   GlobalOptions
-    { _globalNoColors = False,
+    { _globalVerify = False,
+      _globalNoColors = False,
       _globalVSCode = False,
       _globalNumThreads = defaultNumThreads,
       _globalShowNameIds = False,
@@ -85,6 +87,11 @@ defaultGlobalOptions =
 -- the input boolean
 parseGlobalFlags :: Parser GlobalOptions
 parseGlobalFlags = do
+  _globalVerify <-
+    switch
+      ( long "verify"
+          <> help "Generate Lean verification statements"
+      )
   _globalNoColors <-
     switch
       ( long "no-colors"
