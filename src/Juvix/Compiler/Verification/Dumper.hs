@@ -67,13 +67,17 @@ runDumper :: forall r a. (Members '[Files, Reader EntryPoint] r) => Sem (Dumper 
 runDumper a = do
   entry <- ask
   case entry ^. entryPointMainFile of
-    Just sourcePath | dumperEnabled entry -> runDumper' sourcePath a
-    _ -> ignoreDumper a
+    Just sourcePath
+      | dumperEnabled entry ->
+          runDumper' (replaceExtension' ".lean" sourcePath) a
+    _ ->
+      ignoreDumper a
 
 runDumper' :: forall r a. (Member Files r) => Path Abs File -> Sem (Dumper ': r) a -> Sem r a
 runDumper' path a = do
   (st, res) <- reinterpret (runState (DumperState [])) interp a
-  writeFileEnsureLn' path (ppDumps (st ^. dumperStateDumps))
+  when (not . null $ st ^. dumperStateDumps) $
+    writeFileEnsureLn' path (ppDumps (st ^. dumperStateDumps))
   return res
   where
     interp :: forall m b. Dumper m b -> Sem (State DumperState ': r) b
