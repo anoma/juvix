@@ -19,6 +19,7 @@ import Juvix.Compiler.Reg.Data.Module qualified as Reg
 import Juvix.Compiler.Reg.Pretty qualified as Reg
 import Juvix.Compiler.Tree.Data.Module qualified as Tree
 import Juvix.Compiler.Tree.Pretty qualified as Tree
+import Juvix.Compiler.Verification.Dumper
 
 data PipelineArg = PipelineArg
   { _pipelineArgOptions :: CompileOptions,
@@ -74,6 +75,7 @@ runCPipeline pa@PipelineArg {..} = do
       . run
       . runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       $ coreToMiniC _pipelineArgModule
   inputfile <- getMainFile (Just (_pipelineArgOptions ^. compileInputFile))
   cFile <- inputCFile inputfile
@@ -98,6 +100,7 @@ runAsmPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToAsm
       $ _pipelineArgModule
   md' <- getRight r
@@ -111,6 +114,7 @@ runRegPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToReg
       $ _pipelineArgModule
   md' <- getRight r
@@ -124,6 +128,7 @@ runTreePipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToTree Core.IdentityTrans
       $ _pipelineArgModule
   md' <- getRight r
@@ -137,6 +142,7 @@ runAnomaPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToAnoma
       $ _pipelineArgModule
   res <- getRight r
@@ -149,6 +155,7 @@ runCasmPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToCasm
       $ _pipelineArgModule
   Casm.Result {..} <- getRight r
@@ -161,6 +168,7 @@ runCairoPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToCairo
       $ _pipelineArgModule
   res <- getRight r
@@ -173,6 +181,7 @@ runRiscZeroRustPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToRiscZeroRust
       $ _pipelineArgModule
   Rust.Result {..} <- getRight r

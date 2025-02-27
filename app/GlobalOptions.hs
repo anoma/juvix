@@ -55,7 +55,8 @@ instance CanonicalProjection GlobalOptions Core.CoreOptions where
         Core._optUnrollLimit = defaultUnrollLimit,
         Core._optFieldSize = fromMaybe defaultFieldSize _globalFieldSize,
         Core._optOptimizationLevel = defaultOptimizationLevel,
-        Core._optInliningDepth = defaultInliningDepth
+        Core._optInliningDepth = defaultInliningDepth,
+        Core._optVerify = False
       }
 
 defaultGlobalOptions :: GlobalOptions

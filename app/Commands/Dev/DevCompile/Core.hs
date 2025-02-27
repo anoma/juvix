@@ -24,7 +24,7 @@ runCommand opts = do
   res :: Core.Module <-
     ( runError @JuvixError
         . runReader (project' @Core.CoreOptions gopts)
-        . Core.applyTransformations compileTransformations
+        . Core.applyTransformations' compileTransformations
         $ coremodule
       )
       >>= getRight
