@@ -44,7 +44,7 @@ ppEquiv di1 di2 =
 ppDumps :: [DumpInfo] -> Text
 ppDumps dumps = Text.unlines imports <> "\n" <> go 0 dumps
   where
-    imports = map (ppImport . (^. dumpInfoLang)) dumps
+    imports = map ppImport . nubSort . map (^. dumpInfoLang) $ dumps
 
     go :: Int -> [DumpInfo] -> Text
     go n = \case

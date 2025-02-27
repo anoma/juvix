@@ -26,7 +26,7 @@ letrecTupleConstr = "$LetRecTuple$"
 fromCore :: Core.InfoTable -> Expr
 fromCore infoTable = go mempty 0 sccs
   where
-    mainNode = Core.lookupTabIdentifierNode infoTable (infoTable ^. Core.infoMain . to fromJust)
+    mainNode = Core.mkIdent' (infoTable ^. Core.infoMain . to fromJust)
     sccs = buildSCCs (Core.createCallGraph infoTable)
 
     go :: HashMap Symbol BinderInfo -> Int -> [SCC Symbol] -> Expr
