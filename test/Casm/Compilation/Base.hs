@@ -10,6 +10,7 @@ import Juvix.Compiler.Backend
 import Juvix.Compiler.Casm.Data.Result
 import Juvix.Compiler.Casm.Pretty
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Verification.Dumper
 import Juvix.Data.Field
 import Juvix.Data.PPOutput
 
@@ -47,7 +48,7 @@ compileAssertionEntry adjustEntry root' bInterp bRunVM optLevel mainFile inputFi
           }
   PipelineResult {..} <- snd <$> testRunIO entryPoint' upToStoredCore
   step "Translate to CASM"
-  case run $ runError @JuvixError $ runReader entryPoint' $ storedCoreToCasm (Core.combineInfoTables (_pipelineResult ^. Core.coreResultModule)) of
+  case run . runError @JuvixError . runReader entryPoint' . ignoreDumper $ storedCoreToCasm (Core.combineInfoTables (_pipelineResult ^. Core.coreResultModule)) of
     Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right Result {..} -> do
       withTempDir'
@@ -65,7 +66,7 @@ compileErrorAssertion bRunVM root' mainFile step = do
   let entryPoint' = entryPoint {_entryPointFieldSize = cairoFieldSize}
   PipelineResult {..} <- snd <$> testRunIO entryPoint' upToStoredCore
   step "Translate to CASM"
-  case run $ runError @JuvixError $ runReader entryPoint $ storedCoreToCasm (_pipelineResult ^. Core.coreResultModule) of
+  case run . runError @JuvixError . runReader entryPoint . ignoreDumper $ storedCoreToCasm (_pipelineResult ^. Core.coreResultModule) of
     Left {} -> assertBool "" True
     Right Result {..}
       | bRunVM -> casmRunAssertionError' entryPoint' _resultLabelInfo _resultCode _resultBuiltins _resultOutputSize Nothing step

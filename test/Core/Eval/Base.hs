@@ -18,6 +18,7 @@ import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.FromSource
+import Juvix.Compiler.Verification.Dumper
 
 data EvalMode
   = EvalModePlain
@@ -149,7 +150,7 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
       expected <- readFile expectedFile
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) ->
-      case run $ runReader defaultCoreOptions $ runError $ applyTransformations trans $ moduleFromInfoTable $ setupMainFunction defaultModuleId tabIni node of
+      case run . runReader defaultCoreOptions . runError . ignoreDumper $ applyTransformations trans $ moduleFromInfoTable $ setupMainFunction defaultModuleId tabIni node of
         Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right m -> do
           let tab = computeCombinedInfoTable m
