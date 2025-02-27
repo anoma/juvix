@@ -2,7 +2,9 @@ module Juvix.Compiler.Verification.Core.Language where
 
 import Juvix.Prelude
 
-data Constant = ConstantInteger Integer
+data Constant
+  = ConstantInteger Integer
+  | ConstantString Text
 
 type Name = Text
 
