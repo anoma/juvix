@@ -12,6 +12,8 @@ import Data.Text qualified as Text
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Verification.Data.Lang
 import Juvix.Prelude
+import Path qualified
+import System.FilePath
 
 data DumpInfo = DumpInfo
   { _dumpInfoLang :: Lang,
@@ -63,13 +65,41 @@ ppDumps dumps = Text.unlines imports <> "\n" <> go 0 dumps
 dumperEnabled :: EntryPoint -> Bool
 dumperEnabled entry = entry ^. entryPointMainFile == entry ^. entryPointModulePath
 
+writeLeanProjectFiles :: (Member Files r) => Path Abs Dir -> Text -> Sem r ()
+writeLeanProjectFiles dirPath name = do
+  let lakeFile = dirPath Path.</> $(mkRelFile "lakefile.toml")
+      toolchainFile = dirPath Path.</> $(mkRelFile "lean-toolchain")
+  writeFileEnsureLn'
+    lakeFile
+    $ "name = \""
+      <> name
+      <> "_lean\"\n"
+      <> "defaultTargets = [\""
+      <> name
+      <> "\"]\n\n"
+      <> "[[require]]\n"
+      <> "name = \"juvix-lean\"\n"
+      <> "git = \"https://github.com/anoma/juvix-lean.git\"\n\n"
+      <> "[[lean_lib]]\n"
+      <> "name = \""
+      <> name
+      <> "\"\n"
+  writeFileEnsureLn' toolchainFile "leanprover/lean4:v4.15.0-rc1\n"
+
 runDumper :: forall r a. (Members '[Files, Reader EntryPoint] r) => Sem (Dumper ': r) a -> Sem r a
 runDumper a = do
   entry <- ask
   case entry ^. entryPointMainFile of
     Just sourcePath
-      | dumperEnabled entry ->
-          runDumper' (replaceExtension' ".lean" sourcePath) a
+      | dumperEnabled entry -> do
+          let name = dropExtension (toFilePath (filename sourcePath))
+          subdir <- parseRelDir (name <> "_lean")
+          let dirPath = parent sourcePath Path.</> subdir
+          file <- parseRelFile (name <> ".lean")
+          let filePath = dirPath Path.</> file
+          ensureDir' dirPath
+          writeLeanProjectFiles dirPath (fromString name)
+          runDumper' filePath a
     _ ->
       ignoreDumper a
 
