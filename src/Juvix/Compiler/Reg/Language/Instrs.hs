@@ -72,7 +72,7 @@ data InstrUnop = InstrUnop
 
 data InstrCairo = InstrCairo
   { _instrCairoOpcode :: CairoOp,
-    _instrCairoResult :: VarRef,
+    _instrCairoResult :: Maybe VarRef,
     _instrCairoArgs :: [Value]
   }
   deriving stock (Eq)

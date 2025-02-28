@@ -65,6 +65,7 @@ instruction =
     <|> (Branch <$> instrBranch)
     <|> (Case <$> instrCase)
     <|> (Block <$> instrBlock)
+    -- TODO: instrRangeCheck
     <|> instrWithResult
 
 instrWithResult ::
@@ -171,7 +172,7 @@ parseCairoOp kwd op vref = do
   return $
     InstrCairo
       { _instrCairoOpcode = op,
-        _instrCairoResult = vref,
+        _instrCairoResult = Just vref,
         _instrCairoArgs = args
       }
 

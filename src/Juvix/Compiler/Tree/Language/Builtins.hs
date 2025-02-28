@@ -68,6 +68,8 @@ data CairoOp
     OpCairoPoseidon
   | -- | Cairo Elliptic Curve operation.
     OpCairoEc
+  | -- | Cairo range check builtin.
+    OpCairoRangeCheck
   | -- | Cairo random elliptic curve point generation.
     OpCairoRandomEcPoint
   deriving stock (Eq, Generic)
@@ -88,7 +90,15 @@ cairoOpArgsNum :: CairoOp -> Int
 cairoOpArgsNum = \case
   OpCairoPoseidon -> 1
   OpCairoEc -> 3
+  OpCairoRangeCheck -> 2
   OpCairoRandomEcPoint -> 0
+
+cairoOpHasResult :: CairoOp -> Bool
+cairoOpHasResult = \case
+  OpCairoPoseidon -> True
+  OpCairoEc -> True
+  OpCairoRangeCheck -> False
+  OpCairoRandomEcPoint -> True
 
 -- | Builtin Anoma operations. Implemented only in the Anoma backend.
 data AnomaOp

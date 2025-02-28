@@ -202,8 +202,11 @@ recurse' sig = go True
               return (pushValueStack ty2 (popValueStack 1 mem))
 
         fixMemCairo :: Memory -> CairoOp -> Sem r Memory
-        fixMemCairo mem op = do
-          return (pushValueStack TyDynamic (popValueStack (cairoOpArgsNum op) mem))
+        fixMemCairo mem op
+          | cairoOpHasResult op =
+              return (pushValueStack TyDynamic (popValueStack (cairoOpArgsNum op) mem))
+          | otherwise =
+              return (popValueStack (cairoOpArgsNum op) mem)
 
         fixMemExtendClosure :: Memory -> InstrExtendClosure -> Sem r Memory
         fixMemExtendClosure mem InstrExtendClosure {..} = do
@@ -408,8 +411,11 @@ recurseS' sig = go True
               fixStackBinOp si
             Unop {} ->
               return si
-            Cairo op ->
-              return (stackInfoPopValueStack (cairoOpArgsNum op - 1) si)
+            Cairo op
+              | cairoOpHasResult op ->
+                  return (stackInfoPopValueStack (cairoOpArgsNum op - 1) si)
+              | otherwise ->
+                  return (stackInfoPopValueStack (cairoOpArgsNum op) si)
             Push {} -> do
               return (stackInfoPushValueStack 1 si)
             Pop -> do
