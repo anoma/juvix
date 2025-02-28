@@ -182,7 +182,7 @@ computeLocalVarsNum = maximum . map go
       Nop -> 0
       Binop InstrBinop {..} -> goVarRef _instrBinopResult
       Unop InstrUnop {..} -> goVarRef _instrUnopResult
-      Cairo InstrCairo {..} -> goVarRef _instrCairoResult
+      Cairo InstrCairo {..} -> maybe 0 goVarRef _instrCairoResult
       Assign InstrAssign {..} -> goVarRef _instrAssignResult
       Assert {} -> 0
       Trace {} -> 0

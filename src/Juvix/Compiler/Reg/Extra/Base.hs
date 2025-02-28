@@ -7,7 +7,7 @@ getResultVar :: Instruction -> Maybe VarRef
 getResultVar = \case
   Binop x -> Just $ x ^. instrBinopResult
   Unop x -> Just $ x ^. instrUnopResult
-  Cairo x -> Just $ x ^. instrCairoResult
+  Cairo x -> x ^. instrCairoResult
   Assign x -> Just $ x ^. instrAssignResult
   Alloc x -> Just $ x ^. instrAllocResult
   AllocClosure x -> Just $ x ^. instrAllocClosureResult
@@ -20,7 +20,7 @@ setResultVar :: Instruction -> VarRef -> Instruction
 setResultVar instr vref = case instr of
   Binop x -> Binop $ set instrBinopResult vref x
   Unop x -> Unop $ set instrUnopResult vref x
-  Cairo x -> Cairo $ set instrCairoResult vref x
+  Cairo x | cairoOpHasResult (x ^. instrCairoOpcode) -> Cairo $ set instrCairoResult (Just vref) x
   Assign x -> Assign $ set instrAssignResult vref x
   Alloc x -> Alloc $ set instrAllocResult vref x
   AllocClosure x -> AllocClosure $ set instrAllocClosureResult vref x

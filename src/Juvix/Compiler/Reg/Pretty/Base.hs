@@ -65,9 +65,9 @@ instance PrettyCode InstrUnop where
 instance PrettyCode InstrCairo where
   ppCode InstrCairo {..} = do
     op <- Tree.ppCode _instrCairoOpcode
-    res <- ppCode _instrCairoResult
+    res <- maybe (pure mempty) (ppCode >=> pure . (<+> primitive Str.equal <> space)) _instrCairoResult
     vals <- mapM ppCode _instrCairoArgs
-    return $ res <+> primitive Str.equal <+> op <+> hsep vals
+    return $ res <> op <+> hsep vals
 
 instance PrettyCode InstrAssign where
   ppCode InstrAssign {..} = do
