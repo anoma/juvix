@@ -1,0 +1,9 @@
+module Program1;
+
+import Stdlib.Prelude open;
+
+f (x : Nat) : Nat := x + 7;
+
+g (x : Nat) : Nat := x * 2;
+
+main : Nat := f (g 3);
