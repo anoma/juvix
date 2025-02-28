@@ -27,12 +27,12 @@ defaultCoreOptions =
     }
 
 fromEntryPoint :: EntryPoint -> CoreOptions
-fromEntryPoint EntryPoint {..} =
+fromEntryPoint e@EntryPoint {..} =
   CoreOptions
     { _optCheckCoverage = not _entryPointNoCoverage,
       _optUnrollLimit = _entryPointUnrollLimit,
       _optOptimizationLevel = _entryPointOptimizationLevel,
       _optInliningDepth = _entryPointInliningDepth,
       _optFieldSize = _entryPointFieldSize,
-      _optVerify = _entryPointVerify && _entryPointModulePath == _entryPointMainFile
+      _optVerify = entryPointVerificationEnabled e
     }

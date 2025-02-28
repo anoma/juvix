@@ -62,9 +62,6 @@ ppDumps dumps = Text.unlines imports <> "\n" <> go 0 dumps
           <> " := by\n  sorry\n\n"
           <> go (n + 1) (d2 : rest)
 
-dumperEnabled :: EntryPoint -> Bool
-dumperEnabled entry = entry ^. entryPointMainFile == entry ^. entryPointModulePath
-
 writeLeanProjectFiles :: (Member Files r) => Path Abs Dir -> Text -> Sem r ()
 writeLeanProjectFiles dirPath name = do
   let lakeFile = dirPath Path.</> $(mkRelFile "lakefile.toml")
@@ -91,7 +88,7 @@ runDumper a = do
   entry <- ask
   case entry ^. entryPointMainFile of
     Just sourcePath
-      | dumperEnabled entry -> do
+      | entryPointVerificationEnabled entry -> do
           let name = dropExtension (toFilePath (filename sourcePath))
           subdir <- parseRelDir (name <> "_lean")
           let dirPath = parent sourcePath Path.</> subdir
