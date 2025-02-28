@@ -66,6 +66,7 @@ writeLeanProjectFiles :: (Member Files r) => Path Abs Dir -> Text -> Sem r ()
 writeLeanProjectFiles dirPath name = do
   let lakeFile = dirPath Path.</> $(mkRelFile "lakefile.toml")
       toolchainFile = dirPath Path.</> $(mkRelFile "lean-toolchain")
+      gitignoreFile = dirPath Path.</> $(mkRelFile ".gitignore")
   writeFileEnsureLn'
     lakeFile
     $ "name = \""
@@ -82,6 +83,7 @@ writeLeanProjectFiles dirPath name = do
       <> name
       <> "\"\n"
   writeFileEnsureLn' toolchainFile "leanprover/lean4:v4.15.0-rc1\n"
+  writeFileEnsureLn' gitignoreFile ".lake"
 
 runDumper :: forall r a. (Members '[Files, Reader EntryPoint] r) => Sem (Dumper ': r) a -> Sem r a
 runDumper a = do
