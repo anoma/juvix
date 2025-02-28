@@ -1,0 +1,9 @@
+name = "Program1_lean"
+defaultTargets = ["Program1"]
+
+[[require]]
+name = "juvix-lean"
+git = "https://github.com/anoma/juvix-lean.git"
+
+[[lean_lib]]
+name = "Program1"
