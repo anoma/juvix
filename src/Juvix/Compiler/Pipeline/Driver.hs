@@ -99,6 +99,7 @@ evalModuleInfoCachePackageDotJuvix ::
          Files,
          Concurrent,
          Logger,
+         Reader Migration,
          PathResolver
        ]
       r
@@ -160,7 +161,7 @@ evalModuleInfoCacheSetup ::
 evalModuleInfoCacheSetup setup m = do
   evalJvoCache
     . runProgressLog
-    . evalCacheEmptySetup setup processModuleCacheMiss
+    . evalCacheEmptySetup setup (runMigration . processModuleCacheMiss)
     $ m
 
 logDecision :: (Members '[ProgressLog] r) => ThreadId -> ImportNode -> ProcessModuleDecision x -> Sem r ()
@@ -198,6 +199,7 @@ processModuleCacheMissDecide ::
     Members
       '[ ModuleInfoCache,
          Error JuvixError,
+         Reader Migration,
          Files,
          TaggedLock,
          TopModuleNameChecker,
@@ -265,6 +267,7 @@ processModuleCacheMiss ::
          Error JuvixError,
          Files,
          JvoCache,
+         Reader Migration,
          ProgressLog,
          Concurrent,
          PathResolver
@@ -303,8 +306,10 @@ processProjectWith ::
   ( Members
       '[ Error JuvixError,
          ModuleInfoCache,
+         Reader Migration,
          PathResolver,
          Reader EntryPoint,
+         Reader MainPackageId,
          Reader ImportTree,
          Files
        ]
@@ -314,7 +319,9 @@ processProjectWith ::
     ( Members
         '[ Error JuvixError,
            Files,
+           Reader Migration,
            Reader PackageId,
+           Reader MainPackageId,
            HighlightBuilder,
            PathResolver
          ]
@@ -343,9 +350,11 @@ processProjectUpToScoping ::
   ( Members
       '[ Files,
          Error JuvixError,
+         Reader Migration,
          PathResolver,
          ModuleInfoCache,
          Reader EntryPoint,
+         Reader MainPackageId,
          Reader ImportTree
        ]
       r
@@ -359,6 +368,8 @@ processProjectUpToParsing ::
       '[ Files,
          Error JuvixError,
          PathResolver,
+         Reader Migration,
+         Reader MainPackageId,
          ModuleInfoCache,
          Reader EntryPoint,
          Reader ImportTree
@@ -388,9 +399,11 @@ processNodeUpToScoping ::
   ( Members
       '[ PathResolver,
          Error JuvixError,
+         Reader Migration,
          Files,
          HighlightBuilder,
-         Reader PackageId
+         Reader PackageId,
+         Reader MainPackageId
        ]
       r
   ) =>
@@ -398,13 +411,13 @@ processNodeUpToScoping ::
   Sem r ScoperResult
 processNodeUpToScoping node = do
   parseRes <- processNodeUpToParsing node
-  pkg <- ask
+  pkg <- ask @PackageId
   let modules = node ^. processedNodeInfo . pipelineResultImports
       scopedModules :: ScopedModuleTable = getScopedModuleTable modules
       tmp :: TopModulePathKey = relPathtoTopModulePathKey (node ^. processedNode . importNodeFile)
       moduleid :: ModuleId = run (runReader pkg (getModuleId tmp))
   evalTopNameIdGen moduleid $
-    scopeCheck pkg scopedModules parseRes
+    scopeCheck scopedModules parseRes
 
 processRecursivelyUpTo ::
   forall a r.
@@ -459,6 +472,7 @@ processRecursivelyUpToTyped ::
   ( Members
       '[ Reader EntryPoint,
          TopModuleNameChecker,
+         Reader Migration,
          TaggedLock,
          HighlightBuilder,
          Error JuvixError,
@@ -555,7 +569,7 @@ processImports imports = do
 
 processModuleToStoredCore ::
   forall r.
-  (Members '[ModuleInfoCache, PathResolver, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files] r) =>
+  (Members '[Reader Migration, ModuleInfoCache, PathResolver, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files] r) =>
   EntryPoint ->
   Sem r (PipelineResult Store.ModuleInfo)
 processModuleToStoredCore entry = over pipelineResult mkModuleInfo <$> processFileToStoredCore entry
@@ -575,7 +589,7 @@ processModuleToStoredCore entry = over pipelineResult mkModuleInfo <$> processFi
 
 processFileToStoredCore ::
   forall r.
-  (Members '[ModuleInfoCache, HighlightBuilder, PathResolver, TopModuleNameChecker, Error JuvixError, Files] r) =>
+  (Members '[Reader Migration, ModuleInfoCache, HighlightBuilder, PathResolver, TopModuleNameChecker, Error JuvixError, Files] r) =>
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore entry = do
