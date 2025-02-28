@@ -14,6 +14,10 @@ doc opts =
 class PrettyCode c where
   ppCode :: (Member (Reader Options) r) => c -> Sem r (Doc Ann)
 
+ppName :: Name -> Sem r (Doc Ann)
+ppName n = do
+  pure $ "\"" <> pretty n <> "\""
+
 instance PrettyCode BinaryOp where
   ppCode BinaryOpAdd = do
     pure "BinaryOp.add_int"
@@ -37,13 +41,13 @@ instance PrettyCode Constant where
 
 instance PrettyCode App where
   ppCode (App l r) = do
-    l' <- ppLeftExpression appFixity l
+    l' <- ppRightExpression appFixity l
     r' <- ppRightExpression appFixity r
     pure $ "Expr.app" <+> l' <+> r'
 
 instance PrettyCode ConstrApp where
   ppCode (ConstrApp l r) = do
-    l' <- ppLeftExpression appFixity l
+    l' <- ppRightExpression appFixity l
     r' <- ppRightExpression appFixity r
     pure $ "Expr.constr_app" <+> l' <+> r'
 
@@ -69,7 +73,8 @@ instance PrettyCode Branch where
   ppCode (Branch c b n) = do
     b' <- ppRightExpression appFixity b
     n' <- ppRightExpression appFixity n
-    pure $ "Expr.branch" <+> pretty c <+> b' <+> n'
+    c' <- ppName c
+    pure $ "Expr.branch" <+> c' <+> b' <+> n'
 
 instance PrettyCode Recur where
   ppCode (Recur b) = do
@@ -81,7 +86,9 @@ instance PrettyCode Expr where
     ExprVar v -> ppCode v
     ExprUnit -> pure "Expr.unit"
     ExprConst c -> ppCode c
-    ExprConstr n -> pure $ "Expr.constr" <+> pretty n
+    ExprConstr n -> do
+      n' <- ppName n
+      pure $ "Expr.constr" <+> n'
     ExprApp a -> ppCode a
     ExprConstrApp c -> ppCode c
     ExprBinop b -> ppCode b
@@ -94,18 +101,6 @@ instance PrettyCode Expr where
 --------------------------------------------------------------------------------
 -- helper functions
 --------------------------------------------------------------------------------
-
-ppSequence ::
-  (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
-  [a] ->
-  Sem r (Doc Ann)
-ppSequence vs = hsep <$> mapM (ppRightExpression appFixity) vs
-
-docSequence :: (PrettyCode a, HasAtomicity a) => Options -> [a] -> Doc Ann
-docSequence opts =
-  run
-    . runReader opts
-    . ppSequence
 
 ppRightExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
