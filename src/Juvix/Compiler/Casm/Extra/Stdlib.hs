@@ -45,7 +45,7 @@ addStdlibBuiltins addr = do
       _stdlibGetRegsApOffset :: Int = 4
       _stdlibPoseidonApOffset :: Int = 18
       _stdlibEcOpApOffset :: Int = 18
-      _stdlibRangeCheckApOffset :: Int = 12
+      _stdlibRangeCheckApOffset :: Int = 13
   _stdlibGetRegs <- fromJust <$> getIdent _stdlibGetRegsName
   _stdlibCallClosure <- fromJust <$> getIdent _stdlibCallClosureName
   _stdlibExtendClosure <- fromJust <$> getIdent _stdlibExtendClosureName
