@@ -38,6 +38,7 @@ fromCore' tab =
     shouldKeepFunction :: BuiltinFunction -> Bool
     shouldKeepFunction = \case
       BuiltinAssert -> False
+      BuiltinRangeCheck -> False
       BuiltinNatPlus -> False
       BuiltinNatSub -> False
       BuiltinNatMul -> False

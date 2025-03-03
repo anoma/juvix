@@ -91,6 +91,7 @@ toTreeOp = \case
   Core.OpPoseidonHash -> TreeCairoOp OpCairoPoseidon
   Core.OpEc -> TreeCairoOp OpCairoEc
   Core.OpRandomEcPoint -> TreeCairoOp OpCairoRandomEcPoint
+  Core.OpRangeCheck -> TreeCairoOp OpCairoRangeCheck
   -- TreeByteArrayOp
   Core.OpByteArrayFromListByte -> TreeByteArrayOp OpByteArrayFromListUInt8
   Core.OpByteArrayLength -> TreeByteArrayOp OpByteArrayLength

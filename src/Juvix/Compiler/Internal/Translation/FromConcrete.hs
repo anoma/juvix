@@ -992,6 +992,7 @@ checkBuiltinFunction ::
   Sem r ()
 checkBuiltinFunction d f = localBuiltins $ case f of
   BuiltinAssert -> checkAssert d
+  BuiltinRangeCheck -> checkRangeCheck d
   BuiltinIsEqual -> checkIsEq d
   BuiltinOrdCompare -> checkOrdCompare d
   BuiltinNatPlus -> checkNatPlus d

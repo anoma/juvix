@@ -115,8 +115,9 @@ juvix_ec_op:
 -- [fp - 4]: upper bound (inclusive)
 -- [fp - 5]: builtins ptr
 -- On return:
--- [ap - 1]: new builtins ptr
--- RangeCheck ap offset: 6 + 4 + 2
+-- [ap - 1]: 0 (true)
+-- [ap - 2]: new builtins ptr
+-- RangeCheck ap offset: 7 + 4 + 2
 juvix_range_check:
   -- [fp] = poseidon builtin ptr
   [ap] = [[fp - 5]]; ap++
@@ -132,6 +133,7 @@ juvix_range_check:
   [ap] = [[fp - 5] + 2]; ap++
   -- new builtins ptr
   [ap] = [ap - 5] + 2; ap++
+  [ap] = 0; ap++
   ret
 
 -- [fp - 3]: closure

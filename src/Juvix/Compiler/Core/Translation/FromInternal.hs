@@ -1561,6 +1561,11 @@ goApplication a = do
           case as of
             (x : xs) -> return (mkApps' (mkBuiltinApp' OpAssert [x]) xs)
             _ -> error "internal to core: assert must be called with 1 argument"
+        Just Internal.BuiltinRangeCheck -> do
+          as <- exprArgs
+          case as of
+            (x : y : xs) -> return (mkApps' (mkBuiltinApp' OpRangeCheck [x, y]) xs)
+            _ -> error "internal to core: rangeCheck must be called with 2 arguments"
         _ -> app
     _ -> app
 

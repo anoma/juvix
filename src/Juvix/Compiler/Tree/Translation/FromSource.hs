@@ -192,6 +192,7 @@ parseCairo =
   parseCairo' kwPoseidon OpCairoPoseidon
     <|> parseCairo' kwEcOp OpCairoEc
     <|> parseCairo' kwRandomEcPoint OpCairoRandomEcPoint
+    <|> parseCairo' kwRangeCheck OpCairoRangeCheck
 
 parseCairo' ::
   (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

@@ -482,7 +482,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.nextSymbolId t
         goCairo Reg.InstrCairo {..} = case _instrCairoOpcode of
           Reg.OpCairoRandomEcPoint -> do
             off <- getAP
-            insertVar (fromJust _instrCairoResult) off
+            insertVar _instrCairoResult off
             output'' (Hint HintRandomEcPoint)
             goAssignAp (Val $ Ref $ MemRef Ap 0)
           _ -> do
@@ -490,12 +490,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.nextSymbolId t
             mapM_ goAssignApValue (reverse _instrCairoArgs)
             output' apOff (mkCallRel (Lab (LabelRef sym (Just name))))
             off <- getAP
-            case _instrCairoResult of
-              Just res -> do
-                insertVar res (off - 1)
-                setBuiltinOffset (off - 2)
-              Nothing ->
-                setBuiltinOffset (off - 1)
+            insertVar _instrCairoResult (off - 1)
+            setBuiltinOffset (off - 2)
             where
               (apOff, sym, name) = case _instrCairoOpcode of
                 Reg.OpCairoPoseidon -> (blts ^. stdlibPoseidonApOffset, blts ^. stdlibPoseidon, blts ^. stdlibPoseidonName)

@@ -172,7 +172,7 @@ parseCairoOp kwd op vref = do
   return $
     InstrCairo
       { _instrCairoOpcode = op,
-        _instrCairoResult = Just vref,
+        _instrCairoResult = vref,
         _instrCairoArgs = args
       }
 

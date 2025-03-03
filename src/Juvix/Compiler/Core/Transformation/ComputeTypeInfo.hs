@@ -75,6 +75,7 @@ computeNodeTypeInfo md = umapL go
           OpAssert -> case _builtinAppArgs of
             [arg] -> Info.getNodeType arg
             _ -> error "incorrect assert builtin application"
+          OpRangeCheck -> mkTypeBool'
           OpTrace -> case _builtinAppArgs of
             [arg] -> Info.getNodeType arg
             _ -> error "incorrect trace builtin application"
