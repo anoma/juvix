@@ -224,3 +224,33 @@ computeBackwardLiveVars instr live lives = case instr of
   _ -> live
   where
     ulives = HashSet.unions lives
+
+isInstrVolatile :: Instruction -> Bool
+isInstrVolatile = \case
+  Binop {} -> False
+  Unop {} -> False
+  Cairo InstrCairo {..} ->
+    case _instrCairoOpcode of
+      OpCairoEc -> False
+      OpCairoPoseidon -> False
+      OpCairoRandomEcPoint -> False
+      OpCairoRangeCheck -> True
+  Assign {} -> False
+  Alloc {} -> False
+  AllocClosure {} -> False
+  ExtendClosure {} -> False
+  Call {} -> False
+  CallClosures {} -> False
+  TailCall {} -> False
+  TailCallClosures {} -> False
+  Return {} -> False
+  If {} -> False
+  Branch {} -> False
+  Case {} -> False
+  Assert {} -> False
+  Trace {} -> False
+  Dump -> False
+  Failure {} -> False
+  Prealloc {} -> False
+  Nop -> False
+  Block {} -> False

@@ -67,7 +67,7 @@ instance PrettyCode InstrCairo where
     op <- Tree.ppCode _instrCairoOpcode
     res <- ppCode _instrCairoResult
     vals <- mapM ppCode _instrCairoArgs
-    return $ res <+> primitive Str.equal <> op <+> hsep vals
+    return $ res <+> primitive Str.equal <+> op <+> hsep vals
 
 instance PrettyCode InstrAssign where
   ppCode InstrAssign {..} = do

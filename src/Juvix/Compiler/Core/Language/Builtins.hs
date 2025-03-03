@@ -191,7 +191,6 @@ builtinIsFoldable = \case
   OpStrToInt -> True
   OpSeq -> False
   OpAssert -> False
-  OpRangeCheck -> False
   OpTrace -> False
   OpFail -> False
   OpAnomaGet -> False
@@ -225,6 +224,7 @@ builtinIsFoldable = \case
   OpPoseidonHash -> False
   OpEc -> False
   OpRandomEcPoint -> False
+  OpRangeCheck -> False
   OpUInt8ToInt -> True
   OpUInt8FromInt -> True
   OpByteArrayFromListByte -> False
@@ -234,7 +234,7 @@ builtinsString :: [BuiltinOp]
 builtinsString = [OpStrConcat, OpStrToInt, OpShow]
 
 builtinsCairo :: [BuiltinOp]
-builtinsCairo = [OpPoseidonHash, OpEc, OpRandomEcPoint]
+builtinsCairo = [OpPoseidonHash, OpEc, OpRandomEcPoint, OpRangeCheck]
 
 builtinsAnoma :: [BuiltinOp]
 builtinsAnoma =
