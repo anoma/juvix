@@ -604,7 +604,9 @@ compile = \case
           withTemp arg $ \ref -> do
             tmp <- addressTempRef ref
             return (branch tmp tmp crash)
-        Tree.OpFail -> return crash
+        Tree.OpFail -> do
+          arg <- compile _nodeUnopArg
+          goFail arg
         Tree.OpTrace -> do
           arg <- compile _nodeUnopArg
           goTrace arg
@@ -778,6 +780,12 @@ compile = \case
                   { _indexTupleArgsLength = 2,
                     _indexTupleArgsIndex = 1
                   }
+
+    goFail :: Term Natural -> Sem r (Term Natural)
+    goFail arg = do
+      withTemp arg $ \ref -> do
+        val <- addressTempRef ref
+        return $ OpSequence # opTrace val # crash
 
     goTrace :: Term Natural -> Sem r (Term Natural)
     goTrace arg = do
@@ -1314,9 +1322,6 @@ getField field t = t >># opAddress "getField" (pathFromEnum field)
 
 getConstructorMemRep :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r NockmaMemRep
 getConstructorMemRep tag = (^. constructorInfoMemRep) <$> getConstructorInfo tag
-
-crash :: Term Natural
-crash = ("crash" @ OpAddress # OpAddress # OpAddress)
 
 sub :: (Member (Reader CompilerCtx) r) => Term Natural -> Term Natural -> Sem r (Term Natural)
 sub a b = callStdlib StdlibSub [a, b]

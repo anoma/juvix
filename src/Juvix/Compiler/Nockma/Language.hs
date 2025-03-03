@@ -587,6 +587,9 @@ instance (NockmaEq a) => NockmaEq (Term a) where
 instance (NockmaEq a) => NockmaEq (Cell a) where
   nockmaEq (Cell l r) (Cell l' r') = nockmaEq l l' && nockmaEq r r'
 
+crash :: Term Natural
+crash = ("crash" @ OpAddress # OpAddress # OpAddress)
+
 unfoldList :: Term Natural -> [Term Natural]
 unfoldList = ensureNockmList . nonEmpty . unfoldTuple
   where
