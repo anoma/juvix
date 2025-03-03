@@ -716,6 +716,7 @@ builtinInductive a =
         Internal.BuiltinByteArray -> Just (registerInductiveAxiom (Just BuiltinByteArray) [])
         Internal.BuiltinByteArrayFromListByte -> Nothing
         Internal.BuiltinByteArrayLength -> Nothing
+        Internal.BuiltinRangeCheck -> Nothing
   where
     registerInductiveAxiom :: forall r. (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader InternalTyped.InfoTable, NameIdGen, Error BadScope] r) => Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
     registerInductiveAxiom ax ctrs = do
@@ -1092,6 +1093,8 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
         registerAxiomDef (mkLambda' mkDynamic' (mkBuiltinApp' OpByteArrayFromListByte [mkVar' 0]))
       Internal.BuiltinByteArrayLength ->
         registerAxiomDef (mkLambda' mkTypeInteger' (mkBuiltinApp' OpByteArrayLength [mkVar' 0]))
+      Internal.BuiltinRangeCheck ->
+        registerAxiomDef (mkLambda' mkTypeField' (mkLambda' mkTypeField' (mkBuiltinApp' OpRangeCheck [mkVar' 1, mkVar' 0])))
 
     axiomType' :: Sem r Type
     axiomType' = fromTopIndex (goType (a ^. Internal.axiomType))
@@ -1521,6 +1524,7 @@ goApplication a = do
         Just Internal.BuiltinPoseidon -> app
         Just Internal.BuiltinEcOp -> app
         Just Internal.BuiltinRandomEcPoint -> app
+        Just Internal.BuiltinRangeCheck -> app
         Just Internal.BuiltinByte -> app
         Just Internal.BuiltinByteEq -> app
         Just Internal.BuiltinByteToNat -> app
@@ -1561,11 +1565,6 @@ goApplication a = do
           case as of
             (x : xs) -> return (mkApps' (mkBuiltinApp' OpAssert [x]) xs)
             _ -> error "internal to core: assert must be called with 1 argument"
-        Just Internal.BuiltinRangeCheck -> do
-          as <- exprArgs
-          case as of
-            (x : y : xs) -> return (mkApps' (mkBuiltinApp' OpRangeCheck [x, y]) xs)
-            _ -> error "internal to core: rangeCheck must be called with 2 arguments"
         _ -> app
     _ -> app
 
