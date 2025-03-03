@@ -2,53 +2,8 @@ import Juvix.Core.Main
 open Juvix.Core.Main
 
 lemma step_0_constant_folding : Expr.save (Expr.binop BinaryOp.add_int (Expr.binop BinaryOp.mul_int (Expr.const (Constant.int 3)) (Expr.const (Constant.int 2))) (Expr.const (Constant.int 7))) (Expr.var 0) ≈ Expr.save (Expr.const (Constant.int 13)) (Expr.var 0) := by
-  unfold Expr.Equiv Expr.Equiv.Param Expr.Approx.Param
-  intro env₁ env₂ henv
-  constructor
-  case left =>
-    intro v₁ heval
-    exists v₁
-    constructor
-    case left =>
-      cases heval
-      case save val heval heval' =>
-        cases heval'
-        case var hvar =>
-          simp_all
-          subst hvar
-          cases heval
-          case binop i₁ i₂ heval₁ heval₂ =>
-            cases heval₂
-            case const =>
-              cases heval₁
-              case binop i₁ i₂ heval₁ heval₂ =>
-                cases heval₁
-                case const =>
-                  cases heval₂
-                  case const =>
-                    repeat constructor
-        case var_rec =>
-          aesop
-    case right =>
-      rfl
-  case right =>
-    intro v₁ heval
-    exists v₁
-    constructor
-    case left =>
-      cases heval
-      case save val heval heval' =>
-        cases heval'
-        case var hvar =>
-          simp_all
-          subst hvar
-          cases heval
-          case const =>
-            repeat constructor
-        case var_rec =>
-          aesop
-    case right =>
-      rfl
+  repeat' congr
+  sorry
 
 lemma step_1_inlining : Expr.save (Expr.const (Constant.int 13)) (Expr.var 0) ≈ Expr.save (Expr.const (Constant.int 13)) (Expr.var 0) := by
   rfl

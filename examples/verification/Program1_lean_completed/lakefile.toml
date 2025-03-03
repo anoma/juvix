@@ -4,6 +4,7 @@ defaultTargets = ["Program1"]
 [[require]]
 name = "juvix-lean"
 git = "https://github.com/anoma/juvix-lean.git"
+rev = "equiv-congruence"
 
 [[lean_lib]]
 name = "Program1"
