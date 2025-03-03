@@ -93,13 +93,6 @@ cairoOpArgsNum = \case
   OpCairoRangeCheck -> 2
   OpCairoRandomEcPoint -> 0
 
-cairoOpHasResult :: CairoOp -> Bool
-cairoOpHasResult = \case
-  OpCairoPoseidon -> True
-  OpCairoEc -> True
-  OpCairoRangeCheck -> False
-  OpCairoRandomEcPoint -> True
-
 -- | Builtin Anoma operations. Implemented only in the Anoma backend.
 data AnomaOp
   = -- | Get a value by key from Anoma storage

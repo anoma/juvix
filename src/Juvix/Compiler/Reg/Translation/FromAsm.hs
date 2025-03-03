@@ -147,12 +147,7 @@ fromAsmInstr funInfo md si Asm.CmdInstr {..} =
       Cairo
         InstrCairo
           { _instrCairoOpcode = op,
-            _instrCairoResult =
-              if
-                  | cairoOpHasResult op ->
-                      Just $ mkVarRef VarGroupLocal (ntmps + n + 1 - k)
-                  | otherwise ->
-                      Nothing,
+            _instrCairoResult = mkVarRef VarGroupLocal (ntmps + n + 1 - k),
             _instrCairoArgs = getArgs' 0 k
           }
       where

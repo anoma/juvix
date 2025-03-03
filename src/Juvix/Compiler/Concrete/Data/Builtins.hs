@@ -155,6 +155,7 @@ instance NFData BuiltinConstructor
 
 data BuiltinFunction
   = BuiltinAssert
+  | BuiltinRangeCheck
   | BuiltinNatPlus
   | BuiltinNatSub
   | BuiltinNatMul
@@ -196,6 +197,7 @@ instance NFData BuiltinFunction
 instance Pretty BuiltinFunction where
   pretty = \case
     BuiltinAssert -> Str.assert
+    BuiltinRangeCheck -> Str.rangeCheck
     BuiltinNatPlus -> Str.natPlus
     BuiltinNatSub -> Str.natSub
     BuiltinNatMul -> Str.natMul
@@ -475,6 +477,7 @@ isNatBuiltin = \case
   BuiltinOrdCompare -> False
   BuiltinIsEqual -> False
   BuiltinAssert -> False
+  BuiltinRangeCheck -> False
   BuiltinBoolIf -> False
   BuiltinBoolOr -> False
   BuiltinBoolAnd -> False
@@ -511,6 +514,7 @@ isIntBuiltin = \case
   BuiltinIntLt -> True
   --
   BuiltinAssert -> False
+  BuiltinRangeCheck -> False
   BuiltinNatPlus -> False
   BuiltinNatSub -> False
   BuiltinNatMul -> False
@@ -538,6 +542,7 @@ isCastBuiltin = \case
   BuiltinOrdCompare -> False
   BuiltinIsEqual -> False
   BuiltinAssert -> False
+  BuiltinRangeCheck -> False
   BuiltinIntEq -> False
   BuiltinIntPlus -> False
   BuiltinIntSubNat -> False
@@ -616,6 +621,7 @@ isIgnoredBuiltin f
       BuiltinMonadBind -> False
       -- Ignored
       BuiltinAssert -> True
+      BuiltinRangeCheck -> True
       BuiltinBoolIf -> True
       BuiltinBoolOr -> True
       BuiltinBoolAnd -> True
