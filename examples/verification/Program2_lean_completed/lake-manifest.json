@@ -123,6 +123,6 @@
       "configFile": "lakefile.toml"
     }
   ],
-  "name": "Program1_lean",
+  "name": "Program2_lean",
   "lakeDir": ".lake"
 }
