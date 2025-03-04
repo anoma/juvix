@@ -58,8 +58,8 @@ compileAssertionEntry adjustEntry root' bInterp bRunVM optLevel mainFile inputFi
         )
       casmRunAssertion' entryPoint' bInterp bRunVM _resultLabelInfo _resultCode _resultBuiltins _resultOutputSize inputFile expectedFile step
 
-compileErrorAssertion :: Path Abs Dir -> Path Abs File -> (String -> IO ()) -> Assertion
-compileErrorAssertion root' mainFile step = do
+compileErrorAssertion :: Bool -> Path Abs Dir -> Path Abs File -> (String -> IO ()) -> Assertion
+compileErrorAssertion bRunVM root' mainFile step = do
   step "Translate to JuvixCore"
   entryPoint <- testDefaultEntryPointIO root' mainFile
   let entryPoint' = entryPoint {_entryPointFieldSize = cairoFieldSize}
@@ -67,4 +67,6 @@ compileErrorAssertion root' mainFile step = do
   step "Translate to CASM"
   case run $ runError @JuvixError $ runReader entryPoint $ storedCoreToCasm (_pipelineResult ^. Core.coreResultModule) of
     Left {} -> assertBool "" True
-    Right {} -> assertFailure "no error"
+    Right Result {..}
+      | bRunVM -> casmRunAssertionError' entryPoint' _resultLabelInfo _resultCode _resultBuiltins _resultOutputSize Nothing step
+      | otherwise -> assertFailure "no error"

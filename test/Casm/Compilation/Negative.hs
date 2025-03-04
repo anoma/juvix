@@ -5,6 +5,7 @@ import Casm.Compilation.Base
 
 data NegTest = NegTest
   { _name :: String,
+    _runVM :: Bool,
     _relDir :: Path Rel Dir,
     _file :: Path Rel File
   }
@@ -19,7 +20,7 @@ testDescr NegTest {..} =
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
-          _testAssertion = Steps $ compileErrorAssertion tRoot file'
+          _testAssertion = Steps $ compileErrorAssertion _runVM tRoot file'
         }
 
 allTests :: TestTree
@@ -32,10 +33,17 @@ tests :: [NegTest]
 tests =
   [ NegTest
       "Test001: Wrong `main` argument type"
+      False
       $(mkRelDir ".")
       $(mkRelFile "test001.juvix"),
     NegTest
       "Test002: Wrong `main` result type"
+      False
       $(mkRelDir ".")
-      $(mkRelFile "test002.juvix")
+      $(mkRelFile "test002.juvix"),
+    NegTest
+      "Test003: Range check failure"
+      True
+      $(mkRelDir ".")
+      $(mkRelFile "test003.juvix")
   ]
