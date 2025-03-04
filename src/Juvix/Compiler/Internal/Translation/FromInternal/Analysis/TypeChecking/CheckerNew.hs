@@ -141,7 +141,7 @@ checkCoercionCycles = do
     notDecreasing cyclic ctab n =
       any
         ( \ci ->
-            ci ^. coercionInfoDecreasing == False
+            not (ci ^. coercionInfoDecreasing)
               && HashSet.member (ci ^. coercionInfoTarget . instanceAppHead) cyclic
         )
         cis
@@ -177,11 +177,27 @@ checkModuleBody ::
 checkModuleBody ModuleBody {..} = do
   _moduleImports' <- mapM checkImport _moduleImports
   _moduleStatements' <- mapM checkMutualBlock _moduleStatements
+  checkModulePositivity _moduleStatements'
   return
     ModuleBody
       { _moduleStatements = _moduleStatements',
         _moduleImports = _moduleImports'
       }
+
+checkModulePositivity ::
+  ( Members
+      '[ Reader InfoTable,
+         Error TypeCheckerError,
+         ResultBuilder,
+         Reader EntryPoint
+       ]
+      r
+  ) =>
+  [MutualBlock] ->
+  Sem r ()
+checkModulePositivity m = do
+  noPos <- asks (^. entryPointNoPositivity)
+  checkPositivity noPos m
 
 checkImport :: Import -> Sem r Import
 checkImport = return
@@ -231,9 +247,11 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
       expectedRetTy <- lookupConstructorReturnType _inductiveConstructorName
       cty' <- checkIsType (getLoc _inductiveConstructorType) _inductiveConstructorType
       whenJustM (matchTypes expectedRetTy ret) (const (errRet expectedRetTy))
+      ncty' <- strongNormalize cty'
       let c' =
             ConstructorDef
               { _inductiveConstructorType = cty',
+                _inductiveConstructorNormalizedType = Just ncty',
                 _inductiveConstructorName,
                 _inductiveConstructorIsRecord,
                 _inductiveConstructorPragmas,
@@ -259,29 +277,7 @@ checkTopMutualBlock ::
   MutualBlock ->
   Sem r MutualBlock
 checkTopMutualBlock (MutualBlock ds) =
-  MutualBlock
-    <$> runInferenceDefs
-      ( do
-          ls <- mapM checkMutualStatement ds
-          checkBlockPositivity (MutualBlock ls)
-          return ls
-      )
-
-checkBlockPositivity ::
-  ( Members
-      '[ Reader InfoTable,
-         Error TypeCheckerError,
-         ResultBuilder,
-         Reader EntryPoint,
-         Inference
-       ]
-      r
-  ) =>
-  MutualBlock ->
-  Sem r ()
-checkBlockPositivity m = do
-  noPos <- asks (^. entryPointNoPositivity)
-  checkPositivity noPos m
+  MutualBlock <$> runInferenceDefs (mapM checkMutualStatement ds)
 
 resolveCastHoles ::
   forall a r.

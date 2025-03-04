@@ -11,7 +11,6 @@ import Juvix.Compiler.Internal.Extra.DependencyBuilder
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.ConstructorArg
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Occurrences
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.ResultBuilder
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Prelude hiding (fromEither)
@@ -44,62 +43,60 @@ functionSidePolarity = \case
   FunctionLeft -> PolarityNonStrictlyPositive
   FunctionRight -> PolarityStrictlyPositive
 
-mkPositivityMutualBLock :: MutualBlock -> [MutualBlockPositivity]
-mkPositivityMutualBLock m =
-  map toPos
-    . run
+mkPositivityMutualBlocks :: [MutualBlock] -> [MutualBlock]
+mkPositivityMutualBlocks m =
+  run
     . runReader depInfo
-    $ buildMutualBlocks (toList ss)
+    $ buildMutualBlocks ss
   where
-    toPos :: MutualBlock -> MutualBlockPositivity
-    toPos (MutualBlock x) = MutualBlockPositivity x
-    (ss :: NonEmpty PreStatement, depInfo :: NameDependencyInfo) = positivityNameDependencyInfo m
+    ss = flattenMutualBlocks m
+    depInfo :: NameDependencyInfo = positivityNameDependencyInfo ss
 
 checkPositivity ::
   forall r.
   ( Members
       '[ Reader InfoTable,
          Error TypeCheckerError,
-         ResultBuilder,
-         Inference
+         ResultBuilder
        ]
       r
   ) =>
   Bool ->
-  MutualBlock ->
+  [MutualBlock] ->
   Sem r ()
-checkPositivity noPositivityFlag mut =
-  forM_ (mkPositivityMutualBLock mut) (checkMutualBlockPositivity noPositivityFlag)
+checkPositivity noPositivityFlag mut = do
+  let mut' = mkPositivityMutualBlocks mut
+  forM_ mut' (checkMutualBlockPositivity noPositivityFlag)
 
 checkMutualBlockPositivity ::
   forall r.
   ( Members
       '[ Reader InfoTable,
          Error TypeCheckerError,
-         ResultBuilder,
-         Inference
+         ResultBuilder
        ]
       r
   ) =>
   Bool ->
-  MutualBlockPositivity ->
+  MutualBlock ->
   Sem r ()
 checkMutualBlockPositivity noPositivityFlag mut = do
   let ldefs :: [InductiveDef] =
         mut
-          ^.. mutualBlockPositivity
+          ^.. mutualStatements
             . each
             . _StatementInductive
 
   whenJust (nonEmpty ldefs) $ \defs -> do
     args :: [ConstructorArg] <-
       concatMapM
-        (strongNormalize >=> mkConstructorArg)
+        mkConstructorArg
         ( defs
             ^.. each
               . inductiveConstructors
               . each
-              . inductiveConstructorType
+              . inductiveConstructorNormalizedType
+              . to fromJust
         )
     poltab <- (^. typeCheckingTablesPolarityTable) <$> getCombinedTables
     let occ :: Occurrences = mkOccurrences args

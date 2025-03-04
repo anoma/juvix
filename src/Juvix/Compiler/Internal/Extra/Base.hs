@@ -285,6 +285,7 @@ instance HasExpressions ConstructorDef where
     pure
       ConstructorDef
         { _inductiveConstructorType = ty',
+          _inductiveConstructorNormalizedType,
           _inductiveConstructorName,
           _inductiveConstructorIsRecord,
           _inductiveConstructorPragmas,

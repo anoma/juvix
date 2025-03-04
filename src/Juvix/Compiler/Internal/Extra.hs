@@ -163,6 +163,15 @@ genFieldProjection kind _funDefName _funDefType _funDefBuiltin _funDefArgsInfo m
             _lambdaClauses = pure cl
           }
 
+flattenMutualBlocks :: [MutualBlock] -> [PreStatement]
+flattenMutualBlocks = concatMap (^.. mutualStatements . each . to toPreStatement)
+  where
+    toPreStatement :: MutualStatement -> PreStatement
+    toPreStatement = \case
+      StatementInductive i -> PreInductiveDef i
+      StatementFunction i -> PreFunctionDef i
+      StatementAxiom i -> PreAxiomDef i
+
 -- | Generates definitions for each variable in a given pattern.
 genPatternDefs ::
   forall r.
@@ -366,7 +375,7 @@ buildMutualBlocks ::
 buildMutualBlocks ss = do
   depInfo <- ask
   let scomponents :: [SCC Name] = buildSCCs depInfo
-      sccs = (boolHack (mapMaybe nameToPreStatement scomponents))
+      sccs = boolHack (mapMaybe nameToPreStatement scomponents)
   return (map goSCC sccs)
   where
     goSCC :: SCC PreStatement -> MutualBlock

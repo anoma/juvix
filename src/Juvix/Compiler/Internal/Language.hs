@@ -90,11 +90,6 @@ data MutualStatement
   | StatementAxiom AxiomDef
   deriving stock (Generic, Data)
 
-newtype MutualBlockPositivity = MutualBlockPositivity
-  { _mutualBlockPositivity :: NonEmpty MutualStatement
-  }
-  deriving stock (Generic, Data)
-
 newtype MutualBlock = MutualBlock
   { _mutualStatements :: NonEmpty MutualStatement
   }
@@ -453,6 +448,8 @@ data InductiveDef = InductiveDef
 data ConstructorDef = ConstructorDef
   { _inductiveConstructorName :: ConstrName,
     _inductiveConstructorType :: Expression,
+    -- | Filled by the typechecker. Used in positivity
+    _inductiveConstructorNormalizedType :: Maybe NormalizedExpression,
     _inductiveConstructorIsRecord :: Bool,
     _inductiveConstructorPragmas :: Pragmas,
     _inductiveConstructorDocComment :: Maybe Text
@@ -513,6 +510,7 @@ data NormalizedExpression = NormalizedExpression
   { _normalizedExpression :: Expression,
     _normalizedExpressionOriginal :: Expression
   }
+  deriving stock (Data)
 
 makePrisms ''Expression
 makePrisms ''Iden
@@ -530,7 +528,6 @@ makeLenses ''Module'
 makeLenses ''Let
 makeLenses ''MutualBlockLet
 makeLenses ''MutualBlock
-makeLenses ''MutualBlockPositivity
 makeLenses ''PatternArg
 makeLenses ''Import
 makeLenses ''FunctionDef

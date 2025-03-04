@@ -1155,6 +1155,7 @@ goConstructorDef retTy ConstructorDef {..} = do
   return
     Internal.ConstructorDef
       { _inductiveConstructorType = ty',
+        _inductiveConstructorNormalizedType = Nothing,
         _inductiveConstructorName = goSymbol _constructorName,
         _inductiveConstructorIsRecord = isRhsRecord _constructorRhs,
         _inductiveConstructorPragmas = pragmas',

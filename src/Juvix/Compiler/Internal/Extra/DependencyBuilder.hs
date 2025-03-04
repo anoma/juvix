@@ -69,25 +69,15 @@ buildDependencyInfoPreModule ms =
 
 -- | Compute dependency info of a mutual block with `_dependencyParamsInstance`
 -- set to `False`. Used for positivity checking
-positivityNameDependencyInfo :: MutualBlock -> (NonEmpty PreStatement, NameDependencyInfo)
+positivityNameDependencyInfo :: [PreStatement] -> NameDependencyInfo
 positivityNameDependencyInfo m =
-  (preStmts,)
-    . run
+  run
     . runReader dependencyParams
     . buildDependencyInfoHelper
-    $ goPreStatements impossibleParent (toList preStmts)
+    $ goPreStatements impossibleParent m
   where
-    preStmts :: NonEmpty PreStatement
-    preStmts = toPreStatement <$> m ^. mutualStatements
-
     impossibleParent :: Name
     impossibleParent = impossibleError "This name should never be used because `_dependencyParamsInstance` is set to False"
-
-    toPreStatement :: MutualStatement -> PreStatement
-    toPreStatement = \case
-      StatementInductive i -> PreInductiveDef i
-      StatementFunction i -> PreFunctionDef i
-      StatementAxiom i -> PreAxiomDef i
 
     dependencyParams :: DependencyParams
     dependencyParams =
@@ -127,6 +117,11 @@ addCastEdges = do
 
 addStartNode :: (Member (State StartNodes) r) => Name -> Sem r ()
 addStartNode n = modify (HashSet.insert n)
+
+addEdgeParent :: (Members '[Reader DependencyParams, State DependencyGraph] r) => Name -> Name -> Sem r ()
+addEdgeParent a b = do
+  inst <- asks (^. dependencyParamsInstance)
+  when inst (addEdge a b)
 
 addEdgeMay :: (Members '[State DependencyGraph, Reader (Maybe Name)] r) => Name -> Sem r ()
 addEdgeMay n2 = whenJustM ask $ \n1 -> addEdge n1 n2
@@ -194,8 +189,7 @@ goPreLetStatement = \case
 goPreStatements :: forall r. (Members '[Reader DependencyParams, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> [PreStatement] -> Sem r ()
 goPreStatements p = \case
   stmt : stmts -> do
-    inst <- asks (^. dependencyParamsInstance)
-    when inst (goPreStatement p stmt)
+    goPreStatement p stmt
     goPreStatements (getPreStatementName stmt) stmts
   [] -> return ()
   where
@@ -215,7 +209,7 @@ goPreStatement p = \case
 goAxiom :: forall r. (Members '[Reader DependencyParams, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> AxiomDef -> Sem r ()
 goAxiom p ax = do
   checkStartNode (ax ^. axiomName)
-  addEdge (ax ^. axiomName) p
+  addEdgeParent (ax ^. axiomName) p
   runReader (Just (ax ^. axiomName)) (goExpression (ax ^. axiomType))
 
 goInductive :: forall r. (Members '[Reader DependencyParams, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> InductiveDef -> Sem r ()
@@ -223,7 +217,7 @@ goInductive p i = do
   let indName = i ^. inductiveName
   checkStartNode indName
   checkBuiltinInductiveStartNode i
-  addEdge indName p
+  addEdgeParent indName p
   mapM_ (goConstructorDef indName) (i ^. inductiveConstructors)
   runReader (Just indName) $ do
     mapM_ goInductiveParameter (i ^. inductiveParameters)
@@ -259,7 +253,7 @@ checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
 
 goTopFunctionDef :: (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader DependencyParams] r) => Name -> FunctionDef -> Sem r ()
 goTopFunctionDef p f = do
-  addEdge (f ^. funDefName) p
+  addEdgeParent (f ^. funDefName) p
   goFunctionDefHelper f
 
 checkCast ::
