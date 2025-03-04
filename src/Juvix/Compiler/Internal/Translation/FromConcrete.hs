@@ -105,7 +105,7 @@ fromConcrete _resultScoper = do
           <> mconcatMap (S.getCombinedInfoTable . (^. Store.moduleInfoScopedModule)) ms
   _resultModule <-
     runReader @Pragmas mempty
-      . runReader @ExportsTable exportTbl
+      . runReader (instanceDependencyParams exportTbl)
       . runReader tab
       . runReader internalTable
       . mapError (JuvixError @ScoperError)
@@ -128,7 +128,7 @@ fromConcreteExpression e = do
   return e'
 
 fromConcreteImport ::
-  (Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Termination] r) =>
+  (Members '[Reader DependencyParams, Error JuvixError, NameIdGen, Termination] r) =>
   Scoper.Import 'Scoped ->
   Sem r Internal.Import
 fromConcreteImport i = do
@@ -190,13 +190,12 @@ goLocalModule ::
 goLocalModule = concatMapM goAxiomInductive . (^. moduleBody)
 
 goTopModule ::
-  (Members '[Reader DefaultArgsStack, Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, NameIdGen, Reader Pragmas, Termination, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, Reader EntryPoint, Reader DependencyParams, Error JuvixError, Error ScoperError, NameIdGen, Reader Pragmas, Termination, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
   Module 'Scoped 'ModuleTop ->
   Sem r Internal.Module
 goTopModule m = do
   p <- toPreModule m
-  tbl <- ask
-  let depInfo = buildDependencyInfoPreModule p tbl
+  depInfo <- buildDependencyInfoPreModule p
   r <- runReader depInfo (fromPreModule p)
   noTerminationOption <- asks (^. entryPointNoTermination)
   unless noTerminationOption (checkTerminationShallow r)
@@ -242,7 +241,7 @@ traverseM' f x = sequence <$> traverse f x
 
 toPreModule ::
   forall r.
-  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, NameIdGen, Reader Pragmas, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
+  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Error ScoperError, NameIdGen, Reader Pragmas, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
   Module 'Scoped 'ModuleTop ->
   Sem r Internal.PreModule
 toPreModule Module {..} = do
@@ -302,7 +301,7 @@ fromPreModuleBody b = do
 
 goModuleBody ::
   forall r.
-  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, NameIdGen, Reader Pragmas, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
+  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Error ScoperError, NameIdGen, Reader Pragmas, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
   [Statement 'Scoped] ->
   Sem r Internal.PreModuleBody
 goModuleBody stmts = evalState emptyLocalTable $ do

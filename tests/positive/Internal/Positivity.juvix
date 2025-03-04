@@ -1,0 +1,7 @@
+module Positivity;
+
+type T := mk;
+
+type Fun : Type := mk (Box -> T);
+
+type Box := mk T;
