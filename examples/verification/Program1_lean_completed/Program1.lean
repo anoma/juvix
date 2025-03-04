@@ -2,8 +2,8 @@ import Juvix.Core.Main
 open Juvix.Core.Main
 
 lemma step_0_constant_folding : Expr.save (Expr.binop BinaryOp.add_int (Expr.binop BinaryOp.mul_int (Expr.const (Constant.int 3)) (Expr.const (Constant.int 2))) (Expr.const (Constant.int 7))) (Expr.var 0) ≈ Expr.save (Expr.const (Constant.int 13)) (Expr.var 0) := by
-  repeat' congr
-  sorry
+  congr'
+  eval_const'
 
 lemma step_1_inlining : Expr.save (Expr.const (Constant.int 13)) (Expr.var 0) ≈ Expr.save (Expr.const (Constant.int 13)) (Expr.var 0) := by
   rfl
