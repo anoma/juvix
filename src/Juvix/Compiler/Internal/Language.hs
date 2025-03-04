@@ -90,6 +90,11 @@ data MutualStatement
   | StatementAxiom AxiomDef
   deriving stock (Generic, Data)
 
+newtype MutualBlockPositivity = MutualBlockPositivity
+  { _mutualBlockPositivity :: NonEmpty MutualStatement
+  }
+  deriving stock (Generic, Data)
+
 newtype MutualBlock = MutualBlock
   { _mutualStatements :: NonEmpty MutualStatement
   }
@@ -525,6 +530,7 @@ makeLenses ''Module'
 makeLenses ''Let
 makeLenses ''MutualBlockLet
 makeLenses ''MutualBlock
+makeLenses ''MutualBlockPositivity
 makeLenses ''PatternArg
 makeLenses ''Import
 makeLenses ''FunctionDef

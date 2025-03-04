@@ -7,6 +7,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Extra.DependencyBuilder
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.ConstructorArg
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Occurrences
@@ -43,6 +44,17 @@ functionSidePolarity = \case
   FunctionLeft -> PolarityNonStrictlyPositive
   FunctionRight -> PolarityStrictlyPositive
 
+mkPositivityMutualBLock :: MutualBlock -> [MutualBlockPositivity]
+mkPositivityMutualBLock m =
+  map toPos
+    . run
+    . runReader depInfo
+    $ buildMutualBlocks (toList ss)
+  where
+    toPos :: MutualBlock -> MutualBlockPositivity
+    toPos (MutualBlock x) = MutualBlockPositivity x
+    (ss :: NonEmpty PreStatement, depInfo :: NameDependencyInfo) = positivityNameDependencyInfo m
+
 checkPositivity ::
   forall r.
   ( Members
@@ -56,10 +68,26 @@ checkPositivity ::
   Bool ->
   MutualBlock ->
   Sem r ()
-checkPositivity noPositivityFlag mut = do
+checkPositivity noPositivityFlag mut =
+  forM_ (mkPositivityMutualBLock mut) (checkMutualBlockPositivity noPositivityFlag)
+
+checkMutualBlockPositivity ::
+  forall r.
+  ( Members
+      '[ Reader InfoTable,
+         Error TypeCheckerError,
+         ResultBuilder,
+         Inference
+       ]
+      r
+  ) =>
+  Bool ->
+  MutualBlockPositivity ->
+  Sem r ()
+checkMutualBlockPositivity noPositivityFlag mut = do
   let ldefs :: [InductiveDef] =
         mut
-          ^.. mutualStatements
+          ^.. mutualBlockPositivity
             . each
             . _StatementInductive
 

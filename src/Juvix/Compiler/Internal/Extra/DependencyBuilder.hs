@@ -1,10 +1,12 @@
 module Juvix.Compiler.Internal.Extra.DependencyBuilder
-  ( buildDependencyInfoPreModule,
+  ( NameDependencyInfo,
+    buildDependencyInfoPreModule,
     buildDependencyInfoLet,
     instanceDependencyParams,
     letDependencyParams,
+    positivityNameDependencyInfo,
     DependencyParams (..),
-    dependencyParamsExportSet,
+    dependencyParamsIsStartNode,
     dependencyParamsInstance,
   )
 where
@@ -41,19 +43,19 @@ emptyBuilderState =
 letDependencyParams :: DependencyParams
 letDependencyParams =
   DependencyParams
-    { _dependencyParamsExportSet = mempty,
+    { _dependencyParamsIsStartNode = const False,
       _dependencyParamsInstance = False
     }
 
 instanceDependencyParams :: HashSet NameId -> DependencyParams
 instanceDependencyParams s =
   DependencyParams
-    { _dependencyParamsExportSet = s,
+    { _dependencyParamsIsStartNode = (`HashSet.member` s),
       _dependencyParamsInstance = True
     }
 
 data DependencyParams = DependencyParams
-  { _dependencyParamsExportSet :: HashSet NameId,
+  { _dependencyParamsIsStartNode :: NameId -> Bool,
     -- | When set to True, each declaration depends on the previous declaration.
     -- Necessary for instance resolution
     _dependencyParamsInstance :: Bool
@@ -64,6 +66,35 @@ makeLenses ''DependencyParams
 buildDependencyInfoPreModule :: forall r. (Members '[Reader DependencyParams] r) => PreModule -> Sem r NameDependencyInfo
 buildDependencyInfoPreModule ms =
   buildDependencyInfoHelper (goPreModule ms >> addCastEdges)
+
+-- | Compute dependency info of a mutual block with `_dependencyParamsInstance`
+-- set to `False`. Used for positivity checking
+positivityNameDependencyInfo :: MutualBlock -> (NonEmpty PreStatement, NameDependencyInfo)
+positivityNameDependencyInfo m =
+  (preStmts,)
+    . run
+    . runReader dependencyParams
+    . buildDependencyInfoHelper
+    $ goPreStatements impossibleParent (toList preStmts)
+  where
+    preStmts :: NonEmpty PreStatement
+    preStmts = toPreStatement <$> m ^. mutualStatements
+
+    impossibleParent :: Name
+    impossibleParent = impossibleError "This name should never be used because `_dependencyParamsInstance` is set to False"
+
+    toPreStatement :: MutualStatement -> PreStatement
+    toPreStatement = \case
+      StatementInductive i -> PreInductiveDef i
+      StatementFunction i -> PreFunctionDef i
+      StatementAxiom i -> PreAxiomDef i
+
+    dependencyParams :: DependencyParams
+    dependencyParams =
+      DependencyParams
+        { _dependencyParamsInstance = False,
+          _dependencyParamsIsStartNode = const True
+        }
 
 buildDependencyInfoLet :: NonEmpty PreLetStatement -> NameDependencyInfo
 buildDependencyInfoLet ls =
@@ -118,8 +149,8 @@ addEdge n1 n2 =
 
 checkStartNode :: (Members '[Reader DependencyParams, State StartNodes, State BuilderState] r) => Name -> Sem r ()
 checkStartNode n = do
-  dp <- asks (^. dependencyParamsExportSet)
-  when ((n ^. nameId) `HashSet.member` dp) (addStartNode n)
+  isStart <- asks (^. dependencyParamsIsStartNode)
+  when (isStart (n ^. nameId)) (addStartNode n)
 
 goPreModule :: (Members '[Reader DependencyParams, State DependencyGraph, State StartNodes, State BuilderState] r) => PreModule -> Sem r ()
 goPreModule m = do
@@ -155,16 +186,16 @@ goPreLetStatement = \case
     addEdgeMayRev (f ^. funDefName)
     goFunctionDefHelper f
 
--- | `parentName` is the parent -- the previous declaration or the enclosing module. A
+-- | `p` is the parent -- the previous declaration or the enclosing module. A
 -- declaraction depends on its parent (on the previous declaration in the module
 -- if it exists) in order to guarantee that instance declarations are always
 -- processed before their uses. For an instance to be taken into account in
 -- instance resolution, it needs to be declared textually earlier.
 goPreStatements :: forall r. (Members '[Reader DependencyParams, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> [PreStatement] -> Sem r ()
-goPreStatements parentName = \case
+goPreStatements p = \case
   stmt : stmts -> do
     inst <- asks (^. dependencyParamsInstance)
-    when inst (goPreStatement parentName stmt)
+    when inst (goPreStatement p stmt)
     goPreStatements (getPreStatementName stmt) stmts
   [] -> return ()
   where
