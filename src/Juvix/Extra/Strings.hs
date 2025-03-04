@@ -266,6 +266,9 @@ ioReadline = "IO-readline"
 assert :: (IsString s) => s
 assert = "assert"
 
+rangeCheck :: (IsString s) => s
+rangeCheck = "range-check"
+
 natPrint :: (IsString s) => s
 natPrint = "nat-print"
 
@@ -976,6 +979,9 @@ instrPoseidon = "poseidon"
 
 instrEcOp :: (IsString s) => s
 instrEcOp = "ec_op"
+
+instrRangeCheck :: (IsString s) => s
+instrRangeCheck = "range_check"
 
 instrPrealloc :: (IsString s) => s
 instrPrealloc = "prealloc"

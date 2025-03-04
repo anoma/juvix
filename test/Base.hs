@@ -230,6 +230,20 @@ readProcessCwd' menv mcwd cmd args stdinText =
         return r
     )
 
+readProcessExitCodeCwd :: FilePath -> FilePath -> [String] -> Text -> IO ExitCode
+readProcessExitCodeCwd cwd = readProcessExitCodeCwd' Nothing (Just cwd)
+
+-- | Runs the process and returns the exit code. stdout and stderr are suppressed and ignored.
+readProcessExitCodeCwd' :: Maybe [(String, String)] -> Maybe FilePath -> FilePath -> [String] -> Text -> IO ExitCode
+readProcessExitCodeCwd' menv mcwd cmd args stdinText = do
+  let cp =
+        (P.proc cmd args)
+          { P.cwd = mcwd,
+            P.env = menv
+          }
+  (code, _, _) <- P.readCreateProcessWithExitCode cp (unpack stdinText)
+  return code
+
 to3DigitString :: Int -> Text
 to3DigitString n
   | n < 10 = "00" <> show n

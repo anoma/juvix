@@ -275,6 +275,7 @@ instance PrettyCode CairoOp where
   ppCode op = return $ primitive $ case op of
     OpCairoPoseidon -> Str.instrPoseidon
     OpCairoEc -> Str.instrEcOp
+    OpCairoRangeCheck -> Str.cairoRangeCheck
     OpCairoRandomEcPoint -> Str.cairoRandomEcPoint
 
 instance PrettyCode AnomaOp where

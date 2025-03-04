@@ -44,6 +44,7 @@ import Juvix.Data.Keyword.All
     kwPoseidon,
     kwPrealloc,
     kwRandomEcPoint,
+    kwRangeCheck,
     kwRet,
     kwShow,
     kwStrcat,
@@ -96,6 +97,7 @@ allKeywords =
          kwArgsNum,
          kwPoseidon,
          kwRandomEcPoint,
+         kwRangeCheck,
          kwIntToField,
          kwFieldToInt
        ]

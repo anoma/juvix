@@ -580,6 +580,7 @@ builtinAppExpr varsNum vars = do
       <|> (kw kwStrConcat $> OpStrConcat)
       <|> (kw kwStrToInt $> OpStrToInt)
       <|> (kw kwAssert $> OpAssert)
+      <|> (kw kwRangeCheck $> OpRangeCheck)
       <|> (kw kwSeqq $> OpSeq)
       <|> (kw kwTrace $> OpTrace)
       <|> (kw kwFail $> OpFail)

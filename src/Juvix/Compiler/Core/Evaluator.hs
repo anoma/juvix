@@ -218,6 +218,7 @@ geval opts herr tab env0 = eval' env0
       OpFail -> failOp
       OpTrace -> traceOp
       OpAssert -> assertOp
+      OpRangeCheck -> rangeCheckOp
       OpAnomaGet -> anomaGetOp
       OpAnomaEncode -> anomaEncodeOp
       OpAnomaDecode -> anomaDecodeOp
@@ -401,6 +402,31 @@ geval opts herr tab env0 = eval' env0
                         _ ->
                           Exception.throw (EvalError ("assertion failed: " <> printNode val) Nothing)
         {-# INLINE assertOp #-}
+
+        rangeCheckOp :: [Node] -> Node
+        rangeCheckOp = binary $ \val1 val2 ->
+          let !v1 = eval' env val1
+              !v2 = eval' env val2
+           in case (v1, v2) of
+                (NCst c1, NCst c2) ->
+                  case (c1, c2) of
+                    (Constant _ (ConstInteger i1), Constant _ (ConstInteger i2))
+                      | i1 >= 0 && i1 <= i2 ->
+                          nodeFromBool True
+                    (Constant _ (ConstField i1), Constant _ (ConstField i2))
+                      | fieldToInteger i1 >= 0 && fieldToInteger i1 <= fieldToInteger i2 ->
+                          nodeFromBool True
+                    _
+                      | opts ^. evalOptionsSilent ->
+                          nodeFromBool False
+                      | otherwise ->
+                          err "range check failed"
+                _
+                  | opts ^. evalOptionsSilent ->
+                      nodeFromBool False
+                  | otherwise ->
+                      err "range check failed"
+        {-# INLINE rangeCheckOp #-}
 
         normalizeOrUnsupported :: BuiltinOp -> [Node] -> Node
         normalizeOrUnsupported op args =

@@ -496,6 +496,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.nextSymbolId t
               (apOff, sym, name) = case _instrCairoOpcode of
                 Reg.OpCairoPoseidon -> (blts ^. stdlibPoseidonApOffset, blts ^. stdlibPoseidon, blts ^. stdlibPoseidonName)
                 Reg.OpCairoEc -> (blts ^. stdlibEcOpApOffset, blts ^. stdlibEcOp, blts ^. stdlibEcOpName)
+                Reg.OpCairoRangeCheck -> (blts ^. stdlibRangeCheckApOffset, blts ^. stdlibRangeCheck, blts ^. stdlibRangeCheckName)
 
         goAssign :: Reg.InstrAssign -> Sem r ()
         goAssign Reg.InstrAssign {..} =
