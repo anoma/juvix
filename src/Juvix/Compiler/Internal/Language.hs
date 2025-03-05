@@ -448,6 +448,8 @@ data InductiveDef = InductiveDef
 data ConstructorDef = ConstructorDef
   { _inductiveConstructorName :: ConstrName,
     _inductiveConstructorType :: Expression,
+    -- | Filled by the typechecker. Used in positivity
+    _inductiveConstructorNormalizedType :: Maybe NormalizedExpression,
     _inductiveConstructorIsRecord :: Bool,
     _inductiveConstructorPragmas :: Pragmas,
     _inductiveConstructorDocComment :: Maybe Text
@@ -508,6 +510,7 @@ data NormalizedExpression = NormalizedExpression
   { _normalizedExpression :: Expression,
     _normalizedExpressionOriginal :: Expression
   }
+  deriving stock (Data)
 
 makePrisms ''Expression
 makePrisms ''Iden

@@ -105,7 +105,7 @@ fromConcrete _resultScoper = do
           <> mconcatMap (S.getCombinedInfoTable . (^. Store.moduleInfoScopedModule)) ms
   _resultModule <-
     runReader @Pragmas mempty
-      . runReader @ExportsTable exportTbl
+      . runReader (instanceDependencyParams exportTbl)
       . runReader tab
       . runReader internalTable
       . mapError (JuvixError @ScoperError)
@@ -128,7 +128,7 @@ fromConcreteExpression e = do
   return e'
 
 fromConcreteImport ::
-  (Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Termination] r) =>
+  (Members '[Reader DependencyParams, Error JuvixError, NameIdGen, Termination] r) =>
   Scoper.Import 'Scoped ->
   Sem r Internal.Import
 fromConcreteImport i = do
@@ -137,52 +137,6 @@ fromConcreteImport i = do
     . goImport
     $ i
 
-buildMutualBlocks ::
-  (Members '[Reader Internal.NameDependencyInfo] r) =>
-  [Internal.PreStatement] ->
-  Sem r [SCC Internal.PreStatement]
-buildMutualBlocks ss = do
-  depInfo <- ask
-  let scomponents :: [SCC Internal.Name] = buildSCCs depInfo
-  return (boolHack (mapMaybe nameToPreStatement scomponents))
-  where
-    -- If the builtin bool definition is found, it is moved at the front.
-    --
-    -- This is a hack needed to translate BuiltinStringToNat in
-    -- internal-to-core. BuiltinStringToNat is the only function that depends on
-    -- Bool implicitly (i.e. without mentioning it in its type). Eventually
-    -- BuiltinStringToNat needs to be removed and so this hack.
-    boolHack :: [SCC Internal.PreStatement] -> [SCC Internal.PreStatement]
-    boolHack s = case popFirstJust isBuiltinBool s of
-      (Nothing, _) -> s
-      (Just boolDef, rest) -> AcyclicSCC (Internal.PreInductiveDef boolDef) : rest
-      where
-        isBuiltinBool :: SCC Internal.PreStatement -> Maybe Internal.InductiveDef
-        isBuiltinBool = \case
-          CyclicSCC [Internal.PreInductiveDef b]
-            | Just BuiltinBool <- b ^. Internal.inductiveBuiltin -> Just b
-          _ -> Nothing
-
-    statementsByName :: HashMap Internal.Name Internal.PreStatement
-    statementsByName = HashMap.fromList (map mkAssoc ss)
-      where
-        mkAssoc :: Internal.PreStatement -> (Internal.Name, Internal.PreStatement)
-        mkAssoc s = case s of
-          Internal.PreInductiveDef i -> (i ^. Internal.inductiveName, s)
-          Internal.PreFunctionDef i -> (i ^. Internal.funDefName, s)
-          Internal.PreAxiomDef i -> (i ^. Internal.axiomName, s)
-
-    getStmt :: Internal.Name -> Maybe Internal.PreStatement
-    getStmt n = statementsByName ^. at n
-
-    nameToPreStatement :: SCC Internal.Name -> Maybe (SCC Internal.PreStatement)
-    nameToPreStatement = nonEmptySCC . fmap getStmt
-      where
-        nonEmptySCC :: SCC (Maybe a) -> Maybe (SCC a)
-        nonEmptySCC = \case
-          AcyclicSCC a -> AcyclicSCC <$> a
-          CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
-
 goLocalModule ::
   (Members '[Reader EntryPoint, State LocalTable, Reader DefaultArgsStack, Error ScoperError, NameIdGen, Reader Pragmas, Reader S.InfoTable] r) =>
   Module 'Scoped 'ModuleLocal ->
@@ -190,13 +144,12 @@ goLocalModule ::
 goLocalModule = concatMapM goAxiomInductive . (^. moduleBody)
 
 goTopModule ::
-  (Members '[Reader DefaultArgsStack, Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, NameIdGen, Reader Pragmas, Termination, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, Reader EntryPoint, Reader DependencyParams, Error JuvixError, Error ScoperError, NameIdGen, Reader Pragmas, Termination, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
   Module 'Scoped 'ModuleTop ->
   Sem r Internal.Module
 goTopModule m = do
   p <- toPreModule m
-  tbl <- ask
-  let depInfo = buildDependencyInfoPreModule p tbl
+  depInfo <- buildDependencyInfoPreModule p
   r <- runReader depInfo (fromPreModule p)
   noTerminationOption <- asks (^. entryPointNoTermination)
   unless noTerminationOption (checkTerminationShallow r)
@@ -242,7 +195,7 @@ traverseM' f x = sequence <$> traverse f x
 
 toPreModule ::
   forall r.
-  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, NameIdGen, Reader Pragmas, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
+  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Error ScoperError, NameIdGen, Reader Pragmas, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
   Module 'Scoped 'ModuleTop ->
   Sem r Internal.PreModule
 toPreModule Module {..} = do
@@ -273,36 +226,12 @@ fromPreModuleBody ::
   Internal.PreModuleBody ->
   Sem r Internal.ModuleBody
 fromPreModuleBody b = do
-  sccs <- buildMutualBlocks (b ^. Internal.moduleStatements)
-  let moduleStatements' = map goSCC sccs
+  moduleStatements' <- Internal.buildMutualBlocks (b ^. Internal.moduleStatements)
   return (set Internal.moduleStatements moduleStatements' b)
-  where
-    goSCC :: SCC Internal.PreStatement -> Internal.MutualBlock
-    goSCC = \case
-      AcyclicSCC s -> goAcyclic s
-      CyclicSCC c -> goCyclic (nonEmpty' c)
-      where
-        goCyclic :: NonEmpty Internal.PreStatement -> Internal.MutualBlock
-        goCyclic c = Internal.MutualBlock (goMutual <$> c)
-          where
-            goMutual :: Internal.PreStatement -> Internal.MutualStatement
-            goMutual = \case
-              Internal.PreInductiveDef i -> Internal.StatementInductive i
-              Internal.PreFunctionDef i -> Internal.StatementFunction i
-              Internal.PreAxiomDef i -> Internal.StatementAxiom i
-
-        goAcyclic :: Internal.PreStatement -> Internal.MutualBlock
-        goAcyclic = \case
-          Internal.PreInductiveDef i -> one (Internal.StatementInductive i)
-          Internal.PreFunctionDef i -> one (Internal.StatementFunction i)
-          Internal.PreAxiomDef i -> one (Internal.StatementAxiom i)
-          where
-            one :: Internal.MutualStatement -> Internal.MutualBlock
-            one = Internal.MutualBlock . pure
 
 goModuleBody ::
   forall r.
-  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, NameIdGen, Reader Pragmas, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
+  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Error ScoperError, NameIdGen, Reader Pragmas, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
   [Statement 'Scoped] ->
   Sem r Internal.PreModuleBody
 goModuleBody stmts = evalState emptyLocalTable $ do
@@ -1226,6 +1155,7 @@ goConstructorDef retTy ConstructorDef {..} = do
   return
     Internal.ConstructorDef
       { _inductiveConstructorType = ty',
+        _inductiveConstructorNormalizedType = Nothing,
         _inductiveConstructorName = goSymbol _constructorName,
         _inductiveConstructorIsRecord = isRhsRecord _constructorRhs,
         _inductiveConstructorPragmas = pragmas',

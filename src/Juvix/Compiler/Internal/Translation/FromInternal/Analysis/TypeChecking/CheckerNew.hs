@@ -141,7 +141,7 @@ checkCoercionCycles = do
     notDecreasing cyclic ctab n =
       any
         ( \ci ->
-            ci ^. coercionInfoDecreasing == False
+            not (ci ^. coercionInfoDecreasing)
               && HashSet.member (ci ^. coercionInfoTarget . instanceAppHead) cyclic
         )
         cis
@@ -177,11 +177,27 @@ checkModuleBody ::
 checkModuleBody ModuleBody {..} = do
   _moduleImports' <- mapM checkImport _moduleImports
   _moduleStatements' <- mapM checkMutualBlock _moduleStatements
+  checkModulePositivity _moduleStatements'
   return
     ModuleBody
       { _moduleStatements = _moduleStatements',
         _moduleImports = _moduleImports'
       }
+
+checkModulePositivity ::
+  ( Members
+      '[ Reader InfoTable,
+         Error TypeCheckerError,
+         ResultBuilder,
+         Reader EntryPoint
+       ]
+      r
+  ) =>
+  [MutualBlock] ->
+  Sem r ()
+checkModulePositivity m = do
+  noPos <- asks (^. entryPointNoPositivity)
+  checkPositivity noPos m
 
 checkImport :: Import -> Sem r Import
 checkImport = return
@@ -234,6 +250,7 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
       let c' =
             ConstructorDef
               { _inductiveConstructorType = cty',
+                _inductiveConstructorNormalizedType = Nothing,
                 _inductiveConstructorName,
                 _inductiveConstructorIsRecord,
                 _inductiveConstructorPragmas,
@@ -245,16 +262,16 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
         ret = snd (viewConstructorType _inductiveConstructorType)
         errRet :: Expression -> Sem (Inference ': r) a
         errRet expected =
-          throw
-            ( ErrWrongReturnType
-                WrongReturnType
-                  { _wrongReturnTypeConstructorName = _inductiveConstructorName,
-                    _wrongReturnTypeExpected = expected,
-                    _wrongReturnTypeActual = ret
-                  }
-            )
+          throw $
+            ErrWrongReturnType
+              WrongReturnType
+                { _wrongReturnTypeConstructorName = _inductiveConstructorName,
+                  _wrongReturnTypeExpected = expected,
+                  _wrongReturnTypeActual = ret
+                }
 
 checkTopMutualBlock ::
+  forall r.
   (Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
   MutualBlock ->
   Sem r MutualBlock
@@ -263,25 +280,19 @@ checkTopMutualBlock (MutualBlock ds) =
     <$> runInferenceDefs
       ( do
           ls <- mapM checkMutualStatement ds
-          checkBlockPositivity (MutualBlock ls)
-          return ls
+          putConstructorNormalizedType ls
       )
-
-checkBlockPositivity ::
-  ( Members
-      '[ Reader InfoTable,
-         Error TypeCheckerError,
-         ResultBuilder,
-         Reader EntryPoint,
-         Inference
-       ]
-      r
-  ) =>
-  MutualBlock ->
-  Sem r ()
-checkBlockPositivity m = do
-  noPos <- asks (^. entryPointNoPositivity)
-  checkPositivity noPos m
+  where
+    putConstructorNormalizedType :: forall r'. (Members '[Inference] r') => NonEmpty MutualStatement -> Sem r' (NonEmpty MutualStatement)
+    putConstructorNormalizedType =
+      traverseOf
+        (each . _StatementInductive . inductiveConstructors . each)
+        goConstr
+      where
+        goConstr :: ConstructorDef -> Sem r' ConstructorDef
+        goConstr c = do
+          ty' <- strongNormalize (c ^. inductiveConstructorType)
+          return (set inductiveConstructorNormalizedType (Just ty') c)
 
 resolveCastHoles ::
   forall a r.
