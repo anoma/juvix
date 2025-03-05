@@ -67,8 +67,8 @@ buildDependencyInfoPreModule :: forall r. (Members '[Reader DependencyParams] r)
 buildDependencyInfoPreModule ms =
   buildDependencyInfoHelper (goPreModule ms >> addCastEdges)
 
--- | Compute dependency info of a mutual block with `_dependencyParamsInstance`
--- set to `False`. Used for positivity checking
+-- | Compute dependency info with `_dependencyParamsInstance` set to `False`.
+-- Used for positivity checking
 positivityNameDependencyInfo :: [PreStatement] -> NameDependencyInfo
 positivityNameDependencyInfo m =
   run
