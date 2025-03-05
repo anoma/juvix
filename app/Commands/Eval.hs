@@ -18,7 +18,7 @@ runCommand opts@EvalOptions {..} = do
   case mevalNode of
     Just evalNode -> do
       evopts <- evalOptionsToEvalOptions opts
-      md <- getRight . run . runError @JuvixError . runReader @Core.CoreOptions (project gopts) $ Core.applyTransformations Core.toEvalTransformations (Core.moduleFromInfoTable tab)
+      md <- getRight . run . runError @JuvixError . runReader @Core.CoreOptions (project gopts) $ Core.applyTransformations' Core.toEvalTransformations (Core.moduleFromInfoTable tab)
       let tab' = Core.computeCombinedInfoTable md
       Eval.evalAndPrint' (project gopts) (project opts) evopts tab' evalNode
     Nothing -> do

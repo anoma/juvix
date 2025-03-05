@@ -7,6 +7,7 @@ import Juvix.Compiler.Backend
 import Juvix.Compiler.Backend.Rust.Data.Result
 import Juvix.Compiler.Backend.Rust.Pretty
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Verification.Dumper
 import System.Directory
 import System.Environment qualified as E
 import System.Process qualified as P
@@ -34,7 +35,7 @@ compileAssertion tmpDir' root' optLevel mainFile expectedFile step = do
       <$> testDefaultEntryPointIO root' mainFile
   PipelineResult {..} <- snd <$> testRunIO entryPoint upToStoredCore
   step "Translate to RISC0 Rust"
-  case run $ runError @JuvixError $ runReader entryPoint $ storedCoreToRiscZeroRust (Core.combineInfoTables (_pipelineResult ^. Core.coreResultModule)) of
+  case run . runError @JuvixError . runReader entryPoint . ignoreDumper $ storedCoreToRiscZeroRust (Core.combineInfoTables (_pipelineResult ^. Core.coreResultModule)) of
     Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right Result {..} -> do
       let outDir = tmpDir <//> $(mkRelDir "out")

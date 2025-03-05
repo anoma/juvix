@@ -10,6 +10,7 @@ import Juvix.Compiler.Core.Data.Module
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation.FromSource
 import Juvix.Compiler.Pipeline.EntryPoint qualified as EntryPoint
+import Juvix.Compiler.Verification.Dumper
 import Juvix.Data.PPOutput
 
 newtype Test = Test
@@ -45,7 +46,7 @@ coreCompileAssertion' ::
   Assertion
 coreCompileAssertion' entryPoint optLevel tab mainFile expectedFile stdinText step = do
   step "Translate to JuvixAsm"
-  case run . runReader entryPoint' . runError $ storedCoreToAsm (moduleFromInfoTable tab) of
+  case run . runReader entryPoint' . runError . ignoreDumper $ storedCoreToAsm (moduleFromInfoTable tab) of
     Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right md -> do
       length (fromText (Asm.ppPrint md (computeCombinedInfoTable md)) :: String) `seq`
@@ -75,7 +76,7 @@ coreCompileAssertion root' mainFile expectedFile stdinText step = do
           <$> testDefaultEntryPointIO root' mainFile
       step "Transform JuvixCore"
       let tab0 = setupMainFunction defaultModuleId tabIni node
-      case run . runReader entryPoint . runError $ toStored (moduleFromInfoTable tab0) of
+      case run . runReader entryPoint . runError . ignoreDumper $ toStored (moduleFromInfoTable tab0) of
         Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right m -> do
           let tab = computeCombinedInfoTable m

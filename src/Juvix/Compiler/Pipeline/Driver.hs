@@ -55,6 +55,7 @@ import Juvix.Compiler.Store.Options qualified as StoredModule
 import Juvix.Compiler.Store.Options qualified as StoredOptions
 import Juvix.Compiler.Store.Scoped.Language (ScopedModuleTable)
 import Juvix.Compiler.Store.Scoped.Language qualified as Scoped
+import Juvix.Compiler.Verification.Dumper
 import Juvix.Data.CodeAnn
 import Juvix.Extra.Serialize qualified as Serialize
 import Juvix.Prelude
@@ -75,6 +76,7 @@ evalModuleInfoCacheSequential ::
          TopModuleNameChecker,
          Error JuvixError,
          Files,
+         Dumper,
          Concurrent,
          Logger,
          Reader EntryPoint,
@@ -104,10 +106,11 @@ evalModuleInfoCachePackageDotJuvix ::
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
+  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': Dumper ': r) a ->
   Sem r a
 evalModuleInfoCachePackageDotJuvix =
-  evalJvoCache
+  ignoreDumper
+    . evalJvoCache
     . ignoreProgressLog
     . evalCacheEmpty processModuleCacheMiss
 
@@ -149,6 +152,7 @@ evalModuleInfoCacheSetup ::
          Concurrent,
          Error JuvixError,
          Files,
+         Dumper,
          Reader ImportTree,
          Reader PipelineOptions,
          PathResolver
@@ -192,6 +196,7 @@ processModuleCacheMissDecide ::
       '[ ModuleInfoCache,
          Error JuvixError,
          Files,
+         Dumper,
          JvoCache,
          PathResolver
        ]
@@ -201,6 +206,7 @@ processModuleCacheMissDecide ::
          Error JuvixError,
          Reader Migration,
          Files,
+         Dumper,
          TaggedLock,
          TopModuleNameChecker,
          HighlightBuilder,
@@ -266,6 +272,7 @@ processModuleCacheMiss ::
          TopModuleNameChecker,
          Error JuvixError,
          Files,
+         Dumper,
          JvoCache,
          Reader Migration,
          ProgressLog,
@@ -569,7 +576,7 @@ processImports imports = do
 
 processModuleToStoredCore ::
   forall r.
-  (Members '[Reader Migration, ModuleInfoCache, PathResolver, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files] r) =>
+  (Members '[Reader Migration, ModuleInfoCache, PathResolver, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, Dumper] r) =>
   EntryPoint ->
   Sem r (PipelineResult Store.ModuleInfo)
 processModuleToStoredCore entry = over pipelineResult mkModuleInfo <$> processFileToStoredCore entry
@@ -589,7 +596,7 @@ processModuleToStoredCore entry = over pipelineResult mkModuleInfo <$> processFi
 
 processFileToStoredCore ::
   forall r.
-  (Members '[Reader Migration, ModuleInfoCache, HighlightBuilder, PathResolver, TopModuleNameChecker, Error JuvixError, Files] r) =>
+  (Members '[Reader Migration, ModuleInfoCache, HighlightBuilder, PathResolver, TopModuleNameChecker, Error JuvixError, Files, Dumper] r) =>
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore entry = do

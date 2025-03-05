@@ -49,14 +49,23 @@ import Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
+import Juvix.Compiler.Verification.Dumper (Dumper, ignoreDumper)
 
-applyTransformations ::
+applyTransformations' ::
   forall r.
   (Members '[Error JuvixError, Reader CoreOptions] r) =>
   [TransformationId] ->
   Module ->
   Sem r Module
-applyTransformations ts tbl = foldM (flip appTrans) tbl ts
+applyTransformations' ts md = ignoreDumper (applyTransformations ts md)
+
+applyTransformations ::
+  forall r.
+  (Members '[Error JuvixError, Dumper, Reader CoreOptions] r) =>
+  [TransformationId] ->
+  Module ->
+  Sem r Module
+applyTransformations ts = flip (foldM (flip appTrans)) ts
   where
     appTrans :: TransformationId -> Module -> Sem r Module
     appTrans = \case
