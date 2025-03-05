@@ -247,11 +247,10 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
       expectedRetTy <- lookupConstructorReturnType _inductiveConstructorName
       cty' <- checkIsType (getLoc _inductiveConstructorType) _inductiveConstructorType
       whenJustM (matchTypes expectedRetTy ret) (const (errRet expectedRetTy))
-      ncty' <- strongNormalize cty'
       let c' =
             ConstructorDef
               { _inductiveConstructorType = cty',
-                _inductiveConstructorNormalizedType = Just ncty',
+                _inductiveConstructorNormalizedType = Nothing,
                 _inductiveConstructorName,
                 _inductiveConstructorIsRecord,
                 _inductiveConstructorPragmas,
@@ -263,21 +262,37 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
         ret = snd (viewConstructorType _inductiveConstructorType)
         errRet :: Expression -> Sem (Inference ': r) a
         errRet expected =
-          throw
-            ( ErrWrongReturnType
-                WrongReturnType
-                  { _wrongReturnTypeConstructorName = _inductiveConstructorName,
-                    _wrongReturnTypeExpected = expected,
-                    _wrongReturnTypeActual = ret
-                  }
-            )
+          throw $
+            ErrWrongReturnType
+              WrongReturnType
+                { _wrongReturnTypeConstructorName = _inductiveConstructorName,
+                  _wrongReturnTypeExpected = expected,
+                  _wrongReturnTypeActual = ret
+                }
 
 checkTopMutualBlock ::
+  forall r.
   (Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
   MutualBlock ->
   Sem r MutualBlock
 checkTopMutualBlock (MutualBlock ds) =
-  MutualBlock <$> runInferenceDefs (mapM checkMutualStatement ds)
+  MutualBlock
+    <$> runInferenceDefs
+      ( do
+          ls <- mapM checkMutualStatement ds
+          putConstructorNormalizedType ls
+      )
+  where
+    putConstructorNormalizedType :: forall r'. (Members '[Inference] r') => NonEmpty MutualStatement -> Sem r' (NonEmpty MutualStatement)
+    putConstructorNormalizedType =
+      traverseOf
+        (each . _StatementInductive . inductiveConstructors . each)
+        goConstr
+      where
+        goConstr :: ConstructorDef -> Sem r' ConstructorDef
+        goConstr c = do
+          ty' <- strongNormalize (c ^. inductiveConstructorType)
+          return (set inductiveConstructorNormalizedType (Just ty') c)
 
 resolveCastHoles ::
   forall a r.
