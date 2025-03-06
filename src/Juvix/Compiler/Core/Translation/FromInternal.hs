@@ -1307,7 +1307,8 @@ goIden ::
   Internal.Iden ->
   Sem r Node
 goIden i = do
-  let undeclared =
+  let undeclared :: (HasCallStack) => a
+      undeclared =
         error
           ( "internal to core: undeclared identifier: "
               <> txt

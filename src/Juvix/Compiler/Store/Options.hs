@@ -16,7 +16,9 @@ data Options = Options
     _optionsOptimizationLevel :: Int,
     _optionsInliningDepth :: Int,
     _optionsFieldSize :: Natural,
-    _optionsPipeline :: Maybe Pipeline
+    _optionsPipeline :: Maybe Pipeline,
+    -- True for main file, False for imported files
+    _optionsMainFile :: Bool
   }
   deriving stock (Show, Eq, Generic)
 
@@ -39,7 +41,8 @@ fromEntryPoint EntryPoint {..} =
       _optionsOptimizationLevel = _entryPointOptimizationLevel,
       _optionsInliningDepth = _entryPointInliningDepth,
       _optionsFieldSize = _entryPointFieldSize,
-      _optionsPipeline = _entryPointPipeline
+      _optionsPipeline = _entryPointPipeline,
+      _optionsMainFile = _entryPointMainFile == _entryPointModulePath
     }
 
 getOptionsSubdir :: Options -> Path Rel Dir
