@@ -225,3 +225,34 @@ tests:
     exit-status: 0
     stdout: |
       hello world!
+
+  - name: module-with-main-function
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        cd $temp
+        juvix init
+
+        cat <<-EOF > A.juvix
+        module A;
+        import Stdlib.Prelude open;
+        foo : Nat := 5;
+        main : Nat := foo;
+        EOF
+
+        cat <<-EOF > B.juvix
+        module B;
+        import Stdlib.Prelude open;
+        import A;
+        bar : Nat := A.foo;
+        main : Nat := bar + 1;
+        EOF
+
+        juvix --log-level error compile native A.juvix
+        juvix --log-level error compile native B.juvix
+        ./B
+    exit-status: 0
+    stdout: |
+      6
