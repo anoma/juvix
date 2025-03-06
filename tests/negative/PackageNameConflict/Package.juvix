@@ -3,7 +3,7 @@ module Package;
 import PackageDescription.V2 open;
 
 package : Package :=
-  defaultPackage@?{
-    name := "ambiguouspackageid";
+  defaultPackage@{
+    name := "packageNameConflict";
     dependencies := [path "dep1"; path "dep2"];
   };
