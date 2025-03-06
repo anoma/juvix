@@ -8,6 +8,7 @@ extra-deps:
       - effectful-th
   - git: https://github.com/Vekhir/aeson-better-errors.git
     commit: 1ec49ab7d1472046b680b5a64ae2930515b47714
+  - megaparsec-9.7.0@sha256:77e331b4240385974e68d1f8d5ca9014274983cc9ccb8caced743d360c3a409f,3407
 allow-newer: true
 allow-newer-deps:
   - aeson-better-errors
