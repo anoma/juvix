@@ -6,7 +6,7 @@ import Text.Megaparsec qualified as M
 import Text.Megaparsec.Error (errorOffset)
 
 instance Pretty MegaparsecError where
-  pretty (MegaparsecError b) = pretty (M.errorBundlePretty b)
+  pretty (MegaparsecError b) = pretty (M.errorBundlePrettyWith (\_ _ -> M.parseErrorTextPretty) b)
 
 instance HasLoc MegaparsecError where
   getLoc (MegaparsecError b) = singletonInterval (mkLoc offset sourcePos)

@@ -79,7 +79,7 @@ dependencies:
   - hashable == 1.4.*
   - language-c == 0.9.*
   - libyaml == 0.1.*
-  - megaparsec == 9.6.*
+  - megaparsec == 9.7.*
   - commonmark == 0.2.*
   - parsec == 3.1.*
   - lens == 5.2.*
