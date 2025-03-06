@@ -4,5 +4,6 @@ import PackageDescription.V2 open;
 
 package : Package :=
   defaultPackage@{
+    name := "home";
     dependencies := [];
   };
