@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 module Juvix.Compiler.Tree.Translation.FromSource.Lexer.Base
   ( module Juvix.Compiler.Tree.Translation.FromSource.Lexer.Base,
     module Juvix.Parser.Lexer,
@@ -5,6 +7,7 @@ module Juvix.Compiler.Tree.Translation.FromSource.Lexer.Base
 where
 
 import Juvix.Data.Keyword
+import Juvix.Parser.Error.Base
 import Juvix.Parser.Lexer
 import Juvix.Prelude
 import Text.Megaparsec as P hiding (sepBy1, sepEndBy1, some)
@@ -25,8 +28,8 @@ symbol = void . L.symbol space
 integer :: ParsecS r (WithLoc Integer)
 integer = lexeme integer'
 
-number :: Int -> Int -> ParsecS r (WithLoc Int)
-number = number' integer
+number :: forall e r. (FromSimpleParserError e, Member (Error e) r) => Int -> Int -> ParsecS r (WithLoc Int)
+number = number' @e integer
 
 field :: ParsecS r (Integer, Interval)
 field = lexemeInterval field'

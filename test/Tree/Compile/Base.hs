@@ -62,7 +62,7 @@ treeCompileAssertion root' mainFile expectedFile stdinText step = do
   step "Parse"
   s <- readFile mainFile
   case runParser mainFile s of
-    Left err -> assertFailure (prettyString err)
+    Left err -> assertFailure (renderStringDefault err)
     Right md -> do
       entryPoint <-
         set entryPointPipeline (Just EntryPoint.PipelineExec)

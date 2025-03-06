@@ -32,28 +32,27 @@ parseAsmSig =
       _parserSigEmptyExtra = mempty
     }
 
-parseText :: Text -> Either MegaparsecError Module
+parseText :: Text -> Either ParserError Module
 parseText = runParser noFile
 
-parseText' :: BuilderState -> Text -> Either MegaparsecError BuilderState
+parseText' :: BuilderState -> Text -> Either ParserError BuilderState
 parseText' bs = runParser' bs noFile
 
-runParser :: Path Abs File -> Text -> Either MegaparsecError Module
+runParser :: Path Abs File -> Text -> Either ParserError Module
 runParser = runParserS parseAsmSig
 
-runParser' :: BuilderState -> Path Abs File -> Text -> Either MegaparsecError BuilderState
+runParser' :: BuilderState -> Path Abs File -> Text -> Either ParserError BuilderState
 runParser' = runParserS' parseAsmSig
 
 parseCode ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Code
 parseCode = P.sepEndBy command (kw delimSemicolon)
 
 command ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Command
 command = do
-  off <- P.getOffset
   (txt, i) <- identifierL
   let loc = Just i
   case txt of
@@ -141,10 +140,10 @@ command = do
     "tsave" ->
       parseSave loc True
     _ ->
-      parseFailure off ("unknown instruction: " ++ fromText txt)
+      parseFailure' i ("unknown instruction: " ++ fromText txt)
 
 parseSave ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   Maybe Interval ->
   Bool ->
   ParsecS r Command
@@ -165,12 +164,12 @@ parseSave loc isTail = do
       )
 
 value ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Value
 value = (Constant <$> constant) <|> (Ref <$> memRef @Code @(Maybe FunctionInfoExtra))
 
 instrAllocClosure ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrAllocClosure
 instrAllocClosure = do
   sym <- funSymbol @Code @(Maybe FunctionInfoExtra) @DirectRef
@@ -183,7 +182,7 @@ instrExtendClosure = do
   return $ InstrExtendClosure (fromInteger argsNum)
 
 instrCall ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrCall
 instrCall = do
   ct <- parseCallType
@@ -197,7 +196,7 @@ instrCall = do
   return (InstrCall ct argsNum)
 
 parseCallType ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r CallType
 parseCallType = (kw kwDollar $> CallClosure) <|> (CallFun <$> funSymbol @Code @(Maybe FunctionInfoExtra) @DirectRef)
 
@@ -207,12 +206,12 @@ instrCallClosures = do
   return (InstrCallClosures (fromInteger argsNum))
 
 branchCode ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Code
 branchCode = braces parseCode <|> (command >>= \x -> return [x])
 
 trueBranch ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Code
 trueBranch = do
   symbol "true:"
@@ -221,7 +220,7 @@ trueBranch = do
   return c
 
 falseBranch ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Code
 falseBranch = do
   symbol "false:"
@@ -230,7 +229,7 @@ falseBranch = do
   return c
 
 caseBranch ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r CaseBranch
 caseBranch = do
   tag <- P.try $ constrTag @Code @(Maybe FunctionInfoExtra) @DirectRef
@@ -240,7 +239,7 @@ caseBranch = do
   return c
 
 defaultBranch ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Code
 defaultBranch = do
   symbol "default:"

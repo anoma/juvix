@@ -2,6 +2,7 @@ module Juvix.Compiler.Core.Error where
 
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty
+import Juvix.Parser.Error.Base
 
 data CoreError = CoreError
   { _coreErrorMsg :: AnsiText,
@@ -10,6 +11,9 @@ data CoreError = CoreError
   }
 
 makeLenses ''CoreError
+
+instance FromSimpleParserError CoreError where
+  fromSimpleParserError e = CoreError (mkAnsiText (e ^. simpleParserErrorMessage)) Nothing (getLoc e)
 
 instance ToGenericError CoreError where
   genericError e = ask >>= generr

@@ -39,7 +39,7 @@ checkCoreError :: CheckError
 checkCoreError e =
   unless
     (isJust (fromJuvixError @CoreError e))
-    (assertFailure ("Expected core error got: " <> unpack (renderTextDefault e)))
+    (assertFailure ("Expected core error got: " <> renderStringDefault e))
 
 allTests :: TestTree
 allTests =

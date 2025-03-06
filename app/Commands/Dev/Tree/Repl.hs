@@ -56,7 +56,7 @@ readProgram f = do
   bs <- State.gets (^. replStateBuilderState)
   txt <- readFile f
   case parseText' bs txt of
-    Left e -> error (show e)
+    Left e -> error (renderTextDefault e)
     Right bs' ->
       State.modify (set replStateBuilderState bs')
 
@@ -77,7 +77,7 @@ readNode :: String -> Repl Node
 readNode s = do
   bs <- State.gets (^. replStateBuilderState)
   case parseNodeText' bs replFile (strip (pack s)) of
-    Left e -> error (show e)
+    Left e -> error (renderTextDefault e)
     Right (bs', n) -> do
       State.modify (set replStateBuilderState bs')
       return n

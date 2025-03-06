@@ -63,7 +63,7 @@ root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/negative")
 
 wrongError :: JuvixError -> Maybe FailMsg
-wrongError e = Just ("unexpected error: " <> unpack (renderTextDefault e))
+wrongError e = Just ("unexpected error: " <> renderStringDefault e)
 
 tests :: [NegTest]
 tests =

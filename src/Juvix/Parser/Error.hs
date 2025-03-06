@@ -20,6 +20,7 @@ import Text.Parsec.Pos qualified as P
 
 data ParserError
   = ErrMegaparsec MegaparsecError
+  | ErrSimpleParserError SimpleParserError
   | ErrCommonmark CommonmarkError
   | ErrWrongTopModuleName WrongTopModuleName
   | ErrWrongTopModuleNameOrphan WrongTopModuleNameOrphan
@@ -38,9 +39,13 @@ data ParserError
   | ErrExpectedResultType ExpectedResultTypeError
   | ErrExpectedColonEquals ExpectedColonEqualsError
 
+instance FromSimpleParserError ParserError where
+  fromSimpleParserError = ErrSimpleParserError
+
 instance ToGenericError ParserError where
   genericError = \case
     ErrMegaparsec e -> genericError e
+    ErrSimpleParserError e -> genericError e
     ErrCommonmark e -> genericError e
     ErrWrongTopModuleName e -> genericError e
     ErrWrongTopModuleNameOrphan e -> genericError e
