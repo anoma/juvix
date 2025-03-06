@@ -29,6 +29,7 @@ data GlobalOptions = GlobalOptions
     _globalFieldSize :: Maybe Natural,
     _globalOffline :: Bool,
     _globalLogLevel :: LogLevel,
+    _globalUnsafeIgnorePackageNameConflicts :: Bool,
     _globalDevShowThreadIds :: Bool
   }
   deriving stock (Eq, Show)
@@ -75,6 +76,7 @@ defaultGlobalOptions =
       _globalNoCheck = False,
       _globalFieldSize = Nothing,
       _globalDevShowThreadIds = False,
+      _globalUnsafeIgnorePackageNameConflicts = False,
       _globalOffline = False
     }
 
@@ -155,6 +157,12 @@ parseGlobalFlags = do
                 <> intercalate " < " [show l | l <- allElements @LogLevel]
             )
       )
+  _globalUnsafeIgnorePackageNameConflicts <-
+    switch
+      ( long "unsafe-ignore-package-name-conflicts"
+          <> help "[UNSAFE] Allow the same package to be used with different versions"
+      )
+
   _globalNoCheck <-
     switch
       ( long "dev-no-check"

@@ -20,9 +20,10 @@ import Juvix.Compiler.Pipeline.Driver
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree (withImportTree)
+import Juvix.Compiler.Pipeline.Options
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
-import Juvix.Compiler.Pipeline.Run (defaultPipelineOptions, evalModuleInfoCacheHelper)
+import Juvix.Compiler.Pipeline.Run (evalModuleInfoCacheHelper)
 import Juvix.Compiler.Store.Extra qualified as Store
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process (runProcessIO)
@@ -183,7 +184,7 @@ compileReplInputIO fp txt = do
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
     . runDependencyResolver
-    . runReader defaultDependenciesConfig
+    . mapReader (^. pipelineDependenciesConfig)
     . runPathResolverArtifacts
     . runTopModuleNameChecker
     . runReader defaultImportScanStrategy

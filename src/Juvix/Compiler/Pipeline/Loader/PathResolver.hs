@@ -479,7 +479,7 @@ runPathResolver2 st topEnv arg = do
     )
     $ do
       pkgs <- toList <$> getPackageInfos
-      checkPackageNameConflicts pkgs
+      unless (depsConfig ^. dependenciesConfigIgnorePackageNameConflicts) (checkPackageNameConflicts pkgs)
       arg
   where
     handler ::
