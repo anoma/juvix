@@ -160,6 +160,7 @@ fromCore' tab =
         BuiltinByteArray -> False
         BuiltinByteArrayFromListByte -> False
         BuiltinByteArrayLength -> False
+        BuiltinRangeCheck -> False
       BuiltinTypeInductive i -> case i of
         BuiltinList -> True
         BuiltinEq -> True

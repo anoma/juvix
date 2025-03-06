@@ -51,6 +51,7 @@ instance PrettyCode BuiltinOp where
     OpStrConcat -> return primStrConcat
     OpStrToInt -> return primStrToInt
     OpAssert -> return primAssert
+    OpRangeCheck -> return primRangeCheck
     OpSeq -> return primSeq
     OpTrace -> return primTrace
     OpFail -> return primFail
@@ -930,6 +931,9 @@ kwDef = keyword Str.def
 
 primAssert :: Doc Ann
 primAssert = primitive Str.assert_
+
+primRangeCheck :: Doc Ann
+primRangeCheck = primitive Str.rangeCheck
 
 primSeq :: Doc Ann
 primSeq = primitive Str.seqq_

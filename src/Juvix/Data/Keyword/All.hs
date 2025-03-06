@@ -340,6 +340,9 @@ kwEcOp = asciiKw Str.instrEcOp
 kwRandomEcPoint :: Keyword
 kwRandomEcPoint = asciiKw Str.cairoRandomEcPoint
 
+kwRangeCheck :: Keyword
+kwRangeCheck = asciiKw Str.instrRangeCheck
+
 kwAlloc :: Keyword
 kwAlloc = asciiKw Str.instrAlloc
 

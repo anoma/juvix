@@ -209,6 +209,7 @@ isDebugOp = \case
       OpFail -> True
       OpSeq -> True
       OpAssert -> True
+      OpRangeCheck -> False
       OpAnomaSha256 -> False
       OpAnomaByteArrayFromAnomaContents -> False
       OpAnomaByteArrayToAnomaContents -> False
@@ -511,6 +512,7 @@ builtinOpArgTypes = \case
   OpStrConcat -> [mkTypeString', mkTypeString']
   OpStrToInt -> [mkTypeString']
   OpAssert -> [mkTypeBool']
+  OpRangeCheck -> [mkTypeField', mkTypeField']
   OpSeq -> [mkDynamic', mkDynamic']
   OpTrace -> [mkDynamic']
   OpFail -> [mkTypeString']

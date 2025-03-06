@@ -28,6 +28,7 @@ data BuiltinOp
   | OpStrToInt
   | OpSeq
   | OpAssert
+  | OpRangeCheck
   | OpTrace
   | OpFail
   | OpAnomaGet
@@ -120,6 +121,7 @@ builtinOpArgsNum = \case
   OpStrToInt -> 1
   OpSeq -> 2
   OpAssert -> 1
+  OpRangeCheck -> 2
   OpTrace -> 1
   OpFail -> 1
   OpAnomaGet -> 1
@@ -222,6 +224,7 @@ builtinIsFoldable = \case
   OpPoseidonHash -> False
   OpEc -> False
   OpRandomEcPoint -> False
+  OpRangeCheck -> False
   OpUInt8ToInt -> True
   OpUInt8FromInt -> True
   OpByteArrayFromListByte -> False
@@ -231,7 +234,7 @@ builtinsString :: [BuiltinOp]
 builtinsString = [OpStrConcat, OpStrToInt, OpShow]
 
 builtinsCairo :: [BuiltinOp]
-builtinsCairo = [OpPoseidonHash, OpEc, OpRandomEcPoint]
+builtinsCairo = [OpPoseidonHash, OpEc, OpRandomEcPoint, OpRangeCheck]
 
 builtinsAnoma :: [BuiltinOp]
 builtinsAnoma =

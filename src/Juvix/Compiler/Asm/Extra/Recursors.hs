@@ -202,7 +202,7 @@ recurse' sig = go True
               return (pushValueStack ty2 (popValueStack 1 mem))
 
         fixMemCairo :: Memory -> CairoOp -> Sem r Memory
-        fixMemCairo mem op = do
+        fixMemCairo mem op =
           return (pushValueStack TyDynamic (popValueStack (cairoOpArgsNum op) mem))
 
         fixMemExtendClosure :: Memory -> InstrExtendClosure -> Sem r Memory

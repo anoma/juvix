@@ -1329,6 +1329,7 @@ holesHelper mhint expr = do
             Just BuiltinBoolOr -> checkBuiltinApp n 0 2 args
             Just BuiltinBoolAnd -> checkBuiltinApp n 0 2 args
             Just BuiltinSeq -> checkBuiltinApp n 2 2 args
+            Just BuiltinAssert -> checkBuiltinApp n 0 1 args
             _ -> return ()
         _ -> return ()
 
