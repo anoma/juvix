@@ -14,7 +14,6 @@ where
 
 import Juvix.Prelude.Base.Foundation
 import Juvix.Prelude.Effects.Base
-import Safe
 
 data Input (i :: GHCType) :: Effect
 

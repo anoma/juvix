@@ -12,7 +12,7 @@ module Juvix.Compiler.Pipeline.Loader.PathResolver
     findPackageJuvixFiles,
     importNodePackageId,
     mkPackageInfoPackageId,
-    checkConflicts,
+    checkPackageNameConflicts,
   )
 where
 
@@ -41,22 +41,30 @@ import Juvix.Extra.Paths
 import Juvix.Extra.Stdlib (ensureStdlib)
 import Juvix.Prelude
 
-checkConflicts :: forall r'. (Members '[Error JuvixError] r') => [PackageInfo] -> Sem r' ()
-checkConflicts pkgs = do
-  let reps = findRepeatedOn (^. packageInfoPackageId) pkgs
-  case nonEmpty reps of
-    Just (rep :| _) -> errRep rep
-    Nothing -> return ()
+-- | Checks that a package (identified by name) does not appear with different
+-- versions
+checkPackageNameConflicts :: forall r'. (Members '[Error JuvixError] r') => [PackageInfo] -> Sem r' ()
+checkPackageNameConflicts pkgs = do
+  let byname = map fst (findRepeatedOn (^. packageInfoPackageId . packageIdName) pkgs)
+  forM_ byname checkPackageName
   where
-    errRep :: ((PackageInfo, NonEmpty PackageInfo), PackageId) -> Sem r' ()
-    errRep ((p, ps), pid) =
-      throw
-        . JuvixError
-        $ ErrAmbiguousPackageId
-          AmbiguousPackageId
-            { _ambiguousPackageId = pid,
-              _ambiguousPackageIdPackages = NonEmpty.cons p ps
-            }
+    checkPackageName :: (PackageInfo, NonEmpty PackageInfo) -> Sem r' ()
+    checkPackageName (pkg, others) = ignoreFail $ do
+      pkgsDiffVer :: NonEmpty PackageInfo <- failMaybe (nonEmpty (filter ((/= ver) . getVer) (toList others)))
+      let indexedByVer :: HashMap SemVer (NonEmpty PackageInfo) = indexedByHashList getVer pkgsDiffVer
+      diffVers :: NonEmpty (SemVer, NonEmpty PackageInfo) <- failMaybe (nonEmpty (HashMap.toList indexedByVer))
+      let diffVers' :: NonEmpty (SemVer, NonEmpty (Path Abs Dir)) =
+            over (each . _2 . each) (^. packageRoot) diffVers
+      throw . JuvixError . ErrPackageNameConflict $
+        PackageNameConflict
+          { _packageNameConflictPackage = pkg,
+            _packageNameConflictVersions = NonEmpty.cons (ver, pure (pkg ^. packageRoot)) diffVers'
+          }
+      where
+        getVer = (^. packageInfoPackageId . packageIdVersion)
+
+        ver :: SemVer
+        ver = getVer pkg
 
 mkPackage ::
   forall r.
@@ -470,9 +478,8 @@ runPathResolver2 st topEnv arg = do
       handler
     )
     $ do
-      _pkgs <- toList <$> getPackageInfos
-      -- I think we should not check for conflicts
-      -- checkConflicts pkgs
+      pkgs <- toList <$> getPackageInfos
+      unless (depsConfig ^. dependenciesConfigIgnorePackageNameConflicts) (checkPackageNameConflicts pkgs)
       arg
   where
     handler ::

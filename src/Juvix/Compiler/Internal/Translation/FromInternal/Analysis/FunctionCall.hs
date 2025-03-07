@@ -7,7 +7,6 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Data
 import Juvix.Prelude
-import Safe (headMay)
 
 viewCall ::
   forall r.

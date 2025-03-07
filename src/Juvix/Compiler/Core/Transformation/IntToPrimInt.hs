@@ -3,7 +3,6 @@ module Juvix.Compiler.Core.Transformation.IntToPrimInt where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
-import Safe (headMay)
 
 data BuiltinIntCtor
   = BuiltinIntCtorOfNat

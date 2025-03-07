@@ -10,7 +10,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker (TopModuleNameChecker, runTopModuleNameChecker)
-import Juvix.Compiler.Concrete.Translation.ImportScanner (ImportScanStrategy, defaultImportScanStrategy)
+import Juvix.Compiler.Concrete.Translation.ImportScanner (ImportScanStrategy)
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Translation qualified as Internal
@@ -213,7 +213,7 @@ runReplPipelineIOEither' lockMode entry = do
       . runReader defaultPipelineOptions
       . runLoggerIO replLoggerOptions
       . runConcurrent
-      . runReader defaultNumThreads
+      . mapReader (^. pipelineNumThreads)
       . evalInternet hasInternet
       . evalHighlightBuilder
       . runError
@@ -229,10 +229,10 @@ runReplPipelineIOEither' lockMode entry = do
       . mapError (JuvixError @PackageLoaderError)
       . runEvalFileEffIO
       . runDependencyResolver
-      . runReader defaultDependenciesConfig
+      . mapReader (^. pipelineDependenciesConfig)
       . runPathResolver'
       . runTopModuleNameChecker
-      . runReader defaultImportScanStrategy
+      . mapReader (^. pipelineImportStrategy)
       . withImportTree (entry ^. entryPointModulePath)
       . runMigration
       . evalModuleInfoCacheHelper

@@ -7,7 +7,6 @@ import Data.Aeson.TH
 import Juvix.Extra.Clang
 import Juvix.Extra.Version qualified as V
 import Network.HTTP.Simple
-import Safe (headMay)
 import System.Environment qualified as E
 import System.Process qualified as P
 import Text.Read (readMaybe)

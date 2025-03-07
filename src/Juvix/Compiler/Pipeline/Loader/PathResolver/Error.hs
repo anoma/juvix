@@ -94,9 +94,7 @@ data PathResolverError
   = ErrDependencyConflict DependencyConflict
   | ErrMissingModule MissingModule
   | ErrPackageInvalidImport PackageInvalidImport
-  | -- | The ErrAmbiguousPackageId error is unused at the moment. We append the
-    -- hash of all project files to the pre-release tag of the package version.
-    ErrAmbiguousPackageId AmbiguousPackageId
+  | ErrPackageNameConflict PackageNameConflict
   deriving stock (Show)
 
 instance ToGenericError PathResolverError where
@@ -118,14 +116,14 @@ instance HasLoc PathResolverError where
       getLoc _missingModule
     ErrPackageInvalidImport PackageInvalidImport {..} ->
       getLoc _packageInvalidImport
-    ErrAmbiguousPackageId a -> getLoc a
+    ErrPackageNameConflict a -> getLoc a
 
 instance PrettyCodeAnn PathResolverError where
   ppCodeAnn = \case
     ErrDependencyConflict e -> ppCodeAnn e
     ErrMissingModule e -> ppCodeAnn e
     ErrPackageInvalidImport e -> ppCodeAnn e
-    ErrAmbiguousPackageId e -> ppCodeAnn e
+    ErrPackageNameConflict e -> ppCodeAnn e
 
 data DependencyConflict = DependencyConflict
   { _conflictPackages :: NonEmpty PackageInfo,
@@ -191,21 +189,28 @@ instance PrettyCodeAnn PackageInvalidImport where
         <> line
         <> "Package files may only import modules from the Juvix standard library, Juvix.Builtin modules, or from the PackageDescription module."
 
-data AmbiguousPackageId = AmbiguousPackageId
-  { _ambiguousPackageId :: PackageId,
-    _ambiguousPackageIdPackages :: NonEmpty PackageInfo
+data PackageNameConflict = PackageNameConflict
+  { _packageNameConflictPackage :: PackageInfo,
+    -- | Must contain at least two elements
+    _packageNameConflictVersions :: NonEmpty (SemVer, NonEmpty (Path Abs Dir))
   }
   deriving stock (Show)
 
-instance HasLoc AmbiguousPackageId where
-  getLoc AmbiguousPackageId {..} = intervalFromFile ((head _ambiguousPackageIdPackages) ^. packageRoot <//> packageFilePath)
+instance HasLoc PackageNameConflict where
+  getLoc PackageNameConflict {..} = intervalFromFile (_packageNameConflictPackage ^. packageRoot <//> packageFilePath)
 
-instance PrettyCodeAnn AmbiguousPackageId where
-  ppCodeAnn AmbiguousPackageId {..} = do
-    "Ambiguous package id:"
-      <> line
-      <> ppCodeAnn _ambiguousPackageId
-      <> line
-      <> "The above package id is the same for the following packages"
-      <> line
-      <> itemize ((pretty . (^. packageRoot)) <$> _ambiguousPackageIdPackages)
+instance PrettyCodeAnn PackageNameConflict where
+  ppCodeAnn PackageNameConflict {..} = do
+    "The package"
+      <+> important (pretty pkgName)
+      <+> "is used with different versions:"
+        <> line
+        <> itemize
+          [ "version"
+              <+> (important . pretty . prettySemVer $ ver)
+                <> line
+                <> indent' (itemize ["at" <+> important (pretty p) | p <- toList paths])
+            | (ver, paths) <- toList _packageNameConflictVersions
+          ]
+    where
+      pkgName = _packageNameConflictPackage ^. packageInfoPackageId . packageIdName

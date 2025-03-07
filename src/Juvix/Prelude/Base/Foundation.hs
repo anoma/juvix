@@ -4,71 +4,72 @@
 module Juvix.Prelude.Base.Foundation
   ( module Juvix.Prelude.Base.Foundation,
     module Control.Applicative,
-    module Data.Tree,
-    module Data.Versions,
-    module Data.Graph,
-    module Text.Show.Unicode,
-    module Data.Map.Strict,
-    module Data.Set,
-    module Data.IntMap.Strict,
-    module Data.IntSet,
     module Control.DeepSeq,
+    module Control.Lens,
+    module Control.Monad.Catch,
     module Control.Monad.Extra,
     module Control.Monad.Fix,
+    module Control.Monad.Zip,
+    module Data.Bifunctor,
     module Data.Bitraversable,
     module Data.Bool,
     module Data.Char,
     module Data.Either.Extra,
-    module Data.Bifunctor,
     module Data.Eq,
     module Data.Foldable,
     module Data.Function,
     module Data.Functor,
-    module Safe.Exact,
-    module Safe.Foldable,
+    module Data.Functor.Identity,
+    module Data.Graph,
     module Data.Hashable,
     module Data.Int,
+    module Data.IntMap.Strict,
+    module Data.IntSet,
     module Data.List.Extra,
     module Data.List.NonEmpty.Extra,
+    module Data.Map.Strict,
     module Data.Maybe,
     module Data.Monoid,
     module Data.Ord,
     module Data.Semigroup,
-    module Prelude,
+    module Data.Serialize,
+    module Data.Set,
     module Data.Singletons,
     module Data.Singletons.Sigma,
     module Data.Singletons.TH,
     module Data.Stream,
     module Data.String,
+    module Data.String.Interpolate,
     module Data.Text.Encoding,
     module Data.Text.IO,
     module Data.Text.IO.Utf8,
     module Data.Traversable,
-    module Data.Functor.Identity,
+    module Data.Tree,
     module Data.Tuple.Extra,
-    module GHC.Conc,
     module Data.Typeable,
+    module Data.Versions,
     module Data.Void,
     module Data.Word,
+    module GHC.Conc,
     module GHC.Enum,
     module GHC.Generics,
     module GHC.Num,
     module GHC.Real,
     module GHC.Utils.Misc,
-    module Control.Lens,
     module Language.Haskell.TH.Syntax,
-    module Prettyprinter,
     module Numeric,
+    module Path,
+    module Prelude,
+    module Prettyprinter,
+    module Safe,
+    module Safe.Exact,
+    module Safe.Foldable,
     module System.Exit,
     module System.FilePath,
-    module Path,
     module System.IO,
-    module Text.Show,
     module Text.Read,
-    module Control.Monad.Catch,
-    module Control.Monad.Zip,
-    module Data.String.Interpolate,
-    module Data.Serialize,
+    module Text.Show,
+    module Text.Show.Unicode,
     Data,
     Text,
     pack,
@@ -221,6 +222,7 @@ import Path (Abs, Dir, File, Path, Rel, SomeBase (..))
 import Path qualified as PPath
 import Path.IO qualified as Path hiding (getCurrentDir, setCurrentDir, withCurrentDir)
 import Prettyprinter (Doc, (<+>))
+import Safe (headMay)
 import Safe.Exact
 import Safe.Foldable
 import System.Exit hiding (exitFailure, exitSuccess)
@@ -753,6 +755,13 @@ intMap = IntMap.fromList . toList
 indexedByInt :: (Foldable f) => (a -> Int) -> f a -> IntMap a
 indexedByInt getIx l = intMap [(getIx i, i) | i <- toList l]
 
+indexedByHashList ::
+  (Foldable f, Hashable k) =>
+  (a -> k) ->
+  f a ->
+  HashMap k (NonEmpty a)
+indexedByHashList getIx l = hashMapWith (<>) [(getIx i, pure i) | i <- toList l]
+
 indexedByHash :: (Foldable f, Hashable k) => (a -> k) -> f a -> HashMap k a
 indexedByHash getIx l = hashMap [(getIx i, i) | i <- toList l]
 
@@ -781,6 +790,9 @@ ordNubSort = toList . ordSet
 
 ordMap :: (Foldable f, Ord k) => f (k, v) -> Map k v
 ordMap = Map.fromList . toList
+
+hashMapWith :: (Foldable f, Hashable k) => (v -> v -> v) -> f (k, v) -> HashMap k v
+hashMapWith aggr = HashMap.fromListWith aggr . toList
 
 hashMap :: (Foldable f, Hashable k) => f (k, v) -> HashMap k v
 hashMap = HashMap.fromList . toList

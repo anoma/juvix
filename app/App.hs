@@ -298,16 +298,6 @@ runPipeline opts input_ =
   runPipelineLogger opts input_
     . inject
 
-runPipelineRecursive ::
-  forall r.
-  (Members '[App, EmbedIO, Logger, TaggedLock] r) =>
-  Maybe (AppPath File) ->
-  Sem r (InternalTypedResult, [InternalTypedResult])
-runPipelineRecursive input_ = do
-  args <- askArgs
-  entry <- getEntryPoint' args input_
-  runReader defaultPipelineOptions (runPipelineHtmlEither entry) >>= fromRightJuvixError
-
 runPipelineHtml ::
   (Members '[App, EmbedIO, Logger, TaggedLock] r) =>
   Bool ->
@@ -320,16 +310,15 @@ runPipelineHtml bNonRecursive input_
   | otherwise = do
       args <- askArgs
       entry <- getEntryPoint' args input_
-      runReader defaultPipelineOptions (runPipelineHtmlEither entry) >>= fromRightJuvixError
+      runPipelineOptions (runPipelineHtmlEither entry) >>= fromRightJuvixError
 
 runPipelineOptions :: (Members '[App] r) => Sem (Reader PipelineOptions ': r) a -> Sem r a
 runPipelineOptions m = do
   g <- askGlobalOptions
-  let opt =
-        defaultPipelineOptions
-          { _pipelineNumThreads = g ^. globalNumThreads,
-            _pipelineShowThreadId = g ^. globalDevShowThreadIds
-          }
+  let opt = run . execState defaultPipelineOptions $ do
+        modify (set pipelineNumThreads (g ^. globalNumThreads))
+        modify (set (pipelineDependenciesConfig . dependenciesConfigIgnorePackageNameConflicts) (g ^. globalUnsafeIgnorePackageNameConflicts))
+        modify (set pipelineShowThreadId (g ^. globalDevShowThreadIds))
   runReader opt m
 
 runPipelineEntry :: (Members '[App, Logger, EmbedIO, TaggedLock] r) => EntryPoint -> Sem (PipelineEff r) a -> Sem r a

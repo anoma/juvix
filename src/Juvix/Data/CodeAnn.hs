@@ -3,6 +3,7 @@ module Juvix.Data.CodeAnn
     module Juvix.Data.NameKind,
     module Juvix.Prelude.Pretty,
     module Juvix.Data.CodeReference,
+    module Data.Versions,
   )
 where
 
@@ -257,6 +258,9 @@ kwDot = delimiter "."
 
 kwAt :: Doc Ann
 kwAt = keyword Str.at_
+
+important :: Doc Ann -> Doc Ann
+important = annotate AnnImportant
 
 code :: Doc Ann -> Doc Ann
 code = annotate AnnCode
