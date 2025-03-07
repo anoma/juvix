@@ -5,12 +5,12 @@ import PackageDescription.V2 open;
 package : Package :=
   defaultPackage@{
     name := "dep";
-    version :=       mkVersion@{
+    version :=
+      mkVersion@{
         major := 0;
         minor := 11;
         patch := 0;
         release := just "rc.5";
       };
-
     dependencies := [];
   };
