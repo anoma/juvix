@@ -583,6 +583,12 @@ kwAnomaIsCommitment = asciiKw Str.anomaIsCommitment
 kwAnomaIsNullifier :: Keyword
 kwAnomaIsNullifier = asciiKw Str.anomaIsNullifier
 
+kwAnomaTransactionCompose :: Keyword
+kwAnomaTransactionCompose = asciiKw Str.anomaTransactionCompose
+
+kwAnomaActionCreate :: Keyword
+kwAnomaActionCreate = asciiKw Str.anomaActionCreate
+
 kwAnomaSetToList :: Keyword
 kwAnomaSetToList = asciiKw Str.anomaSetToList
 

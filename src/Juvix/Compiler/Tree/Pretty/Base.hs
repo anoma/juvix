@@ -308,6 +308,8 @@ instance PrettyCode AnomaOp where
     OpAnomaIsNullifier -> Str.anomaIsNullifier
     OpAnomaSetToList -> Str.anomaSetToList
     OpAnomaSetFromList -> Str.anomaSetFromList
+    OpAnomaTransactionCompose -> Str.anomaTransactionCompose
+    OpAnomaActionCreate -> Str.anomaActionCreate
 
 instance PrettyCode UnaryOpcode where
   ppCode = \case

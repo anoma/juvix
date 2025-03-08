@@ -577,6 +577,8 @@ compile = \case
         Tree.OpAnomaRandomSplit -> callStdlib StdlibRandomSplit args
         Tree.OpAnomaIsCommitment -> callRm RmIsCommitment args
         Tree.OpAnomaIsNullifier -> callRm RmIsNullifier args
+        Tree.OpAnomaActionCreate -> callRm RmActionCreate args
+        Tree.OpAnomaTransactionCompose -> callRm RmTransactionCompose args
         Tree.OpAnomaSetToList -> goAnomaSetToList args
         Tree.OpAnomaSetFromList -> goAnomaSetFromList args
 
