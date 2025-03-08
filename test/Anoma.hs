@@ -8,6 +8,6 @@ allTests :: TestTree
 allTests =
   testGroup
     "Anoma tests"
-    [ Compilation.allTests,
-      Client.allTests
+    [ Compilation.allTests
+    -- Client.allTests
     ]

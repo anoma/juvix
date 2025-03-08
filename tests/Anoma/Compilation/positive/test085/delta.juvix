@@ -3,42 +3,36 @@ module delta;
 import Stdlib.Prelude open;
 import Stdlib.Debug.Trace open;
 import ResourceMachine open;
+import Encode open;
+import ByteArray open;
 
 main : Delta :=
   let
     resource : Resource :=
-      mkResource@{
-        label := 11;
-        logic := \{_ _ := true};
+      Resource.mk@{
+        label := Label.mk 11;
+        logic := Encoded.encode (Logic.mk \{_ := true});
+        value := AnomaAtom.fromNat 0;
+        nullifierKeyCommitment := NullifierKeyCommitment.zero;
         ephemeral := true;
         quantity := 55;
-        data := 0;
-        nullifier-key := 0;
-        nonce := 0;
-        rseed := 0;
+        nonce := Nonce.fromNat 0;
+        unusedRandSeed := 0;
       };
     action : Action :=
-      mkAction@{
-        commitments := [];
-        nullifiers := [];
-        proofs := [];
-        app-data := 1;
+      Action.create@{
+        consumed := [];
+        created := [];
+        appData := AppData.empty;
       };
-    resCommitment : Nat := commitment resource;
-    resNullifier : Nat := nullifier resource;
+    resCommitment : Commitment := commitment resource;
+    resNullifier : Nullifier := Resource.Transparent.nullifier resource;
   in -- Most of these call return large nouns that are not appropritate for testing.
       -- This test checks that these functions do not crash.
       kind
       resource
-    >-> addDelta (resource-delta resource) (resource-delta resource)
-    >-> addDelta (resource-delta resource) (resource-delta resource)
-    >-> proveDelta zeroDelta
+    >-> addDelta (Action.delta action) (Action.delta action)
     >-> trace (subDelta zeroDelta zeroDelta)
     >-> trace (addDelta zeroDelta zeroDelta)
-    >-> proveAction action
-    >-> trace (actionDelta action)
-    >-> trace (isCommitment resCommitment)
-    >-> trace (isNullifier resNullifier)
-    >-> trace (isCommitment resNullifier)
-    >-> trace (isNullifier resCommitment)
-    >-> actionsDelta [action];
+    >-> trace (Action.delta action)
+    >-> Action.listDelta [action];

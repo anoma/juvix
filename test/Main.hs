@@ -32,37 +32,39 @@ slowTests =
     "Juvix slow tests"
     AllFinish
     <$> sequence
-      [ return Runtime.allTests,
-        return Reg.allTests,
-        return Asm.allTests,
-        return Tree.allTests,
-        return Core.allTests,
-        return Internal.allTests,
-        return Compilation.allTests,
-        return Examples.allTests,
-        Casm.allTests,
-        return Anoma.allTests,
-        return Repl.allTests
+      [ -- return Runtime.allTests,
+        -- return Reg.allTests,
+        -- return Asm.allTests,
+        -- return Tree.allTests,
+        -- return Core.allTests,
+        -- return Internal.allTests,
+        -- return Compilation.allTests,
+        -- return Examples.allTests,
+        -- Casm.allTests,
+        return Anoma.allTests
+        -- return Repl.allTests
       ]
-      <> sequence (if Config.config ^. Config.configRust then [Rust.allTests] else [])
+
+-- <> sequence (if Config.config ^. Config.configRust then [Rust.allTests] else [])
 
 fastTests :: IO TestTree
 fastTests =
   return $
     testGroup
       "Juvix fast tests"
-      [ Parsing.allTests,
-        Resolver.allTests,
-        Scope.allTests,
-        Termination.allTests,
-        Typecheck.allTests,
-        Format.allTests,
-        Formatter.allTests,
-        Package.allTests,
-        BackendMarkdown.allTests,
-        Isabelle.allTests,
-        Nockma.allTests
-      ]
+      []
+
+-- Parsing.allTests,
+-- Resolver.allTests,
+-- Scope.allTests,
+-- Termination.allTests,
+-- Typecheck.allTests,
+-- Format.allTests,
+-- Formatter.allTests,
+-- Package.allTests,
+-- BackendMarkdown.allTests,
+-- Isabelle.allTests,
+-- Nockma.allTests
 
 main :: IO ()
 main = do

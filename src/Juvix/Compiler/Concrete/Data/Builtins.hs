@@ -280,6 +280,8 @@ data BuiltinAxiom
   | BuiltinAnomaRandomSplit
   | BuiltinAnomaIsCommitment
   | BuiltinAnomaIsNullifier
+  | BuiltinAnomaActionCreate
+  | BuiltinAnomaTransactionCompose
   | BuiltinAnomaSet
   | BuiltinAnomaSetToList
   | BuiltinAnomaSetFromList
@@ -350,6 +352,8 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaRandomSplit -> KNameFunction
     BuiltinAnomaIsCommitment -> KNameFunction
     BuiltinAnomaIsNullifier -> KNameFunction
+    BuiltinAnomaActionCreate -> KNameFunction
+    BuiltinAnomaTransactionCompose -> KNameFunction
     BuiltinPoseidon -> KNameFunction
     BuiltinEcOp -> KNameFunction
     BuiltinRandomEcPoint -> KNameFunction
@@ -427,6 +431,8 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaRandomSplit -> Str.anomaRandomSplit
     BuiltinAnomaIsCommitment -> Str.anomaIsCommitment
     BuiltinAnomaIsNullifier -> Str.anomaIsNullifier
+    BuiltinAnomaTransactionCompose -> Str.anomaTransactionCompose
+    BuiltinAnomaActionCreate -> Str.anomaActionCreate
     BuiltinAnomaSet -> Str.anomaSet
     BuiltinAnomaSetToList -> Str.anomaSetToList
     BuiltinAnomaSetFromList -> Str.anomaSetFromList

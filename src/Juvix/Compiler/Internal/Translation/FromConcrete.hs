@@ -1081,6 +1081,8 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinAnomaRandomSplit -> checkAnomaRandomSplit d
   BuiltinAnomaIsCommitment -> checkAnomaIsCommitment d
   BuiltinAnomaIsNullifier -> checkAnomaIsNullifier d
+  BuiltinAnomaActionCreate -> return ()
+  BuiltinAnomaTransactionCompose -> return ()
   BuiltinAnomaSet -> checkAnomaSet d
   BuiltinAnomaSetToList -> checkAnomaSetToList d
   BuiltinAnomaSetFromList -> checkAnomaSetFromList d
