@@ -147,6 +147,8 @@ fromCore' tab =
         BuiltinAnomaRandomSplit -> False
         BuiltinAnomaIsCommitment -> False
         BuiltinAnomaIsNullifier -> False
+        BuiltinAnomaTransactionCompose -> False
+        BuiltinAnomaActionCreate -> False
         BuiltinAnomaSet -> False
         BuiltinAnomaSetToList -> False
         BuiltinAnomaSetFromList -> False

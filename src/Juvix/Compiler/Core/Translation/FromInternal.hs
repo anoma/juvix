@@ -703,6 +703,8 @@ builtinInductive a =
         Internal.BuiltinAnomaRandomSplit -> Nothing
         Internal.BuiltinAnomaIsCommitment -> Nothing
         Internal.BuiltinAnomaIsNullifier -> Nothing
+        Internal.BuiltinAnomaActionCreate -> Nothing
+        Internal.BuiltinAnomaTransactionCompose -> Nothing
         Internal.BuiltinAnomaSet -> Just (registerInductiveAxiom (Just BuiltinAnomaSet) [])
         Internal.BuiltinAnomaSetToList -> Nothing
         Internal.BuiltinAnomaSetFromList -> Nothing
@@ -1039,6 +1041,22 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               natType
               (mkBuiltinApp' OpAnomaIsCommitment [mkVar' 0])
           )
+      Internal.BuiltinAnomaActionCreate -> do
+        registerAxiomDef
+          . mkLambda'
+            mkDynamic'
+          . mkLambda'
+            mkDynamic'
+          . mkLambda'
+            mkDynamic'
+          $ mkBuiltinApp' OpAnomaActionCreate [mkVar' 2, mkVar' 1, mkVar' 0]
+      Internal.BuiltinAnomaTransactionCompose -> do
+        registerAxiomDef
+          . mkLambda'
+            mkDynamic'
+          . mkLambda'
+            mkDynamic'
+          $ mkBuiltinApp' OpAnomaTransactionCompose [mkVar' 1, mkVar' 0]
       Internal.BuiltinAnomaIsNullifier -> do
         natType <- getNatType
         registerAxiomDef
@@ -1518,6 +1536,8 @@ goApplication a = do
         Just Internal.BuiltinAnomaRandomSplit -> app
         Just Internal.BuiltinAnomaIsCommitment -> app
         Just Internal.BuiltinAnomaIsNullifier -> app
+        Just Internal.BuiltinAnomaTransactionCompose -> app
+        Just Internal.BuiltinAnomaActionCreate -> app
         Just Internal.BuiltinAnomaSet -> app
         Just Internal.BuiltinAnomaSetToList -> app
         Just Internal.BuiltinAnomaSetFromList -> app
