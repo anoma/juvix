@@ -461,6 +461,12 @@ anomaSet = "anoma-set"
 anomaSetToList :: (IsString s) => s
 anomaSetToList = "anoma-set-to-list"
 
+anomaTransactionCompose :: (IsString s) => s
+anomaTransactionCompose = "anoma-transaction-compose"
+
+anomaActionCreate :: (IsString s) => s
+anomaActionCreate = "anoma-action-create"
+
 anomaSetFromList :: (IsString s) => s
 anomaSetFromList = "anoma-set-from-list"
 

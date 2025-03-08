@@ -106,6 +106,8 @@ computeNodeTypeInfo md = umapL go
           OpAnomaRandomSplit -> mkDynamic'
           OpAnomaIsCommitment -> mkTypeBool'
           OpAnomaIsNullifier -> mkTypeBool'
+          OpAnomaActionCreate -> mkDynamic'
+          OpAnomaTransactionCompose -> mkDynamic'
           OpAnomaSetToList -> mkDynamic'
           OpAnomaSetFromList -> mkDynamic'
           OpPoseidonHash -> case _builtinAppArgs of

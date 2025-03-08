@@ -149,6 +149,8 @@ data AnomaOp
     OpAnomaIsNullifier
   | OpAnomaSetToList
   | OpAnomaSetFromList
+  | OpAnomaTransactionCompose
+  | OpAnomaActionCreate
   deriving stock (Eq, Show, Generic)
 
 instance Serialize AnomaOp

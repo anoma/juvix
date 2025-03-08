@@ -236,6 +236,8 @@ isDebugOp = \case
       OpAnomaRandomSplit -> False
       OpAnomaIsCommitment -> False
       OpAnomaIsNullifier -> False
+      OpAnomaTransactionCompose -> False
+      OpAnomaActionCreate -> False
       OpAnomaSetToList -> False
       OpAnomaSetFromList -> False
       OpEc -> False
@@ -540,6 +542,10 @@ builtinOpArgTypes = \case
   OpAnomaRandomGeneratorInit -> [mkTypeInteger']
   OpAnomaRandomNextBytes -> [mkTypeInteger', mkTypeRandomGenerator']
   OpAnomaRandomSplit -> [mkTypeRandomGenerator']
+  OpAnomaActionCreate -> [mkDynamic', mkDynamic', mkDynamic']
+  OpAnomaTransactionCompose -> [mkDynamic', mkDynamic']
+  -- TODO with the v0.2 interface OpAnomaIsCommitment and OpAnomaIsNullifier
+  -- should probably be mkDynamic'
   OpAnomaIsCommitment -> [mkTypeInteger']
   OpAnomaIsNullifier -> [mkTypeInteger']
   OpAnomaSetToList -> [mkDynamic']

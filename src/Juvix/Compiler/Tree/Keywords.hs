@@ -9,6 +9,7 @@ import Juvix.Compiler.Tree.Keywords.Base
 import Juvix.Data.Keyword.All
   ( kwAdd_,
     kwAlloc,
+    kwAnomaActionCreate,
     kwAnomaActionDelta,
     kwAnomaActionsDelta,
     kwAnomaAddDelta,
@@ -34,6 +35,7 @@ import Juvix.Data.Keyword.All
     kwAnomaSign,
     kwAnomaSignDetached,
     kwAnomaSubDelta,
+    kwAnomaTransactionCompose,
     kwAnomaVerifyDetached,
     kwAnomaVerifyWithMessage,
     kwAnomaZeroDelta,

@@ -23,6 +23,7 @@ anomaLib =
 anomaLibPath :: AnomaLib -> Term Natural
 anomaLibPath = \case
   AnomaLibFunction (AnomaStdlibFunction f) -> case f of
+    -- [callOp numWithinLayer @ layerNum]
     StdlibDec -> [nock| [9 342 0 4.095] |]
     StdlibAdd -> [nock| [9 20 0 4.095] |]
     StdlibSub -> [nock| [9 47 0 4.095] |]
@@ -124,5 +125,7 @@ anomaLibPath = \case
     RmProveDelta -> [nock| [9 1.535 0 1] |]
     RmIsCommitment -> [nock| [9 1.526 0 1] |]
     RmIsNullifier -> [nock| [9 372 0 1] |]
+    RmActionCreate -> [nock| [9 382 0 1] |]
+    RmTransactionCompose -> [nock| [9 383 0 1] |]
   AnomaLibValue (AnomaRmValue v) -> case v of
     RmZeroDelta -> [nock| [9 20 0 1] |]
