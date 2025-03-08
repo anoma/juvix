@@ -256,7 +256,8 @@ goConstructor sym ctor = do
         Internal.BuiltinMkEcPoint -> freshTag
         Internal.BuiltinMkAnomaAction -> freshTag
         Internal.BuiltinMkAnomaResource -> freshTag
-        Internal.BuiltinMkComplianceInputs -> freshTag
+        Internal.BuiltinMkAnomaComplianceInputs -> freshTag
+        Internal.BuiltinMkAnomaShieldedTransaction -> freshTag
         Internal.BuiltinMkOrd -> freshTag
         Internal.BuiltinOrderingLT -> freshTag
         Internal.BuiltinOrderingGT -> freshTag
