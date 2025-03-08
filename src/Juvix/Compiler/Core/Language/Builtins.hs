@@ -57,6 +57,7 @@ data BuiltinOp
   | OpAnomaRandomSplit
   | OpAnomaIsCommitment
   | OpAnomaIsNullifier
+  | OpAnomaCreateFromComplianceInputs
   | OpAnomaSetToList
   | OpAnomaSetFromList
   | OpPoseidonHash
@@ -150,6 +151,7 @@ builtinOpArgsNum = \case
   OpAnomaRandomSplit -> 1
   OpAnomaIsCommitment -> 1
   OpAnomaIsNullifier -> 1
+  OpAnomaCreateFromComplianceInputs -> 5
   OpAnomaSetToList -> 1
   OpAnomaSetFromList -> 1
   OpPoseidonHash -> 1
@@ -219,6 +221,7 @@ builtinIsFoldable = \case
   OpAnomaRandomSplit -> False
   OpAnomaIsCommitment -> False
   OpAnomaIsNullifier -> False
+  OpAnomaCreateFromComplianceInputs -> False
   OpAnomaSetToList -> False
   OpAnomaSetFromList -> False
   OpPoseidonHash -> False

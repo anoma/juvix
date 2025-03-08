@@ -55,10 +55,12 @@ builtinConstructors = \case
   BuiltinList -> [BuiltinListNil, BuiltinListCons]
   BuiltinMaybe -> [BuiltinMaybeNothing, BuiltinMaybeJust]
   BuiltinPair -> [BuiltinPairConstr]
+  BuiltinJson -> [BuiltinJsonArray, BuiltinJsonBool, BuiltinJsonObject, BuiltinJsonNumber, BuiltinJsonString]
   BuiltinPoseidonState -> [BuiltinMkPoseidonState]
   BuiltinEcPoint -> [BuiltinMkEcPoint]
   BuiltinAnomaResource -> [BuiltinMkAnomaResource]
   BuiltinAnomaAction -> [BuiltinMkAnomaAction]
+  BuiltinAnomaComplianceInputs -> [BuiltinMkComplianceInputs]
   BuiltinEq -> [BuiltinMkEq]
   BuiltinOrd -> [BuiltinMkOrd]
   BuiltinOrdering -> [BuiltinOrderingLT, BuiltinOrderingEQ, BuiltinOrderingGT]
@@ -70,6 +72,7 @@ data BuiltinInductive
   | BuiltinList
   | BuiltinMaybe
   | BuiltinPair
+  | BuiltinJson
   | BuiltinEq
   | BuiltinOrd
   | BuiltinOrdering
@@ -77,6 +80,7 @@ data BuiltinInductive
   | BuiltinEcPoint
   | BuiltinAnomaResource
   | BuiltinAnomaAction
+  | BuiltinAnomaComplianceInputs
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinInductive
@@ -93,6 +97,7 @@ instance Pretty BuiltinInductive where
     BuiltinList -> Str.list
     BuiltinMaybe -> Str.maybe_
     BuiltinPair -> Str.pair
+    BuiltinJson -> Str.json
     BuiltinEq -> Str.eq
     BuiltinOrd -> Str.ord
     BuiltinOrdering -> Str.ordering
@@ -100,6 +105,7 @@ instance Pretty BuiltinInductive where
     BuiltinEcPoint -> Str.cairoEcPoint
     BuiltinAnomaResource -> Str.anomaResource
     BuiltinAnomaAction -> Str.anomaAction
+    BuiltinAnomaComplianceInputs -> Str.anomaComplianceInputs
 
 instance Pretty BuiltinConstructor where
   pretty = \case
@@ -114,10 +120,17 @@ instance Pretty BuiltinConstructor where
     BuiltinMaybeNothing -> Str.nothing
     BuiltinMaybeJust -> Str.just
     BuiltinPairConstr -> Str.pair
+    BuiltinJsonEmpty -> Str.jsonEmpty
+    BuiltinJsonArray -> Str.jsonArray
+    BuiltinJsonBool -> Str.jsonBool
+    BuiltinJsonObject -> Str.jsonObject
+    BuiltinJsonNumber -> Str.jsonNumber
+    BuiltinJsonString -> Str.jsonString
     BuiltinMkPoseidonState -> Str.cairoMkPoseidonState
     BuiltinMkEcPoint -> Str.cairoMkEcPoint
     BuiltinMkAnomaResource -> Str.anomaMkResource
     BuiltinMkAnomaAction -> Str.anomaMkAction
+    BuiltinMkComplianceInputs -> Str.anomaMkComplianceInputs
     BuiltinMkEq -> Str.mkEq
     BuiltinMkOrd -> Str.mkOrd
     BuiltinOrderingLT -> Str.lt
@@ -141,10 +154,17 @@ data BuiltinConstructor
   | BuiltinMaybeNothing
   | BuiltinMaybeJust
   | BuiltinPairConstr
+  | BuiltinJsonEmpty
+  | BuiltinJsonArray
+  | BuiltinJsonBool
+  | BuiltinJsonObject
+  | BuiltinJsonNumber
+  | BuiltinJsonString
   | BuiltinMkPoseidonState
   | BuiltinMkEcPoint
   | BuiltinMkAnomaResource
   | BuiltinMkAnomaAction
+  | BuiltinMkComplianceInputs
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable BuiltinConstructor
@@ -280,6 +300,7 @@ data BuiltinAxiom
   | BuiltinAnomaRandomSplit
   | BuiltinAnomaIsCommitment
   | BuiltinAnomaIsNullifier
+  | BuiltinAnomaCreateFromComplianceInputs
   | BuiltinAnomaSet
   | BuiltinAnomaSetToList
   | BuiltinAnomaSetFromList
@@ -350,6 +371,7 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaRandomSplit -> KNameFunction
     BuiltinAnomaIsCommitment -> KNameFunction
     BuiltinAnomaIsNullifier -> KNameFunction
+    BuiltinAnomaCreateFromComplianceInputs -> KNameFunction
     BuiltinPoseidon -> KNameFunction
     BuiltinEcOp -> KNameFunction
     BuiltinRandomEcPoint -> KNameFunction
@@ -427,6 +449,7 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaRandomSplit -> Str.anomaRandomSplit
     BuiltinAnomaIsCommitment -> Str.anomaIsCommitment
     BuiltinAnomaIsNullifier -> Str.anomaIsNullifier
+    BuiltinAnomaCreateFromComplianceInputs -> Str.anomaCreateFromComplianceInputs
     BuiltinAnomaSet -> Str.anomaSet
     BuiltinAnomaSetToList -> Str.anomaSetToList
     BuiltinAnomaSetFromList -> Str.anomaSetFromList

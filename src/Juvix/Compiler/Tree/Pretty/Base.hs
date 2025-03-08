@@ -306,6 +306,7 @@ instance PrettyCode AnomaOp where
     OpAnomaRandomSplit -> Str.anomaRandomSplit
     OpAnomaIsCommitment -> Str.anomaIsCommitment
     OpAnomaIsNullifier -> Str.anomaIsNullifier
+    OpAnomaCreateFromComplianceInputs -> Str.anomaCreateFromComplianceInputs
     OpAnomaSetToList -> Str.anomaSetToList
     OpAnomaSetFromList -> Str.anomaSetFromList
 

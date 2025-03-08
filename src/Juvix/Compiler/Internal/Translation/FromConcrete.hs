@@ -13,6 +13,7 @@ import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Builtins.Assert
+import Juvix.Compiler.Builtins.Json
 import Juvix.Compiler.Builtins.Pair
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
@@ -975,10 +976,12 @@ checkBuiltinInductive d b = localBuiltins $ case b of
   BuiltinList -> checkListDef d
   BuiltinMaybe -> checkMaybeDef d
   BuiltinPair -> checkPairDef d
+  BuiltinJson -> checkJsonDef d
   BuiltinPoseidonState -> checkPoseidonStateDef d
   BuiltinEcPoint -> checkEcPointDef d
   BuiltinAnomaResource -> checkResource d
   BuiltinAnomaAction -> checkAction d
+  BuiltinAnomaComplianceInputs -> checkComplianceInputs d
 
 localBuiltins :: (Members '[Reader S.InfoTable] r) => Sem (Reader BuiltinsTable ': r) a -> Sem r a
 localBuiltins m = do
@@ -1081,6 +1084,7 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinAnomaRandomSplit -> checkAnomaRandomSplit d
   BuiltinAnomaIsCommitment -> checkAnomaIsCommitment d
   BuiltinAnomaIsNullifier -> checkAnomaIsNullifier d
+  BuiltinAnomaCreateFromComplianceInputs -> checkAnomaCreateFromComplianceInputs d
   BuiltinAnomaSet -> checkAnomaSet d
   BuiltinAnomaSetToList -> checkAnomaSetToList d
   BuiltinAnomaSetFromList -> checkAnomaSetFromList d

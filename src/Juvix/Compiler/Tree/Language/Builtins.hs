@@ -147,6 +147,7 @@ data AnomaOp
     OpAnomaIsCommitment
   | -- | Returns true if its argument is a nullifier
     OpAnomaIsNullifier
+  | OpAnomaCreateFromComplianceInputs
   | OpAnomaSetToList
   | OpAnomaSetFromList
   deriving stock (Eq, Show, Generic)
