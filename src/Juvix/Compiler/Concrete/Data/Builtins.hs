@@ -60,7 +60,8 @@ builtinConstructors = \case
   BuiltinEcPoint -> [BuiltinMkEcPoint]
   BuiltinAnomaResource -> [BuiltinMkAnomaResource]
   BuiltinAnomaAction -> [BuiltinMkAnomaAction]
-  BuiltinAnomaComplianceInputs -> [BuiltinMkComplianceInputs]
+  BuiltinAnomaComplianceInputs -> [BuiltinMkAnomaComplianceInputs]
+  BuiltinAnomaShieldedTransaction -> [BuiltinMkAnomaShieldedTransaction]
   BuiltinEq -> [BuiltinMkEq]
   BuiltinOrd -> [BuiltinMkOrd]
   BuiltinOrdering -> [BuiltinOrderingLT, BuiltinOrderingEQ, BuiltinOrderingGT]
@@ -81,6 +82,7 @@ data BuiltinInductive
   | BuiltinAnomaResource
   | BuiltinAnomaAction
   | BuiltinAnomaComplianceInputs
+  | BuiltinAnomaShieldedTransaction
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinInductive
@@ -106,6 +108,7 @@ instance Pretty BuiltinInductive where
     BuiltinAnomaResource -> Str.anomaResource
     BuiltinAnomaAction -> Str.anomaAction
     BuiltinAnomaComplianceInputs -> Str.anomaComplianceInputs
+    BuiltinAnomaShieldedTransaction -> Str.anomaShieldedTransaction
 
 instance Pretty BuiltinConstructor where
   pretty = \case
@@ -130,7 +133,8 @@ instance Pretty BuiltinConstructor where
     BuiltinMkEcPoint -> Str.cairoMkEcPoint
     BuiltinMkAnomaResource -> Str.anomaMkResource
     BuiltinMkAnomaAction -> Str.anomaMkAction
-    BuiltinMkComplianceInputs -> Str.anomaMkComplianceInputs
+    BuiltinMkAnomaComplianceInputs -> Str.anomaMkComplianceInputs
+    BuiltinMkAnomaShieldedTransaction -> Str.anomaMkShieldedTransaction
     BuiltinMkEq -> Str.mkEq
     BuiltinMkOrd -> Str.mkOrd
     BuiltinOrderingLT -> Str.lt
@@ -164,7 +168,8 @@ data BuiltinConstructor
   | BuiltinMkEcPoint
   | BuiltinMkAnomaResource
   | BuiltinMkAnomaAction
-  | BuiltinMkComplianceInputs
+  | BuiltinMkAnomaComplianceInputs
+  | BuiltinMkAnomaShieldedTransaction
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable BuiltinConstructor

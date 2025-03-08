@@ -139,6 +139,13 @@ checkComplianceInputs d = do
   unless (isSmallUniverse' (d ^. inductiveType)) (err "ComplianceInputs should be in the small universe")
   unless (length (d ^. inductiveConstructors) == 1) (err "ComplianceInputs should have exactly one constructor")
 
+checkShieldedTransaction :: (Members '[Error ScoperError] r) => InductiveDef -> Sem r ()
+checkShieldedTransaction d = do
+  let err = builtinsErrorText (getLoc d)
+  unless (null (d ^. inductiveParameters)) (err "ShieldedTransaction should have no type parameters")
+  unless (isSmallUniverse' (d ^. inductiveType)) (err "ShieldedTransaction should be in the small universe")
+  unless (length (d ^. inductiveConstructors) == 1) (err "ShieldedTransaction should have exactly one constructor")
+
 checkDelta :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
 checkDelta d =
   unless (isSmallUniverse' (d ^. axiomType)) $
@@ -278,10 +285,12 @@ checkAnomaIsNullifier f = do
 checkAnomaCreateFromComplianceInputs :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaCreateFromComplianceInputs f = do
   let l = getLoc f
-  nat_ <- getBuiltinNameScoper l BuiltinNat
-  bool_ <- getBuiltinNameScoper l BuiltinBool
-  unless (f ^. axiomType === (nat_ --> bool_)) $
-    builtinsErrorText l "isNullifier must be of type Nat -> Bool"
+  json_ <- getBuiltinNameScoper l BuiltinJson
+  list_ <- getBuiltinNameScoper l BuiltinList
+  byteArray <- getBuiltinNameScoper l BuiltinByteArray
+  shieldedTransaction <- getBuiltinNameScoper l BuiltinAnomaShieldedTransaction
+  unless (f ^. axiomType === (list_ @@ json_ --> list_ @@ byteArray --> list_ @@ json_ --> list_ @@ byteArray --> list_ @@ json_ --> shieldedTransaction)) $
+    builtinsErrorText l "createFromComplianceInputs must be of type: List Json -> List ByteArray -> List Json -> List ByteArray -> List Json -> ShieldedTransaction"
 
 checkAnomaSet :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaSet t = do

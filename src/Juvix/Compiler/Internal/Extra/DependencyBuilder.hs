@@ -246,6 +246,7 @@ checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
       BuiltinAnomaResource -> return ()
       BuiltinAnomaAction -> return ()
       BuiltinAnomaComplianceInputs -> return ()
+      BuiltinAnomaShieldedTransaction -> return ()
       BuiltinEq -> return ()
       BuiltinOrd -> return ()
       BuiltinOrdering -> return ()
