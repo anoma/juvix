@@ -132,6 +132,13 @@ checkAction d = do
   unless (isSmallUniverse' (d ^. inductiveType)) (err "AnomaAction should be in the small universe")
   unless (length (d ^. inductiveConstructors) == 1) (err "AnomaAction should have exactly one constructor")
 
+checkComplianceInputs :: (Members '[Error ScoperError] r) => InductiveDef -> Sem r ()
+checkComplianceInputs d = do
+  let err = builtinsErrorText (getLoc d)
+  unless (null (d ^. inductiveParameters)) (err "ComplianceInputs should have no type parameters")
+  unless (isSmallUniverse' (d ^. inductiveType)) (err "ComplianceInputs should be in the small universe")
+  unless (length (d ^. inductiveConstructors) == 1) (err "ComplianceInputs should have exactly one constructor")
+
 checkDelta :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
 checkDelta d =
   unless (isSmallUniverse' (d ^. axiomType)) $
@@ -262,6 +269,14 @@ checkAnomaIsCommitment f = do
 
 checkAnomaIsNullifier :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaIsNullifier f = do
+  let l = getLoc f
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  bool_ <- getBuiltinNameScoper l BuiltinBool
+  unless (f ^. axiomType === (nat_ --> bool_)) $
+    builtinsErrorText l "isNullifier must be of type Nat -> Bool"
+
+checkAnomaCreateFromComplianceInputs :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkAnomaCreateFromComplianceInputs f = do
   let l = getLoc f
   nat_ <- getBuiltinNameScoper l BuiltinNat
   bool_ <- getBuiltinNameScoper l BuiltinBool

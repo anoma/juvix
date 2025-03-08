@@ -81,6 +81,7 @@ instance PrettyCode BuiltinOp where
     OpAnomaRandomSplit -> return primRandomSplit
     OpAnomaIsCommitment -> return primIsCommitment
     OpAnomaIsNullifier -> return primIsNullifier
+    OpAnomaCreateFromComplianceInputs -> return primAnomaCreateFromComplianceInputs
     OpAnomaSetToList -> return primAnomaSetToList
     OpAnomaSetFromList -> return primAnomaSetFromList
     OpPoseidonHash -> return primPoseidonHash
@@ -655,10 +656,12 @@ instance PrettyCode InfoTable where
           shouldPrintInductive = \case
             Just (BuiltinTypeInductive i) -> case i of
               BuiltinPair -> True
+              BuiltinJson -> True
               BuiltinPoseidonState -> True
               BuiltinEcPoint -> True
               BuiltinAnomaResource -> True
               BuiltinAnomaAction -> True
+              BuiltinAnomaComplianceInputs -> True
               BuiltinList -> False
               BuiltinEq -> False
               BuiltinOrd -> False
@@ -1018,6 +1021,9 @@ primIsCommitment = primitive Str.anomaIsCommitment
 
 primIsNullifier :: Doc Ann
 primIsNullifier = primitive Str.anomaIsNullifier
+
+primAnomaCreateFromComplianceInputs :: Doc Ann
+primAnomaCreateFromComplianceInputs = primitive Str.anomaCreateFromComplianceInputs
 
 primAnomaSetToList :: Doc Ann
 primAnomaSetToList = primitive Str.anomaSetToList
