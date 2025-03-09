@@ -7,7 +7,7 @@
       "type": "git",
       "subDir": null,
       "scope": "",
-      "rev": "a42349f313f7ae259b1cff2f2b2b643321d19c06",
+      "rev": "0c1a53207198d3d1d0b60dd13fb7f719cf4d06ba",
       "name": "«juvix-lean»",
       "manifestFile": "lake-manifest.json",
       "inputRev": "equiv-congruence",
