@@ -396,15 +396,17 @@ with
     (appData : AppData)
     : Action :=
     builtinCreate@{
-      consumed := AnomaSet.fromList consumed;
-      created := AnomaSet.fromList created;
+      -- consumed := AnomaSet.fromList consumed;
+      -- created := AnomaSet.fromList created;
+      consumed;
+      created;
       appData;
     };
 
   builtin anoma-action-create
   axiom builtinCreate
-    (consumed : AnomaSet NullifiableResource)
-    (created : AnomaSet Resource)
+    (consumed : List NullifiableResource)
+    (created : List Resource)
     (appData : AppData)
     : Action;
 end;

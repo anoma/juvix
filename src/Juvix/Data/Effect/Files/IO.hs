@@ -13,7 +13,6 @@ import Juvix.Prelude.Path
 import Juvix.Prelude.Prepath
 import Path.IO qualified as Path
 import System.Environment.XDG.BaseDir
-import System.IO.Error
 import System.IO.Temp
 import System.Posix.Types qualified as P
 import System.PosixCompat.Files qualified as P
