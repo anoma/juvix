@@ -20,6 +20,10 @@ main : _ :=
         unusedRandSeed := 0;
       };
 
+    d : Delta := zeroDelta;
+    addd : Delta := addDelta zeroDelta zeroDelta;
+    subd : Delta := subDelta zeroDelta zeroDelta;
+
     appData := AppData.empty;
 
     action : Action :=
@@ -28,17 +32,18 @@ main : _ :=
     created := [];
     appData := AppData.empty;
     };
-    -- resCommitment : Commitment := commitment resource;
-    -- resNullifier : Nullifier := Resource.Transparent.nullifier resource;
+  -- resCommitment : Commitment := commitment resource;
+  -- resNullifier : Nullifier := Resource.Transparent.nullifier resource;
   in -- Most of these call return large nouns that are not appropritate for testing.
       -- This test checks that these functions do not crash.
-      kind
-      resource
-    -- >-> addDelta (Action.delta action) (Action.delta action)
-    >-> kind resource;
-    -- >-> subDelta (Action.delta action) (Action.delta action)
+      zeroDelta;
+      -- kind
+      -- resource
     -- >-> trace (subDelta zeroDelta zeroDelta)
     -- >-> trace (addDelta zeroDelta zeroDelta)
-    -- >-> trace (Action.delta action)
-    -- >-> Action.listDelta [action]
+    -- >-> addDelta (Action.delta action) (Action.delta action)
     -- >-> kind resource;
+-- >-> subDelta (Action.delta action) (Action.delta action)
+-- >-> trace (Action.delta action)
+-- >-> Action.listDelta [action]
+-- >-> kind resource;
