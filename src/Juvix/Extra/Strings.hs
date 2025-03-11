@@ -1167,7 +1167,7 @@ anomaComplianceInputs :: (IsString s) => s
 anomaComplianceInputs = "anoma-compliance-inputs"
 
 anomaShieldedTransaction :: (IsString s) => s
-anomaShieldedTransaction = "anoma-shielded-transaction"
+anomaShieldedTransaction = "anoma-transaction"
 
 anomaMkResource :: (IsString s) => s
 anomaMkResource = "mkResource"
