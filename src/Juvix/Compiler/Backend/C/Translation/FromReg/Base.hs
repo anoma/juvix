@@ -23,6 +23,11 @@ getBuiltinUID = \case
   Reg.TagBind -> 5
   Reg.TagWrite -> 6
   Reg.TagReadLn -> 7
+  Reg.TagJsonArray -> 8
+  Reg.TagJsonBool -> 9
+  Reg.TagJsonObject -> 10
+  Reg.TagJsonNumber -> 11
+  Reg.TagJsonString -> 12
 
 getUID :: Reg.ExtraInfo -> Reg.Tag -> Int
 getUID info tag = case tag of
