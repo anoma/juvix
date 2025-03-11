@@ -5,6 +5,7 @@ import Commands.Dev.Core.Strip.Options
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
+import Juvix.Compiler.Verification.Dumper
 
 runCommand :: forall r a. (Members '[EmbedIO, TaggedLock, App] r, CanonicalProjection a Core.Options, CanonicalProjection a CoreStripOptions) => a -> Sem r ()
 runCommand opts = do
@@ -18,6 +19,7 @@ runCommand opts = do
         run
           . runReader ep
           . runError @JuvixError
+          . ignoreDumper
           $ Core.toStripped Core.IdentityTrans (Core.moduleFromInfoTable tab)
   tab' <-
     getRight $

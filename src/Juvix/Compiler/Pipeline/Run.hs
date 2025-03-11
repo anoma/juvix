@@ -27,6 +27,7 @@ import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
 import Juvix.Compiler.Store.Scoped.Language qualified as Scoped
+import Juvix.Compiler.Verification.Dumper
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
@@ -116,6 +117,7 @@ runIOEitherPipeline' entry a = do
     . runJuvixError
     . runFilesIO
     . runReader entry
+    . runDumper
     . runProcessIO
     . mapError (JuvixError @GitProcessError)
     . runGitProcess
@@ -148,7 +150,8 @@ evalModuleInfoCacheHelper ::
          Reader NumThreads,
          Reader PipelineOptions,
          Logger,
-         Files
+         Files,
+         Dumper
        ]
       r
   ) =>
@@ -221,6 +224,7 @@ runReplPipelineIOEither' lockMode entry = do
       . runNameIdGenArtifacts
       . runFilesIO
       . runReader entry
+      . ignoreDumper
       . runTaggedLock lockMode
       . mapError (JuvixError @GitProcessError)
       . runProcessIO

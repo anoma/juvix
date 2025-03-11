@@ -11,6 +11,7 @@ import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Modular.Result
 import Juvix.Compiler.Store.Backend.Module qualified as Stored
 import Juvix.Compiler.Tree.Pipeline qualified as Tree
+import Juvix.Compiler.Verification.Dumper
 import Juvix.Extra.Serialize qualified as Serialize
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
@@ -20,7 +21,8 @@ type ModularEff r =
   '[ Files,
      TaggedLock,
      Reader EntryPoint,
-     Error JuvixError
+     Error JuvixError,
+     Dumper
    ]
     ++ r
 
@@ -119,14 +121,14 @@ processModuleTable midTarget f mt = do
   return $ ModuleTable tab
 
 modularCoreToStripped ::
-  (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint] r) =>
+  (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
   Core.ModuleTable ->
   Sem r Stripped.ModuleTable
 modularCoreToStripped mt =
   processModuleTable TargetStripped (Pipeline.storedCoreToStripped Core.IdentityTrans) mt
 
 modularCoreToTree ::
-  (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint] r) =>
+  (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
   Core.ModuleTable ->
   Sem r Tree.ModuleTable
 modularCoreToTree =

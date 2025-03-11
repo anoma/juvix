@@ -25,6 +25,7 @@ import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Run (evalModuleInfoCacheHelper)
 import Juvix.Compiler.Store.Extra qualified as Store
+import Juvix.Compiler.Verification.Dumper
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process (runProcessIO)
 import Juvix.Prelude
@@ -177,6 +178,7 @@ compileReplInputIO fp txt = do
     . evalHighlightBuilder
     . runTaggedLockPermissive
     . runFilesIO
+    . ignoreDumper
     . mapError (JuvixError @GitProcessError)
     . runProcessIO
     . runGitProcess
@@ -235,7 +237,7 @@ runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ 
     applyTransforms :: Bool -> [Core.TransformationId] -> Sem (Core.InfoTableBuilder ': r) ()
     applyTransforms shouldDisambiguate' ts' = do
       md <- Core.getModule
-      md' <- mapReader Core.fromEntryPoint $ Core.applyTransformations ts' md
+      md' <- ignoreDumper . mapReader Core.fromEntryPoint $ Core.applyTransformations' ts' md
       let md'' =
             if
                 | shouldDisambiguate' -> disambiguateNames md'

@@ -58,7 +58,9 @@ data EntryPoint = EntryPoint
     _entryPointIsabelleOnlyTypes :: Bool,
     _entryPointPipeline :: Maybe Pipeline,
     -- | The SHA256 hash of the source file at _entryPointModulePath
-    _entryPointSHA256 :: Maybe Text
+    _entryPointSHA256 :: Maybe Text,
+    -- | Dump verification statements?
+    _entryPointVerify :: Bool
   }
   deriving stock (Eq, Show)
 
@@ -66,6 +68,11 @@ makeLenses ''EntryPoint
 
 entryPointPackageType :: Lens' EntryPoint PackageType
 entryPointPackageType = entryPointSomeRoot . someRootType
+
+entryPointVerificationEnabled :: EntryPoint -> Bool
+entryPointVerificationEnabled entry =
+  entry ^. entryPointVerify
+    && entry ^. entryPointMainFile == entry ^. entryPointModulePath
 
 defaultUnrollLimit :: Int
 defaultUnrollLimit = 140
@@ -113,5 +120,6 @@ defaultEntryPointNoFile pkg root =
       _entryPointFieldSize = defaultFieldSize,
       _entryPointIsabelleOnlyTypes = False,
       _entryPointPipeline = Nothing,
-      _entryPointSHA256 = Nothing
+      _entryPointSHA256 = Nothing,
+      _entryPointVerify = False
     }
