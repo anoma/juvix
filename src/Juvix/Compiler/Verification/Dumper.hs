@@ -77,12 +77,13 @@ writeLeanProjectFiles dirPath name = do
       <> "\"]\n\n"
       <> "[[require]]\n"
       <> "name = \"juvix-lean\"\n"
-      <> "git = \"https://github.com/anoma/juvix-lean.git\"\n\n"
+      <> "git = \"https://github.com/anoma/juvix-lean.git\"\n"
+      <> "rev = \"main\"\n\n"
       <> "[[lean_lib]]\n"
       <> "name = \""
       <> name
       <> "\"\n"
-  writeFileEnsureLn' toolchainFile "leanprover/lean4:v4.15.0-rc1\n"
+  writeFileEnsureLn' toolchainFile "leanprover/lean4:v4.18.0-rc1\n"
   writeFileEnsureLn' gitignoreFile ".lake\n"
 
 runDumper :: forall r a. (Members '[Files, Reader EntryPoint] r) => Sem (Dumper ': r) a -> Sem r a
