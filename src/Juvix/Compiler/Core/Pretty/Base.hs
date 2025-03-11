@@ -100,6 +100,11 @@ instance PrettyCode BuiltinDataTag where
     TagBind -> return $ annotate (AnnKind KNameConstructor) (pretty ("bind" :: String))
     TagWrite -> return $ annotate (AnnKind KNameConstructor) (pretty ("write" :: String))
     TagReadLn -> return $ annotate (AnnKind KNameConstructor) (pretty ("readLn" :: String))
+    TagJsonArray -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonArray" :: String))
+    TagJsonBool -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonBool" :: String))
+    TagJsonObject -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonObject" :: String))
+    TagJsonNumber -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonNumber" :: String))
+    TagJsonString -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonString" :: String))
 
 instance PrettyCode Tag where
   ppCode = \case

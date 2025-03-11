@@ -73,7 +73,6 @@ fromCore' tab =
     shouldKeepConstructor = \case
       BuiltinListNil -> True
       BuiltinListCons -> True
-      BuiltinJsonEmpty -> True
       BuiltinJsonString -> True
       BuiltinJsonNumber -> True
       BuiltinJsonBool -> True
