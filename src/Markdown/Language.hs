@@ -1,9 +1,11 @@
 module Markdown.Language
   ( module Markdown.Language,
     Attribute,
-    Format,
-    ListSpacing,
-    ListType,
+    Format (..),
+    ListSpacing (..),
+    EnumeratorType (..),
+    DelimiterType (..),
+    ListType (..),
   )
 where
 
@@ -38,18 +40,29 @@ data Meta a = Meta
   }
   deriving stock (Show, Eq, Generic)
 
+data HardBreak = HardBreak
+  deriving stock (Show, Eq, Generic)
+
+data SoftBreak = SoftBreak
+  deriving stock (Show, Eq, Generic)
+
+newtype EscapedChar = EscapedChar
+  { _escapedChar :: Char
+  }
+  deriving stock (Show, Eq, Generic)
+
 data Inline
-  = InlineLineBreak
-  | InlineSoftBreak
+  = InlineHardBreak (Meta HardBreak)
+  | InlineSoftBreak (Meta SoftBreak)
   | InlineString (Meta Text)
-  | InlineEntity Text
-  | InlineEscapedChar Char
+  | InlineEntity (Meta Text)
+  | InlineEscapedChar (Meta EscapedChar)
   | InlineEmph Inlines
   | InlineStrong Inlines
-  | InlineLink Link
-  | InlineImage Image
-  | InlineCode Text
-  | InlineRaw RawInline
+  | InlineLink (Meta Link)
+  | InlineImage (Meta Image)
+  | InlineCode (Meta Text)
+  | InlineRaw (Meta RawInline)
   deriving stock (Show, Eq, Generic)
 
 data CodeBlock = CodeBlock
@@ -80,7 +93,15 @@ data ReferenceLinkDefinition = ReferenceLinkDefinition
 data List = List
   { _listType :: ListType,
     _listSpacing :: ListSpacing,
-    _listBlocks :: [Block]
+    _listBlocks :: NonEmpty Blocks
+  }
+  deriving stock (Show, Eq, Generic)
+
+data ThematicBreak = ThematicBreak
+  deriving stock (Show, Eq, Generic)
+
+newtype QuoteBlock = QuoteBlock
+  { _quoteBlock :: Blocks
   }
   deriving stock (Show, Eq, Generic)
 
@@ -88,12 +109,12 @@ data Block
   = BlockParagraph (Meta Inlines)
   | BlockPlain (Meta Inlines)
   | BlockHeading (Meta Heading)
-  | BlockThematicBreak Block
-  | BlockQuote Block
+  | BlockThematicBreak (Meta ThematicBreak)
+  | BlockQuote (Meta QuoteBlock)
   | BlockCodeBlock (Meta CodeBlock)
-  | BlockRawBlock RawBlock
-  | BlockReferenceLinkDefinition ReferenceLinkDefinition
-  | BlockList List
+  | BlockRawBlock (Meta RawBlock)
+  | BlockReferenceLinkDefinition (Meta ReferenceLinkDefinition)
+  | BlockList (Meta List)
   deriving stock (Show, Eq, Generic)
 
 newtype Blocks = Blocks
@@ -134,17 +155,23 @@ instance Rangeable (Meta a) where
   ranged = set (metaLoc . unIrrelevant)
 
 instance HasAttributes Inline where
-  addAttributes _attr = error "todo"
+  addAttributes _attr = trace "todo"
 
 -- TODO
 instance Rangeable Inline where
   ranged d =
     \case
-      InlineString s -> InlineString (ranged d s)
-      x ->
-        trace
-          ("* rangeable inline: '" <> (show x) <> "' " <> show d)
-          x
+      InlineHardBreak a -> InlineHardBreak (ranged d a)
+      InlineSoftBreak a -> InlineSoftBreak (ranged d a)
+      InlineString a -> InlineString (ranged d a)
+      InlineEntity a -> InlineEntity (ranged d a)
+      InlineEscapedChar a -> InlineEscapedChar (ranged d a)
+      InlineEmph a -> InlineEmph (ranged d a)
+      InlineStrong a -> InlineStrong (ranged d a)
+      InlineLink a -> InlineLink (ranged d a)
+      InlineImage a -> InlineImage (ranged d a)
+      InlineCode a -> InlineCode (ranged d a)
+      InlineRaw a -> InlineRaw (ranged d a)
 
 instance HasAttributes Blocks where
   addAttributes attr = over blocks (map (addAttributes attr))
@@ -189,35 +216,39 @@ instance Rangeable Block where
           BlockPlain a -> BlockPlain (ranged r a)
           BlockCodeBlock a -> BlockCodeBlock (ranged r a)
           BlockHeading a -> BlockHeading (ranged r a)
-          x -> error ("TODO: " <> show x)
+          BlockThematicBreak a -> BlockThematicBreak (ranged r a)
+          BlockQuote a -> BlockQuote (ranged r a)
+          BlockList a -> BlockList (ranged r a)
+          BlockRawBlock a -> BlockRawBlock (ranged r a)
+          BlockReferenceLinkDefinition a -> BlockReferenceLinkDefinition (ranged r a)
       )
 
 instance HasAttributes Block where
-  addAttributes _ = error "todo"
+  addAttributes _ = trace "attributes block"
 
 instance IsInline Inlines where
-  lineBreak = toInlines InlineLineBreak
-  softBreak = toInlines InlineSoftBreak
+  lineBreak = toInlines (InlineHardBreak (mkMeta HardBreak))
+  softBreak = toInlines (InlineSoftBreak (mkMeta SoftBreak))
   str a = toInlines (InlineString (mkMeta a))
-  entity a = toInlines (InlineEntity a)
-  escapedChar a = toInlines (InlineEscapedChar a)
+  entity a = toInlines (InlineEntity (mkMeta a))
+  escapedChar _escapedChar = toInlines (InlineEscapedChar (mkMeta (EscapedChar {..})))
   emph a = toInlines (InlineEmph a)
   strong a = toInlines (InlineStrong a)
-  link _linkDestination _linkTitle _linkDescription = toInlines (InlineLink Link {..})
-  image _imageSource _imageTitle _imageDescription = toInlines (InlineImage Image {..})
-  code a = toInlines (InlineCode a)
-  rawInline _rawInlineFormat _rawInlineText = toInlines (InlineRaw (RawInline {..}))
+  link _linkDestination _linkTitle _linkDescription = toInlines (InlineLink (mkMeta Link {..}))
+  image _imageSource _imageTitle _imageDescription = toInlines (InlineImage (mkMeta Image {..}))
+  code a = toInlines (InlineCode (mkMeta a))
+  rawInline _rawInlineFormat _rawInlineText = toInlines (InlineRaw (mkMeta RawInline {..}))
 
 instance IsBlock Inlines Blocks where
   plain p = mkBlocks (BlockPlain (mkMeta p))
   paragraph i = mkBlocks (BlockParagraph (mkMeta i))
-  thematicBreak = error "todo"
-  blockQuote = error "todo"
+  thematicBreak = mkBlocks (BlockThematicBreak (mkMeta ThematicBreak))
+  blockQuote _quoteBlock = mkBlocks (BlockQuote (mkMeta QuoteBlock {..}))
   codeBlock _codeBlockLanguage _codeBlock = mkBlocks (BlockCodeBlock (mkMeta (CodeBlock {..})))
   heading _headingLevel _headingText = mkBlocks (BlockHeading (mkMeta Heading {..}))
   rawBlock = error "todo"
-  referenceLinkDefinition = error "todo"
-  list = error "todo"
+  referenceLinkDefinition _referenceLinkDefinitionLabel (_referenceLinkDefinitionDestination, _referenceLinkDefinitionTitle) = mkBlocks (BlockReferenceLinkDefinition (mkMeta ReferenceLinkDefinition {..}))
+  list _listType _listSpacing lstBlocks = mkBlocks (BlockList (mkMeta List {_listBlocks = nonEmpty' lstBlocks, ..}))
 
 instance (Pretty a) => Pretty (Meta a) where
   pretty = pretty . (^. metaArg)

@@ -308,8 +308,11 @@ compose n f a = f (compose (n - 1) f a)
 -- String related util functions.
 --------------------------------------------------------------------------------
 
-show :: (Show a, IsString str) => a -> str
+show :: forall str a. (Show a, IsString str) => a -> str
 show = fromString . Show.show
+
+showEscapedChar :: Char -> Text
+showEscapedChar c = pack (showLitChar c "")
 
 toUpperFirst :: String -> String
 toUpperFirst [] = []
@@ -910,8 +913,11 @@ graphCycle gi =
         goChildren :: NonEmpty Vertex -> [Tree Vertex] -> Either (NonEmpty Vertex) ()
         goChildren path = mapM_ (go path)
 
+allNaturalsFrom :: Natural -> Stream Natural
+allNaturalsFrom start = Stream.iterate succ start
+
 allNaturals :: Stream Natural
-allNaturals = Stream.iterate succ 0
+allNaturals = allNaturalsFrom 0
 
 allWords :: Stream Text
 allWords = pack . toList <$> allFiniteSequences ('a' :| ['b' .. 'z'])
