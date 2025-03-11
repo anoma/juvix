@@ -1064,9 +1064,6 @@ pair = "pair"
 json :: (IsString s) => s
 json = "json"
 
-jsonEmpty :: (IsString s) => s
-jsonEmpty = "jsonEmpty"
-
 jsonArray :: (IsString s) => s
 jsonArray = "jsonArray"
 

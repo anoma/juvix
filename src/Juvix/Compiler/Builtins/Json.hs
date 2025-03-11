@@ -11,22 +11,13 @@ checkJsonDef d = do
   unless (isSmallUniverse' (d ^. inductiveType)) (err "Json should be in the small universe")
   unless (null (d ^. inductiveParameters)) (err "Json should have no type parameters")
   case d ^. inductiveConstructors of
-    [constrJsonEmpty, constrJsonArray, constrJsonBool, constrJsonObject, constrJsonNumber, constrJsonString] ->
-      checkJsonEmpty constrJsonEmpty
-        >> checkJsonArray constrJsonArray
+    [constrJsonArray, constrJsonBool, constrJsonObject, constrJsonNumber, constrJsonString] ->
+      checkJsonArray constrJsonArray
         >> checkJsonBool constrJsonBool
         >> checkJsonObject constrJsonObject
         >> checkJsonNumber constrJsonNumber
         >> checkJsonString constrJsonString
-    _ -> err "Json should have exactly six constructors"
-
-checkJsonEmpty :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => ConstructorDef -> Sem r ()
-checkJsonEmpty d@ConstructorDef {..} = do
-  let ty = _inductiveConstructorType
-  json_ <- getBuiltinNameScoper (getLoc d) BuiltinJson
-  let cty = json_
-  unless (ty === cty) $
-    builtinsErrorText (getLoc d) "json empty constructor has the wrong type"
+    _ -> err "Json should have exactly five constructors"
 
 checkJsonArray :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => ConstructorDef -> Sem r ()
 checkJsonArray d@ConstructorDef {..} = do

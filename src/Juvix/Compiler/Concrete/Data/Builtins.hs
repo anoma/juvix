@@ -55,7 +55,7 @@ builtinConstructors = \case
   BuiltinList -> [BuiltinListNil, BuiltinListCons]
   BuiltinMaybe -> [BuiltinMaybeNothing, BuiltinMaybeJust]
   BuiltinPair -> [BuiltinPairConstr]
-  BuiltinJson -> [BuiltinJsonEmpty, BuiltinJsonArray, BuiltinJsonBool, BuiltinJsonObject, BuiltinJsonNumber, BuiltinJsonString]
+  BuiltinJson -> [BuiltinJsonArray, BuiltinJsonBool, BuiltinJsonObject, BuiltinJsonNumber, BuiltinJsonString]
   BuiltinPoseidonState -> [BuiltinMkPoseidonState]
   BuiltinEcPoint -> [BuiltinMkEcPoint]
   BuiltinAnomaResource -> [BuiltinMkAnomaResource]
@@ -123,7 +123,6 @@ instance Pretty BuiltinConstructor where
     BuiltinMaybeNothing -> Str.nothing
     BuiltinMaybeJust -> Str.just
     BuiltinPairConstr -> Str.pair
-    BuiltinJsonEmpty -> Str.jsonEmpty
     BuiltinJsonArray -> Str.jsonArray
     BuiltinJsonBool -> Str.jsonBool
     BuiltinJsonObject -> Str.jsonObject
@@ -158,7 +157,6 @@ data BuiltinConstructor
   | BuiltinMaybeNothing
   | BuiltinMaybeJust
   | BuiltinPairConstr
-  | BuiltinJsonEmpty
   | BuiltinJsonArray
   | BuiltinJsonBool
   | BuiltinJsonObject

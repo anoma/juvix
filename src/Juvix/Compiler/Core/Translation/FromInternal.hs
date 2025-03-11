@@ -243,12 +243,11 @@ goConstructor sym ctor = do
         Internal.BuiltinIntNegSuc -> freshTag
         Internal.BuiltinListNil -> freshTag
         Internal.BuiltinListCons -> freshTag
-        Internal.BuiltinJsonEmpty -> freshTag
-        Internal.BuiltinJsonArray -> freshTag
-        Internal.BuiltinJsonBool -> freshTag
-        Internal.BuiltinJsonObject -> freshTag
-        Internal.BuiltinJsonNumber -> freshTag
-        Internal.BuiltinJsonString -> freshTag
+        Internal.BuiltinJsonArray -> return (BuiltinTag TagJsonArray)
+        Internal.BuiltinJsonBool -> return (BuiltinTag TagJsonBool)
+        Internal.BuiltinJsonObject -> return (BuiltinTag TagJsonObject)
+        Internal.BuiltinJsonNumber -> return (BuiltinTag TagJsonNumber)
+        Internal.BuiltinJsonString -> return (BuiltinTag TagJsonString)
         Internal.BuiltinMaybeNothing -> freshTag
         Internal.BuiltinMaybeJust -> freshTag
         Internal.BuiltinPairConstr -> freshTag
