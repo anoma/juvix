@@ -61,8 +61,8 @@ checkJsonNumber :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => Con
 checkJsonNumber d@ConstructorDef {..} = do
   let ty = _inductiveConstructorType
   json_ <- getBuiltinNameScoper (getLoc d) BuiltinJson
-  int_ <- getBuiltinNameScoper (getLoc d) BuiltinInt
-  let cty = int_ --> json_
+  nat_ <- getBuiltinNameScoper (getLoc d) BuiltinNat
+  let cty = nat_ --> json_
   unless (ty === cty) $
     builtinsErrorText (getLoc d) "json number constructor has the wrong type"
 

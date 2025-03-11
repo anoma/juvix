@@ -55,7 +55,7 @@ builtinConstructors = \case
   BuiltinList -> [BuiltinListNil, BuiltinListCons]
   BuiltinMaybe -> [BuiltinMaybeNothing, BuiltinMaybeJust]
   BuiltinPair -> [BuiltinPairConstr]
-  BuiltinJson -> [BuiltinJsonArray, BuiltinJsonBool, BuiltinJsonObject, BuiltinJsonNumber, BuiltinJsonString]
+  BuiltinJson -> [BuiltinJsonEmpty, BuiltinJsonArray, BuiltinJsonBool, BuiltinJsonObject, BuiltinJsonNumber, BuiltinJsonString]
   BuiltinPoseidonState -> [BuiltinMkPoseidonState]
   BuiltinEcPoint -> [BuiltinMkEcPoint]
   BuiltinAnomaResource -> [BuiltinMkAnomaResource]
