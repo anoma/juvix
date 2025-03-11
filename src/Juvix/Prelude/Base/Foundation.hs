@@ -133,7 +133,7 @@ import Data.Bifunctor hiding (first, second)
 import Data.Bitraversable
 import Data.Bool
 import Data.ByteString (ByteString)
-import Data.Char
+import Data.Char hiding (Format)
 import Data.Char qualified as Char
 import Data.Data
 import Data.Either.Extra

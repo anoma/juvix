@@ -27,7 +27,8 @@ traceWith f a = trace (f a) a
 
 trace :: Text -> a -> a
 trace = traceLabel ""
-{-# WARNING trace "Using trace" #-}
+
+-- {-# WARNING trace "Using trace" #-}
 
 traceM :: (Applicative f) => Text -> f ()
 traceM t = traceLabel "" t (pure ())

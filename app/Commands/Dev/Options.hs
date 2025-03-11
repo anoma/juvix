@@ -25,6 +25,7 @@ import Commands.Dev.Latex.Options
 import Commands.Dev.MigrateJuvixYaml.Options
 import Commands.Dev.Nockma.Options
 import Commands.Dev.Parse.Options
+import Commands.Dev.PlainMarkdown.Options
 import Commands.Dev.Reg.Options
 import Commands.Dev.Repl.Options
 import Commands.Dev.Runtime.Options
@@ -45,6 +46,7 @@ data DevCommand
   | Asm AsmCommand
   | Reg RegCommand
   | Tree TreeCommand
+  | PlainMarkdown PlainMarkdownCommand
   | Casm CasmCommand
   | Runtime RuntimeCommand
   | Parse ParseOptions
@@ -78,9 +80,17 @@ parseDevCommand =
           commandMigrateJuvixYaml,
           commandLatex,
           commandAnoma,
-          commandNockma
+          commandNockma,
+          commandPlainMarkdown
         ]
     )
+
+commandPlainMarkdown :: Mod CommandFields DevCommand
+commandPlainMarkdown =
+  command "plain-markdown" $
+    info
+      (PlainMarkdown <$> parsePlainMarkdownCommand)
+      (progDesc "Subcommands related to Markdown (without Juvix)")
 
 commandLatex :: Mod CommandFields DevCommand
 commandLatex =
