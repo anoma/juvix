@@ -924,7 +924,7 @@ goDefType FunctionLhs {..} = do
         Nothing -> return (Internal.smallUniverseE (getLoc a))
         Just ty -> goExpression ty
 
-      let _paramImpligoExpressioncit = _sigArgImplicit
+      let _paramImplicit = _sigArgImplicit
           noName = Internal.FunctionParameter {_paramName = Nothing, ..}
           mk :: Concrete.Argument 'Scoped -> Internal.FunctionParameter
           mk ma =
