@@ -2,7 +2,7 @@ module Commands.Dev.PlainMarkdown.Format where
 
 import Commands.Base
 import Commands.Dev.PlainMarkdown.Format.Options
-import Markdown.FromSource
+import Markdown.FromSource qualified as Markdown
 import Markdown.Print
 
 runCommand ::
@@ -12,6 +12,5 @@ runCommand ::
   Sem r ()
 runCommand opts = do
   afile <- fromAppPathFile (opts ^. formatFile)
-  mdBlock <- runAppError @SimpleError (fromFile afile)
-  print mdBlock
+  mdBlock <- runAppError @SimpleError (Markdown.parseFile afile)
   renderStdOutLn (ppOut mdBlock)

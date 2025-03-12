@@ -51,17 +51,37 @@ newtype EscapedChar = EscapedChar
   }
   deriving stock (Show, Eq, Generic)
 
+newtype Strong = Strong
+  { _strong :: Inlines
+  }
+  deriving stock (Show, Eq, Generic)
+
+newtype Emph = Emph
+  { _emph :: Inlines
+  }
+  deriving stock (Show, Eq, Generic)
+
+newtype Code = Code
+  { _code :: Text
+  }
+  deriving stock (Show, Eq, Generic)
+
+newtype Entity = Entity
+  { _entity :: Text
+  }
+  deriving stock (Show, Eq, Generic)
+
 data Inline
   = InlineHardBreak (Meta HardBreak)
   | InlineSoftBreak (Meta SoftBreak)
   | InlineString (Meta Text)
-  | InlineEntity (Meta Text)
+  | InlineEntity (Meta Entity)
   | InlineEscapedChar (Meta EscapedChar)
-  | InlineEmph Inlines
-  | InlineStrong Inlines
+  | InlineEmph (Meta Emph)
+  | InlineStrong (Meta Strong)
   | InlineLink (Meta Link)
   | InlineImage (Meta Image)
-  | InlineCode (Meta Text)
+  | InlineCode (Meta Code)
   | InlineRaw (Meta RawInline)
   deriving stock (Show, Eq, Generic)
 
@@ -155,9 +175,20 @@ instance Rangeable (Meta a) where
   ranged = set (metaLoc . unIrrelevant)
 
 instance HasAttributes Inline where
-  addAttributes _attr = trace "todo"
+  addAttributes attr =
+    \case
+      InlineHardBreak a -> InlineHardBreak (addAttributes attr a)
+      InlineSoftBreak a -> InlineSoftBreak (addAttributes attr a)
+      InlineString a -> InlineString (addAttributes attr a)
+      InlineEntity a -> InlineEntity (addAttributes attr a)
+      InlineEscapedChar a -> InlineEscapedChar (addAttributes attr a)
+      InlineEmph a -> InlineEmph (addAttributes attr a)
+      InlineStrong a -> InlineStrong (addAttributes attr a)
+      InlineLink a -> InlineLink (addAttributes attr a)
+      InlineImage a -> InlineImage (addAttributes attr a)
+      InlineCode a -> InlineCode (addAttributes attr a)
+      InlineRaw a -> InlineRaw (addAttributes attr a)
 
--- TODO
 instance Rangeable Inline where
   ranged d =
     \case
@@ -180,10 +211,10 @@ instance HasAttributes Inlines where
   addAttributes attr = over inlines (map (addAttributes attr))
 
 instance Rangeable Blocks where
-  ranged d bs = trace ("rangeable blocks " <> show (length (bs ^. blocks)) <> " " <> show d) (over blocks (map (ranged d)) bs)
+  ranged d bs = over blocks (map (ranged d)) bs
 
 instance Rangeable Inlines where
-  ranged d = trace ("rangeable inlines " <> show d) . over inlines (map (ranged d))
+  ranged d = over inlines (map (ranged d))
 
 class IsInlines a where
   toInlines :: a -> Inlines
@@ -208,35 +239,40 @@ iniRange :: SourceRange
 iniRange = mempty
 
 instance Rangeable Block where
-  ranged r b =
-    trace
-      ("rangeable block: " <> show b)
-      ( case b of
-          BlockParagraph a -> BlockParagraph (ranged r a)
-          BlockPlain a -> BlockPlain (ranged r a)
-          BlockCodeBlock a -> BlockCodeBlock (ranged r a)
-          BlockHeading a -> BlockHeading (ranged r a)
-          BlockThematicBreak a -> BlockThematicBreak (ranged r a)
-          BlockQuote a -> BlockQuote (ranged r a)
-          BlockList a -> BlockList (ranged r a)
-          BlockRawBlock a -> BlockRawBlock (ranged r a)
-          BlockReferenceLinkDefinition a -> BlockReferenceLinkDefinition (ranged r a)
-      )
+  ranged r = \case
+    BlockParagraph a -> BlockParagraph (ranged r a)
+    BlockPlain a -> BlockPlain (ranged r a)
+    BlockCodeBlock a -> BlockCodeBlock (ranged r a)
+    BlockHeading a -> BlockHeading (ranged r a)
+    BlockThematicBreak a -> BlockThematicBreak (ranged r a)
+    BlockQuote a -> BlockQuote (ranged r a)
+    BlockList a -> BlockList (ranged r a)
+    BlockRawBlock a -> BlockRawBlock (ranged r a)
+    BlockReferenceLinkDefinition a -> BlockReferenceLinkDefinition (ranged r a)
 
 instance HasAttributes Block where
-  addAttributes _ = trace "attributes block"
+  addAttributes attr = \case
+    BlockParagraph a -> BlockParagraph (addAttributes attr a)
+    BlockPlain a -> BlockPlain (addAttributes attr a)
+    BlockCodeBlock a -> BlockCodeBlock (addAttributes attr a)
+    BlockHeading a -> BlockHeading (addAttributes attr a)
+    BlockThematicBreak a -> BlockThematicBreak (addAttributes attr a)
+    BlockQuote a -> BlockQuote (addAttributes attr a)
+    BlockList a -> BlockList (addAttributes attr a)
+    BlockRawBlock a -> BlockRawBlock (addAttributes attr a)
+    BlockReferenceLinkDefinition a -> BlockReferenceLinkDefinition (addAttributes attr a)
 
 instance IsInline Inlines where
   lineBreak = toInlines (InlineHardBreak (mkMeta HardBreak))
   softBreak = toInlines (InlineSoftBreak (mkMeta SoftBreak))
   str a = toInlines (InlineString (mkMeta a))
-  entity a = toInlines (InlineEntity (mkMeta a))
+  entity a = toInlines (InlineEntity (mkMeta (Entity a)))
   escapedChar _escapedChar = toInlines (InlineEscapedChar (mkMeta (EscapedChar {..})))
-  emph a = toInlines (InlineEmph a)
-  strong a = toInlines (InlineStrong a)
+  emph a = toInlines (InlineEmph (mkMeta (Emph a)))
+  strong a = toInlines (InlineStrong (mkMeta (Strong a)))
   link _linkDestination _linkTitle _linkDescription = toInlines (InlineLink (mkMeta Link {..}))
   image _imageSource _imageTitle _imageDescription = toInlines (InlineImage (mkMeta Image {..}))
-  code a = toInlines (InlineCode (mkMeta a))
+  code a = toInlines (InlineCode (mkMeta (Code a)))
   rawInline _rawInlineFormat _rawInlineText = toInlines (InlineRaw (mkMeta RawInline {..}))
 
 instance IsBlock Inlines Blocks where
@@ -246,7 +282,7 @@ instance IsBlock Inlines Blocks where
   blockQuote _quoteBlock = mkBlocks (BlockQuote (mkMeta QuoteBlock {..}))
   codeBlock _codeBlockLanguage _codeBlock = mkBlocks (BlockCodeBlock (mkMeta (CodeBlock {..})))
   heading _headingLevel _headingText = mkBlocks (BlockHeading (mkMeta Heading {..}))
-  rawBlock = error "todo"
+  rawBlock _rawBlockFormat _rawBlockText = mkBlocks (BlockRawBlock (mkMeta RawBlock {..}))
   referenceLinkDefinition _referenceLinkDefinitionLabel (_referenceLinkDefinitionDestination, _referenceLinkDefinitionTitle) = mkBlocks (BlockReferenceLinkDefinition (mkMeta ReferenceLinkDefinition {..}))
   list _listType _listSpacing lstBlocks = mkBlocks (BlockList (mkMeta List {_listBlocks = nonEmpty' lstBlocks, ..}))
 

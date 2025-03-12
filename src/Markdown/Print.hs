@@ -38,12 +38,68 @@ instance PrettyPrint EscapedChar where
   ppCode (EscapedChar c) =
     ppCode (showEscapedChar c)
 
+instance PrettyPrint Strong where
+  ppCode (Strong i) = do
+    ppCode @Text "**"
+    ppCode i
+    ppCode @Text "**"
+
+instance PrettyPrint Emph where
+  ppCode (Emph i) = do
+    ppCode @Text "_"
+    ppCode i
+    ppCode @Text "_"
+
+-- [link](/uri "title")
+instance PrettyPrint Link where
+  ppCode Link {..} = do
+    ppCode @Text "["
+      <> ppCode _linkDescription
+      <> ppCode @Text "]("
+      <> ppCode _linkDestination
+      <+?> ppLinkTitle _linkTitle
+        <> ppCode @Text ")"
+
+instance PrettyPrint Image where
+  ppCode Image {..} = do
+    ppCode @Text "!"
+    ppCode
+      Link
+        { _linkDescription = _imageDescription,
+          _linkTitle = _imageTitle,
+          _linkDestination = _imageSource
+        }
+
+instance PrettyPrint Code where
+  ppCode (Code c) = do
+    ppCode @Text "`"
+    ppCode c
+    ppCode @Text "`"
+
+instance PrettyPrint Entity where
+  ppCode (Entity e) = ppCode e
+
 instance PrettyPrint Inline where
   ppCode = \case
     InlineString txt -> noLoc (pretty txt)
     InlineSoftBreak b -> ppCode b
     InlineHardBreak b -> ppCode b
     InlineEscapedChar b -> ppCode b
+    InlineEntity b -> ppCode b
+    InlineEmph b -> ppCode b
+    InlineStrong b -> ppCode b
+    InlineLink b -> ppCode b
+    InlineImage b -> ppCode b
+    InlineCode b -> ppCode b
+    InlineRaw b -> ppCode b
+
+instance PrettyPrint RawBlock where
+  ppCode RawBlock {..} =
+    ppCode _rawBlockText
+
+instance PrettyPrint RawInline where
+  ppCode RawInline {..} =
+    ppCode _rawInlineText
 
 instance PrettyPrint Inlines where
   ppCode = mapM_ ppCode . (^. inlines)
@@ -108,11 +164,17 @@ instance PrettyPrint QuoteBlock where
             $ Text.lines q
     noLoc (pretty withQuotes)
 
+ppLinkTitle ::
+  (Member (Reader Options) r, Member ExactPrint r) =>
+  Text ->
+  Maybe (Sem r ())
+ppLinkTitle title
+  | Text.null title = Nothing
+  | otherwise = Just (ppCode (show @Text title))
+
 instance PrettyPrint ReferenceLinkDefinition where
   ppCode ReferenceLinkDefinition {..} = do
-    let title
-          | Text.null _referenceLinkDefinitionTitle = Nothing
-          | otherwise = Just (ppCode (show @Text _referenceLinkDefinitionTitle))
+    let title = ppLinkTitle _referenceLinkDefinitionTitle
     ppCode ("[" <> _referenceLinkDefinitionLabel <> "]:")
       <+> ppCode _referenceLinkDefinitionDestination
       <+?> title
@@ -125,6 +187,6 @@ instance PrettyPrint Block where
     BlockHeading p -> ppCode p
     BlockThematicBreak p -> ppCode p
     BlockQuote p -> ppCode p
-    BlockRawBlock {} -> error "raw block"
+    BlockRawBlock p -> ppCode p
     BlockList l -> ppCode l
     BlockReferenceLinkDefinition d -> ppCode d
