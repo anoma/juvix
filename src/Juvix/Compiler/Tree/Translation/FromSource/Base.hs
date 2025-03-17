@@ -426,11 +426,12 @@ constrTag ::
   (Members '[Error SimpleParserError, Reader (ParserSig t e d), InfoTableBuilder' t e] r) =>
   ParsecS r Tag
 constrTag = do
-  (txt, loc) <- interval $ identifier @t @e @d
+  off <- P.getOffset
+  txt <- identifier @t @e @d
   idt <- lift $ getIdent' @t @e txt
   case idt of
     Just (IdentConstr tag) -> return tag
-    _ -> parsingError' loc "expected a constructor"
+    _ -> parseFailure off "expected a constructor"
 
 indSymbol ::
   forall t e d r.
