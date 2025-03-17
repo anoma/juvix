@@ -264,7 +264,7 @@ parseCExtend = do
             _nodeExtendClosureArgs = arg2 :| args'
           }
     _ ->
-      parseFailure' loc "expected at least two arguments"
+      parsingError' loc "expected at least two arguments"
 
 parseCall ::
   forall r.
@@ -299,7 +299,7 @@ parseCall = do
                 _nodeCallArgs = args'
               }
         [] ->
-          parseFailure' loc "expected at least one argument"
+          parsingError' loc "expected at least one argument"
 
 parseCCall ::
   forall r.
@@ -310,7 +310,7 @@ parseCCall = do
   args <- parseArgs
   case args of
     [_] ->
-      parseFailure' loc "expected at least two arguments"
+      parsingError' loc "expected at least two arguments"
     arg : args' ->
       return
         NodeCallClosures
@@ -319,7 +319,7 @@ parseCCall = do
             _nodeCallClosuresArgs = nonEmpty' args'
           }
     [] ->
-      parseFailure' loc "expected at least two arguments"
+      parsingError' loc "expected at least two arguments"
 
 parseBranch ::
   (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

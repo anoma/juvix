@@ -140,7 +140,7 @@ command = do
     "tsave" ->
       parseSave loc True
     _ ->
-      parseFailure' i ("unknown instruction: " ++ fromText txt)
+      parsingError' i ("unknown instruction: " ++ fromText txt)
 
 parseSave ::
   (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>

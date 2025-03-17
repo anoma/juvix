@@ -147,7 +147,7 @@ statementFunction = do
   sym <- case idt of
     Nothing -> lift $ freshSymbol' @t @e
     Just (IdentFwd sym) -> return sym
-    _ -> parseFailure' i ("duplicate identifier: " ++ fromText txt)
+    _ -> parsingError' i ("duplicate identifier: " ++ fromText txt)
   when (txt == "main") $
     lift (registerMain' @t @e sym)
   args <- functionArguments @t @e @d
@@ -175,13 +175,13 @@ statementFunction = do
   case idt of
     Just (IdentFwd _) -> do
       when (isNothing mcode) $
-        parseFailure' i ("duplicate forward declaration of " ++ fromText txt)
+        parsingError' i ("duplicate forward declaration of " ++ fromText txt)
       fi' <- lift $ getFunctionInfo' @t @e sym
       unless
         ( fi' ^. functionArgsNum == fi ^. functionArgsNum
             && isSubtype (fi' ^. functionType) (fi ^. functionType)
         )
-        $ parseFailure' i "function definition does not match earlier declaration"
+        $ parsingError' i "function definition does not match earlier declaration"
       lift $ registerFunction' fi
     _ -> do
       lift $ registerFunction' fi
@@ -197,7 +197,7 @@ statementInductive = do
   (txt, i) <- identifierL @t @e @d
   idt <- lift $ getIdent' @t @e txt
   when (isJust idt) $
-    parseFailure' i ("duplicate identifier: " ++ fromText txt)
+    parsingError' i ("duplicate identifier: " ++ fromText txt)
   sym <- lift $ freshSymbol' @t @e
   let ii =
         InductiveInfo
@@ -231,7 +231,7 @@ constrDecl symInd = do
   (txt, i) <- identifierL @t @e @d
   idt <- lift $ getIdent' @t @e txt
   when (isJust idt) $
-    parseFailure' i ("duplicate identifier: " ++ fromText txt)
+    parsingError' i ("duplicate identifier: " ++ fromText txt)
   tag <- lift $ freshTag' @t @e
   ty <- typeAnnotation @t @e @d
   let ty' = uncurryType ty
@@ -280,7 +280,7 @@ parseType = do
   typeFun' @t @e @d tys
     <|> do
       unless (null (NonEmpty.tail tys)) $
-        parseFailure' loc "expected \"->\""
+        parsingError' loc "expected \"->\""
       return (head tys)
 
 typeFun' ::
@@ -322,7 +322,7 @@ typeNamed = do
       idt <- lift $ getIdent' @t @e txt
       case idt of
         Just (IdentInd sym) -> return (mkTypeInductive sym)
-        _ -> parseFailure' loc ("not a type: " ++ fromText txt)
+        _ -> parsingError' loc ("not a type: " ++ fromText txt)
 
 constant :: ParsecS r Constant
 constant = fieldValue <|> uint8Value <|> integerValue <|> boolValue <|> stringValue <|> unitValue <|> voidValue
@@ -408,7 +408,7 @@ namedRef' f = do
     Nothing -> f loc txt
 
 namedRef :: forall t e d r. (Members '[Error SimpleParserError, Reader (ParserSig t e d), State (LocalParams' d)] r) => ParsecS r d
-namedRef = namedRef' @t @e @d (\loc _ -> parseFailure' loc "undeclared identifier")
+namedRef = namedRef' @t @e @d (\loc _ -> parsingError' loc "undeclared identifier")
 
 parseField ::
   forall t e d r.
@@ -430,7 +430,7 @@ constrTag = do
   idt <- lift $ getIdent' @t @e txt
   case idt of
     Just (IdentConstr tag) -> return tag
-    _ -> parseFailure' loc "expected a constructor"
+    _ -> parsingError' loc "expected a constructor"
 
 indSymbol ::
   forall t e d r.
@@ -441,7 +441,7 @@ indSymbol = do
   idt <- lift $ getIdent' @t @e txt
   case idt of
     Just (IdentInd sym) -> return sym
-    _ -> parseFailure' loc "expected an inductive type"
+    _ -> parsingError' loc "expected an inductive type"
 
 funSymbol ::
   forall t e d r.
@@ -453,4 +453,4 @@ funSymbol = do
   case idt of
     Just (IdentFwd sym) -> return sym
     Just (IdentFun sym) -> return sym
-    _ -> parseFailure' loc "expected a function"
+    _ -> parsingError' loc "expected a function"

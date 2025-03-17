@@ -62,7 +62,7 @@ label addr = P.try $ do
     Just sym -> do
       b <- lift $ hasOffset sym
       if
-          | b -> parseFailure' loc "duplicate label"
+          | b -> parsingError' loc "duplicate label"
           | otherwise -> do
               lift $ registerLabelAddress sym addr
               return $ Label $ LabelRef {_labelRefSymbol = sym, _labelRefName = Just txt}

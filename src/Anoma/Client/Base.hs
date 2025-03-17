@@ -78,9 +78,9 @@ anomaClientCreateProcess launchMode = do
 setupAnomaClientProcess :: forall r. (Members '[EmbedIO, Logger, Error SimpleError] r) => Handle -> Sem r AnomaClientInfo
 setupAnomaClientProcess nodeOut = do
   ln <- hGetLine nodeOut
-  let parseError = throw (SimpleError (mkAnsiText ("Failed to parse the client grpc port when starting the anoma node and client.\nExpected a number but got " <> ln)))
+  let parsingError = throw (SimpleError (mkAnsiText ("Failed to parse the client grpc port when starting the anoma node and client.\nExpected a number but got " <> ln)))
   let parseInt :: Text -> Sem r Int
-      parseInt = either (const parseError) return . readEither . unpack
+      parseInt = either (const parsingError) return . readEither . unpack
   (grpcPort, nodeId) <- case T.words ln of
     [grpcPortStr, nodeIdStr] -> (,) <$> parseInt grpcPortStr <*> pure nodeIdStr
     _ -> throw (SimpleError (mkAnsiText ("Could not parse Anoma client output. Expected <grpcPort> <node_id>, got: " <> ln)))

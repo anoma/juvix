@@ -20,11 +20,14 @@ import Juvix.Prelude
 import Juvix.Prelude.Parsing as P hiding (hspace, space, space1)
 import Text.Megaparsec.Char.Lexer qualified as L
 
-parseFailure :: forall e r a. (FromSimpleParserError e, Member (Error e) r) => Interval -> String -> ParsecS r a
-parseFailure loc str = P.lift . throw @e . fromSimpleParserError $ SimpleParserError loc (Text.pack str)
+parseFailure :: Int -> String -> ParsecT Void Text m a
+parseFailure off str = P.parseError $ P.FancyError off (Set.singleton (P.ErrorFail str))
 
-parseFailure' :: forall r a. (Member (Error SimpleParserError) r) => Interval -> String -> ParsecS r a
-parseFailure' loc str = P.lift . throw $ SimpleParserError loc (Text.pack str)
+parsingError :: forall e r a. (FromSimpleParserError e, Member (Error e) r) => Interval -> String -> ParsecS r a
+parsingError loc str = P.lift . throw @e . fromSimpleParserError $ SimpleParserError loc (Text.pack str)
+
+parsingError' :: forall r a. (Member (Error SimpleParserError) r) => Interval -> String -> ParsecS r a
+parsingError' loc str = P.lift . throw $ SimpleParserError loc (Text.pack str)
 
 whiteSpace1 :: (MonadParsec e s m, Token s ~ Char) => m ()
 whiteSpace1 = void (takeWhile1P (Just spaceMsg) isWhiteSpace)
@@ -161,7 +164,7 @@ number' int mn mx = do
   let n = num ^. withLocParam
   when
     (n < fromIntegral mn || n > fromIntegral mx)
-    (parseFailure @e loc ("number out of bounds: " ++ show n))
+    (parsingError @e loc ("number out of bounds: " ++ show n))
   return (fromInteger <$> num)
 
 string' :: ParsecS r Text
