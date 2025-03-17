@@ -38,5 +38,3 @@ parseHelperS p t = mapLeft ppParseErrorBundle <$> runParserT p "<input>" t
 
 ppParseErrorBundle :: (TraversableStream txt, VisualStream txt, IsString err) => ParseErrorBundle txt Void -> err
 ppParseErrorBundle = prettyIsString . errorBundlePretty
-
--- TODO: replace errorBundlePretty
