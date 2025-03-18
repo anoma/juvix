@@ -18,6 +18,8 @@
 // have the value MAX_UIDS.
 #define MAX_UIDS 1048576U
 
+// Make sure this corresponds to the number of built-in UIDs in
+// Juvix/Compiler/Backend.hs.
 #define BUILTIN_UIDS_NUM 13U
 
 // Maximum number of different user constructors (globally).
