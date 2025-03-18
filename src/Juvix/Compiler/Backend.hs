@@ -55,7 +55,7 @@ getLimits tgt debug = case tgt of
         _limitsMaxStackDelta = 16368,
         _limitsMaxFunctionAlloc = 16368,
         _limitsDispatchStackSize = 4,
-        _limitsBuiltinUIDsNum = 8,
+        _limitsBuiltinUIDsNum = 13,
         _limitsSpecialisedApply = 3
       }
   TargetCNative64 ->
@@ -70,7 +70,7 @@ getLimits tgt debug = case tgt of
         _limitsMaxStackDelta = 8184,
         _limitsMaxFunctionAlloc = 8184,
         _limitsDispatchStackSize = 4,
-        _limitsBuiltinUIDsNum = 8,
+        _limitsBuiltinUIDsNum = 13,
         _limitsSpecialisedApply = 3
       }
   TargetCore ->
@@ -93,7 +93,7 @@ getLimits tgt debug = case tgt of
         _limitsMaxStackDelta = 16368,
         _limitsMaxFunctionAlloc = 16368,
         _limitsDispatchStackSize = 4,
-        _limitsBuiltinUIDsNum = 8,
+        _limitsBuiltinUIDsNum = 13,
         _limitsSpecialisedApply = 3
       }
   TargetAnoma ->
@@ -110,7 +110,7 @@ getLimits tgt debug = case tgt of
         _limitsMaxStackDelta = 0, -- irrelevant
         _limitsMaxFunctionAlloc = 0, -- irrelevant
         _limitsDispatchStackSize = 0, -- irrelevant
-        _limitsBuiltinUIDsNum = 8,
+        _limitsBuiltinUIDsNum = 13,
         _limitsSpecialisedApply = 3
       }
   TargetRust ->
