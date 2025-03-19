@@ -91,7 +91,7 @@ jobs:
       - name: attest release tar
         uses: actions/attest-build-provenance@v1
         with:
-          subject-path: '/tmp/juvix-linux-x86_64.tar.gz'
+          subject-path: "/tmp/juvix-linux-x86_64.tar.gz"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -143,7 +143,7 @@ jobs:
       - name: attest release tar
         uses: actions/attest-build-provenance@v1
         with:
-          subject-path: 'juvix-macos-x86_64.tar.gz'
+          subject-path: "juvix-macos-x86_64.tar.gz"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -195,7 +195,7 @@ jobs:
       - name: attest release tar
         uses: actions/attest-build-provenance@v1
         with:
-          subject-path: 'juvix-macos-aarch64.tar.gz'
+          subject-path: "juvix-macos-aarch64.tar.gz"
 
       - uses: actions/upload-artifact@v4
         with:
