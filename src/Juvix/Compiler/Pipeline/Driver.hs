@@ -14,8 +14,6 @@ module Juvix.Compiler.Pipeline.Driver
     processImport,
     processRecursivelyUpToTyped,
     processRecursivelyUpTo,
-    processImports,
-    processModuleToStoredCore,
     processProjectUpToScoping,
     processProjectUpToParsing,
   )
@@ -514,6 +512,8 @@ processFileUpToParsing ::
 processFileUpToParsing entry = do
   res <- runReader entry upToParsing
   let imports :: [Import 'Parsed] = res ^. Parser.resultParserState . Parser.parserStateImports
+  traceM ("processFileUpToParsing: " <> prettyText (entry ^. entryPointModulePath))
+  traceM ("Imports: " <> prettyText (map (^. importModulePath) imports))
   CompileResult {..} <- runReader entry (processImports (map (^. importModulePath) imports))
   return
     PipelineResult
@@ -530,6 +530,7 @@ processFileUpTo ::
   Sem r (PipelineResult a)
 processFileUpTo a = do
   entry <- ask
+  traceM ("processFileUpTo: " <> prettyText (entry ^. entryPointModulePath))
   res <- processFileUpToParsing entry
   let pkg = entry ^. entryPointPackageId
   mid <- runReader pkg (getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath . to topModulePathKey))
@@ -578,7 +579,9 @@ processModuleToStoredCore ::
   (Members '[Reader Migration, ModuleInfoCache, PathResolver, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, Dumper] r) =>
   EntryPoint ->
   Sem r (PipelineResult Store.ModuleInfo)
-processModuleToStoredCore entry = over pipelineResult mkModuleInfo <$> processFileToStoredCore entry
+processModuleToStoredCore entry = do
+  traceM ("processModuleToStoredCore: " <> prettyText (entry ^. entryPointModulePath))
+  over pipelineResult mkModuleInfo <$> processFileToStoredCore entry
   where
     mkModuleInfo :: Core.CoreResult -> Store.ModuleInfo
     mkModuleInfo Core.CoreResult {..} =
@@ -599,6 +602,7 @@ processFileToStoredCore ::
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore entry = do
+  traceM ("processFileToStoredCore: " <> prettyText (entry ^. entryPointModulePath))
   res <- processFileUpToParsing entry
   let pkg = entry ^. entryPointPackageId
   mid <- runReader pkg (getModuleId (res ^. pipelineResult . Parser.resultModule . modulePath . to topModulePathKey))

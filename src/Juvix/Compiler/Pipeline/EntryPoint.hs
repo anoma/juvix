@@ -69,10 +69,13 @@ makeLenses ''EntryPoint
 entryPointPackageType :: Lens' EntryPoint PackageType
 entryPointPackageType = entryPointSomeRoot . someRootType
 
+entryPointIsMainFile :: EntryPoint -> Bool
+entryPointIsMainFile entry =
+  entry ^. entryPointMainFile == entry ^. entryPointModulePath
+
 entryPointVerificationEnabled :: EntryPoint -> Bool
 entryPointVerificationEnabled entry =
-  entry ^. entryPointVerify
-    && entry ^. entryPointMainFile == entry ^. entryPointModulePath
+  entry ^. entryPointVerify && entryPointIsMainFile entry
 
 defaultUnrollLimit :: Int
 defaultUnrollLimit = 140
