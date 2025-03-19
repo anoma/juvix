@@ -12,7 +12,7 @@ Merge a PR against anoma/juvix main that contains the following:
    1. In the GitHub Web UI Releases>Create a new release
    2. Fill in 'tag' and 'previous tag' fields
    3. Click 'Generate release notes' and copy the list of merged PRs into [CHANGELOG.md](CHANGELOG.md)
-   4. :warning: *Do not create the Release*
+   4. :warning: _Do not create the Release_
    5. Apply the following sed scripts so that the markup matches previous releases:
       1. `s/*/-`
       2. `s/https:\/\/github.com\/anoma\/juvix\/pull\/\(\d*\)/\[\\#\1](\0)`
@@ -20,6 +20,7 @@ Merge a PR against anoma/juvix main that contains the following:
       4. `s/@\(\(\w\|-\)*\)$/([\1](https:\/\/github.com\/\1))`
 
    NB: We used to use https://github.com/github-changelog-generator/github-changelog-generator to generate the CHANGELOG.md but this stopped working some time in 2024. The markup it used differs from the Github 'Generate release notes' which is why we need to modify it to match the old markup.
+
 4. Make sure that the juvix-stdlib submodule references the main branchg of the juvix-stdlib repo.
 5. Wait for tests to pass / approval and merge the PR into main
 
