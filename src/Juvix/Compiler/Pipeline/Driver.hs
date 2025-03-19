@@ -26,7 +26,6 @@ import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print.Base (docNoCommentsDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed (scopeCheck)
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (getModuleId)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource (fromSource)
