@@ -46,9 +46,9 @@ instance PrettyPrint Strong where
 
 instance PrettyPrint Emph where
   ppCode (Emph i) = do
-    ppCode @Text "_"
+    ppCode @Text "*"
     ppCode i
-    ppCode @Text "_"
+    ppCode @Text "*"
 
 -- [link](/uri "title")
 instance PrettyPrint Link where
@@ -105,19 +105,24 @@ instance PrettyPrint Inlines where
   ppCode = mapM_ ppCode . (^. inlines)
 
 instance PrettyPrint Blocks where
-  ppCode = concatWith (\a b -> a <> hardline <> hardline <> b) . map ppCode . (^. blocks)
+  ppCode =
+    concatWith (\a b -> a <> hardline <> hardline <> b)
+      . map ppCode
+      . (^. blocks)
 
 instance PrettyPrint Text where
   ppCode = noLoc . pretty
 
 instance PrettyPrint CodeBlock where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => CodeBlock -> Sem r ()
-  ppCode CodeBlock {..} = do
-    codeSep
-    ppCode _codeBlockLanguage
-    hardline
-    ppCode _codeBlock
-    codeSep
+  ppCode CodeBlock {..}
+    | Text.null _codeBlockLanguage = indentN 4 (ppCode _codeBlock)
+    | otherwise = do
+        codeSep
+        ppCode _codeBlockLanguage
+        hardline
+        ppCode _codeBlock
+        codeSep
     where
       codeSep :: Sem r ()
       codeSep = ppCode @Text "```"
@@ -150,17 +155,19 @@ instance PrettyPrint List where
         ( \b -> do
             num <- yield @Text
             ppCode num
-            ppCode b
+            indentN 2 (ppCode b)
         )
         _listBlocks
 
 instance PrettyPrint QuoteBlock where
   ppCode QuoteBlock {..} = do
     let q :: Text = toPlainText (ppOut _quoteBlock)
+        addQuoteChar :: Text -> Text
+        addQuoteChar t = ">" <> t
         withQuotes :: Text =
           Text.dropEnd 1
             . Text.unlines
-            . map ("> " <>)
+            . map addQuoteChar
             $ Text.lines q
     noLoc (pretty withQuotes)
 

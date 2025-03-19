@@ -12,5 +12,8 @@ runCommand ::
   Sem r ()
 runCommand opts = do
   afile <- fromAppPathFile (opts ^. formatFile)
-  mdBlock <- runAppError @SimpleError (Markdown.parseFile afile)
-  renderStdOutLn (ppOut mdBlock)
+  txt <- readFile' afile
+  mdBlock <- runAppError @SimpleError (Markdown.parseText afile txt)
+  let out = ppOut mdBlock <> ansiTextNewline
+  renderStdOut out
+  when (opts ^. formatCheck && txt /= toPlainText out) exitFailure
