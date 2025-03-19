@@ -26,6 +26,7 @@ import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
+import Juvix.Compiler.Pipeline.SHA256Cache
 import Juvix.Compiler.Store.Scoped.Language qualified as Scoped
 import Juvix.Compiler.Verification.Dumper
 import Juvix.Data.Effect.Git
@@ -155,7 +156,7 @@ evalModuleInfoCacheHelper ::
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
+  Sem (ModuleInfoCache ': SHA256Cache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheHelper m = do
   hasParallelSupport <- supportsParallel
