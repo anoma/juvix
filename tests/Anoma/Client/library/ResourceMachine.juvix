@@ -103,12 +103,6 @@ axiom actionDelta : Action -> Delta;
 builtin anoma-actions-delta
 axiom actionsDelta : List Action -> Delta;
 
-builtin anoma-prove-action
-axiom proveAction : Action -> Nat;
-
-builtin anoma-prove-delta
-axiom proveDelta : Delta -> Nat;
-
 builtin anoma-zero-delta
 axiom zeroDelta : Delta;
 

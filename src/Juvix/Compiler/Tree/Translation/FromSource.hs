@@ -162,8 +162,6 @@ parseAnoma =
     <|> parseAnoma' kwAnomaResourceDelta OpAnomaResourceDelta
     <|> parseAnoma' kwAnomaActionDelta OpAnomaActionDelta
     <|> parseAnoma' kwAnomaActionsDelta OpAnomaActionsDelta
-    <|> parseAnoma' kwAnomaProveAction OpAnomaProveAction
-    <|> parseAnoma' kwAnomaProveDelta OpAnomaProveDelta
     <|> parseAnoma' kwAnomaZeroDelta OpAnomaZeroDelta
     <|> parseAnoma' kwAnomaAddDelta OpAnomaAddDelta
     <|> parseAnoma' kwAnomaSubDelta OpAnomaSubDelta

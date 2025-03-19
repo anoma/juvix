@@ -226,8 +226,6 @@ isDebugOp = \case
       OpAnomaResourceDelta -> False
       OpAnomaActionDelta -> False
       OpAnomaActionsDelta -> False
-      OpAnomaProveAction -> False
-      OpAnomaProveDelta -> False
       OpAnomaZeroDelta -> False
       OpAnomaAddDelta -> False
       OpAnomaSubDelta -> False
@@ -534,8 +532,6 @@ builtinOpArgTypes = \case
   OpAnomaResourceDelta -> [mkDynamic']
   OpAnomaActionDelta -> [mkDynamic']
   OpAnomaActionsDelta -> [mkDynamic']
-  OpAnomaProveAction -> [mkDynamic']
-  OpAnomaProveDelta -> [mkDynamic']
   OpAnomaZeroDelta -> []
   OpAnomaAddDelta -> [mkDynamic', mkDynamic']
   OpAnomaSubDelta -> [mkDynamic', mkDynamic']

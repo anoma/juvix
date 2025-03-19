@@ -553,12 +553,6 @@ kwAnomaActionDelta = asciiKw Str.anomaActionDelta
 kwAnomaActionsDelta :: Keyword
 kwAnomaActionsDelta = asciiKw Str.anomaActionsDelta
 
-kwAnomaProveAction :: Keyword
-kwAnomaProveAction = asciiKw Str.anomaProveAction
-
-kwAnomaProveDelta :: Keyword
-kwAnomaProveDelta = asciiKw Str.anomaProveDelta
-
 kwAnomaZeroDelta :: Keyword
 kwAnomaZeroDelta = asciiKw Str.anomaZeroDelta
 

@@ -71,8 +71,6 @@ instance PrettyCode BuiltinOp where
     OpAnomaResourceDelta -> return primResourceDelta
     OpAnomaActionDelta -> return primActionDelta
     OpAnomaActionsDelta -> return primActionsDelta
-    OpAnomaProveAction -> return primProveAction
-    OpAnomaProveDelta -> return primProveDelta
     OpAnomaZeroDelta -> return primZeroDelta
     OpAnomaAddDelta -> return primAddDelta
     OpAnomaSubDelta -> return primSubDelta
@@ -990,12 +988,6 @@ primActionDelta = primitive Str.anomaActionDelta
 
 primActionsDelta :: Doc Ann
 primActionsDelta = primitive Str.anomaActionsDelta
-
-primProveDelta :: Doc Ann
-primProveDelta = primitive Str.anomaProveDelta
-
-primProveAction :: Doc Ann
-primProveAction = primitive Str.anomaProveAction
 
 primZeroDelta :: Doc Ann
 primZeroDelta = primitive Str.anomaZeroDelta
