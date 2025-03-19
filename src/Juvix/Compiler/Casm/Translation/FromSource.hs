@@ -9,47 +9,48 @@ import Juvix.Extra.Paths
 import Juvix.Parser.Error
 import Text.Megaparsec qualified as P
 
-parseText :: Text -> Either MegaparsecError (LabelInfo, [Instruction])
+parseText :: Text -> Either ParserError (LabelInfo, [Instruction])
 parseText = runParser noFile
 
-runParser :: Path Abs File -> Text -> Either MegaparsecError (LabelInfo, [Instruction])
+runParser :: Path Abs File -> Text -> Either ParserError (LabelInfo, [Instruction])
 runParser fileName input_ =
-  case run . runLabelInfoBuilder $ runParser' 0 (toFilePath fileName) input_ of
-    (_, Left err) -> Left err
-    (li, Right instrs) -> Right (li, instrs)
+  case run . runLabelInfoBuilder . runError @SimpleParserError $ runParser' 0 (toFilePath fileName) input_ of
+    (_, Left err) -> Left (ErrSimpleParserError err)
+    (_, Right (Left err)) -> Left err
+    (li, Right (Right instrs)) -> Right (li, instrs)
 
-runParser' :: (Member LabelInfoBuilder r) => Address -> FilePath -> Text -> Sem r (Either MegaparsecError [Instruction])
+runParser' :: (Member LabelInfoBuilder r) => Address -> FilePath -> Text -> Sem r (Either ParserError [Instruction])
 runParser' addr fileName input_ = do
-  e <- P.runParserT (parseToplevel addr) fileName input_
+  e <- runError @SimpleParserError $ P.runParserT (parseToplevel addr) fileName input_
   return $ case e of
-    Left err -> Left (MegaparsecError err)
-    Right instrs -> Right instrs
+    Left err -> Left (ErrSimpleParserError err)
+    Right (Left err) -> Left (ErrMegaparsec (MegaparsecError err))
+    Right (Right instrs) -> Right instrs
 
-parseToplevel :: (Member LabelInfoBuilder r) => Address -> ParsecS r [Instruction]
+parseToplevel :: (Members '[Error SimpleParserError, LabelInfoBuilder] r) => Address -> ParsecS r [Instruction]
 parseToplevel addr = do
   instrs <- statements addr
   P.eof
   return instrs
 
-statements :: (Member LabelInfoBuilder r) => Address -> ParsecS r [Instruction]
+statements :: (Members '[Error SimpleParserError, LabelInfoBuilder] r) => Address -> ParsecS r [Instruction]
 statements addr = do
   space
   label' addr <|> statement' addr <|> return []
 
-statement' :: (Member LabelInfoBuilder r) => Address -> ParsecS r [Instruction]
+statement' :: (Members '[Error SimpleParserError, LabelInfoBuilder] r) => Address -> ParsecS r [Instruction]
 statement' addr = do
   i <- instruction
   (i :) <$> statements (addr + 1)
 
-label' :: (Member LabelInfoBuilder r) => Address -> ParsecS r [Instruction]
+label' :: (Members '[Error SimpleParserError, LabelInfoBuilder] r) => Address -> ParsecS r [Instruction]
 label' addr = do
   l <- label addr
   (l :) <$> statements (addr + 1)
 
-label :: (Member LabelInfoBuilder r) => Address -> ParsecS r Instruction
+label :: (Members '[Error SimpleParserError, LabelInfoBuilder] r) => Address -> ParsecS r Instruction
 label addr = P.try $ do
-  off' <- P.getOffset
-  txt <- identifier
+  (txt, loc) <- interval identifier
   kw kwColon
   msym <- lift $ getIdent txt
   case msym of
@@ -61,12 +62,12 @@ label addr = P.try $ do
     Just sym -> do
       b <- lift $ hasOffset sym
       if
-          | b -> parseFailure off' "duplicate label"
+          | b -> parsingError' loc "duplicate label"
           | otherwise -> do
               lift $ registerLabelAddress sym addr
               return $ Label $ LabelRef {_labelRefSymbol = sym, _labelRefName = Just txt}
 
-instruction :: (Member LabelInfoBuilder r) => ParsecS r Instruction
+instruction :: (Members '[Error SimpleParserError, LabelInfoBuilder] r) => ParsecS r Instruction
 instruction =
   parseHint
     <|> parseNop
@@ -107,7 +108,7 @@ parseNop = do
   kw kwNop
   return Nop
 
-parseAlloc :: (Member LabelInfoBuilder r) => ParsecS r Instruction
+parseAlloc :: (Members '[Error SimpleParserError, LabelInfoBuilder] r) => ParsecS r Instruction
 parseAlloc = do
   kw kwAp
   kw kwPlusEq
@@ -118,7 +119,7 @@ parseAlloc = do
         { _instrAllocSize = i
         }
 
-parseRValue :: forall r. (Member LabelInfoBuilder r) => ParsecS r RValue
+parseRValue :: forall r. (Members '[Error SimpleParserError, LabelInfoBuilder] r) => ParsecS r RValue
 parseRValue = load <|> binop <|> val
   where
     load :: ParsecS r RValue
@@ -166,19 +167,19 @@ parseRValue = load <|> binop <|> val
     val :: ParsecS r RValue
     val = Val <$> parseValue
 
-parseValue :: (Member LabelInfoBuilder r) => ParsecS r Value
+parseValue :: (Members '[Error SimpleParserError, LabelInfoBuilder] r) => ParsecS r Value
 parseValue = (Imm <$> parseImm) <|> (Ref <$> parseMemRef) <|> (Lab <$> parseLabel)
 
 parseImm :: ParsecS r Immediate
 parseImm = (^. withLocParam) <$> integer
 
-parseOffset :: ParsecS r Offset
+parseOffset :: (Member (Error SimpleParserError) r) => ParsecS r Offset
 parseOffset =
   (kw kwPlus >> offset)
     <|> (kw kwMinus >> (negate <$> offset))
     <|> return 0
 
-parseMemRef :: ParsecS r MemRef
+parseMemRef :: (Member (Error SimpleParserError) r) => ParsecS r MemRef
 parseMemRef = do
   lbracket
   r <- register
@@ -186,7 +187,7 @@ parseMemRef = do
   rbracket
   return MemRef {_memRefReg = r, _memRefOff = off}
 
-parseLabel :: (Member LabelInfoBuilder r) => ParsecS r LabelRef
+parseLabel :: (Members '[Error SimpleParserError, LabelInfoBuilder] r) => ParsecS r LabelRef
 parseLabel = do
   txt <- identifier
   msym <- lift $ getIdent txt
@@ -204,7 +205,7 @@ parseIncAp = (kw delimSemicolon >> kw kwApPlusPlus >> return True) <|> return Fa
 parseRel :: ParsecS r Bool
 parseRel = (kw kwRel >> return True) <|> (kw kwAbs >> return False) <|> return True
 
-parseJump :: forall r. (Member LabelInfoBuilder r) => ParsecS r Instruction
+parseJump :: forall r. (Members '[Error SimpleParserError, LabelInfoBuilder] r) => ParsecS r Instruction
 parseJump = do
   kw kwJmp
   P.try jmpIf <|> jmp
@@ -240,7 +241,7 @@ parseJump = do
               _instrJumpComment = Nothing
             }
 
-parseCall :: (Member LabelInfoBuilder r) => ParsecS r Instruction
+parseCall :: (Members '[Error SimpleParserError, LabelInfoBuilder] r) => ParsecS r Instruction
 parseCall = do
   kw kwCall
   isRel <- parseRel
@@ -258,19 +259,19 @@ parseReturn = do
   kw kwRet
   return Return
 
-parseAssert :: ParsecS r Instruction
+parseAssert :: (Member (Error SimpleParserError) r) => ParsecS r Instruction
 parseAssert = do
   kw kwAssert
   r <- parseMemRef
   return $ Assert $ InstrAssert {_instrAssertValue = r}
 
-parseTrace :: (Member LabelInfoBuilder r) => ParsecS r Instruction
+parseTrace :: (Members '[Error SimpleParserError, LabelInfoBuilder] r) => ParsecS r Instruction
 parseTrace = do
   kw kwTrace
   v <- parseRValue
   return $ Trace $ InstrTrace {_instrTraceValue = v}
 
-parseAssign :: forall r. (Member LabelInfoBuilder r) => ParsecS r Instruction
+parseAssign :: forall r. (Members '[Error SimpleParserError, LabelInfoBuilder] r) => ParsecS r Instruction
 parseAssign = do
   res <- parseMemRef
   kw kwEq

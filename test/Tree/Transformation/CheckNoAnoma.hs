@@ -27,7 +27,7 @@ treeEvalTransformationErrorAssertion mainFile trans checkError step = do
   step "Parse"
   s <- readFile mainFile
   case runParser mainFile s of
-    Left err -> assertFailure (prettyString err)
+    Left err -> assertFailure (renderStringDefault err)
     Right tab0 -> do
       step "Validate"
       case run $ runReader Tree.defaultOptions $ runError @JuvixError $ applyTransformations [Validate] tab0 of

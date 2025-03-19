@@ -139,7 +139,7 @@ casmRunAssertion bInterp bRunVM root mainFile inputFile expectedFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (prettyString err)
+    Left err -> assertFailure (renderStringDefault err)
     Right (labi, instrs) -> do
       entryPoint <- testDefaultEntryPointIO root mainFile
       casmRunAssertion' entryPoint bInterp bRunVM labi instrs [] 1 inputFile expectedFile step
@@ -161,7 +161,7 @@ casmRunErrorAssertion mainFile step = do
             Left _ -> assertBool "" True
             Right _ -> assertFailure "no error"
 
-parseFile :: Path Abs File -> IO (Either MegaparsecError (LabelInfo, Code))
+parseFile :: Path Abs File -> IO (Either ParserError (LabelInfo, Code))
 parseFile f = do
   s <- readFile f
   return (runParser f s)

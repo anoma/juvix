@@ -41,7 +41,7 @@ asmCompileAssertion root' mainFile expectedFile stdinText step = do
   step "Parse"
   s <- readFile mainFile
   case runParser mainFile s of
-    Left err -> assertFailure (show err)
+    Left err -> assertFailure (renderStringDefault err)
     Right md -> do
       entryPoint <- testDefaultEntryPointIO root' mainFile
       asmCompileAssertion' entryPoint 3 md mainFile expectedFile stdinText step

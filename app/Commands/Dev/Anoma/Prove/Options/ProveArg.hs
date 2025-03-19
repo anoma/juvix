@@ -12,8 +12,7 @@ import CommonOptions
 import Juvix.Data.IntegerWithBase
 import Juvix.Parser.Lexer
 import Juvix.Prelude.Parsing hiding (many, option)
-
-type Parse = Parsec Void Text
+import Juvix.Prelude.Parsing qualified as P
 
 newtype ProveArg' = ProveArg'
   { _proveArg :: Sigma ProveArgTag ProveArgTypeSym0
@@ -68,6 +67,9 @@ parseProveArg = fromProveArg' <$> parseProveArg'
                 _argFileSpecDecoding = d
               }
 
+data NegativeError = NegativeError
+  deriving stock (Show)
+
 parseProveArg' :: Parser ProveArg'
 parseProveArg' =
   option
@@ -78,14 +80,14 @@ parseProveArg' =
         <> helpDoc ("An argument to the program:" <> line <> proveArgTagHelp)
     )
   where
-    pProveArgTag :: Parse ProveArgTag
+    pProveArgTag :: ParsecS r ProveArgTag
     pProveArgTag =
       choice
         [ chunk (show a) $> a
           | a :: ProveArgTag <- allElements
         ]
 
-    pAppPath :: Parse (AppPath File)
+    pAppPath :: ParsecS r (AppPath File)
     pAppPath = do
       i <- mkPrepath . unpack <$> takeRest
       return
@@ -94,7 +96,7 @@ parseProveArg' =
             _pathPath = i
           }
 
-    pProveArg' :: Parse ProveArg'
+    pProveArg' :: (Member (Error NegativeError) r) => ParsecS r ProveArg'
     pProveArg' = do
       dty <- pProveArgTag
       withSomeSing dty $ \ty -> do
@@ -102,7 +104,7 @@ parseProveArg' =
         a <- pProveArgType ty
         return (ProveArg' (ty :&: a))
 
-    pProveArgType :: SProveArgTag t -> Parse (ProveArgType t)
+    pProveArgType :: (Member (Error NegativeError) r) => SProveArgTag t -> ParsecS r (ProveArgType t)
     pProveArgType p = do
       ret <- case p of
         SProveArgTagByteArray -> pAppPath
@@ -112,13 +114,20 @@ parseProveArg' =
         SProveArgTagBase64UnJammed -> pAppPath
         SProveArgTagBytesUnJammed -> pAppPath
         SProveArgTagNat -> do
-          off <- getOffset
           i <- (^. withLocParam . integerWithBaseValue) <$> integerWithBase'
           if
-              | i < 0 -> parseFailure off "Expected a non-negative integer"
+              | i < 0 -> P.lift $ throw NegativeError
               | otherwise -> return (fromIntegral i)
       eof
       return ret
 
     pp :: ReadM ProveArg'
-    pp = eitherReader $ \strInput -> parseHelper pProveArg' (pack strInput)
+    pp = eitherReader $ \strInput ->
+      let e =
+            run
+              . runError @NegativeError
+              $ parseHelperS pProveArg' (pack strInput)
+       in case e of
+            Left _ -> Left "Expected a non-negative integer"
+            Right (Left s) -> Left s
+            Right (Right a) -> Right a

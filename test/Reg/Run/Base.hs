@@ -52,7 +52,7 @@ regRunAssertionParam interpretFun mainFile expectedFile trans testTrans step = d
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (prettyString err)
+    Left err -> assertFailure (renderStringDefault err)
     Right md -> do
       unless (null trans) $
         step "Transform"
@@ -84,7 +84,7 @@ regRunErrorAssertion mainFile step = do
             )
         Nothing -> assertBool "" True
 
-parseFile :: Path Abs File -> IO (Either MegaparsecError Module)
+parseFile :: Path Abs File -> IO (Either ParserError Module)
 parseFile f = do
   s <- readFile f
   return (runParser f s)

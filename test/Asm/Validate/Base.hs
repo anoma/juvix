@@ -17,7 +17,7 @@ asmValidateErrorAssertion mainFile step = do
         Just _ -> assertBool "" True
         Nothing -> assertFailure "no error"
 
-parseFile :: Path Abs File -> IO (Either MegaparsecError Module)
+parseFile :: Path Abs File -> IO (Either ParserError Module)
 parseFile f = do
   s <- readFile f
   return (runParser f s)
