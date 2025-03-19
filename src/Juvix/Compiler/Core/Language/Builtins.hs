@@ -47,8 +47,6 @@ data BuiltinOp
   | OpAnomaResourceDelta
   | OpAnomaActionDelta
   | OpAnomaActionsDelta
-  | OpAnomaProveAction
-  | OpAnomaProveDelta
   | OpAnomaZeroDelta
   | OpAnomaAddDelta
   | OpAnomaSubDelta
@@ -68,7 +66,7 @@ data BuiltinOp
   | OpUInt8FromInt
   | OpByteArrayFromListByte
   | OpByteArrayLength
-  deriving stock (Eq, Generic, Show)
+  deriving stock (Eq, Generic, Show, Enum, Bounded)
 
 instance Serialize BuiltinOp
 
@@ -142,8 +140,6 @@ builtinOpArgsNum = \case
   OpAnomaResourceDelta -> 1
   OpAnomaActionDelta -> 1
   OpAnomaActionsDelta -> 1
-  OpAnomaProveAction -> 1
-  OpAnomaProveDelta -> 1
   OpAnomaZeroDelta -> 0
   OpAnomaAddDelta -> 2
   OpAnomaSubDelta -> 2
@@ -212,8 +208,6 @@ builtinIsFoldable = \case
   OpAnomaResourceDelta -> False
   OpAnomaActionDelta -> False
   OpAnomaActionsDelta -> False
-  OpAnomaProveAction -> False
-  OpAnomaProveDelta -> False
   OpAnomaZeroDelta -> False
   OpAnomaAddDelta -> False
   OpAnomaSubDelta -> False
@@ -236,41 +230,79 @@ builtinIsFoldable = \case
   OpByteArrayFromListByte -> False
   OpByteArrayLength -> False
 
+-- TODO should be refactored so that you don't need to remember to add a builtin
+-- to this list
 builtinsString :: [BuiltinOp]
 builtinsString = [OpStrConcat, OpStrToInt, OpShow]
 
+-- TODO should be refactored so that you don't need to remember to add a builtin
+-- to this list
 builtinsCairo :: [BuiltinOp]
 builtinsCairo = [OpPoseidonHash, OpEc, OpRandomEcPoint, OpRangeCheck]
 
 builtinsAnoma :: [BuiltinOp]
-builtinsAnoma =
-  [ OpAnomaGet,
-    OpAnomaEncode,
-    OpAnomaDecode,
-    OpAnomaVerifyDetached,
-    OpAnomaSign,
-    OpAnomaVerifyWithMessage,
-    OpAnomaSignDetached,
-    OpAnomaByteArrayToAnomaContents,
-    OpAnomaByteArrayFromAnomaContents,
-    OpAnomaSha256,
-    OpAnomaResourceCommitment,
-    OpAnomaResourceNullifier,
-    OpAnomaResourceKind,
-    OpAnomaResourceDelta,
-    OpAnomaActionDelta,
-    OpAnomaActionsDelta,
-    OpAnomaProveAction,
-    OpAnomaProveDelta,
-    OpAnomaZeroDelta,
-    OpAnomaAddDelta,
-    OpAnomaSubDelta,
-    OpAnomaRandomGeneratorInit,
-    OpAnomaRandomNextBytes,
-    OpAnomaRandomSplit,
-    OpAnomaSetToList,
-    OpAnomaSetFromList
-  ]
+builtinsAnoma = filter isBuiltinAnoma allElements
+  where
+    isBuiltinAnoma :: BuiltinOp -> Bool
+    isBuiltinAnoma = \case
+      OpAnomaGet -> True
+      OpAnomaEncode -> True
+      OpAnomaDecode -> True
+      OpAnomaVerifyDetached -> True
+      OpAnomaSign -> True
+      OpAnomaVerifyWithMessage -> True
+      OpAnomaSignDetached -> True
+      OpAnomaByteArrayToAnomaContents -> True
+      OpAnomaByteArrayFromAnomaContents -> True
+      OpAnomaSha256 -> True
+      OpAnomaResourceCommitment -> True
+      OpAnomaResourceNullifier -> True
+      OpAnomaResourceKind -> True
+      OpAnomaResourceDelta -> True
+      OpAnomaActionDelta -> True
+      OpAnomaActionsDelta -> True
+      OpAnomaZeroDelta -> True
+      OpAnomaAddDelta -> True
+      OpAnomaSubDelta -> True
+      OpAnomaRandomGeneratorInit -> True
+      OpAnomaRandomNextBytes -> True
+      OpAnomaRandomSplit -> True
+      OpAnomaSetToList -> True
+      OpAnomaSetFromList -> True
+      OpAnomaIsCommitment -> True
+      OpAnomaIsNullifier -> True
+      OpAnomaTransactionCompose -> True
+      OpAnomaActionCreate -> True
+      --
+      OpIntAdd -> False
+      OpIntSub -> False
+      OpIntMul -> False
+      OpIntMod -> False
+      OpIntDiv -> False
+      OpIntLt -> False
+      OpIntLe -> False
+      OpFieldAdd -> False
+      OpFieldSub -> False
+      OpFieldMul -> False
+      OpFieldDiv -> False
+      OpFieldFromInt -> False
+      OpFieldToInt -> False
+      OpEq -> False
+      OpShow -> False
+      OpSeq -> False
+      OpStrConcat -> False
+      OpStrToInt -> False
+      OpAssert -> False
+      OpTrace -> False
+      OpFail -> False
+      OpRangeCheck -> False
+      OpPoseidonHash -> False
+      OpEc -> False
+      OpRandomEcPoint -> False
+      OpUInt8FromInt -> False
+      OpUInt8ToInt -> False
+      OpByteArrayLength -> False
+      OpByteArrayFromListByte -> False
 
 builtinsUInt8 :: [BuiltinOp]
 builtinsUInt8 = [OpUInt8FromInt, OpUInt8ToInt]

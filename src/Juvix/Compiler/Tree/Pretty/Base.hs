@@ -296,8 +296,6 @@ instance PrettyCode AnomaOp where
     OpAnomaResourceDelta -> Str.anomaResourceDelta
     OpAnomaActionDelta -> Str.anomaActionDelta
     OpAnomaActionsDelta -> Str.anomaActionsDelta
-    OpAnomaProveAction -> Str.anomaProveAction
-    OpAnomaProveDelta -> Str.anomaProveDelta
     OpAnomaZeroDelta -> Str.anomaZeroDelta
     OpAnomaAddDelta -> Str.anomaAddDelta
     OpAnomaSubDelta -> Str.anomaSubDelta

@@ -174,22 +174,6 @@ checkResourceDelta f = do
   unless (f ^. axiomType === (resource --> delta)) $
     builtinsErrorText l "resourceDelta must be of type AnomaResource -> AnomaDelta"
 
-checkProveAction :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
-checkProveAction f = do
-  let l = getLoc f
-  action <- getBuiltinNameScoper l BuiltinAnomaAction
-  nat_ <- getBuiltinNameScoper l BuiltinNat
-  unless (f ^. axiomType === (action --> nat_)) $
-    builtinsErrorText l "proveAction must be of type AnomaAction -> Nat"
-
-checkProveDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
-checkProveDelta f = do
-  let l = getLoc f
-  delta <- getBuiltinNameScoper l BuiltinAnomaDelta
-  nat_ <- getBuiltinNameScoper l BuiltinNat
-  unless (f ^. axiomType === (delta --> nat_)) $
-    builtinsErrorText l "proveDelta must be of type AnomaDelta -> Nat"
-
 checkActionDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkActionDelta f = do
   let l = getLoc f

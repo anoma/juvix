@@ -431,12 +431,6 @@ anomaAddDelta = "anoma-add-delta"
 anomaSubDelta :: (IsString s) => s
 anomaSubDelta = "anoma-sub-delta"
 
-anomaProveDelta :: (IsString s) => s
-anomaProveDelta = "anoma-prove-delta"
-
-anomaProveAction :: (IsString s) => s
-anomaProveAction = "anoma-prove-action"
-
 anomaRandomGenerator :: (IsString s) => s
 anomaRandomGenerator = "anoma-random-generator"
 

@@ -96,8 +96,6 @@ computeNodeTypeInfo md = umapL go
           OpAnomaResourceDelta -> mkDynamic'
           OpAnomaActionDelta -> mkDynamic'
           OpAnomaActionsDelta -> mkDynamic'
-          OpAnomaProveAction -> mkTypeInteger'
-          OpAnomaProveDelta -> mkTypeInteger'
           OpAnomaZeroDelta -> mkDynamic'
           OpAnomaAddDelta -> mkDynamic'
           OpAnomaSubDelta -> mkDynamic'

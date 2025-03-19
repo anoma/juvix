@@ -272,8 +272,6 @@ data BuiltinAxiom
   | BuiltinAnomaZeroDelta
   | BuiltinAnomaAddDelta
   | BuiltinAnomaSubDelta
-  | BuiltinAnomaProveAction
-  | BuiltinAnomaProveDelta
   | BuiltinAnomaRandomGenerator
   | BuiltinAnomaRandomGeneratorInit
   | BuiltinAnomaRandomNextBytes
@@ -344,8 +342,6 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaZeroDelta -> KNameFunction
     BuiltinAnomaAddDelta -> KNameFunction
     BuiltinAnomaSubDelta -> KNameFunction
-    BuiltinAnomaProveAction -> KNameFunction
-    BuiltinAnomaProveDelta -> KNameFunction
     BuiltinAnomaRandomGenerator -> KNameInductive
     BuiltinAnomaRandomGeneratorInit -> KNameFunction
     BuiltinAnomaRandomNextBytes -> KNameFunction
@@ -423,8 +419,6 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaZeroDelta -> Str.anomaZeroDelta
     BuiltinAnomaAddDelta -> Str.anomaAddDelta
     BuiltinAnomaSubDelta -> Str.anomaSubDelta
-    BuiltinAnomaProveDelta -> Str.anomaProveDelta
-    BuiltinAnomaProveAction -> Str.anomaProveAction
     BuiltinAnomaRandomGenerator -> Str.anomaRandomGenerator
     BuiltinAnomaRandomGeneratorInit -> Str.anomaRandomGeneratorInit
     BuiltinAnomaRandomNextBytes -> Str.anomaRandomNextBytes

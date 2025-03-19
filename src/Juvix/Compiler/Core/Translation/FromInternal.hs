@@ -692,8 +692,6 @@ builtinInductive a =
         Internal.BuiltinAnomaResourceKind -> Nothing
         Internal.BuiltinAnomaActionDelta -> Nothing
         Internal.BuiltinAnomaActionsDelta -> Nothing
-        Internal.BuiltinAnomaProveDelta -> Nothing
-        Internal.BuiltinAnomaProveAction -> Nothing
         Internal.BuiltinAnomaZeroDelta -> Nothing
         Internal.BuiltinAnomaAddDelta -> Nothing
         Internal.BuiltinAnomaSubDelta -> Nothing
@@ -976,19 +974,6 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
           ( mkLambda'
               mkDynamic'
               (mkBuiltinApp' OpAnomaActionsDelta [mkVar' 0])
-          )
-      Internal.BuiltinAnomaProveAction -> do
-        actionType <- getAnomaActionType
-        registerAxiomDef
-          ( mkLambda'
-              actionType
-              (mkBuiltinApp' OpAnomaProveAction [mkVar' 0])
-          )
-      Internal.BuiltinAnomaProveDelta -> do
-        registerAxiomDef
-          ( mkLambda'
-              mkDynamic'
-              (mkBuiltinApp' OpAnomaProveDelta [mkVar' 0])
           )
       Internal.BuiltinAnomaZeroDelta -> do
         registerAxiomDef (mkBuiltinApp' OpAnomaZeroDelta [])
@@ -1528,8 +1513,6 @@ goApplication a = do
         Just Internal.BuiltinAnomaZeroDelta -> app
         Just Internal.BuiltinAnomaAddDelta -> app
         Just Internal.BuiltinAnomaSubDelta -> app
-        Just Internal.BuiltinAnomaProveAction -> app
-        Just Internal.BuiltinAnomaProveDelta -> app
         Just Internal.BuiltinAnomaRandomGenerator -> app
         Just Internal.BuiltinAnomaRandomGeneratorInit -> app
         Just Internal.BuiltinAnomaRandomNextBytes -> app

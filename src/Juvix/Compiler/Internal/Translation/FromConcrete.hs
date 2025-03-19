@@ -1073,8 +1073,6 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinAnomaZeroDelta -> checkZeroDelta d
   BuiltinAnomaAddDelta -> checkDeltaBinaryOp d
   BuiltinAnomaSubDelta -> checkDeltaBinaryOp d
-  BuiltinAnomaProveDelta -> checkProveDelta d
-  BuiltinAnomaProveAction -> checkProveAction d
   BuiltinAnomaRandomGenerator -> checkAnomaRandomGenerator d
   BuiltinAnomaRandomGeneratorInit -> checkAnomaRandomGeneratorInit d
   BuiltinAnomaRandomNextBytes -> checkAnomaRandomNextBytes d
