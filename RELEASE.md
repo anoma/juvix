@@ -21,7 +21,7 @@ Merge a PR against anoma/juvix main that contains the following:
 
    NB: We used to use https://github.com/github-changelog-generator/github-changelog-generator to generate the CHANGELOG.md but this stopped working some time in 2024. The markup it used differs from the Github 'Generate release notes' which is why we need to modify it to match the old markup.
 
-4. Make sure that the juvix-stdlib submodule references the main branchg of the juvix-stdlib repo.
+4. Make sure that the juvix-stdlib submodule references the main branch of the juvix-stdlib repo.
 5. Wait for tests to pass / approval and merge the PR into main
 
 Example PR: https://github.com/anoma/juvix/pull/3254
