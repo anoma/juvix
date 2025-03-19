@@ -20,6 +20,7 @@ module Juvix.Compiler.Pipeline.Driver
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print.Base (docNoCommentsDefault)
@@ -126,7 +127,13 @@ compileSequentially ::
   Sem r (HashMap ImportNode (PipelineResult Store.ModuleInfo))
 compileSequentially = do
   nodes :: HashSet ImportNode <- asks (^. importTreeNodes)
-  hashMapFromHashSetM nodes (mkEntryIndex >=> compileNode)
+  entry <- ask
+  -- We should not compile the main file as a module
+  let nodes' = HashSet.filter (not . isMainFile entry) nodes
+  hashMapFromHashSetM nodes' (mkEntryIndex >=> compileNode)
+  where
+    isMainFile :: EntryPoint -> ImportNode -> Bool
+    isMainFile entry node = Just (node ^. importNodeAbsFile) == entry ^. entryPointMainFile
 
 compileNode ::
   (Members '[ModuleInfoCache, PathResolver] r) =>
