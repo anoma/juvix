@@ -1,0 +1,242 @@
+name: Juvix Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "the git ref to release from"
+        required: true
+        default: "main"
+
+env:
+  STACK_VERSION: 2.11.1
+
+permissions:
+  id-token: write
+  attestations: write
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build static Linux x86_64 binary
+    runs-on: ubuntu-latest
+    container: quay.io/benz0li/ghc-musl:9.8.2
+    outputs:
+      tag: ${{ steps.tag.outputs.value }}
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+          repository: anoma/juvix
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: create ~/.local/bin
+        run: mkdir -p "$HOME/.local/bin"
+        shell: bash
+
+      - name: install stack
+        run: |
+          curl https://github.com/commercialhaskell/stack/releases/download/v$STACK_VERSION/stack-$STACK_VERSION-linux-x86_64-static.tar.gz -OL
+          tar xf stack-$STACK_VERSION-linux-x86_64-static.tar.gz
+          cp stack-$STACK_VERSION-linux-x86_64-static/stack /usr/local/bin
+
+      - name: add ~/.local/bin to PATH
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+        shell: bash
+
+      - name: Stack permissions bug workaround
+        run: "chown -R $(id -un):$(id -gn) ~"
+
+      # Without this the git command used by githash TemplateHaskell fails with permission error
+      # https://github.com/anoma/juvix/issues/2294
+      - name: Git permissions workaround
+        run: "chown -R $(id -un):$(id -gn) ."
+
+      - name: Install cargo
+        run: apk add --update cargo
+
+      - name: Install clang
+        run: apk add --update clang
+
+      - name: Install llvm
+        run: apk add --update llvm
+
+      - name: Install libncursesw
+        run: apk add --update libncursesw
+
+      - name: Runtime build
+        run: make runtime LIBTOOL=llvm-ar
+
+      - name: build Juvix
+        run: stack install --allow-different-user --system-ghc --ghc-options='-split-sections' --flag juvix:static
+
+      - run: echo "HOME=$HOME" >> $GITHUB_ENV
+        shell: bash
+
+      - name: set Juvix version to juvix-version.current output variable
+        id: juvix-version
+        run: echo "current=$(juvix --version | head -n 1 | sed -E 's/.*[^0-9]([0-9]+\.[0-9]+\.[0-9]+).*/\1/')" >> $GITHUB_OUTPUT
+
+      - name: set tag.value to tag for release
+        id: tag
+        run: echo "value=v${{ steps.juvix-version.outputs.current }}" >> $GITHUB_OUTPUT
+
+      - name: create release tar
+        run: |
+          cp "${{ env.HOME }}/.local/bin/juvix" /tmp/juvix
+          cd /tmp
+          tar zcf juvix-linux-x86_64.tar.gz juvix
+
+      - name: attest release tar
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: '/tmp/juvix-linux-x86_64.tar.gz'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x86_64-binary
+          path: /tmp/juvix-linux*
+          if-no-files-found: error
+
+  build-macos-x86_64:
+    runs-on: macos-13
+    name: Build macOS x86_64 binary
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+          repository: anoma/juvix
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: install stack
+        run: |
+          brew install haskell-stack
+
+      - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
+        run: |
+          echo "CC=$(brew --prefix llvm@15)/bin/clang" >> $GITHUB_ENV
+          echo "LIBTOOL=$(brew --prefix llvm@15)/bin/llvm-ar" >> $GITHUB_ENV
+
+      - name: Make runtime
+        run: |
+          make CC=$CC LIBTOOL=$LIBTOOL runtime
+
+      - name: Stack setup
+        id: stack
+        uses: freckle/stack-action@v4
+        with:
+          test: false
+
+      - name: Install Juvix
+        run: |
+          make CC=$CC LIBTOOL=$LIBTOOL install
+
+      - run: echo "HOME=$HOME" >> $GITHUB_ENV
+        shell: bash
+
+      - name: create release tar
+        run: |
+          tar zcf juvix-macos-x86_64.tar.gz -C "${{ env.HOME }}/.local/bin" juvix
+
+      - name: attest release tar
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: 'juvix-macos-x86_64.tar.gz'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-x86_64-binary
+          path: juvix-macos*
+          if-no-files-found: error
+
+  build-macos-aarch64:
+    runs-on: macos-14
+    name: Build macOS aarch64 binary
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+          repository: anoma/juvix
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: install stack
+        run: |
+          brew install haskell-stack
+
+      - name: Set homebrew LLVM CC and LIBTOOL vars (macOS)
+        run: |
+          echo "CC=$(brew --prefix llvm@15)/bin/clang" >> $GITHUB_ENV
+          echo "LIBTOOL=$(brew --prefix llvm@15)/bin/llvm-ar" >> $GITHUB_ENV
+
+      - name: Make runtime
+        run: |
+          make CC=$CC LIBTOOL=$LIBTOOL runtime
+
+      - name: Stack setup
+        id: stack
+        uses: freckle/stack-action@v4
+        with:
+          test: false
+
+      - name: Install Juvix
+        run: |
+          make CC=$CC LIBTOOL=$LIBTOOL install
+
+      - run: echo "HOME=$HOME" >> $GITHUB_ENV
+        shell: bash
+
+      - name: create release tar
+        run: |
+          tar zcf juvix-macos-aarch64.tar.gz -C "${{ env.HOME }}/.local/bin" juvix
+
+      - name: attest release tar
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: 'juvix-macos-aarch64.tar.gz'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-aarch64-binary
+          path: juvix-macos*
+          if-no-files-found: error
+
+  publish-release:
+    needs: [build-linux, build-macos-x86_64, build-macos-aarch64]
+    runs-on: ubuntu-latest
+    name: Publish Draft Release
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-x86_64-binary
+          path: /tmp
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-x86_64-binary
+          path: /tmp
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-aarch64-binary
+          path: /tmp
+
+      - name: Create sha256 hashes of release artefacts
+        run: |
+          cd /tmp
+          sha256sum juvix-linux-x86_64.tar.gz > juvix-linux-x86_64.tar.gz.sha256
+          sha256sum juvix-macos-x86_64.tar.gz > juvix-macos-x86_64.tar.gz.sha256
+          sha256sum juvix-macos-aarch64.tar.gz > juvix-macos-aarch64.tar.gz.sha256
+
+      - name: create draft release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{needs.build-linux.outputs.tag}}
+          name: ${{needs.build-linux.outputs.tag}}
+          commit: ${{ github.event.inputs.ref }}
+          artifactErrorsFailBuild: true
+          artifacts: /tmp/juvix-*
+          draft: true
+          skipIfReleaseExists: true
