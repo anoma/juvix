@@ -112,20 +112,20 @@ anomaLibPath = \case
     -- called silt in hoon
     StdlibAnomaSetFromList -> [nock| [9 22 0 7] |]
   AnomaLibFunction (AnomaRmFunction f) -> case f of
-    RmCommit -> [nock| [9 94 0 1] |]
-    RmNullify -> [nock| [9 350 0 1] |]
-    RmKind -> [nock| [9 5972 0 1] |]
-    RmProveLogic -> [nock| [9 342 0 1] |]
-    RmProveAction -> [nock| [9 22 0 1] |]
-    RmDeltaAdd -> [nock| [9 372 0 1] |]
-    RmDeltaSub -> [nock| [9 12013 0 1] |]
-    RmResourceDelta -> [nock| [9 343 0 1] |]
-    RmActionDelta -> [nock| [9 4 0 1] |]
-    RmMakeDelta -> [nock| [9 1.494 0 1] |]
-    RmProveDelta -> [nock| [9 1.535 0 1] |]
-    RmIsCommitment -> [nock| [9 1.526 0 1] |]
-    RmIsNullifier -> [nock| [9 372 0 1] |]
-    RmActionCreate -> [nock| [9 382 0 1] |]
-    RmTransactionCompose -> [nock| [9 383 0 1] |]
+    RmCommit -> [nock| [9 94 0 1] |] -- unchanged
+    RmNullify -> [nock| [9 350 0 1] |] -- can't find example
+    RmKind -> [nock| [9 5972 0 1] |] -- changed to 5972
+    RmProveLogic -> [nock| [9 342 0 1] |] -- can't find example. To be removed
+    RmProveAction -> [nock| [9 22 0 1] |] -- can't find example
+    RmDeltaAdd -> [nock| [9 372 0 1] |] -- changed to 372
+    RmDeltaSub -> [nock| [9 12013 0 1] |] -- changed to 12013
+    RmResourceDelta -> [nock| [9 343 0 1] |] -- can't find example
+    RmActionDelta -> [nock| [9 4 0 1] |] -- unchanged
+    RmMakeDelta -> [nock| [9 11951 0 1] |] -- changed to 11951
+    RmProveDelta -> [nock| [9 1.535 0 1] |] -- can't find example. To be removed
+    RmIsCommitment -> [nock| [9 12012 0 1] |] -- changed to 12012
+    RmIsNullifier -> [nock| [9 5974 0 1] |] -- changed to 5974
+    RmActionCreate -> [nock| [9 382 0 1] |] -- new
+    RmTransactionCompose -> [nock| [9 383 0 1] |] -- new
   AnomaLibValue (AnomaRmValue v) -> case v of
-    RmZeroDelta -> [nock| [9 174 0 1] |]
+    RmZeroDelta -> [nock| [9 20 0 1] |] -- can't find example
