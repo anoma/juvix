@@ -113,7 +113,7 @@ anomaLibPath = \case
     StdlibAnomaSetFromList -> [nock| [9 22 0 7] |]
   AnomaLibFunction (AnomaRmFunction f) -> case f of
     RmCommit -> [nock| [9 94 0 1] |] -- unchanged
-    RmNullify -> [nock| [9 350 0 1] |] -- can't find example
+    RmNullify -> [nock| [9 2.815 0 1] |] -- can't find example (changed to 2.815 (Artem's chat))
     RmKind -> [nock| [9 5972 0 1] |] -- changed to 5972
     RmProveLogic -> [nock| [9 342 0 1] |] -- can't find example. To be removed
     RmProveAction -> [nock| [9 22 0 1] |] -- can't find example
@@ -128,4 +128,4 @@ anomaLibPath = \case
     RmActionCreate -> [nock| [9 382 0 1] |] -- new
     RmTransactionCompose -> [nock| [9 383 0 1] |] -- new
   AnomaLibValue (AnomaRmValue v) -> case v of
-    RmZeroDelta -> [nock| [9 20 0 1] |] -- can't find example
+    RmZeroDelta -> [nock| [9 174 0 1] |] -- can't find example
