@@ -875,8 +875,6 @@ nockNatLiteral = nockIntegralLiteral
 nockIntegralLiteral :: (Integral a) => a -> Term Natural
 nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
 
--- [call L [replace [RL [seq [@ R] a]] [@ (locStdlib <> fPath)]]] ?
---
 -- Calling convention for Anoma library
 --
 -- [push
