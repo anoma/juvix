@@ -540,8 +540,6 @@ builtinOpArgTypes = \case
   OpAnomaRandomSplit -> [mkTypeRandomGenerator']
   OpAnomaActionCreate -> [mkDynamic', mkDynamic', mkDynamic']
   OpAnomaTransactionCompose -> [mkDynamic', mkDynamic']
-  -- TODO with the v0.2 interface OpAnomaIsCommitment and OpAnomaIsNullifier
-  -- should probably be mkDynamic'
   OpAnomaIsCommitment -> [mkTypeInteger']
   OpAnomaIsNullifier -> [mkTypeInteger']
   OpAnomaSetToList -> [mkDynamic']
