@@ -127,16 +127,16 @@ modularCoreToStripped ::
 modularCoreToStripped mt =
   processModuleTable TargetStripped (Pipeline.storedCoreToStripped Core.IdentityTrans) mt
 
-modularCoreToTree ::
-  (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
-  Core.ModuleTable ->
-  Sem r Tree.ModuleTable
-modularCoreToTree =
-  modularCoreToStripped >=> modularStrippedToTree
-
 modularStrippedToTree ::
   (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint] r) =>
   Stripped.ModuleTable ->
   Sem r Tree.ModuleTable
 modularStrippedToTree mt =
   processModuleTable TargetTree Pipeline.strippedCoreToTree mt
+
+modularCoreToTree ::
+  (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
+  Core.ModuleTable ->
+  Sem r Tree.ModuleTable
+modularCoreToTree =
+  modularCoreToStripped >=> modularStrippedToTree
