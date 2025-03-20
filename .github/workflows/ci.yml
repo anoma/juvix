@@ -234,12 +234,12 @@ jobs:
           toolchain: 1.81.0
           cache-on-failure: false
 
-      - name: Install RISC0 VM
-        shell: bash
-        run: |
-          curl -L https://risczero.com/install | bash
-          ~/.risc0/bin/rzup install
-          ~/.risc0/bin/rzup install r0vm 1.2.4
+      # - name: Install RISC0 VM
+      #   shell: bash
+      #   run: |
+      #     curl -L https://risczero.com/install | bash
+      #     ~/.risc0/bin/rzup install
+      #     ~/.risc0/bin/rzup install r0vm 1.2.4
 
       - name: Checkout CairoVM
         uses: actions/checkout@v4
