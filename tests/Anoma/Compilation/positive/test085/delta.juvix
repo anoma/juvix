@@ -13,24 +13,38 @@ main : _ :=
         label := Label.mk 11;
         logic := Encoded.encode (Logic.mk \{_ := true});
         value := AnomaAtom.fromNat 0;
-        nullifierKeyCommitment := NullifierKeyCommitment.toAnomaAtom NullifierKeyCommitment.zero;
+        nullifierKeyCommitment :=
+          NullifierKeyCommitment.toAnomaAtom NullifierKeyCommitment.zero;
         ephemeral := true;
-        quantity := 5555 + 3443;
+        quantity := 55;
         nonce := Nonce.toAnomaAtom (Nonce.fromNat 0);
         unusedRandSeed := 0;
       };
-  --   d : Delta := zeroDelta;
-  --   addd : Delta := addDelta zeroDelta zeroDelta;
-  --   subd : Delta := subDelta zeroDelta zeroDelta;
 
-  --   appData := AppData.empty;
+    d : Delta := zeroDelta;
+    addd : Delta := addDelta zeroDelta zeroDelta;
+    subd : Delta := subDelta zeroDelta zeroDelta;
 
-  --   action : Action :=
-  --   Action.create@{
-  --   consumed := [];
-  --   created := [];
-  --   appData := AppData.empty;
-  --   };
-  -- resCommitment : Commitment := commitment resource;
-  -- resNullifier : Nullifier := Resource.Transparent.nullifier resource;
-  in kind resource;
+    appData := AppData.empty;
+
+    action : Action :=
+      Action.create@{
+        consumed := [];
+        created := [];
+        appData := AppData.empty;
+      };
+    resCommitment : Commitment := commitment resource;
+    resNullifier : Nullifier := Resource.Transparent.nullifier resource;
+  in -- Most of these call return large nouns that are not appropritate for testing.
+      -- This test checks that these functions do not crash.
+      trace
+      zeroDelta
+    >-> trace (kind resource)
+    >-> trace (subDelta zeroDelta zeroDelta)
+    >-> trace (addDelta zeroDelta zeroDelta)
+    >-> (commitment resource)
+    >-> trace (Resource.Transparent.nullifier resource)
+    >-> trace (Action.delta action)
+    >-> addDelta (Action.delta action) (Action.delta action)
+    >-> subDelta (Action.delta action) (Action.delta action)
+    >-> trace (Action.listDelta [action]);
