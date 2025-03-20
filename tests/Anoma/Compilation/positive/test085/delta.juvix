@@ -13,37 +13,24 @@ main : _ :=
         label := Label.mk 11;
         logic := Encoded.encode (Logic.mk \{_ := true});
         value := AnomaAtom.fromNat 0;
-        nullifierKeyCommitment := NullifierKeyCommitment.zero;
+        nullifierKeyCommitment := NullifierKeyCommitment.toAnomaAtom NullifierKeyCommitment.zero;
         ephemeral := true;
-        quantity := 55;
-        nonce := Nonce.fromNat 0;
+        quantity := 5555 + 3443;
+        nonce := Nonce.toAnomaAtom (Nonce.fromNat 0);
         unusedRandSeed := 0;
       };
+  --   d : Delta := zeroDelta;
+  --   addd : Delta := addDelta zeroDelta zeroDelta;
+  --   subd : Delta := subDelta zeroDelta zeroDelta;
 
-    d : Delta := zeroDelta;
-    addd : Delta := addDelta zeroDelta zeroDelta;
-    subd : Delta := subDelta zeroDelta zeroDelta;
+  --   appData := AppData.empty;
 
-    appData := AppData.empty;
-
-    action : Action :=
-    Action.create@{
-    consumed := [];
-    created := [];
-    appData := AppData.empty;
-    };
+  --   action : Action :=
+  --   Action.create@{
+  --   consumed := [];
+  --   created := [];
+  --   appData := AppData.empty;
+  --   };
   -- resCommitment : Commitment := commitment resource;
   -- resNullifier : Nullifier := Resource.Transparent.nullifier resource;
-  in -- Most of these call return large nouns that are not appropritate for testing.
-      -- This test checks that these functions do not crash.
-      zeroDelta;
-      -- kind
-      -- resource
-    -- >-> trace (subDelta zeroDelta zeroDelta)
-    -- >-> trace (addDelta zeroDelta zeroDelta)
-    -- >-> addDelta (Action.delta action) (Action.delta action)
-    -- >-> kind resource;
--- >-> subDelta (Action.delta action) (Action.delta action)
--- >-> trace (Action.delta action)
--- >-> Action.listDelta [action]
--- >-> kind resource;
+  in kind resource;
