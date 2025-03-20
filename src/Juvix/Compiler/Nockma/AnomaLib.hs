@@ -112,12 +112,12 @@ anomaLibPath = \case
     -- called silt in hoon
     StdlibAnomaSetFromList -> [nock| [9 22 0 7] |]
   AnomaLibFunction (AnomaRmFunction f) -> case f of
-    RmCommit -> [nock| [9 94 0 1] |] -- unchanged
+    RmCommit -> [nock| [9 3002 0 1] |] -- changed to 3002
     RmNullify -> [nock| [9 2.815 0 1] |] -- can't find example (changed to 2.815 (Artem's chat))
     RmKind -> [nock| [9 5972 0 1] |] -- changed to 5972
     RmDeltaAdd -> [nock| [9 372 0 1] |] -- changed to 372
     RmDeltaSub -> [nock| [9 12013 0 1] |] -- changed to 12013
-    RmResourceDelta -> [nock| [9 343 0 1] |] -- can't find example
+    RmResourceDelta -> [nock| [9 701 0 1] |] -- changed to 701
     RmActionDelta -> [nock| [9 4 0 1] |] -- unchanged
     RmMakeDelta -> [nock| [9 11951 0 1] |] -- changed to 11951
     RmIsCommitment -> [nock| [9 12012 0 1] |] -- changed to 12012
