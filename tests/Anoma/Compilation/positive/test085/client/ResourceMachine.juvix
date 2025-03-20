@@ -168,6 +168,9 @@ with
 
   from32SizedByteArray : ByteArray -> Nonce := internalMk;
 
+  toAnomaAtom : Nonce -> AnomaAtom
+  := toNat >> AnomaAtom.fromNat;
+
   toNat : Nonce -> Nat
     | (internalMk nonce) := toAnomaContents nonce;
 
@@ -185,6 +188,9 @@ with
     NullifierKeyCommitment.mk (ByteArray.zero 32);
 
   fromByteArray : ByteArray -> NullifierKeyCommitment := mk;
+
+  toAnomaAtom : NullifierKeyCommitment -> AnomaAtom :=
+    toByteArray >> toAnomaContents >> AnomaAtom.fromNat;
 
   toByteArray : NullifierKeyCommitment -> ByteArray
     | (mk b) := b;
@@ -204,8 +210,8 @@ type Resource :=
     value : AnomaAtom;
     quantity : Nat;
     ephemeral : Bool;
-    nonce : Nonce;
-    nullifierKeyCommitment : NullifierKeyCommitment;
+    nonce : AnomaAtom;
+    nullifierKeyCommitment : AnomaAtom;
     unusedRandSeed : Nat;
   }
 with
