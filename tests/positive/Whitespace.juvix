@@ -1,0 +1,5 @@
+module Whitespace;
+
+import Stdlib.Prelude open;
+		f (x : Nat) : Nat := x;
+	main : Nat := f 10;

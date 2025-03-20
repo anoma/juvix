@@ -36,19 +36,19 @@ whiteSpace :: (MonadParsec e s m, Token s ~ Char) => m ()
 whiteSpace = void (takeWhileP (Just spaceMsg) isWhiteSpace)
 
 isWhiteSpace :: Char -> Bool
-isWhiteSpace = (`elem` [' ', '\n'])
+isWhiteSpace = (`elem` [' ', '\t', '\r', '\n'])
 
 hspace :: (MonadParsec e s m, Token s ~ Char) => m (Tokens s)
 hspace = takeWhileP (Just spaceMsg) isHWhiteSpace
   where
     isHWhiteSpace :: Char -> Bool
-    isHWhiteSpace = (== ' ')
+    isHWhiteSpace = (`elem` [' ', '\t', '\r'])
 
 hspace_ :: (MonadParsec e s m, Token s ~ Char) => m ()
 hspace_ = void hspace
 
 spaceMsg :: String
-spaceMsg = "white space (only spaces and newlines allowed)"
+spaceMsg = "white space"
 
 -- | `special` is set when judoc comments or pragmas are supported
 space' :: forall e m. (MonadParsec e Text m) => Bool -> m (Maybe SpaceSpan)
