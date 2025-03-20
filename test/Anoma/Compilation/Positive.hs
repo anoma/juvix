@@ -33,8 +33,6 @@ data AnomaTest = AnomaTest
     _anomaCheck :: Check ()
   }
 
-makeLenses ''AnomaTest
-
 root :: Prelude.Path Abs Dir
 root = relToProject $(mkRelDir "tests/Anoma/Compilation/positive")
 
