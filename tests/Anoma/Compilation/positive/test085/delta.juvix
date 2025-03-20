@@ -21,12 +21,6 @@ main : _ :=
         unusedRandSeed := 0;
       };
 
-    d : Delta := zeroDelta;
-    addd : Delta := addDelta zeroDelta zeroDelta;
-    subd : Delta := subDelta zeroDelta zeroDelta;
-
-    appData := AppData.empty;
-
     action : Action :=
       Action.create@{
         consumed := [];
@@ -35,16 +29,27 @@ main : _ :=
       };
     resCommitment : Commitment := commitment resource;
     resNullifier : Nullifier := Resource.Transparent.nullifier resource;
-  in -- Most of these call return large nouns that are not appropritate for testing.
+
+    t : Transaction :=
+      Transaction.mk@{
+        roots := AnomaSet.empty;
+        actions := AnomaSet.empty;
+      };
+  in -- Some of these call return large nouns that are not appropritate for testing.
       -- This test checks that these functions do not crash.
       trace
-      zeroDelta
-    >-> trace (kind resource)
+      (RawTag.builtinIsCommitment (Commitment.toNat resCommitment))
+    >-> trace (RawTag.builtinIsNullifier (Nullifier.toNat resNullifier))
+    >-> trace (RawTag.builtinIsNullifier (Commitment.toNat resCommitment))
+    >-> trace (RawTag.builtinIsCommitment (Nullifier.toNat resNullifier))
+    >-> trace zeroDelta
     >-> trace (subDelta zeroDelta zeroDelta)
     >-> trace (addDelta zeroDelta zeroDelta)
-    >-> (commitment resource)
-    >-> trace (Resource.Transparent.nullifier resource)
-    >-> trace (Action.delta action)
+    >-> trace (Action.listDelta [action])
+    >-> kind resource
+    >-> resCommitment
+    >-> resNullifier
+    >-> Action.delta action
     >-> addDelta (Action.delta action) (Action.delta action)
     >-> subDelta (Action.delta action) (Action.delta action)
-    >-> trace (Action.listDelta [action]);
+    >-> Transaction.compose t t;

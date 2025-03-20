@@ -125,4 +125,4 @@ anomaLibPath = \case
     RmActionCreate -> [nock| [9 382 0 1] |] -- new
     RmTransactionCompose -> [nock| [9 383 0 1] |] -- new
   AnomaLibValue (AnomaRmValue v) -> case v of
-    RmZeroDelta -> [nock| [9 174 0 1] |] -- can't find example
+    RmZeroDelta -> [nock| [9 174 0 1] |] -- changed to 174

@@ -1025,14 +1025,14 @@ allTests =
             $(mkRelFile "delta.juvix")
             []
             $ checkOutput
-              [ [nock| 0 |],
-                [nock| 0 |],
-                [nock| 0 |],
-                [nock| true |],
+              [ [nock| true |],
                 [nock| true |],
                 [nock| false |],
                 [nock| false |],
-                [nock| 0 |]
+                [nock| 2 |],
+                [nock| 2 |],
+                [nock| 2 |],
+                [nock| 2 |]
               ],
           mkAnomaTest
             86
