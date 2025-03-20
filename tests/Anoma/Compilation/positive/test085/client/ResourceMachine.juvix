@@ -199,8 +199,8 @@ end;
 builtin anoma-resource
 type Resource :=
   mk@{
-    label : Label;
     logic : Encoded Logic;
+    label : Label;
     value : AnomaAtom;
     quantity : Nat;
     ephemeral : Bool;
