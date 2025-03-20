@@ -168,8 +168,7 @@ with
 
   from32SizedByteArray : ByteArray -> Nonce := internalMk;
 
-  toAnomaAtom : Nonce -> AnomaAtom
-  := toNat >> AnomaAtom.fromNat;
+  toAnomaAtom : Nonce -> AnomaAtom := toNat >> AnomaAtom.fromNat;
 
   toNat : Nonce -> Nat
     | (internalMk nonce) := toAnomaContents nonce;
@@ -215,6 +214,9 @@ type Resource :=
     unusedRandSeed : Nat;
   }
 with
+  builtin anoma-resource-delta
+  axiom delta : Resource -> Delta;
+
   module Transparent;
     nullifier : Resource -> Nullifier :=
       NullifiableResource.Transparent.mk >> NullifiableResource.nullifier;
@@ -276,6 +278,22 @@ RawTag-Ord : Ord RawTag;
 
 type RawTag := privateMk Nat
 with
+  builtin anoma-is-commitment
+  axiom builtinIsCommitment : Nat -> Bool;
+
+  isCommitment : RawTag -> Bool := toNat >> builtinIsCommitment;
+
+  builtin anoma-is-nullifier
+  axiom builtinIsNullifier : Nat -> Bool;
+
+  isNullifier : RawTag -> Bool := toNat >> builtinIsNullifier;
+
+  toTag (r : RawTag) : Maybe Tag :=
+    if
+      | isCommitment r := just (Created (Commitment.fromNat (toNat r)))
+      | isNullifier r := just (Consumed (Nullifier.fromNat (toNat r)))
+      | else := nothing;
+
   fromTag : Tag -> RawTag := Tag.toNat >> fromNat;
 
   toNat : RawTag -> Nat
