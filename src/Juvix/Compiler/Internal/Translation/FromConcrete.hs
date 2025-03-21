@@ -1073,14 +1073,14 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinAnomaZeroDelta -> checkZeroDelta d
   BuiltinAnomaAddDelta -> checkDeltaBinaryOp d
   BuiltinAnomaSubDelta -> checkDeltaBinaryOp d
-  BuiltinAnomaProveDelta -> checkProveDelta d
-  BuiltinAnomaProveAction -> checkProveAction d
   BuiltinAnomaRandomGenerator -> checkAnomaRandomGenerator d
   BuiltinAnomaRandomGeneratorInit -> checkAnomaRandomGeneratorInit d
   BuiltinAnomaRandomNextBytes -> checkAnomaRandomNextBytes d
   BuiltinAnomaRandomSplit -> checkAnomaRandomSplit d
   BuiltinAnomaIsCommitment -> checkAnomaIsCommitment d
   BuiltinAnomaIsNullifier -> checkAnomaIsNullifier d
+  BuiltinAnomaActionCreate -> return ()
+  BuiltinAnomaTransactionCompose -> return ()
   BuiltinAnomaSet -> checkAnomaSet d
   BuiltinAnomaSetToList -> checkAnomaSetToList d
   BuiltinAnomaSetFromList -> checkAnomaSetFromList d

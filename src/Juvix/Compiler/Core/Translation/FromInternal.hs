@@ -692,8 +692,6 @@ builtinInductive a =
         Internal.BuiltinAnomaResourceKind -> Nothing
         Internal.BuiltinAnomaActionDelta -> Nothing
         Internal.BuiltinAnomaActionsDelta -> Nothing
-        Internal.BuiltinAnomaProveDelta -> Nothing
-        Internal.BuiltinAnomaProveAction -> Nothing
         Internal.BuiltinAnomaZeroDelta -> Nothing
         Internal.BuiltinAnomaAddDelta -> Nothing
         Internal.BuiltinAnomaSubDelta -> Nothing
@@ -703,6 +701,8 @@ builtinInductive a =
         Internal.BuiltinAnomaRandomSplit -> Nothing
         Internal.BuiltinAnomaIsCommitment -> Nothing
         Internal.BuiltinAnomaIsNullifier -> Nothing
+        Internal.BuiltinAnomaActionCreate -> Nothing
+        Internal.BuiltinAnomaTransactionCompose -> Nothing
         Internal.BuiltinAnomaSet -> Just (registerInductiveAxiom (Just BuiltinAnomaSet) [])
         Internal.BuiltinAnomaSetToList -> Nothing
         Internal.BuiltinAnomaSetFromList -> Nothing
@@ -975,19 +975,6 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               mkDynamic'
               (mkBuiltinApp' OpAnomaActionsDelta [mkVar' 0])
           )
-      Internal.BuiltinAnomaProveAction -> do
-        actionType <- getAnomaActionType
-        registerAxiomDef
-          ( mkLambda'
-              actionType
-              (mkBuiltinApp' OpAnomaProveAction [mkVar' 0])
-          )
-      Internal.BuiltinAnomaProveDelta -> do
-        registerAxiomDef
-          ( mkLambda'
-              mkDynamic'
-              (mkBuiltinApp' OpAnomaProveDelta [mkVar' 0])
-          )
       Internal.BuiltinAnomaZeroDelta -> do
         registerAxiomDef (mkBuiltinApp' OpAnomaZeroDelta [])
       Internal.BuiltinAnomaAddDelta -> do
@@ -1039,6 +1026,22 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               natType
               (mkBuiltinApp' OpAnomaIsCommitment [mkVar' 0])
           )
+      Internal.BuiltinAnomaActionCreate -> do
+        registerAxiomDef
+          . mkLambda'
+            mkDynamic'
+          . mkLambda'
+            mkDynamic'
+          . mkLambda'
+            mkDynamic'
+          $ mkBuiltinApp' OpAnomaActionCreate [mkVar' 2, mkVar' 1, mkVar' 0]
+      Internal.BuiltinAnomaTransactionCompose -> do
+        registerAxiomDef
+          . mkLambda'
+            mkDynamic'
+          . mkLambda'
+            mkDynamic'
+          $ mkBuiltinApp' OpAnomaTransactionCompose [mkVar' 1, mkVar' 0]
       Internal.BuiltinAnomaIsNullifier -> do
         natType <- getNatType
         registerAxiomDef
@@ -1510,14 +1513,14 @@ goApplication a = do
         Just Internal.BuiltinAnomaZeroDelta -> app
         Just Internal.BuiltinAnomaAddDelta -> app
         Just Internal.BuiltinAnomaSubDelta -> app
-        Just Internal.BuiltinAnomaProveAction -> app
-        Just Internal.BuiltinAnomaProveDelta -> app
         Just Internal.BuiltinAnomaRandomGenerator -> app
         Just Internal.BuiltinAnomaRandomGeneratorInit -> app
         Just Internal.BuiltinAnomaRandomNextBytes -> app
         Just Internal.BuiltinAnomaRandomSplit -> app
         Just Internal.BuiltinAnomaIsCommitment -> app
         Just Internal.BuiltinAnomaIsNullifier -> app
+        Just Internal.BuiltinAnomaTransactionCompose -> app
+        Just Internal.BuiltinAnomaActionCreate -> app
         Just Internal.BuiltinAnomaSet -> app
         Just Internal.BuiltinAnomaSetToList -> app
         Just Internal.BuiltinAnomaSetFromList -> app

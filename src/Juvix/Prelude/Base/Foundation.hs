@@ -5,6 +5,7 @@ module Juvix.Prelude.Base.Foundation
   ( module Juvix.Prelude.Base.Foundation,
     module Control.Applicative,
     module Control.DeepSeq,
+    module System.IO.Error,
     module Control.Lens,
     module Control.Monad.Catch,
     module Control.Monad.Extra,
@@ -122,7 +123,7 @@ import Control.Lens hiding
     (#),
     (<.>),
   )
-import Control.Monad.Catch (ExitCase (..), MonadMask, MonadThrow, generalBracket, throwM)
+import Control.Monad.Catch (ExitCase (..), MonadMask, MonadThrow, SomeException, generalBracket, throwM)
 import Control.Monad.Extra hiding (fail, forM, mconcatMapM, whileJustM)
 import Control.Monad.Extra qualified as Monad
 import Control.Monad.Fix

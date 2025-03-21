@@ -272,14 +272,14 @@ data BuiltinAxiom
   | BuiltinAnomaZeroDelta
   | BuiltinAnomaAddDelta
   | BuiltinAnomaSubDelta
-  | BuiltinAnomaProveAction
-  | BuiltinAnomaProveDelta
   | BuiltinAnomaRandomGenerator
   | BuiltinAnomaRandomGeneratorInit
   | BuiltinAnomaRandomNextBytes
   | BuiltinAnomaRandomSplit
   | BuiltinAnomaIsCommitment
   | BuiltinAnomaIsNullifier
+  | BuiltinAnomaActionCreate
+  | BuiltinAnomaTransactionCompose
   | BuiltinAnomaSet
   | BuiltinAnomaSetToList
   | BuiltinAnomaSetFromList
@@ -342,14 +342,14 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaZeroDelta -> KNameFunction
     BuiltinAnomaAddDelta -> KNameFunction
     BuiltinAnomaSubDelta -> KNameFunction
-    BuiltinAnomaProveAction -> KNameFunction
-    BuiltinAnomaProveDelta -> KNameFunction
     BuiltinAnomaRandomGenerator -> KNameInductive
     BuiltinAnomaRandomGeneratorInit -> KNameFunction
     BuiltinAnomaRandomNextBytes -> KNameFunction
     BuiltinAnomaRandomSplit -> KNameFunction
     BuiltinAnomaIsCommitment -> KNameFunction
     BuiltinAnomaIsNullifier -> KNameFunction
+    BuiltinAnomaActionCreate -> KNameFunction
+    BuiltinAnomaTransactionCompose -> KNameFunction
     BuiltinPoseidon -> KNameFunction
     BuiltinEcOp -> KNameFunction
     BuiltinRandomEcPoint -> KNameFunction
@@ -419,14 +419,14 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaZeroDelta -> Str.anomaZeroDelta
     BuiltinAnomaAddDelta -> Str.anomaAddDelta
     BuiltinAnomaSubDelta -> Str.anomaSubDelta
-    BuiltinAnomaProveDelta -> Str.anomaProveDelta
-    BuiltinAnomaProveAction -> Str.anomaProveAction
     BuiltinAnomaRandomGenerator -> Str.anomaRandomGenerator
     BuiltinAnomaRandomGeneratorInit -> Str.anomaRandomGeneratorInit
     BuiltinAnomaRandomNextBytes -> Str.anomaRandomNextBytes
     BuiltinAnomaRandomSplit -> Str.anomaRandomSplit
     BuiltinAnomaIsCommitment -> Str.anomaIsCommitment
     BuiltinAnomaIsNullifier -> Str.anomaIsNullifier
+    BuiltinAnomaTransactionCompose -> Str.anomaTransactionCompose
+    BuiltinAnomaActionCreate -> Str.anomaActionCreate
     BuiltinAnomaSet -> Str.anomaSet
     BuiltinAnomaSetToList -> Str.anomaSetToList
     BuiltinAnomaSetFromList -> Str.anomaSetFromList

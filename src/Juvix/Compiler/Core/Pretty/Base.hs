@@ -71,8 +71,6 @@ instance PrettyCode BuiltinOp where
     OpAnomaResourceDelta -> return primResourceDelta
     OpAnomaActionDelta -> return primActionDelta
     OpAnomaActionsDelta -> return primActionsDelta
-    OpAnomaProveAction -> return primProveAction
-    OpAnomaProveDelta -> return primProveDelta
     OpAnomaZeroDelta -> return primZeroDelta
     OpAnomaAddDelta -> return primAddDelta
     OpAnomaSubDelta -> return primSubDelta
@@ -81,6 +79,8 @@ instance PrettyCode BuiltinOp where
     OpAnomaRandomSplit -> return primRandomSplit
     OpAnomaIsCommitment -> return primIsCommitment
     OpAnomaIsNullifier -> return primIsNullifier
+    OpAnomaActionCreate -> return primActionCreate
+    OpAnomaTransactionCompose -> return primTransactionCompose
     OpAnomaSetToList -> return primAnomaSetToList
     OpAnomaSetFromList -> return primAnomaSetFromList
     OpPoseidonHash -> return primPoseidonHash
@@ -989,12 +989,6 @@ primActionDelta = primitive Str.anomaActionDelta
 primActionsDelta :: Doc Ann
 primActionsDelta = primitive Str.anomaActionsDelta
 
-primProveDelta :: Doc Ann
-primProveDelta = primitive Str.anomaProveDelta
-
-primProveAction :: Doc Ann
-primProveAction = primitive Str.anomaProveAction
-
 primZeroDelta :: Doc Ann
 primZeroDelta = primitive Str.anomaZeroDelta
 
@@ -1015,6 +1009,12 @@ primRandomSplit = primitive Str.anomaRandomSplit
 
 primIsCommitment :: Doc Ann
 primIsCommitment = primitive Str.anomaIsCommitment
+
+primTransactionCompose :: Doc Ann
+primTransactionCompose = primitive Str.anomaTransactionCompose
+
+primActionCreate :: Doc Ann
+primActionCreate = primitive Str.anomaActionCreate
 
 primIsNullifier :: Doc Ann
 primIsNullifier = primitive Str.anomaIsNullifier

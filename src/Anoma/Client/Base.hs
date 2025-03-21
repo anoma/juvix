@@ -77,10 +77,11 @@ anomaClientCreateProcess launchMode = do
 
 setupAnomaClientProcess :: forall r. (Members '[EmbedIO, Logger, Error SimpleError] r) => Handle -> Sem r AnomaClientInfo
 setupAnomaClientProcess nodeOut = do
-  ln <- hGetLine nodeOut
-  let parsingError = throw (SimpleError (mkAnsiText ("Failed to parse the client grpc port when starting the anoma node and client.\nExpected a number but got " <> ln)))
-  let parseInt :: Text -> Sem r Int
-      parseInt = either (const parsingError) return . readEither . unpack
+  let x :: IO Text = catchIOError (hGetLine nodeOut) $ \e -> error ("The node client is expected to output two numbers (see include/anoma/start.exs), but there was an IO exception:\n" <> show e)
+  ln <- liftIO x
+  let parseError = throw (SimpleError (mkAnsiText ("Failed to parse the client grpc port when starting the anoma node and client.\nExpected a number but got " <> ln)))
+      parseInt :: Text -> Sem r Int
+      parseInt = either (const parseError) return . readEither . unpack
   (grpcPort, nodeId) <- case T.words ln of
     [grpcPortStr, nodeIdStr] -> (,) <$> parseInt grpcPortStr <*> pure nodeIdStr
     _ -> throw (SimpleError (mkAnsiText ("Could not parse Anoma client output. Expected <grpcPort> <node_id>, got: " <> ln)))
@@ -88,12 +89,11 @@ setupAnomaClientProcess nodeOut = do
   logInfo (mkAnsiText ("Node ID: " <> annotate AnnImportant (pretty nodeId)))
   logInfo (mkAnsiText ("Listening on port " <> annotate AnnImportant (pretty grpcPort)))
   return
-    ( AnomaClientInfo
-        { _anomaClientInfoPort = grpcPort,
-          _anomaClientInfoUrl = "localhost",
-          _anomaClientInfoNodeId = nodeId
-        }
-    )
+    AnomaClientInfo
+      { _anomaClientInfoPort = grpcPort,
+        _anomaClientInfoUrl = "localhost",
+        _anomaClientInfoNodeId = nodeId
+      }
 
 launchAnomaClient :: (Members '[Logger, EmbedIO, Error SimpleError] r) => LaunchMode -> AnomaPath -> Sem r AnomaClientLaunchInfo
 launchAnomaClient launchMode anomapath = runEnvironment . runReader anomapath . runProcess $ do

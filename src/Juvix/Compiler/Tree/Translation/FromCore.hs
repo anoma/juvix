@@ -75,8 +75,6 @@ toTreeOp = \case
   Core.OpAnomaResourceDelta -> TreeAnomaOp OpAnomaResourceDelta
   Core.OpAnomaActionDelta -> TreeAnomaOp OpAnomaActionDelta
   Core.OpAnomaActionsDelta -> TreeAnomaOp OpAnomaActionsDelta
-  Core.OpAnomaProveAction -> TreeAnomaOp OpAnomaProveAction
-  Core.OpAnomaProveDelta -> TreeAnomaOp OpAnomaProveDelta
   Core.OpAnomaZeroDelta -> TreeAnomaOp OpAnomaZeroDelta
   Core.OpAnomaAddDelta -> TreeAnomaOp OpAnomaAddDelta
   Core.OpAnomaSubDelta -> TreeAnomaOp OpAnomaSubDelta
@@ -85,6 +83,8 @@ toTreeOp = \case
   Core.OpAnomaRandomSplit -> TreeAnomaOp OpAnomaRandomSplit
   Core.OpAnomaIsCommitment -> TreeAnomaOp OpAnomaIsCommitment
   Core.OpAnomaIsNullifier -> TreeAnomaOp OpAnomaIsNullifier
+  Core.OpAnomaActionCreate -> TreeAnomaOp OpAnomaActionCreate
+  Core.OpAnomaTransactionCompose -> TreeAnomaOp OpAnomaTransactionCompose
   Core.OpAnomaSetToList -> TreeAnomaOp OpAnomaSetToList
   Core.OpAnomaSetFromList -> TreeAnomaOp OpAnomaSetFromList
   -- TreeCairoOp

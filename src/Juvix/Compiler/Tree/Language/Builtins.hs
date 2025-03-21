@@ -127,10 +127,6 @@ data AnomaOp
     OpAnomaActionDelta
   | -- | Compute the delta of a list of Actions
     OpAnomaActionsDelta
-  | -- | Compute the proof of an Action
-    OpAnomaProveAction
-  | -- | Compute the proof of a Delta
-    OpAnomaProveDelta
   | -- | The zero Delta
     OpAnomaZeroDelta
   | -- | Add Deltas
@@ -149,6 +145,8 @@ data AnomaOp
     OpAnomaIsNullifier
   | OpAnomaSetToList
   | OpAnomaSetFromList
+  | OpAnomaTransactionCompose
+  | OpAnomaActionCreate
   deriving stock (Eq, Show, Generic)
 
 instance Serialize AnomaOp

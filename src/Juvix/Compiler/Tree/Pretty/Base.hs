@@ -296,8 +296,6 @@ instance PrettyCode AnomaOp where
     OpAnomaResourceDelta -> Str.anomaResourceDelta
     OpAnomaActionDelta -> Str.anomaActionDelta
     OpAnomaActionsDelta -> Str.anomaActionsDelta
-    OpAnomaProveAction -> Str.anomaProveAction
-    OpAnomaProveDelta -> Str.anomaProveDelta
     OpAnomaZeroDelta -> Str.anomaZeroDelta
     OpAnomaAddDelta -> Str.anomaAddDelta
     OpAnomaSubDelta -> Str.anomaSubDelta
@@ -308,6 +306,8 @@ instance PrettyCode AnomaOp where
     OpAnomaIsNullifier -> Str.anomaIsNullifier
     OpAnomaSetToList -> Str.anomaSetToList
     OpAnomaSetFromList -> Str.anomaSetFromList
+    OpAnomaTransactionCompose -> Str.anomaTransactionCompose
+    OpAnomaActionCreate -> Str.anomaActionCreate
 
 instance PrettyCode UnaryOpcode where
   ppCode = \case

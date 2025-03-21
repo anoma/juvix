@@ -139,14 +139,14 @@ fromCore' tab =
         BuiltinAnomaAddDelta -> False
         BuiltinAnomaSubDelta -> False
         BuiltinAnomaZeroDelta -> False
-        BuiltinAnomaProveAction -> False
-        BuiltinAnomaProveDelta -> False
         BuiltinAnomaRandomGenerator -> False
         BuiltinAnomaRandomGeneratorInit -> False
         BuiltinAnomaRandomNextBytes -> False
         BuiltinAnomaRandomSplit -> False
         BuiltinAnomaIsCommitment -> False
         BuiltinAnomaIsNullifier -> False
+        BuiltinAnomaTransactionCompose -> False
+        BuiltinAnomaActionCreate -> False
         BuiltinAnomaSet -> False
         BuiltinAnomaSetToList -> False
         BuiltinAnomaSetFromList -> False

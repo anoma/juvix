@@ -50,16 +50,15 @@ data RmFunction
   = RmCommit
   | RmNullify
   | RmKind
-  | RmProveLogic
-  | RmProveAction
   | RmDeltaAdd
   | RmDeltaSub
   | RmResourceDelta
   | RmActionDelta
   | RmMakeDelta
-  | RmProveDelta
   | RmIsCommitment
   | RmIsNullifier
+  | RmActionCreate
+  | RmTransactionCompose
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable RmFunction
@@ -126,16 +125,15 @@ instance Pretty RmFunction where
     RmCommit -> "commit"
     RmNullify -> "nullify"
     RmKind -> "kind"
-    RmProveLogic -> "prove-logic"
-    RmProveAction -> "prove-action"
     RmDeltaAdd -> "delta-add"
     RmDeltaSub -> "delta-sub"
     RmResourceDelta -> "resource-delta"
     RmActionDelta -> "action-delta"
     RmMakeDelta -> "make-delta"
-    RmProveDelta -> "prove-delta"
     RmIsCommitment -> "is-commitment"
     RmIsNullifier -> "is-nullifier"
+    RmActionCreate -> "action-create"
+    RmTransactionCompose -> "transaction-compose"
 
 instance Pretty RmValue where
   pretty = \case
