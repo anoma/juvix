@@ -309,5 +309,5 @@ tests =
     posTest
       "Tabs"
       $(mkRelDir ".")
-      $(mkRelFile "Tabs.juvix")
+      $(mkRelFile "Tab.juvix")
   ]
