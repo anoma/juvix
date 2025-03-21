@@ -36,12 +36,18 @@ The Juvix Release workflow builds the Juvix release binary for:
 
 It then creates a draft release on GitHub with tag `v$JUVIX_VERSION` where `$JUVIX_VERSION` is obtained from the output of `juvix --version`.
 
-## Step 3: Update `homebrew-juvix` formula
+## Step 3: Publish the new 'Juvix Release'
+
+In the Github Web UI edit the draft release created in Step 2. set it as latest release, and publish it.
+
+## Step 4: Update `homebrew-juvix` formula
 
 Update the `version` class field and the sha256 hashes of the Juvix tarballs in [anoma/homebrew-juvix:Formula/juvix.rb](https://github.com/anoma/homebrew-juvix/blob/main/Formula/juvix.rb).
 
 The sha256 hashes can be obtained from files (named `*.sha256`) in the release assets published in Step 2.
 
-## Step 4: Publish the new 'Juvix Release'
+## Step 5: Run tests in [juvix-installer](https://github.com/anoma/juvix-installer)
 
-In the Github Web UI edit the draft release created in Step 2. set it as latest release, and publish it.
+The [juvix-installer](https://github.com/anoma/juvix-installer) repository tests check that get.juvix.org and the `homebrew-juvix` formula work.
+
+To run them, manually trigger the [test workflow](https://github.com/anoma/juvix-installer/actions/workflows/test.yaml) and check that the installed Juvix version is as expected.
