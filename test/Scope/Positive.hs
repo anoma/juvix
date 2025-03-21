@@ -306,6 +306,7 @@ tests =
       "Scope ill typed"
       $(mkRelDir ".")
       $(mkRelFile "ScopeIllTyped.juvix"),
+    posTest
       "Whitespace"
       $(mkRelDir ".")
       $(mkRelFile "Whitespace.juvix"),
