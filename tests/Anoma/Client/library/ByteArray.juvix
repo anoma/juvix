@@ -1,18 +1,38 @@
 module ByteArray;
 
 import Stdlib.Prelude open;
+import Stdlib.Trait.Ord.Eq open using {fromOrdToEq};
 
-builtin bytearray
-axiom ByteArray : Type;
+module ByteArray;
+  builtin bytearray
+  axiom ByteArray : Type;
 
-builtin bytearray-from-list-byte
-axiom mkByteArray : List Byte -> ByteArray;
+  builtin bytearray-from-list-byte
+  axiom mk : List Byte -> ByteArray;
 
-builtin bytearray-length
-axiom size : ByteArray -> Nat;
+  zero (length : Nat) : ByteArray := mk (replicate length 0x0);
 
-builtin anoma-bytearray-to-anoma-contents
-axiom toAnomaContents : ByteArray -> Nat;
+  --- The number of bytes in the ;ByteArray;
+  builtin bytearray-length
+  axiom size : ByteArray -> Nat;
 
-builtin anoma-bytearray-from-anoma-contents
-axiom fromAnomaContents : Nat -> Nat -> ByteArray;
+  builtin anoma-bytearray-to-anoma-contents
+  axiom toAnomaContents : ByteArray -> Nat;
+
+  builtin anoma-bytearray-from-anoma-contents
+  axiom fromAnomaContents : Nat -> Nat -> ByteArray;
+end;
+
+open ByteArray using {ByteArray; fromAnomaContents; toAnomaContents} public;
+
+instance
+ByteArray-Ord : Ord ByteArray :=
+  let
+    prod (b : ByteArray) : _ := ByteArray.size b, toAnomaContents b;
+  in Ord.mk@{
+       compare (lhs rhs : ByteArray) : Ordering :=
+         Ord.compare (prod lhs) (prod rhs);
+     };
+
+instance
+ByteArray-Eq : Eq ByteArray := fromOrdToEq;
