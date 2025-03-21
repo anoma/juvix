@@ -43,6 +43,7 @@ import Juvix.Compiler.Pipeline.Driver.Data
 import Juvix.Compiler.Pipeline.JvoCache
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.ModuleInfoCache
+import Juvix.Compiler.Pipeline.SHA256Cache
 import Juvix.Compiler.Store.Core.Extra
 import Juvix.Compiler.Store.Core.Extra qualified as Store
 import Juvix.Compiler.Store.Extra
@@ -84,7 +85,7 @@ evalModuleInfoCacheSequential ::
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
+  Sem (ModuleInfoCache ': SHA256Cache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheSequential = evalModuleInfoCacheSetup (const (void (compileSequentially)))
 
@@ -104,12 +105,13 @@ evalModuleInfoCachePackageDotJuvix ::
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': Dumper ': r) a ->
+  Sem (ModuleInfoCache ': SHA256Cache ': ProgressLog ': JvoCache ': Dumper ': r) a ->
   Sem r a
 evalModuleInfoCachePackageDotJuvix =
   ignoreDumper
     . evalJvoCache
     . ignoreProgressLog
+    . evalSHA256Cache
     . evalCacheEmpty processModuleCacheMiss
 
 -- | Compiles the whole project sequentially (i.e. all modules in the ImportTree).
@@ -117,6 +119,7 @@ compileSequentially ::
   forall r.
   ( Members
       '[ Files,
+         SHA256Cache,
          ModuleInfoCache,
          Reader EntryPoint,
          PathResolver,
@@ -163,12 +166,13 @@ evalModuleInfoCacheSetup ::
        ]
       r
   ) =>
-  (EntryIndex -> Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) ()) ->
-  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
+  (EntryIndex -> Sem (ModuleInfoCache ': SHA256Cache ': ProgressLog ': JvoCache ': r) ()) ->
+  Sem (ModuleInfoCache ': SHA256Cache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheSetup setup m = do
   evalJvoCache
     . runProgressLog
+    . evalSHA256Cache
     . evalCacheEmptySetup setup (runMigration . processModuleCacheMiss)
     $ m
 
@@ -202,11 +206,13 @@ processModuleCacheMissDecide ::
          Files,
          Dumper,
          JvoCache,
+         SHA256Cache,
          PathResolver
        ]
       r,
     Members
       '[ ModuleInfoCache,
+         SHA256Cache,
          Error JuvixError,
          Reader Migration,
          Files,
@@ -278,6 +284,7 @@ processModuleCacheMiss ::
          Files,
          Dumper,
          JvoCache,
+         SHA256Cache,
          Reader Migration,
          ProgressLog,
          Concurrent,
@@ -299,7 +306,7 @@ processModuleCacheMiss entryIx = do
       recomp ^. recompileDo
 
 processProject ::
-  (Members '[Files, PathResolver, ModuleInfoCache, Reader EntryPoint, Reader ImportTree] r) =>
+  (Members '[Files, PathResolver, SHA256Cache, ModuleInfoCache, Reader EntryPoint, Reader ImportTree] r) =>
   Sem r [ProcessedNode ()]
 processProject = do
   rootDir <- asks (^. entryPointRoot)
@@ -317,6 +324,7 @@ processProjectWith ::
   forall a r.
   ( Members
       '[ Error JuvixError,
+         SHA256Cache,
          ModuleInfoCache,
          Reader Migration,
          PathResolver,
@@ -364,6 +372,7 @@ processProjectUpToScoping ::
          Error JuvixError,
          Reader Migration,
          PathResolver,
+         SHA256Cache,
          ModuleInfoCache,
          Reader EntryPoint,
          Reader MainPackageId,
@@ -382,6 +391,7 @@ processProjectUpToParsing ::
          PathResolver,
          Reader Migration,
          Reader MainPackageId,
+         SHA256Cache,
          ModuleInfoCache,
          Reader EntryPoint,
          Reader ImportTree
@@ -441,6 +451,7 @@ processRecursivelyUpTo ::
          Error JuvixError,
          Files,
          PathResolver,
+         SHA256Cache,
          ModuleInfoCache
        ]
       r
@@ -490,6 +501,7 @@ processRecursivelyUpToTyped ::
          Error JuvixError,
          Files,
          PathResolver,
+         SHA256Cache,
          ModuleInfoCache
        ]
       r
@@ -499,7 +511,7 @@ processRecursivelyUpToTyped = processRecursivelyUpTo (const True) upToInternalTy
 
 processImport ::
   forall r.
-  (Members '[ModuleInfoCache, Reader EntryPoint, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[SHA256Cache, ModuleInfoCache, Reader EntryPoint, Error JuvixError, Files, PathResolver] r) =>
   TopModulePath ->
   Sem r (PipelineResult Store.ModuleInfo)
 processImport p = withPathFile p getCachedImport
@@ -509,7 +521,7 @@ processImport p = withPathFile p getCachedImport
 
 processFileUpToParsing ::
   forall r.
-  (Members '[ModuleInfoCache, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[SHA256Cache, ModuleInfoCache, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, PathResolver] r) =>
   EntryPoint ->
   Sem r (PipelineResult Parser.ParserResult)
 processFileUpToParsing entry = do
@@ -526,7 +538,7 @@ processFileUpToParsing entry = do
 
 processFileUpTo ::
   forall r a.
-  (Members '[Reader EntryPoint, Error JuvixError, TopModuleNameChecker, PathResolver, Files, HighlightBuilder, ModuleInfoCache] r) =>
+  (Members '[Reader EntryPoint, Error JuvixError, TopModuleNameChecker, PathResolver, Files, HighlightBuilder, SHA256Cache, ModuleInfoCache] r) =>
   Sem (Reader Parser.ParserResult ': Reader Store.ModuleTable ': NameIdGen ': r) a ->
   Sem r (PipelineResult a)
 processFileUpTo a = do
@@ -543,7 +555,7 @@ processFileUpTo a = do
 
 processImports ::
   forall r.
-  (Members '[Reader EntryPoint, ModuleInfoCache, Error JuvixError, Files, PathResolver] r) =>
+  (Members '[Reader EntryPoint, SHA256Cache, ModuleInfoCache, Error JuvixError, Files, PathResolver] r) =>
   [TopModulePath] ->
   Sem r CompileResult
 processImports imports = do
@@ -576,7 +588,7 @@ processImports imports = do
 
 processModuleToStoredCore ::
   forall r.
-  (Members '[Reader Migration, ModuleInfoCache, PathResolver, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, Dumper] r) =>
+  (Members '[Reader Migration, SHA256Cache, ModuleInfoCache, PathResolver, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, Dumper] r) =>
   EntryPoint ->
   Sem r (PipelineResult Store.ModuleInfo)
 processModuleToStoredCore entry = do
@@ -597,7 +609,7 @@ processModuleToStoredCore entry = do
 
 processFileToStoredCore ::
   forall r.
-  (Members '[Reader Migration, ModuleInfoCache, HighlightBuilder, PathResolver, TopModuleNameChecker, Error JuvixError, Files, Dumper] r) =>
+  (Members '[Reader Migration, SHA256Cache, ModuleInfoCache, HighlightBuilder, PathResolver, TopModuleNameChecker, Error JuvixError, Files, Dumper] r) =>
   EntryPoint ->
   Sem r (PipelineResult Core.CoreResult)
 processFileToStoredCore entry = do

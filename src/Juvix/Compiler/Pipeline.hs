@@ -47,6 +47,7 @@ import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Result
 import Juvix.Compiler.Pipeline.Root.Base
+import Juvix.Compiler.Pipeline.SHA256Cache (SHA256Cache)
 import Juvix.Compiler.Reg.Pipeline qualified as Reg
 import Juvix.Compiler.Reg.Translation.FromAsm qualified as Reg
 import Juvix.Compiler.Store.Language qualified as Store
@@ -61,6 +62,7 @@ type PipelineAppEffects = '[TaggedLock, Reader PipelineOptions, Logger, EmbedIO]
 
 type PipelineLocalEff =
   '[ ModuleInfoCache,
+     SHA256Cache,
      ProgressLog,
      JvoCache,
      Reader Migration,

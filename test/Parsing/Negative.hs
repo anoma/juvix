@@ -55,13 +55,6 @@ negTestAbsDir _name _dir f _checkErr =
 parserErrorTests :: [NegTest]
 parserErrorTests =
   [ negTest
-      "Tab character"
-      $(mkRelDir ".")
-      $(mkRelFile "Tab.juvix")
-      $ \case
-        ErrMegaparsec {} -> Nothing
-        _ -> wrongError,
-    negTest
       "Pragmas YAML error"
       $(mkRelDir ".")
       $(mkRelFile "PragmasYAML.juvix")

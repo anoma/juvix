@@ -24,6 +24,7 @@ import Juvix.Compiler.Pipeline.Options
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Run (evalModuleInfoCacheHelper)
+import Juvix.Compiler.Pipeline.SHA256Cache
 import Juvix.Compiler.Store.Extra qualified as Store
 import Juvix.Compiler.Verification.Dumper
 import Juvix.Data.Effect.Git
@@ -126,7 +127,7 @@ compileExpression p =
     >>= fromInternalExpression
 
 registerImport ::
-  (Members '[TaggedLock, Error JuvixError, State Artifacts, Reader EntryPoint, Files, GitClone, PathResolver, ModuleInfoCache] r) =>
+  (Members '[TaggedLock, Error JuvixError, State Artifacts, Reader EntryPoint, Files, GitClone, PathResolver, ModuleInfoCache, SHA256Cache] r) =>
   Import 'Parsed ->
   Sem r ()
 registerImport i = do

@@ -305,5 +305,12 @@ tests =
     posTest
       "Scope ill typed"
       $(mkRelDir ".")
-      $(mkRelFile "ScopeIllTyped.juvix")
+      $(mkRelFile "ScopeIllTyped.juvix"),
+      "Whitespace"
+      $(mkRelDir ".")
+      $(mkRelFile "Whitespace.juvix"),
+    posTest
+      "Tabs"
+      $(mkRelDir ".")
+      $(mkRelFile "Tab.juvix")
   ]
