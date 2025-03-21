@@ -52,4 +52,5 @@ main : _ :=
     >-> Action.delta action
     >-> addDelta (Action.delta action) (Action.delta action)
     >-> subDelta (Action.delta action) (Action.delta action)
-    >-> Transaction.compose t t;
+    >-> Transaction.compose t t
+    >-> true;

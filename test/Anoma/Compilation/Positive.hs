@@ -126,10 +126,12 @@ mkAnomaTest testNum testMode testName' dirPath filePath args check =
   mkAnomaTest' testMode emptyStorage testNum testName' dirPath filePath args check
 
 checkNatOutput :: [Natural] -> Check ()
-checkNatOutput = checkOutput . fmap toNock
+checkNatOutput = checkTracesAndOutput . fmap toNock
 
-checkOutput :: [Term Natural] -> Check ()
-checkOutput expected = case unsnoc expected of
+-- | The expected result of the program is the last item in the list. If the
+-- list is empty then it is expected to return void
+checkTracesAndOutput :: [Term Natural] -> Check ()
+checkTracesAndOutput expected = case unsnoc expected of
   Nothing -> eqTraces [] >> eqNock (TermAtom nockVoid)
   Just (xs, x) -> do
     eqTraces xs
@@ -304,7 +306,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test006.juvix")
           []
-          (checkOutput [[nock| 2 |], [nock| true |], [nock| false |]]),
+          (checkTracesAndOutput [[nock| 2 |], [nock| true |], [nock| false |]]),
         mkAnomaTest
           7
           AnomaTestModeFull
@@ -314,7 +316,7 @@ allTests =
           []
           $ do
             let l :: Term Natural = [nock| [1 2 nil] |]
-            checkOutput [[nock| false |], [nock| true |], [nock| 0 |], [nock| [1 nil] |], [nock| 1 |], l, l],
+            checkTracesAndOutput [[nock| false |], [nock| true |], [nock| 0 |], [nock| [1 nil] |], [nock| 1 |], l, l],
         mkAnomaTest
           8
           AnomaTestModeDebugOnly
@@ -444,7 +446,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test022.juvix")
           [natArg 1000]
-          $ checkOutput
+          $ checkTracesAndOutput
             [ [nock| [10 9 8 7 6 5 4 3 2 1 nil] |],
               [nock| [1 2 3 4 5 6 7 8 9 10 nil] |],
               [nock| [10 9 8 7 6 nil] |],
@@ -483,7 +485,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test026.juvix")
           []
-          $ checkOutput [makeList (toNock @Natural <$> [1 .. 100])],
+          $ checkTracesAndOutput [makeList (toNock @Natural <$> [1 .. 100])],
         -- TODO allow lambda branches of different number of patterns
         -- mkAnomaTest
         --   "Test027: Church numerals"
@@ -523,7 +525,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test031.juvix")
           []
-          $ checkOutput [[nock| [4 3 2 1 3 2 1 2 1 1 nil ] |]],
+          $ checkTracesAndOutput [[nock| [4 3 2 1 3 2 1 2 1 1 nil ] |]],
         mkAnomaTest
           32
           AnomaTestModeDebugOnly
@@ -533,7 +535,7 @@ allTests =
           []
           $ do
             let l = makeList (toNock @Natural <$> [2 .. 11])
-            checkOutput [l, l, l],
+            checkTracesAndOutput [l, l, l],
         mkAnomaTest
           33
           AnomaTestModeFull
@@ -541,7 +543,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test033.juvix")
           []
-          $ checkOutput
+          $ checkTracesAndOutput
             [ [nock| 9 |],
               [nock| [7 2] |],
               [nock| 5 |],
@@ -563,7 +565,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test035.juvix")
           []
-          $ checkOutput
+          $ checkTracesAndOutput
             [ [nock| [9 7 5 3 1 nil] |],
               [nock| 300 |],
               [nock| 4160 |],
@@ -602,7 +604,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test039.juvix")
           []
-          $ checkOutput [[nock| false |], [nock| true |]],
+          $ checkTracesAndOutput [[nock| false |], [nock| true |]],
         mkAnomaTest
           40
           AnomaTestModeFull
@@ -610,7 +612,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test040.juvix")
           []
-          $ checkOutput [[nock| true |]],
+          $ checkTracesAndOutput [[nock| true |]],
         mkAnomaTest
           41
           AnomaTestModeFull
@@ -658,7 +660,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test049.juvix")
           []
-          $ checkOutput
+          $ checkTracesAndOutput
             [ [nock| 1 |],
               [nock| 1 |],
               [nock| 0 |],
@@ -692,7 +694,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test052.juvix")
           []
-          $ checkOutput [[nock| [15 nil] |]],
+          $ checkTracesAndOutput [[nock| [15 nil] |]],
         mkAnomaTest
           53
           AnomaTestModeFull
@@ -716,7 +718,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test055.juvix")
           []
-          $ checkOutput
+          $ checkTracesAndOutput
             [[nock| [[[[1 2] 3] [[2 3] 4] nil] [1 2] [2 3] nil] |]],
         mkAnomaTest
           56
@@ -757,7 +759,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test060.juvix")
           []
-          $ checkOutput [[nock| [30 10 2] |]],
+          $ checkTracesAndOutput [[nock| [30 10 2] |]],
         mkAnomaTest
           61
           AnomaTestModeFull
@@ -829,7 +831,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test069.juvix")
           []
-          $ checkOutput [[nock| true |]],
+          $ checkTracesAndOutput [[nock| true |]],
         mkAnomaTest
           70
           AnomaTestModeFull
@@ -880,7 +882,7 @@ allTests =
               $(mkRelDir ".")
               $(mkRelFile "test074.juvix")
               [k1, k2]
-              $ checkOutput [v1, v2],
+              $ checkTracesAndOutput [v1, v2],
         mkAnomaTest
           75
           AnomaTestModeDebugOnly
@@ -896,7 +898,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test076.juvix")
           []
-          $ checkOutput
+          $ checkTracesAndOutput
             [ [nock| 0 |],
               [nock| [1 2 0] |],
               [nock| [1 2] |],
@@ -909,7 +911,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test077.juvix")
           []
-          $ checkOutput
+          $ checkTracesAndOutput
             [ [nock| 64 |],
               [nock| true |]
             ],
@@ -921,7 +923,7 @@ allTests =
               $(mkRelDir ".")
               $(mkRelFile "test078.juvix")
               [toSignAndVerify]
-              $ checkOutput
+              $ checkTracesAndOutput
                 [toSignAndVerify],
         let inputStr :: Term Natural = [nock| "Juvix!" |]
          in mkAnomaTest
@@ -931,7 +933,7 @@ allTests =
               $(mkRelDir ".")
               $(mkRelFile "test079.juvix")
               [inputStr]
-              $ checkOutput [[nock| "Juvix! ✨ héllo world ✨" |]],
+              $ checkTracesAndOutput [[nock| "Juvix! ✨ héllo world ✨" |]],
         mkAnomaTest
           80
           AnomaTestModeFull
@@ -939,7 +941,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test080.juvix")
           []
-          $ checkOutput
+          $ checkTracesAndOutput
             [ [nock| [nil 1] |],
               [nock| 2 |],
               [nock| 3 |],
@@ -952,7 +954,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test081.juvix")
           []
-          $ checkOutput
+          $ checkTracesAndOutput
             [ [nock| 1 |],
               [nock| 255 |],
               [nock| 2 |],
@@ -972,7 +974,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test082.juvix")
           []
-          $ checkOutput
+          $ checkTracesAndOutput
             [ [nock| 0 |],
               [nock| [0 0] |],
               [nock| 3 |],
@@ -991,7 +993,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test083.juvix")
           []
-          $ checkOutput
+          $ checkTracesAndOutput
             [ [nock| [[0 0] 0] |],
               [nock| [[3 0] 0] |],
               [nock| [[4 1] 1] |],
@@ -1005,7 +1007,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test084.juvix")
           []
-          $ checkOutput
+          $ checkTracesAndOutput
             [ [nock| 32 |],
               [nock|
                   [
@@ -1020,7 +1022,7 @@ allTests =
           $(mkRelDir "test085")
           $(mkRelFile "delta.juvix")
           []
-          $ checkOutput
+          $ checkTracesAndOutput
             [ [nock| true |],
               [nock| true |],
               [nock| false |],
@@ -1028,7 +1030,8 @@ allTests =
               [nock| 2 |],
               [nock| 2 |],
               [nock| 2 |],
-              [nock| 2 |]
+              [nock| 2 |],
+              [nock| true |]
             ],
         mkAnomaTest
           86
@@ -1037,7 +1040,7 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test086.juvix")
           []
-          $ checkOutput
+          $ checkTracesAndOutput
             [ [nock| [2 30764] |],
               [nock| [3 10689019] |],
               [nock| [2 20159] |],
@@ -1052,5 +1055,5 @@ allTests =
               $(mkRelDir ".")
               $(mkRelFile "test087.juvix")
               [testList]
-              $ checkOutput [expectedOutput]
+              $ checkTracesAndOutput [expectedOutput]
       ]
