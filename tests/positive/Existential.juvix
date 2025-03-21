@@ -1,0 +1,67 @@
+module Existential;
+
+import Juvix.Builtin.V1.Fixity open public;
+
+trait
+type FromNatural A :=
+  mkFromNatural@{
+    builtin from-nat
+    fromNat : Nat -> A;
+  };
+
+open FromNatural public;
+
+instance
+fromNaturalNatI : FromNatural Nat :=
+  mkFromNatural@{
+    fromNat (x : Nat) : Nat := x;
+  };
+
+builtin nat
+type Nat :=
+  | zero
+  | suc Nat;
+
+open Nat using {zero; suc} public;
+
+builtin pair
+type Pair (A B : Type) := , : A → B → Pair A B;
+
+open Pair using {,} public;
+
+syntax operator , pair;
+
+builtin eq
+trait
+type HasNat A :=
+  mk@{
+    getNat : A -> Nat;
+  };
+
+open HasNat using {getNat};
+
+type T :=
+  | mk1
+  | mk2;
+
+instance
+NatT : HasNat T :=
+  HasNat.mk@{
+    getNat : T -> Nat
+      | T.mk1 := 1
+      | T.mk2 := 2;
+  };
+
+type Box := mk : (ty : Type) -> {{HasNat ty}} -> ty -> Box;
+
+e1 : Box := Box.mk T T.mk1;
+
+e2 : Box := Box.mk T T.mk2;
+
+main : Pair Nat Nat :=
+  case e1, e2 of
+    | Box.mk ty1 {{i}} x, Box.mk ty2 {{i2}} x2 :=
+      let
+        _ : HasNat ty1 := i;
+        _ : HasNat ty2 := i2;
+      in getNat x, getNat x2;
