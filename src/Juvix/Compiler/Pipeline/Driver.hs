@@ -295,7 +295,8 @@ processModuleCacheMiss entryIx = do
     ProcessModuleReuse r -> do
       highlightMergeDocTable (r ^. pipelineResult . Store.moduleInfoScopedModule . Scoped.scopedModuleDocTable)
       return r
-    ProcessModuleRecompile recomp -> recomp ^. recompileDo
+    ProcessModuleRecompile recomp -> do
+      recomp ^. recompileDo
 
 processProject ::
   (Members '[Files, PathResolver, ModuleInfoCache, Reader EntryPoint, Reader ImportTree] r) =>
@@ -504,12 +505,7 @@ processImport ::
 processImport p = withPathFile p getCachedImport
   where
     getCachedImport :: ImportNode -> Sem r (PipelineResult Store.ModuleInfo)
-    getCachedImport node = do
-      hasParallelSupport <- supportsParallel
-      eix <- mkEntryIndex node
-      if
-          | hasParallelSupport -> cacheGet eix
-          | otherwise -> processModule eix
+    getCachedImport = mkEntryIndex >=> processModule
 
 processFileUpToParsing ::
   forall r.
