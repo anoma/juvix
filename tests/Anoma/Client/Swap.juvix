@@ -16,15 +16,19 @@ trivial_true_resource_eph : Resource :=
     quantity := 1;
     value := AnomaAtom.fromNat 0;
     nullifierKeyCommitment :=
-          NullifierKeyCommitment.toAnomaAtom NullifierKeyCommitment.zero;
-        unusedRandSeed := 0;
-        nonce := Nonce.toAnomaAtom (Nonce.fromNat 0);
+      NullifierKeyCommitment.toAnomaAtom NullifierKeyCommitment.zero;
+    unusedRandSeed := 0;
+    nonce := Nonce.toRaw (Nonce.fromNat 0);
   };
 
 trivial_true_eph_nullifier_action : Action :=
   Action.create@{
     created := [];
-    consumed := [NullifiableResource.Transparent.mk trivial_true_resource_eph];
+    consumed :=
+      [
+        RootedNullifiableResource.Transparent.mkEphemeral
+          trivial_true_resource_eph;
+      ];
     appData := AppData.empty;
   };
 
@@ -42,9 +46,9 @@ trivial_true_resource : Resource :=
     quantity := 1;
     value := AnomaAtom.fromNat 0;
     nullifierKeyCommitment :=
-          NullifierKeyCommitment.toAnomaAtom NullifierKeyCommitment.zero;
-        unusedRandSeed := 0;
-        nonce := Nonce.toAnomaAtom (Nonce.fromNat 2);
+      NullifierKeyCommitment.toAnomaAtom NullifierKeyCommitment.zero;
+    unusedRandSeed := 0;
+    nonce := Nonce.toRaw (Nonce.fromNat 2);
   };
 
 trivial_true_commit_action : Action :=
@@ -56,7 +60,7 @@ trivial_true_commit_action : Action :=
 
 commit_intent : Transaction :=
   Transaction.mk@{
-    roots := AnomaSet.empty ;
+    roots := AnomaSet.empty;
     actions := AnomaSet.fromList [trivial_true_commit_action];
   };
 
