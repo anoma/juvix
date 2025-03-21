@@ -29,7 +29,7 @@ instance NFData Options
 makeLenses ''Options
 
 fromEntryPoint :: EntryPoint -> Options
-fromEntryPoint EntryPoint {..} =
+fromEntryPoint e@EntryPoint {..} =
   Options
     { _optionsNoTermination = _entryPointNoTermination,
       _optionsNoPositivity = _entryPointNoPositivity,
@@ -42,7 +42,7 @@ fromEntryPoint EntryPoint {..} =
       _optionsInliningDepth = _entryPointInliningDepth,
       _optionsFieldSize = _entryPointFieldSize,
       _optionsPipeline = _entryPointPipeline,
-      _optionsMainFile = _entryPointMainFile == _entryPointModulePath
+      _optionsMainFile = entryPointIsMainFile e
     }
 
 getOptionsSubdir :: Options -> Path Rel Dir

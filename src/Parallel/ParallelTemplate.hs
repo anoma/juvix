@@ -11,6 +11,7 @@ module Parallel.ParallelTemplate
     compileArgsDependencies,
     compileArgsNodesIndex,
     compileArgsNodeName,
+    compileArgsNodeIsIgnored,
     compileArgsNumWorkers,
     compileArgsCompileNode,
     compileArgsPreProcess,
@@ -30,6 +31,8 @@ data CompileArgs (s :: [Effect]) nodeId node compileProof = CompileArgs
   { _compileArgsNodesIndex :: NodesIndex nodeId node,
     _compileArgsDependencies :: Dependencies nodeId,
     _compileArgsNodeName :: node -> Text,
+    -- | If this function returns `True`, the node will not be compiled.
+    _compileArgsNodeIsIgnored :: node -> Bool,
     _compileArgsNumWorkers :: Int,
     -- | Called concurrently on every node without any specific order before
     -- compilation starts.
@@ -257,9 +260,11 @@ compileNode ::
   Sem r ()
 compileNode nodId = do
   m :: node <- getNode nodId
-  compileFun <- asks @(CompileArgs s nodeId node compileProof) (^. compileArgsCompileNode)
-  proof :: compileProof <- inject (compileFun m)
-  registerCompiledModule @nodeId @node @s @compileProof nodId proof
+  compileIgnored <- asks @(CompileArgs s nodeId node compileProof) (^. compileArgsNodeIsIgnored)
+  unless (compileIgnored m) $ do
+    compileFun <- asks @(CompileArgs s nodeId node compileProof) (^. compileArgsCompileNode)
+    proof :: compileProof <- inject (compileFun m)
+    registerCompiledModule @nodeId @node @s @compileProof nodId proof
 
 registerCompiledModule ::
   forall nodeId node s compileProof r.

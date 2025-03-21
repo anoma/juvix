@@ -1,0 +1,23 @@
+working-directory: ./../../../../tests
+
+tests:
+  - name: scope-ill-typed
+    command:
+      - juvix
+      - dev
+      - scope
+    args:
+      - positive/ScopeIllTyped.juvix
+    stdout: |
+      module ScopeIllTyped;
+
+      import Stdlib.Data.Nat open;
+
+      trait
+      type T A :=
+        mk@{
+          f : A -> A;
+        };
+
+      main : Nat := T.f 0;
+    exit-status: 0

@@ -3,7 +3,6 @@ module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping
     module Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error,
     scopeCheck,
     scopeCheckRepl,
-    getModuleId,
     scopeCheckReplImport,
     scopeCheckOpenModule,
     scopeCheckExpression,
@@ -1215,15 +1214,6 @@ checkFixityFields ParsedFixityFields {..} = do
         _fixityFieldsPrecBelow = below',
         _fixityFieldsAssoc,
         _fixityFieldsBraces
-      }
-
-getModuleId :: forall r. (Member (Reader PackageId) r) => TopModulePathKey -> Sem r ModuleId
-getModuleId path = do
-  pkgId <- ask
-  return
-    ModuleId
-      { _moduleIdPath = path,
-        _moduleIdPackageId = pkgId
       }
 
 checkFixitySyntaxDef ::

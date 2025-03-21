@@ -33,3 +33,12 @@ defaultModuleId =
             _packageIdVersion = SemVer 1 0 0 Nothing Nothing
           }
     }
+
+getModuleId :: forall r. (Member (Reader PackageId) r) => TopModulePathKey -> Sem r ModuleId
+getModuleId path = do
+  pkgId <- ask
+  return
+    ModuleId
+      { _moduleIdPath = path,
+        _moduleIdPackageId = pkgId
+      }

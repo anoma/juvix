@@ -140,7 +140,8 @@ getReplEntryPoint f inputFile = do
   root <- Reader.asks (^. replRoot)
   gopts <- State.gets (^. replStateGlobalOptions)
   liftIO
-    ( set entryPointTarget (Just TargetCore)
+    ( set entryPointMainFile Nothing
+        . set entryPointTarget (Just TargetCore)
         . set entryPointPipeline (Just PipelineEval)
         . set entryPointSymbolPruningMode KeepAll
         <$> f root inputFile gopts

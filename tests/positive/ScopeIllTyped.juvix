@@ -1,0 +1,11 @@
+module ScopeIllTyped;
+
+import Stdlib.Data.Nat open;
+
+trait
+type T A :=
+  mk@{
+    f : A -> A;
+  };
+
+main : Nat := T.f 0;
