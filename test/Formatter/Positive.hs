@@ -37,9 +37,9 @@ makeFormatTest' Scope.PosTest {..} =
 filterOutTests :: [String] -> [Scope.PosTest] -> [Scope.PosTest]
 filterOutTests out = filter (\Scope.PosTest {..} -> _name `notElem` out)
 
--- Ignore tests that use the stdlib
+-- Ignore tests that use the stdlib or contain CRs or TABs
 ignoredTests :: [String]
-ignoredTests = ["Import embedded standard library", "Basic dependencies"]
+ignoredTests = ["Import embedded standard library", "Basic dependencies", "Whitespace", "Tabs"]
 
 allTests :: TestTree
 allTests =

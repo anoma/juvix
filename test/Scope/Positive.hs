@@ -301,5 +301,13 @@ tests =
     posTest
       "Type signatures"
       $(mkRelDir ".")
-      $(mkRelFile "TypeSignatures.juvix")
+      $(mkRelFile "TypeSignatures.juvix"),
+    posTest
+      "Whitespace"
+      $(mkRelDir ".")
+      $(mkRelFile "Whitespace.juvix"),
+    posTest
+      "Tabs"
+      $(mkRelDir ".")
+      $(mkRelFile "Tab.juvix")
   ]
