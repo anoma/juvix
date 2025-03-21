@@ -3,6 +3,7 @@ module ResourceMachine;
 import Encode open;
 import ByteArray open;
 import Stdlib.Prelude open;
+import Stdlib.Debug.Fail open;
 
 type Tag :=
   | Created Commitment
@@ -30,18 +31,26 @@ with
 end;
 
 --- The nullifier key type describing a secret required to compute the ;Nullifier; of a resource
-type NullifierKey :=
-  privateMk@{
-    unNullifierKey : ByteArray;
-  }
+type NullifierKey := privateMk ByteArray
 with
+  -- should be mk AnomaAtom
+  type Raw := mk Nat;
+
+  fromRaw : NullifierKey.Raw -> NullifierKey
+    | (Raw.mk n) := privateMk (fromAnomaContents size n);
+
+  toRaw : NullifierKey -> NullifierKey.Raw
+    | (NullifierKey.privateMk bs) := Raw.mk (toAnomaContents bs);
+
+  size : Nat := 64;
+
   fromByteArray : ByteArray -> NullifierKey := privateMk;
 
   toByteArray : NullifierKey -> ByteArray
     | (privateMk b) := b;
 
   module Transparent;
-    mk : NullifierKey := privateMk (ByteArray.zero 64);
+    mk : NullifierKey := privateMk (ByteArray.zero size);
   end;
 
   deriving instance
@@ -94,6 +103,7 @@ type ConsumedItem :=
     nullifier : Nullifier;
     root : CommitmentRoot;
     logic : Nat;
+  -- TODO change to Encoded Logic
   };
 
 type DeltaHash := privateMk Nat;
@@ -102,6 +112,7 @@ type CreatedItem :=
   mk@{
     commitment : Commitment;
     logic : Nat;
+  -- TODO change to Encoded Logic
   };
 
 type Instance :=
@@ -133,6 +144,7 @@ type Logic : Type :=
     compute : Logic.Arg -> Bool;
   }
 with
+  -- called RLPS.Instance
   positive
   type Arg :=
     mk@{
@@ -160,18 +172,27 @@ end;
 
 --- A fixed-size data type encoding a number to be used once ensuring that the resource commitment is unique.
 --- NOTE: This should be a number having an at most negligible chance of repeating is sufficient, e.g., a pseudo-random number.
-type Nonce := internalMk ByteArray
+type Nonce := privateMk ByteArray
 with
+  -- should be mk AnomaAtom
+  type Raw := mk Nat;
+
+  fromRaw : Nonce.Raw -> Nonce
+    | (Raw.mk n) := privateMk (fromAnomaContents size n);
+
+  toRaw : Nonce -> Nonce.Raw
+    | (Nonce.privateMk bs) := Raw.mk (toAnomaContents bs);
+
   size : Nat := 32;
 
-  fromNat : Nat -> Nonce := fromAnomaContents size >> internalMk;
+  fromNat : Nat -> Nonce := fromAnomaContents size >> privateMk;
 
-  from32SizedByteArray : ByteArray -> Nonce := internalMk;
+  from32SizedByteArray : ByteArray -> Nonce :=  privateMk;
 
   toAnomaAtom : Nonce -> AnomaAtom := toNat >> AnomaAtom.fromNat;
 
   toNat : Nonce -> Nat
-    | (internalMk nonce) := toAnomaContents nonce;
+    | (privateMk nonce) := toAnomaContents nonce;
 
   deriving instance
   Nonce-Ord : Ord Nonce;
@@ -209,7 +230,7 @@ type Resource :=
     value : AnomaAtom;
     quantity : Nat;
     ephemeral : Bool;
-    nonce : AnomaAtom;
+    nonce : Nonce.Raw;
     nullifierKeyCommitment : AnomaAtom;
     unusedRandSeed : Nat;
   }
@@ -376,9 +397,39 @@ with
   end;
 end;
 
+type RootedNullifiableResource :=
+  mk@{
+    key : NullifierKey.Raw;
+    resource : Resource;
+    root : CommitmentRoot;
+  }
+with
+  module Transparent;
+    mkEphemeral (resource : Resource) : RootedNullifiableResource :=
+      if
+        | Resource.ephemeral resource :=
+          mk@{
+            resource;
+            root := CommitmentRoot.fromNat 0;
+          }
+        | else :=
+          failwith "mkEphemeral requires an ephemeral resource as an arguments";
+
+    mk
+      (resource : Resource)
+      (root : CommitmentRoot)
+      : RootedNullifiableResource :=
+      RootedNullifiableResource.mk@{
+        resource;
+        root;
+        key := NullifierKey.toRaw NullifierKey.Transparent.mk;
+      };
+  end;
+end;
+
 type NullifiableResource :=
   mk@{
-    key : NullifierKey;
+    key : NullifierKey.Raw;
     resource : Resource;
   }
 with
@@ -392,7 +443,7 @@ with
     mk (resource : Resource) : NullifiableResource :=
       NullifiableResource.mk@{
         resource;
-        key := NullifierKey.Transparent.mk;
+        key := NullifierKey.toRaw NullifierKey.Transparent.mk;
       };
   end;
 end;
@@ -415,13 +466,11 @@ with
   axiom listDelta : List Action -> Delta;
 
   create
-    (consumed : List NullifiableResource)
+    (consumed : List RootedNullifiableResource)
     (created : List Resource)
     (appData : AppData)
     : Action :=
     builtinCreate@{
-      -- consumed := AnomaSet.fromList consumed;
-      -- created := AnomaSet.fromList created;
       consumed;
       created;
       appData;
@@ -429,7 +478,7 @@ with
 
   builtin anoma-action-create
   axiom builtinCreate
-    (consumed : List NullifiableResource)
+    (consumed : List RootedNullifiableResource)
     (created : List Resource)
     (appData : AppData)
     : Action;
