@@ -8,9 +8,6 @@ on:
         required: true
         default: "main"
 
-env:
-  STACK_VERSION: 2.11.1
-
 permissions:
   id-token: write
   attestations: write
@@ -34,12 +31,6 @@ jobs:
       - name: create ~/.local/bin
         run: mkdir -p "$HOME/.local/bin"
         shell: bash
-
-      - name: install stack
-        run: |
-          curl https://github.com/commercialhaskell/stack/releases/download/v$STACK_VERSION/stack-$STACK_VERSION-linux-x86_64-static.tar.gz -OL
-          tar xf stack-$STACK_VERSION-linux-x86_64-static.tar.gz
-          cp stack-$STACK_VERSION-linux-x86_64-static/stack /usr/local/bin
 
       - name: add ~/.local/bin to PATH
         run: echo "$HOME/.local/bin" >> $GITHUB_PATH
