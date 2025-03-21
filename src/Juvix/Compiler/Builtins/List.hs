@@ -13,7 +13,6 @@ checkListDef d = do
   param :: VarName <- case d ^. inductiveParameters of
     [v] -> return (v ^. inductiveParamName)
     _ -> err "List should have exactly one type parameter"
-
   case d ^. inductiveConstructors of
     [c1, c2] -> checkNil param c1 >> checkCons param c2
     _ -> err "List should have exactly two constructors"

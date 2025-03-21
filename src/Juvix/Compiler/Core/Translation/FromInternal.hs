@@ -243,6 +243,11 @@ goConstructor sym ctor = do
         Internal.BuiltinIntNegSuc -> freshTag
         Internal.BuiltinListNil -> freshTag
         Internal.BuiltinListCons -> freshTag
+        Internal.BuiltinJsonArray -> return (BuiltinTag TagJsonArray)
+        Internal.BuiltinJsonBool -> return (BuiltinTag TagJsonBool)
+        Internal.BuiltinJsonObject -> return (BuiltinTag TagJsonObject)
+        Internal.BuiltinJsonNumber -> return (BuiltinTag TagJsonNumber)
+        Internal.BuiltinJsonString -> return (BuiltinTag TagJsonString)
         Internal.BuiltinMaybeNothing -> freshTag
         Internal.BuiltinMaybeJust -> freshTag
         Internal.BuiltinPairConstr -> freshTag
@@ -250,6 +255,8 @@ goConstructor sym ctor = do
         Internal.BuiltinMkEcPoint -> freshTag
         Internal.BuiltinMkAnomaAction -> freshTag
         Internal.BuiltinMkAnomaResource -> freshTag
+        Internal.BuiltinMkAnomaComplianceInputs -> freshTag
+        Internal.BuiltinMkAnomaShieldedTransaction -> freshTag
         Internal.BuiltinMkOrd -> freshTag
         Internal.BuiltinOrderingLT -> freshTag
         Internal.BuiltinOrderingGT -> freshTag
@@ -703,6 +710,7 @@ builtinInductive a =
         Internal.BuiltinAnomaRandomSplit -> Nothing
         Internal.BuiltinAnomaIsCommitment -> Nothing
         Internal.BuiltinAnomaIsNullifier -> Nothing
+        Internal.BuiltinAnomaCreateFromComplianceInputs -> Nothing
         Internal.BuiltinAnomaSet -> Just (registerInductiveAxiom (Just BuiltinAnomaSet) [])
         Internal.BuiltinAnomaSetToList -> Nothing
         Internal.BuiltinAnomaSetFromList -> Nothing
@@ -1045,6 +1053,24 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
           ( mkLambda'
               natType
               (mkBuiltinApp' OpAnomaIsNullifier [mkVar' 0])
+          )
+      Internal.BuiltinAnomaCreateFromComplianceInputs -> do
+        registerAxiomDef
+          ( mkLambda'
+              mkDynamic'
+              ( mkLambda'
+                  mkDynamic'
+                  ( mkLambda'
+                      mkDynamic'
+                      ( mkLambda'
+                          mkDynamic'
+                          ( mkLambda'
+                              mkDynamic'
+                              (mkBuiltinApp' OpAnomaCreateFromComplianceInputs [mkVar' 4, mkVar' 3, mkVar' 2, mkVar' 1, mkVar' 0])
+                          )
+                      )
+                  )
+              )
           )
       Internal.BuiltinAnomaSet -> return ()
       Internal.BuiltinAnomaSetToList -> do
@@ -1518,6 +1544,7 @@ goApplication a = do
         Just Internal.BuiltinAnomaRandomSplit -> app
         Just Internal.BuiltinAnomaIsCommitment -> app
         Just Internal.BuiltinAnomaIsNullifier -> app
+        Just Internal.BuiltinAnomaCreateFromComplianceInputs -> app
         Just Internal.BuiltinAnomaSet -> app
         Just Internal.BuiltinAnomaSetToList -> app
         Just Internal.BuiltinAnomaSetFromList -> app
