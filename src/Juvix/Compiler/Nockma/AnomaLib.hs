@@ -113,7 +113,7 @@ anomaLibPath = \case
     StdlibAnomaSetFromList -> [nock| [9 22 0 7] |]
   AnomaLibFunction (AnomaRmFunction f) -> case f of
     RmCommit -> [nock| [9 3002 0 1] |]
-    RmNullify -> [nock| [9 2.815 0 1] |]
+    RmNullify -> [nock| [9 2815 0 1] |]
     RmKind -> [nock| [9 5972 0 1] |]
     RmDeltaAdd -> [nock| [9 372 0 1] |]
     RmDeltaSub -> [nock| [9 12013 0 1] |]
