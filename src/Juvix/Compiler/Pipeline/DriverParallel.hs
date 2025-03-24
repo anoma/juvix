@@ -96,6 +96,8 @@ compileInParallel = do
         CompileArgs
           { _compileArgsNodesIndex = idx,
             _compileArgsNodeName = getNodeName,
+            -- We should not compile the main file as a module to avoid double compliation
+            _compileArgsNodeIsIgnored = entryPointIsMainFile . (^. entryIxEntry),
             _compileArgsPreProcess = Just preLoadFromJvoFile,
             _compileArgsDependencies = mkDependencies t,
             _compileArgsNumWorkers = numWorkers,

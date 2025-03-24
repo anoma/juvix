@@ -14,19 +14,17 @@ module Juvix.Compiler.Pipeline.Driver
     processImport,
     processRecursivelyUpToTyped,
     processRecursivelyUpTo,
-    processImports,
-    processModuleToStoredCore,
     processProjectUpToScoping,
     processProjectUpToParsing,
   )
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.Highlight
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print.Base (docNoCommentsDefault)
 import Juvix.Compiler.Concrete.Translation.FromParsed (scopeCheck)
-import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping (getModuleId)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource (fromSource)
@@ -132,7 +130,13 @@ compileSequentially ::
   Sem r (HashMap ImportNode (PipelineResult Store.ModuleInfo))
 compileSequentially = do
   nodes :: HashSet ImportNode <- asks (^. importTreeNodes)
-  hashMapFromHashSetM nodes (mkEntryIndex >=> compileNode)
+  entry <- ask
+  -- We should not compile the main file as a module
+  let nodes' = HashSet.filter (not . isMainFile entry) nodes
+  hashMapFromHashSetM nodes' (mkEntryIndex >=> compileNode)
+  where
+    isMainFile :: EntryPoint -> ImportNode -> Bool
+    isMainFile entry node = Just (node ^. importNodeAbsFile) == entry ^. entryPointMainFile
 
 compileNode ::
   (Members '[ModuleInfoCache, PathResolver] r) =>
@@ -298,7 +302,8 @@ processModuleCacheMiss entryIx = do
     ProcessModuleReuse r -> do
       highlightMergeDocTable (r ^. pipelineResult . Store.moduleInfoScopedModule . Scoped.scopedModuleDocTable)
       return r
-    ProcessModuleRecompile recomp -> recomp ^. recompileDo
+    ProcessModuleRecompile recomp -> do
+      recomp ^. recompileDo
 
 processProject ::
   (Members '[Files, PathResolver, SHA256Cache, ModuleInfoCache, Reader EntryPoint, Reader ImportTree] r) =>
@@ -512,12 +517,7 @@ processImport ::
 processImport p = withPathFile p getCachedImport
   where
     getCachedImport :: ImportNode -> Sem r (PipelineResult Store.ModuleInfo)
-    getCachedImport node = do
-      hasParallelSupport <- supportsParallel
-      eix <- mkEntryIndex node
-      if
-          | hasParallelSupport -> cacheGet eix
-          | otherwise -> processModule eix
+    getCachedImport = mkEntryIndex >=> processModule
 
 processFileUpToParsing ::
   forall r.
@@ -591,7 +591,8 @@ processModuleToStoredCore ::
   (Members '[Reader Migration, SHA256Cache, ModuleInfoCache, PathResolver, HighlightBuilder, TopModuleNameChecker, Error JuvixError, Files, Dumper] r) =>
   EntryPoint ->
   Sem r (PipelineResult Store.ModuleInfo)
-processModuleToStoredCore entry = over pipelineResult mkModuleInfo <$> processFileToStoredCore entry
+processModuleToStoredCore entry = do
+  over pipelineResult mkModuleInfo <$> processFileToStoredCore entry
   where
     mkModuleInfo :: Core.CoreResult -> Store.ModuleInfo
     mkModuleInfo Core.CoreResult {..} =

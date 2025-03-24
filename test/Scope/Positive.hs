@@ -303,6 +303,10 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "TypeSignatures.juvix"),
     posTest
+      "Scope ill typed"
+      $(mkRelDir ".")
+      $(mkRelFile "ScopeIllTyped.juvix"),
+    posTest
       "Whitespace"
       $(mkRelDir ".")
       $(mkRelFile "Whitespace.juvix"),
