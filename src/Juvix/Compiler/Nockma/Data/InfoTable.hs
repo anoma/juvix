@@ -8,8 +8,10 @@ data InfoTable = InfoTable
   { _infoFunctions :: HashMap Symbol FunctionInfo,
     -- | Transitive imports.
     _infoImports :: HashSet ModuleId,
+    -- | Unquoted code.
     _infoCode :: Maybe (Term Natural)
   }
+  deriving stock (Generic)
 
 data FunctionInfo = FunctionInfo
   { _functionInfoName :: Text,
@@ -18,9 +20,14 @@ data FunctionInfo = FunctionInfo
     _functionInfoModuleId :: ModuleId,
     _functionInfoArity :: Natural
   }
+  deriving stock (Generic)
 
 makeLenses ''InfoTable
 makeLenses ''FunctionInfo
+
+instance Serialize FunctionInfo
+
+instance Serialize InfoTable
 
 instance Semigroup InfoTable where
   t1 <> t2 =

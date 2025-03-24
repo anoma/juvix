@@ -7,12 +7,14 @@ import Prelude (show)
 data Direction
   = L
   | R
-  deriving stock (Eq, Bounded, Enum)
+  deriving stock (Eq, Bounded, Enum, Generic)
 
 instance Show Direction where
   show = \case
     L -> "L"
     R -> "R"
+
+instance Serialize Direction
 
 type Path = [Direction]
 

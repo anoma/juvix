@@ -33,7 +33,8 @@ import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
 import Juvix.Compiler.Internal qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
-import Juvix.Compiler.Nockma.Translation.FromTree qualified as NockmaTree
+import Juvix.Compiler.Nockma.Data.Module qualified as Nockma
+import Juvix.Compiler.Nockma.Translation.FromTree qualified as Nockma
 import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.JvoCache
@@ -215,7 +216,7 @@ upToMiniC = upToAsm >>= asmToMiniC
 
 upToAnoma ::
   (Members '[Reader Migration, HighlightBuilder, Reader Parser.ParserResult, Reader EntryPoint, Dumper, Reader Store.ModuleTable, Files, NameIdGen, Error JuvixError] r) =>
-  Sem r NockmaTree.AnomaResult
+  Sem r Nockma.Module
 upToAnoma = upToStoredCore' Core.PipelineExec >>= \Core.CoreResult {..} -> storedCoreToAnoma (Core.combineInfoTables _coreResultModule)
 
 upToRust ::
@@ -256,7 +257,7 @@ storedCoreToTree ::
   Sem r Tree.Module
 storedCoreToTree checkId = storedCoreToStripped checkId >=> strippedCoreToTree
 
-storedCoreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) => Core.Module -> Sem r NockmaTree.AnomaResult
+storedCoreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) => Core.Module -> Sem r Nockma.Module
 storedCoreToAnoma = storedCoreToTree Core.CheckAnoma >=> treeToAnoma
 
 storedCoreToAsm :: (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) => Core.Module -> Sem r Asm.Module
@@ -287,7 +288,7 @@ storedCoreToCairo = storedCoreToCasm >=> casmToCairo
 strippedCoreToTree :: Stripped.Module -> Sem r Tree.Module
 strippedCoreToTree = return . Tree.fromCore
 
-strippedCoreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Stripped.Module -> Sem r NockmaTree.AnomaResult
+strippedCoreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Stripped.Module -> Sem r Nockma.Module
 strippedCoreToAnoma = strippedCoreToTree >=> treeToAnoma
 
 strippedCoreToAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Stripped.Module -> Sem r Asm.Module
@@ -330,7 +331,7 @@ coreToCasm = Core.toStored >=> storedCoreToCasm
 coreToCairo :: (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) => Core.Module -> Sem r Cairo.Result
 coreToCairo = Core.toStored >=> storedCoreToCairo
 
-coreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) => Core.Module -> Sem r NockmaTree.AnomaResult
+coreToAnoma :: (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) => Core.Module -> Sem r Nockma.Module
 coreToAnoma = coreToTree Core.CheckAnoma >=> treeToAnoma
 
 coreToRust :: (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) => Core.Module -> Sem r Rust.Result
@@ -355,8 +356,11 @@ treeToCairoAsm = Tree.toCairoAsm >=> return . Asm.fromTree
 treeToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.Module -> Sem r Reg.Module
 treeToReg = treeToAsm >=> asmToReg
 
-treeToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.Module -> Sem r (NockmaTree.AnomaResult)
-treeToAnoma = Tree.toNockma >=> mapReader NockmaTree.fromEntryPoint . NockmaTree.fromTreeTable . computeCombinedInfoTable
+treeToAnoma' :: (Members '[Error JuvixError, Reader EntryPoint] r) => Nockma.InfoTable -> Tree.Module -> Sem r Nockma.Module
+treeToAnoma' importsTab = Tree.toNockma >=> mapReader Nockma.fromEntryPoint . Nockma.fromTreeModule importsTab
+
+treeToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.Module -> Sem r Nockma.Module
+treeToAnoma = treeToAnoma' mempty . combineInfoTables
 
 treeToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.Module -> Sem r C.MiniCResult
 treeToMiniC = treeToAsm >=> asmToMiniC
