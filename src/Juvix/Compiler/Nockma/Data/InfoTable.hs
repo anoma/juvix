@@ -1,5 +1,6 @@
 module Juvix.Compiler.Nockma.Data.InfoTable where
 
+import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Nockma.Language
 import Juvix.Prelude hiding (Path)
 

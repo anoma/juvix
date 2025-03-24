@@ -8,6 +8,7 @@ where
 import Juvix.Compiler.Core.Data.Module.Base
 import Juvix.Compiler.Nockma.Data.InfoTable
 import Juvix.Compiler.Nockma.Language
+import Juvix.Prelude
 
 type Module = Module' InfoTable
 
