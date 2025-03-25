@@ -1,8 +1,6 @@
 module Juvix.Compiler.Nockma.Translation.FromTree
   ( fromEntryPoint,
     fromTreeModule,
-    AnomaResult (..),
-    anomaClosure,
     compilerFunctionId,
     compilerFunctionName,
     AnomaCallablePathId (..),
@@ -44,10 +42,6 @@ import Juvix.Compiler.Tree.Language qualified as Tree
 import Juvix.Compiler.Tree.Language.Rep
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding (Atom, Path)
-
-newtype AnomaResult = AnomaResult
-  { _anomaClosure :: Term Natural
-  }
 
 nockmaMemRep :: MemRep -> NockmaMemRep
 nockmaMemRep = \case
@@ -187,7 +181,6 @@ indexTuple IndexTupleArgs {..}
        in replicate _indexTupleArgsIndex R ++ lastL
 
 makeLenses ''CompilerOptions
-makeLenses ''AnomaResult
 makeLenses ''CompilerFunction
 makeLenses ''CompilerCtx
 makeLenses ''FunctionCtx
@@ -987,11 +980,8 @@ remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged "remakeList"))
 
 -- | The result is unquoted.
-runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> AnomaResult
-runCompilerWith _opts constrs moduleFuns mainFun =
-  AnomaResult
-    { _anomaClosure = mainClosure
-    }
+runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> Term Natural
+runCompilerWith _opts constrs moduleFuns mainFun = todo
   where
     libFuns :: [CompilerFunction]
     libFuns = moduleFuns ++ (builtinFunction <$> allElements)
