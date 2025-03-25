@@ -57,6 +57,7 @@ data BuiltinOp
   | OpAnomaRandomSplit
   | OpAnomaIsCommitment
   | OpAnomaIsNullifier
+  | OpAnomaCreateFromComplianceInputs
   | OpAnomaSetToList
   | OpAnomaSetFromList
   | OpPoseidonHash
@@ -80,6 +81,11 @@ data BuiltinDataTag
   | TagBind
   | TagWrite
   | TagReadLn
+  | TagJsonArray
+  | TagJsonBool
+  | TagJsonObject
+  | TagJsonNumber
+  | TagJsonString
   deriving stock (Eq, Generic, Ord)
 
 instance Hashable BuiltinDataTag
@@ -96,6 +102,11 @@ instance Pretty BuiltinDataTag where
     TagBind -> Str.bind
     TagWrite -> Str.write
     TagReadLn -> Str.readLn
+    TagJsonArray -> Str.jsonArray
+    TagJsonBool -> Str.jsonBool
+    TagJsonObject -> Str.jsonObject
+    TagJsonNumber -> Str.jsonNumber
+    TagJsonString -> Str.jsonString
 
 instance Show BuiltinDataTag where
   show = show . pretty
@@ -150,6 +161,7 @@ builtinOpArgsNum = \case
   OpAnomaRandomSplit -> 1
   OpAnomaIsCommitment -> 1
   OpAnomaIsNullifier -> 1
+  OpAnomaCreateFromComplianceInputs -> 5
   OpAnomaSetToList -> 1
   OpAnomaSetFromList -> 1
   OpPoseidonHash -> 1
@@ -168,6 +180,11 @@ builtinConstrArgsNum = \case
   TagBind -> 2
   TagWrite -> 1
   TagReadLn -> 0
+  TagJsonArray -> 1
+  TagJsonBool -> 1
+  TagJsonObject -> 1
+  TagJsonNumber -> 1
+  TagJsonString -> 1
 
 -- | True if the builtin can be evaluated away during constant folding
 builtinIsFoldable :: BuiltinOp -> Bool
@@ -219,6 +236,7 @@ builtinIsFoldable = \case
   OpAnomaRandomSplit -> False
   OpAnomaIsCommitment -> False
   OpAnomaIsNullifier -> False
+  OpAnomaCreateFromComplianceInputs -> False
   OpAnomaSetToList -> False
   OpAnomaSetFromList -> False
   OpPoseidonHash -> False

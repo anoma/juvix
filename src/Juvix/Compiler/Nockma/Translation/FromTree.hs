@@ -48,6 +48,15 @@ newtype AnomaResult = AnomaResult
   { _anomaClosure :: Term Natural
   }
 
+nockStringLiteral :: Text -> Term Natural
+nockStringLiteral t =
+  OpQuote
+    # TermAtom
+      Atom
+        { _atomInfo = atomHintInfo AtomHintString,
+          _atom = textToNatural t
+        }
+
 nockmaMemRep :: MemRep -> NockmaMemRep
 nockmaMemRep = \case
   MemRepTuple -> NockmaMemRepTuple
@@ -72,8 +81,9 @@ data NockmaMemRep
   | NockmaMemRepList NockmaMemRepListConstr
   | NockmaMemRepMaybe NockmaMemRepMaybeConstr
 
-newtype NockmaBuiltinTag
+data NockmaBuiltinTag
   = NockmaBuiltinBool Bool
+  | NockmaBuiltinJson Text
 
 type UserFunctionId = Symbol
 
@@ -504,20 +514,12 @@ compile = \case
         | i < 0 -> error "negative integer"
         | otherwise -> nockIntegralLiteral i
       Tree.ConstBool i -> nockBoolLiteral i
-      Tree.ConstString t -> OpQuote # goConstString t
+      Tree.ConstString t -> nockStringLiteral t
       Tree.ConstUnit -> OpQuote # constUnit
       Tree.ConstVoid -> OpQuote # constVoid
       Tree.ConstField {} -> fieldErr
       Tree.ConstUInt8 i -> nockIntegralLiteral i
       Tree.ConstByteArray bs -> OpQuote # (toNock @Natural (fromIntegral (BS.length bs)) # toNock (byteStringToNatural bs))
-
-    goConstString :: Text -> Term Natural
-    goConstString t =
-      TermAtom
-        Atom
-          { _atomInfo = atomHintInfo AtomHintString,
-            _atom = textToNatural t
-          }
 
     goSave :: Tree.NodeSave -> Sem r (Term Natural)
     goSave Tree.NodeSave {..} = do
@@ -577,6 +579,7 @@ compile = \case
         Tree.OpAnomaRandomSplit -> callStdlib StdlibRandomSplit args
         Tree.OpAnomaIsCommitment -> callRm RmIsCommitment args
         Tree.OpAnomaIsNullifier -> callRm RmIsNullifier args
+        Tree.OpAnomaCreateFromComplianceInputs -> callRm RmCreateFromComplianceInputs args
         Tree.OpAnomaSetToList -> goAnomaSetToList args
         Tree.OpAnomaSetFromList -> goAnomaSetFromList args
 
@@ -954,6 +957,11 @@ nockmaBuiltinTag :: Tree.BuiltinDataTag -> NockmaBuiltinTag
 nockmaBuiltinTag = \case
   Tree.TagTrue -> NockmaBuiltinBool True
   Tree.TagFalse -> NockmaBuiltinBool False
+  Tree.TagJsonArray -> NockmaBuiltinJson "a"
+  Tree.TagJsonBool -> NockmaBuiltinJson "b"
+  Tree.TagJsonObject -> NockmaBuiltinJson "o"
+  Tree.TagJsonNumber -> NockmaBuiltinJson "n"
+  Tree.TagJsonString -> NockmaBuiltinJson "s"
   Tree.TagReturn -> impossible
   Tree.TagBind -> impossible
   Tree.TagWrite -> impossible
@@ -966,6 +974,7 @@ goConstructor mr t args = assert (all isCell args) $
   case t of
     Tree.BuiltinTag b -> case nockmaBuiltinTag b of
       NockmaBuiltinBool v -> nockBoolLiteral v
+      NockmaBuiltinJson s -> nockStringLiteral s
     Tree.UserTag tag -> case mr of
       NockmaMemRepConstr ->
         makeConstructor $ \case
@@ -992,7 +1001,7 @@ unsupported :: Text -> a
 unsupported thing = error ("The Nockma backend does not support " <> thing)
 
 stringsErr :: Text -> a
-stringsErr t = unsupported ("strings: " <> t)
+stringsErr t = unsupported ("string operations: " <> t)
 
 fieldErr :: a
 fieldErr = unsupported "the field type"
@@ -1184,6 +1193,7 @@ getFunctionName funId = (^. functionInfoName) <$> getFunctionInfo funId
 builtinTagToTerm :: NockmaBuiltinTag -> Term Natural
 builtinTagToTerm = \case
   NockmaBuiltinBool v -> nockBoolLiteral v
+  NockmaBuiltinJson s -> nockStringLiteral s
 
 constructorTagToTerm :: Tree.Tag -> Term Natural
 constructorTagToTerm = \case
@@ -1204,6 +1214,7 @@ caseCmd ref defaultBranch = \case
   (tag, b) : bs -> case tag of
     Tree.BuiltinTag t -> case nockmaBuiltinTag t of
       NockmaBuiltinBool v -> goBoolTag v b bs
+      NockmaBuiltinJson {} -> goRepConstr tag b bs
     Tree.UserTag {} -> do
       rep <- getConstructorMemRep tag
       case rep of
@@ -1273,6 +1284,7 @@ caseCmd ref defaultBranch = \case
           Tree.UserTag {} -> impossible
           Tree.BuiltinTag tag -> case nockmaBuiltinTag tag of
             NockmaBuiltinBool v' -> guard (v /= v') $> br
+            NockmaBuiltinJson {} -> impossible
 
     goRepList :: NonEmpty (NockmaMemRepListConstr, Term Natural) -> Sem r (Term Natural)
     goRepList ((c, b) :| bs) = do
