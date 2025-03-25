@@ -3,8 +3,8 @@ module Commands.Dev.Tree.Compile.Anoma where
 import Commands.Base
 import Commands.Compile.Anoma.Options
 import Commands.Extra.NewCompile
+import Juvix.Compiler.Nockma.Data.Module qualified as Anoma
 import Juvix.Compiler.Nockma.Pretty qualified as Anoma
-import Juvix.Compiler.Nockma.Translation.FromTree qualified as Anoma
 import Juvix.Compiler.Tree.Data.Module
 import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
 
@@ -22,10 +22,10 @@ runCommand opts = do
   entrypoint <-
     applyOptions opts
       <$> getEntryPoint inputFile
-  res <-
+  md' :: Anoma.Module <-
     getRight
       . run
       . runError @JuvixError
       . runReader entrypoint
       $ treeToAnoma md
-  writeFileEnsureLn outFile (Anoma.ppPrint (res ^. Anoma.anomaClosure))
+  writeFileEnsureLn outFile (Anoma.ppPrint (fromJust (md' ^. Anoma.moduleInfoTable . Anoma.infoCode)))
