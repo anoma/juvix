@@ -4,6 +4,80 @@
 <img align="right" width="300" height="300" alt="Juvix Mascot" src="../assets/images/tara-smiling.svg" />
 </a>
 
+## [v0.6.10](https://github.com/anoma/juvix/tree/v0.6.10) (2025-03-25)
+
+## What's Changed
+* Modify how the arguments are passed to the anoma node by @janmasrovira in https://github.com/anoma/juvix/pull/3258
+* Add `dev anoma print-config` command by @janmasrovira in https://github.com/anoma/juvix/pull/3260
+* Remove global `--unroll` limit flag by @janmasrovira in https://github.com/anoma/juvix/pull/3262
+* Add `--print-loc` option to `dev import-tree scan` command by @janmasrovira in https://github.com/anoma/juvix/pull/3263
+* Fix source locations for flatparse backend and add tests for import scanning by @janmasrovira in https://github.com/anoma/juvix/pull/3265
+* Allow partially applied trace by @lukaszcz in https://github.com/anoma/juvix/pull/3267
+* Update nock Anoma stdlib by @paulcadman in https://github.com/anoma/juvix/pull/3271
+* Add `--cue` flag to `dev nockma encode` by @janmasrovira in https://github.com/anoma/juvix/pull/3272
+* Check top module name in markdown files by @janmasrovira in https://github.com/anoma/juvix/pull/3266
+* Fix let-patterns inside named arguments by @lukaszcz in https://github.com/anoma/juvix/pull/3274
+* Optimize single-argument unknown function invocations with known non-function target types by @lukaszcz in https://github.com/anoma/juvix/pull/3270
+* Update stdlib reference to point to main by @lukaszcz in https://github.com/anoma/juvix/pull/3276
+* Recursive markdown generation by @janmasrovira in https://github.com/anoma/juvix/pull/3268
+* Upload Juvix binary from each CI run by @paulcadman in https://github.com/anoma/juvix/pull/3280
+* Update stdlib reference to point to `main` by @lukaszcz in https://github.com/anoma/juvix/pull/3281
+* Anoma protobuf version fix by @paulcadman in https://github.com/anoma/juvix/pull/3286
+* Improve error message for ambiguous export by @janmasrovira in https://github.com/anoma/juvix/pull/3289
+* Improve instance termination by @lukaszcz in https://github.com/anoma/juvix/pull/3288
+* Make meta-variables introduced by coercion resolution non-rigid by @lukaszcz in https://github.com/anoma/juvix/pull/3290
+* Fix prettyprinting of import statements by @janmasrovira in https://github.com/anoma/juvix/pull/3291
+* Treat holes as non-rigid meta-variables during instance search by @lukaszcz in https://github.com/anoma/juvix/pull/3293
+* Increase AnomaLib Layer Depth for v0.30 by @agureev in https://github.com/anoma/juvix/pull/3277
+* Remove mainFunctionWrapper in nock backend by @paulcadman in https://github.com/anoma/juvix/pull/3294
+* Allow local modules to be forward referenced by @janmasrovira in https://github.com/anoma/juvix/pull/3275
+* Add support for AnomaSet and AnomaSet{to, from}List by @paulcadman in https://github.com/anoma/juvix/pull/3296
+* Avoid double jamming prove arguments in Anoma CLI commands by @paulcadman in https://github.com/anoma/juvix/pull/3298
+* Make html links to top symbols stable by @janmasrovira in https://github.com/anoma/juvix/pull/3299
+* Pre-register all type axioms in internal to core by @janmasrovira in https://github.com/anoma/juvix/pull/3297
+* Fix recompilation message for when options change by @janmasrovira in https://github.com/anoma/juvix/pull/3304
+* Remove axioms info from Core InfoTable by @lukaszcz in https://github.com/anoma/juvix/pull/3307
+* Fix dependency graph creation in filterUnreachable by @lukaszcz in https://github.com/anoma/juvix/pull/3309
+* Support unjammed arguments by @janmasrovira in https://github.com/anoma/juvix/pull/3308
+* Improve Core parser error handling by @lukaszcz in https://github.com/anoma/juvix/pull/3300
+* Support ByteArray and List arguments to anoma prove CLI by @paulcadman in https://github.com/anoma/juvix/pull/3313
+* Allow named arguments for some anoma builtins by @janmasrovira in https://github.com/anoma/juvix/pull/3310
+* Fix bug in scoping for default arguments by @janmasrovira in https://github.com/anoma/juvix/pull/3318
+* Fix recompilation of package-base by @lukaszcz in https://github.com/anoma/juvix/pull/3314
+* Remove VampIR pipeline and commands by @lukaszcz in https://github.com/anoma/juvix/pull/3320
+* Remove unused Core transformations by @lukaszcz in https://github.com/anoma/juvix/pull/3321
+* Lock Rust version on the CI by @lukaszcz in https://github.com/anoma/juvix/pull/3325
+* Modular compilation in Core by @lukaszcz in https://github.com/anoma/juvix/pull/3315
+* Make pedantic option the default in the `justfile` by @janmasrovira in https://github.com/anoma/juvix/pull/3330
+* Fix `main` detection by @lukaszcz in https://github.com/anoma/juvix/pull/3335
+* Accept optional semicolon before pipe by @janmasrovira in https://github.com/anoma/juvix/pull/3334
+* Report error when named arguments are repeated by @janmasrovira in https://github.com/anoma/juvix/pull/3329
+* Fix markdown --folder-structure flag by @janmasrovira in https://github.com/anoma/juvix/pull/3332
+* Fix builtin anoma-random-next-bytes by @janmasrovira in https://github.com/anoma/juvix/pull/3322
+* Extend type modules by @janmasrovira in https://github.com/anoma/juvix/pull/3336
+* Update juvix-stdlib to main by @janmasrovira in https://github.com/anoma/juvix/pull/3311
+* Format exits with success unless `--check` given by @janmasrovira in https://github.com/anoma/juvix/pull/3338
+* Update RISC0 to 1.3.0 by @lukaszcz in https://github.com/anoma/juvix/pull/3341
+* Downgrade RISC0 to 1.2.4 by @lukaszcz in https://github.com/anoma/juvix/pull/3343
+* Modular compilation in JuvixTree by @lukaszcz in https://github.com/anoma/juvix/pull/3324
+* Qualified constructors by @janmasrovira in https://github.com/anoma/juvix/pull/3337
+* Trace the arg to OpFail before crashing in Nockma by @janmasrovira in https://github.com/anoma/juvix/pull/3345
+* Fix detection of mutual blocks for the positivity checker by @janmasrovira in https://github.com/anoma/juvix/pull/3349
+* Remember in stored compilation options if the module was the main file by @lukaszcz in https://github.com/anoma/juvix/pull/3350
+* Expose Cairo range check builtin by @lukaszcz in https://github.com/anoma/juvix/pull/3346
+* Fix syntax error format by @lukaszcz in https://github.com/anoma/juvix/pull/3353
+* Check package name conflicts by @janmasrovira in https://github.com/anoma/juvix/pull/3352
+* Verified compilation prototype: generation of Lean verification statements by @lukaszcz in https://github.com/anoma/juvix/pull/3344
+* Fix `parseFailure` in the parsers by @lukaszcz in https://github.com/anoma/juvix/pull/3355
+* Temporarily disable RISC0 in the CI by @lukaszcz in https://github.com/anoma/juvix/pull/3365
+* Add `update-anomalib.sh` script by @janmasrovira in https://github.com/anoma/juvix/pull/3369
+* SHA256 cache for import nodes by @lukaszcz in https://github.com/anoma/juvix/pull/3367
+* Accept TABs and CRs as whitespace by @lukaszcz in https://github.com/anoma/juvix/pull/3371
+* Don't compile the main file as a module by @lukaszcz in https://github.com/anoma/juvix/pull/3364
+* Lock RISC0 dependencies and re-enable RISC0 tests on the CI by @lukaszcz in https://github.com/anoma/juvix/pull/3373
+
+**Full Changelog**: https://github.com/anoma/juvix/compare/v0.6.9...v0.6.10
+
 ## [v0.6.9](https://github.com/anoma/juvix/tree/v0.6.9) (2024-12-20)
 
 [Full Changelog](https://github.com/anoma/juvix/compare/v0.6.8...v0.6.9)
