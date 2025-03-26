@@ -356,11 +356,17 @@ treeToCairoAsm = Tree.toCairoAsm >=> return . Asm.fromTree
 treeToReg :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.Module -> Sem r Reg.Module
 treeToReg = treeToAsm >=> asmToReg
 
-treeToAnoma' :: (Members '[Error JuvixError, Reader EntryPoint] r) => Nockma.InfoTable -> Tree.Module -> Sem r Nockma.Module
-treeToAnoma' importsTab = Tree.toNockma >=> mapReader Nockma.fromEntryPoint . Nockma.fromTreeModule importsTab
+treeToAnoma' ::
+  (Members '[Error JuvixError, Reader EntryPoint] r) =>
+  (ModuleId -> Sem r Nockma.Module) ->
+  Nockma.InfoTable ->
+  Tree.Module ->
+  Sem r Nockma.Module
+treeToAnoma' fetchModule importsTab =
+  Tree.toNockma >=> mapReader Nockma.fromEntryPoint . Nockma.fromTreeModule (inject . fetchModule) importsTab
 
 treeToAnoma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.Module -> Sem r Nockma.Module
-treeToAnoma = treeToAnoma' mempty . combineInfoTables
+treeToAnoma = treeToAnoma' (const (error "")) mempty . combineInfoTables
 
 treeToMiniC :: (Members '[Error JuvixError, Reader EntryPoint] r) => Tree.Module -> Sem r C.MiniCResult
 treeToMiniC = treeToAsm >=> asmToMiniC

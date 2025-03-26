@@ -9,7 +9,10 @@ data InfoTable = InfoTable
     -- | Transitive imports.
     _infoImports :: HashSet ModuleId,
     -- | Unquoted code.
-    _infoCode :: Maybe (Term Natural)
+    _infoCode :: Maybe (Term Natural),
+    _infoJammedCode :: Maybe ByteString,
+    -- | SHA256 hash of the code.
+    _infoSHA256 :: Maybe ByteString
   }
   deriving stock (Generic)
 
@@ -34,7 +37,9 @@ instance Semigroup InfoTable where
     InfoTable
       { _infoFunctions = t1 ^. infoFunctions <> t2 ^. infoFunctions,
         _infoImports = t1 ^. infoImports <> t2 ^. infoImports,
-        _infoCode = Nothing
+        _infoCode = Nothing,
+        _infoJammedCode = Nothing,
+        _infoSHA256 = Nothing
       }
 
 instance Monoid InfoTable where
@@ -42,7 +47,9 @@ instance Monoid InfoTable where
     InfoTable
       { _infoFunctions = mempty,
         _infoImports = mempty,
-        _infoCode = Nothing
+        _infoCode = Nothing,
+        _infoJammedCode = Nothing,
+        _infoSHA256 = Nothing
       }
 
 lookupTabFunInfo' :: InfoTable -> Symbol -> Maybe FunctionInfo
