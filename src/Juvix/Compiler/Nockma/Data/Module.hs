@@ -21,3 +21,7 @@ lookupFunInfo' Module {..} sym =
 
 lookupFunInfo :: Module -> Symbol -> FunctionInfo
 lookupFunInfo m sym = fromJust (lookupFunInfo' m sym)
+
+getModuleCode :: Module -> Term Natural
+getModuleCode Module {..} =
+  fromJust (_moduleInfoTable ^. infoCode)

@@ -20,6 +20,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     curryClosure,
     IndexTupleArgs (..),
     indexTuple,
+    makeMainFunction,
   )
 where
 
@@ -364,16 +365,16 @@ makeMainFunction arity funCode = makeRawClosure $ \case
 -- The result is an unquoted subject which cannot be evaluated directly. Its
 -- head needs to be called with the Anoma calling convention.
 compileToSubject :: CompilerCtx -> HashMap ModuleId ByteString -> [ModuleId] -> [Tree.FunctionInfo] -> Maybe Symbol -> Term Natural
-compileToSubject ctx importsSHA256 importedModuleIds userFuns mmain =
+compileToSubject ctx importsSHA256 importedModuleIds userFuns msym =
   makeMainFunction mainArity mainCode
   where
     mainCode :: Term Natural
-    mainCode = case mmain of
+    mainCode = case msym of
       Nothing -> modulesLib
       Just mainSym -> run $ runReader ctx $ mkMainClosureCode mainSym
 
     mainArity :: Natural
-    mainArity = case mmain of
+    mainArity = case msym of
       Nothing -> 0
       Just mainSym -> fromJust (HashMap.lookup mainSym (ctx ^. compilerFunctionInfos)) ^. functionInfoArity
 
