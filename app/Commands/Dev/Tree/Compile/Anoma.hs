@@ -1,6 +1,7 @@
 module Commands.Dev.Tree.Compile.Anoma where
 
 import Commands.Base
+import Commands.Compile.Anoma
 import Commands.Compile.Anoma.Options
 import Commands.Extra.NewCompile
 import Juvix.Compiler.Nockma.Data.Module qualified as Anoma
@@ -9,7 +10,7 @@ import Juvix.Compiler.Tree.Data.Module
 import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
 
 runCommand ::
-  (Members '[App, TaggedLock, EmbedIO] r) =>
+  (Members '[App, TaggedLock, EmbedIO, Files] r) =>
   AnomaOptions ('InputExtension 'FileExtJuvixTree) ->
   Sem r ()
 runCommand opts = do
@@ -28,4 +29,4 @@ runCommand opts = do
       . runError @JuvixError
       . runReader entrypoint
       $ treeToAnoma md
-  writeFileEnsureLn outFile (Anoma.ppPrint (fromJust (md' ^. Anoma.moduleInfoTable . Anoma.infoCode)))
+  outputAnomaResult (opts' ^. compileDebug) outFile md'

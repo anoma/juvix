@@ -925,7 +925,6 @@ compile = \case
       fpath <- getFunctionPath fun
       farity <- getFunctionArity fun
       args <- mapM compile _nodeAllocClosureArgs
-      -- TODO: fix the paths
       let modulesLib = opAddress "modulesLibrary" (base <> closurePath ModulesLibrary)
           anomaLibrary = opAddress "anomaLibrary" (base <> closurePath AnomaLibrary)
           closure =
@@ -1201,14 +1200,14 @@ replaceArgs = replaceArgsWithTerm "replaceArgs" . foldTermsOrQuotedNil
 getModuleInfo :: (Members '[Reader CompilerCtx] r) => ModuleId -> Sem r ModuleInfo
 getModuleInfo mid = asks (^?! compilerModuleInfos . at mid . _Just)
 
-getFunctionInfo :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r FunctionInfo
+getFunctionInfo :: (HasCallStack) => (Members '[Reader CompilerCtx] r) => Symbol -> Sem r FunctionInfo
 getFunctionInfo funId = asks (^?! compilerFunctionInfos . at funId . _Just)
 
-getFunctionPath :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Path
+getFunctionPath :: (HasCallStack) => (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Path
 getFunctionPath funId = do
   finfo <- getFunctionInfo funId
   minfo <- getModuleInfo (finfo ^. functionInfoModuleId)
-  return $ minfo ^. moduleInfoPath ++ finfo ^. functionInfoPath
+  return $ pathFromEnum ModulesLibrary ++ minfo ^. moduleInfoPath ++ finfo ^. functionInfoPath
 
 getFunctionName :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Text
 getFunctionName funId = (^. functionInfoName) <$> getFunctionInfo funId
