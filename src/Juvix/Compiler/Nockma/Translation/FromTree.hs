@@ -121,6 +121,7 @@ makeLenses ''CompilerOptions
 makeLenses ''CompilerCtx
 makeLenses ''FunctionCtx
 makeLenses ''ConstructorInfo
+makeLenses ''ModuleInfo
 
 emptyCompilerCtx :: CompilerCtx
 emptyCompilerCtx =
@@ -190,6 +191,9 @@ getSubjectBasePath = do
   h <- asks (^. compilerStackHeight)
   return $ replicate h R
 
+opGetSubject :: Term Natural
+opGetSubject = opAddress "getSubject" []
+
 -- | Pushes a temporary value onto the subject stack and continues compilation
 -- with the provided continuation function.
 --
@@ -207,6 +211,7 @@ getSubjectBasePath = do
 -- withTemp doSth $ \ref -> do
 --   val <- addressTempRef ref
 --   return $ val # val
+-- ```
 withTemp ::
   (Member (Reader CompilerCtx) r) =>
   Term Natural ->
@@ -295,6 +300,9 @@ foldTermsOrQuotedNil = maybe (OpQuote # nockNilTagged "foldTermsOrQuotedNil") fo
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
 
+mkScry :: [Term Natural] -> Term Natural
+mkScry key = OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # (foldTermsOrQuotedNil key)
+
 allConstructors :: Tree.Module -> Tree.ConstructorInfo -> NonEmpty Tree.ConstructorInfo
 allConstructors md ci =
   let indInfo = Tree.lookupInductiveInfo md (ci ^. Tree.constructorInductive)
@@ -345,19 +353,30 @@ makeLibraryFunction funName funArity funCode =
       )
 
 -- The result is not quoted and cannot be evaluated directly.
-makeMainFunction :: Natural -> Term Natural -> Term Natural -> Term Natural
-makeMainFunction arity modulesLib funCode = makeRawClosure $ \case
+makeMainFunction :: Natural -> Term Natural -> Term Natural
+makeMainFunction arity funCode = makeRawClosure $ \case
   FunCode -> funCode
   ArgsTuple -> argsTuplePlaceholder "mainFunction" arity
   ClosureRemainingArgsNum -> nockNilTagged ("makeMainFunction-ClosureRemainingArgsNum")
-  ModulesLibrary -> modulesLib
+  ModulesLibrary -> "moduleLibrary" @ modulesLibraryPlaceHolder
   AnomaLibrary -> anomaLib
 
--- The result is an unquoted which cannot be evaluated directly. Its head needs
--- to be called with the Anoma calling convention.
-compileToSubject :: CompilerCtx -> HashMap ModuleId ByteString -> [ModuleId] -> [Tree.FunctionInfo] -> Term Natural
-compileToSubject ctx importsSHA256 importedModuleIds userFuns = todo
+-- The result is an unquoted subject which cannot be evaluated directly. Its
+-- head needs to be called with the Anoma calling convention.
+compileToSubject :: CompilerCtx -> HashMap ModuleId ByteString -> [ModuleId] -> [Tree.FunctionInfo] -> Maybe Symbol -> Term Natural
+compileToSubject ctx importsSHA256 importedModuleIds userFuns mmain =
+  makeMainFunction mainArity mainCode
   where
+    mainCode :: Term Natural
+    mainCode = case mmain of
+      Nothing -> modulesLib
+      Just mainSym -> run $ runReader ctx $ mkMainClosureCode mainSym
+
+    mainArity :: Natural
+    mainArity = case mmain of
+      Nothing -> 0
+      Just mainSym -> fromJust (HashMap.lookup mainSym (ctx ^. compilerFunctionInfos)) ^. functionInfoArity
+
     -- This term is not quoted and cannot be evaluated.
     funcsLib :: Term Natural
     funcsLib = "functionsLibrary" @ makeList compiledFuns
@@ -374,25 +393,38 @@ compileToSubject ctx importsSHA256 importedModuleIds userFuns = todo
             userFuns
 
     -- The term _must_ be evaluated.
-    importsLib :: Term Natural
-    importsLib = todo
+    modulesLib :: Term Natural
+    modulesLib = remakeList ((OpQuote # funcsLib) : map mkImport importedModuleIds)
+
+    mkImport :: ModuleId -> Term Natural
+    mkImport mid = mkScry [key]
+      where
+        key =
+          TermAtom
+            . mkEmptyAtom
+            . byteStringToNatural
+            . fromJust
+            . HashMap.lookup mid
+            $ importsSHA256
+
+    mkMainClosureCode :: (Member (Reader CompilerCtx) r) => Symbol -> Sem r (Term Natural)
+    mkMainClosureCode sym = do
+      libpath <- stackPath ModulesLibrary
+      let newSubject = opReplace "replace-mainClosure-modulesLib" libpath modulesLib opGetSubject
+      fpath <- getFunctionPath sym
+      return (opCall ("callFun-main") (fpath ++ closurePath FunCode) newSubject)
 
 -- | Use `Tree.toNockma` before calling this function. The result is an unquoted
 -- subject whose head needs to be called with the Anoma calling convention.
 --
 -- `importsTab` is the combined info table for (all) transitive imports
-fromTreeModule ::
-  (Members '[Error JuvixError, Reader CompilerOptions] r) =>
-  (ModuleId -> Sem r Module) ->
-  InfoTable ->
-  Tree.Module ->
-  Sem r Module
+fromTreeModule :: (ModuleId -> Sem r Module) -> InfoTable -> Tree.Module -> Sem r Module
 fromTreeModule fetchModule importsTab md = do
   importsSHA256 :: HashMap ModuleId ByteString <-
     HashMap.fromList
       . map (\m -> (m ^. moduleId, fromJust (m ^. moduleInfoTable . infoSHA256)))
       <$> mapM fetchModule importedModuleIds
-  let moduleCode = compileToSubject compilerCtx importsSHA256 importedModuleIds userFuns
+  let moduleCode = compileToSubject compilerCtx importsSHA256 importedModuleIds userFuns (md ^. Tree.moduleInfoTable . Tree.infoMainFunction)
       jammedCode = jamToByteString moduleCode
       tab =
         InfoTable
@@ -690,7 +722,7 @@ compile = \case
       Tree.OpUInt8ToInt -> compile arg
 
     goAnomaGet :: [Term Natural] -> Term Natural
-    goAnomaGet key = OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # (foldTermsOrQuotedNil key)
+    goAnomaGet = mkScry
 
     goAnomaEncode :: [Term Natural] -> Sem r (Term Natural)
     goAnomaEncode = callStdlib StdlibEncode
@@ -893,11 +925,11 @@ compile = \case
       farity <- getFunctionArity fun
       args <- mapM compile _nodeAllocClosureArgs
       -- TODO: fix the paths
-      let funLib = opAddress "modulesLibrary" (base <> closurePath ModulesLibrary)
+      let modulesLib = opAddress "modulesLibrary" (base <> closurePath ModulesLibrary)
           anomaLibrary = opAddress "anomaLibrary" (base <> closurePath AnomaLibrary)
           closure =
             opReplace "putAnomaLib" (closurePath AnomaLibrary) anomaLibrary
-              . opReplace "putFunLib" (closurePath ModulesLibrary) funLib
+              . opReplace "putModulesLib" (closurePath ModulesLibrary) modulesLib
               $ opAddress "goAllocClosure-getFunction" (base <> fpath)
           newArity = farity - fromIntegral (length args)
       massert (newArity > 0)
@@ -1143,6 +1175,9 @@ curryClosure f args newArity = do
     ModulesLibrary -> OpQuote # modulesLibraryPlaceHolder
     AnomaLibrary -> OpQuote # anomaLibPlaceholder
 
+-- | TODO: This is quite inefficient in most circumstances. We need to only
+-- perform `n` replacement operations if we're modifying `n` callable paths in
+-- the subject, but we're remaking the entire subject each time.
 replaceSubject' :: (Member (Reader CompilerCtx) r) => Text -> (AnomaCallablePathId -> Maybe (Term Natural)) -> Sem r (Term Natural)
 replaceSubject' tag f = do
   lst <- forM allElements $ \s -> do
@@ -1162,11 +1197,17 @@ replaceArgsWithTerm tag term =
 replaceArgs :: (Member (Reader CompilerCtx) r) => [Term Natural] -> Sem r (Term Natural)
 replaceArgs = replaceArgsWithTerm "replaceArgs" . foldTermsOrQuotedNil
 
+getModuleInfo :: (Members '[Reader CompilerCtx] r) => ModuleId -> Sem r ModuleInfo
+getModuleInfo mid = asks (^?! compilerModuleInfos . at mid . _Just)
+
 getFunctionInfo :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r FunctionInfo
 getFunctionInfo funId = asks (^?! compilerFunctionInfos . at funId . _Just)
 
 getFunctionPath :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Path
-getFunctionPath funId = (^. functionInfoPath) <$> getFunctionInfo funId
+getFunctionPath funId = do
+  finfo <- getFunctionInfo funId
+  minfo <- getModuleInfo (finfo ^. functionInfoModuleId)
+  return $ minfo ^. moduleInfoPath ++ finfo ^. functionInfoPath
 
 getFunctionName :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Text
 getFunctionName funId = (^. functionInfoName) <$> getFunctionInfo funId
