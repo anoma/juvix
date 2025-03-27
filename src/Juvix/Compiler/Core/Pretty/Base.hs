@@ -79,6 +79,7 @@ instance PrettyCode BuiltinOp where
     OpAnomaRandomSplit -> return primRandomSplit
     OpAnomaIsCommitment -> return primIsCommitment
     OpAnomaIsNullifier -> return primIsNullifier
+    OpAnomaCreateFromComplianceInputs -> return primAnomaCreateFromComplianceInputs
     OpAnomaActionCreate -> return primActionCreate
     OpAnomaTransactionCompose -> return primTransactionCompose
     OpAnomaSetToList -> return primAnomaSetToList
@@ -99,6 +100,11 @@ instance PrettyCode BuiltinDataTag where
     TagBind -> return $ annotate (AnnKind KNameConstructor) (pretty ("bind" :: String))
     TagWrite -> return $ annotate (AnnKind KNameConstructor) (pretty ("write" :: String))
     TagReadLn -> return $ annotate (AnnKind KNameConstructor) (pretty ("readLn" :: String))
+    TagJsonArray -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonArray" :: String))
+    TagJsonBool -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonBool" :: String))
+    TagJsonObject -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonObject" :: String))
+    TagJsonNumber -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonNumber" :: String))
+    TagJsonString -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonString" :: String))
 
 instance PrettyCode Tag where
   ppCode = \case
@@ -655,10 +661,13 @@ instance PrettyCode InfoTable where
           shouldPrintInductive = \case
             Just (BuiltinTypeInductive i) -> case i of
               BuiltinPair -> True
+              BuiltinJson -> True
               BuiltinPoseidonState -> True
               BuiltinEcPoint -> True
               BuiltinAnomaResource -> True
               BuiltinAnomaAction -> True
+              BuiltinAnomaComplianceInputs -> True
+              BuiltinAnomaShieldedTransaction -> True
               BuiltinList -> False
               BuiltinEq -> False
               BuiltinOrd -> False
@@ -1018,6 +1027,9 @@ primActionCreate = primitive Str.anomaActionCreate
 
 primIsNullifier :: Doc Ann
 primIsNullifier = primitive Str.anomaIsNullifier
+
+primAnomaCreateFromComplianceInputs :: Doc Ann
+primAnomaCreateFromComplianceInputs = primitive Str.anomaCreateFromComplianceInputs
 
 primAnomaSetToList :: Doc Ann
 primAnomaSetToList = primitive Str.anomaSetToList

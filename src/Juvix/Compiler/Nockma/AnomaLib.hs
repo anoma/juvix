@@ -124,5 +124,6 @@ anomaLibPath = \case
     RmIsNullifier -> [nock| [9 5974 0 1] |]
     RmActionCreate -> [nock| [9 382 0 1] |]
     RmTransactionCompose -> [nock| [9 383 0 1] |]
+    RmCreateFromComplianceInputs -> [nock| [9 1406 0 1] |]
   AnomaLibValue (AnomaRmValue v) -> case v of
     RmZeroDelta -> [nock| [9 174 0 1] |]

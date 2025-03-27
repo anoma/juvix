@@ -234,6 +234,7 @@ isDebugOp = \case
       OpAnomaRandomSplit -> False
       OpAnomaIsCommitment -> False
       OpAnomaIsNullifier -> False
+      OpAnomaCreateFromComplianceInputs -> False
       OpAnomaTransactionCompose -> False
       OpAnomaActionCreate -> False
       OpAnomaSetToList -> False
@@ -542,6 +543,7 @@ builtinOpArgTypes = \case
   OpAnomaTransactionCompose -> [mkDynamic', mkDynamic']
   OpAnomaIsCommitment -> [mkTypeInteger']
   OpAnomaIsNullifier -> [mkTypeInteger']
+  OpAnomaCreateFromComplianceInputs -> [mkDynamic', mkDynamic', mkDynamic', mkDynamic', mkDynamic']
   OpAnomaSetToList -> [mkDynamic']
   OpAnomaSetFromList -> [mkDynamic']
   OpPoseidonHash -> [mkDynamic']

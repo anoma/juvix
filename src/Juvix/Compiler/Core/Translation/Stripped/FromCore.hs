@@ -73,6 +73,11 @@ fromCore' tab =
     shouldKeepConstructor = \case
       BuiltinListNil -> True
       BuiltinListCons -> True
+      BuiltinJsonString -> True
+      BuiltinJsonNumber -> True
+      BuiltinJsonBool -> True
+      BuiltinJsonArray -> True
+      BuiltinJsonObject -> True
       BuiltinMkEq -> True
       BuiltinMkOrd -> True
       BuiltinOrderingLT -> True
@@ -85,6 +90,8 @@ fromCore' tab =
       BuiltinPairConstr -> True
       BuiltinMkAnomaResource -> True
       BuiltinMkAnomaAction -> True
+      BuiltinMkAnomaComplianceInputs -> True
+      BuiltinMkAnomaShieldedTransaction -> True
       BuiltinNatZero -> False
       BuiltinNatSuc -> False
       BuiltinBoolTrue -> False
@@ -145,6 +152,7 @@ fromCore' tab =
         BuiltinAnomaRandomSplit -> False
         BuiltinAnomaIsCommitment -> False
         BuiltinAnomaIsNullifier -> False
+        BuiltinAnomaCreateFromComplianceInputs -> False
         BuiltinAnomaTransactionCompose -> False
         BuiltinAnomaActionCreate -> False
         BuiltinAnomaSet -> False
@@ -166,6 +174,7 @@ fromCore' tab =
         BuiltinEq -> True
         BuiltinMaybe -> True
         BuiltinPair -> True
+        BuiltinJson -> True
         BuiltinOrd -> True
         BuiltinOrdering -> True
         BuiltinPoseidonState -> True
@@ -175,6 +184,8 @@ fromCore' tab =
         BuiltinBool -> False
         BuiltinAnomaResource -> True
         BuiltinAnomaAction -> True
+        BuiltinAnomaComplianceInputs -> True
+        BuiltinAnomaShieldedTransaction -> True
 
 translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
 translateFunctionInfo tab IdentifierInfo {..} =

@@ -577,6 +577,9 @@ kwAnomaIsCommitment = asciiKw Str.anomaIsCommitment
 kwAnomaIsNullifier :: Keyword
 kwAnomaIsNullifier = asciiKw Str.anomaIsNullifier
 
+kwAnomaCreateFromComplianceInputs :: Keyword
+kwAnomaCreateFromComplianceInputs = asciiKw Str.anomaCreateFromComplianceInputs
+
 kwAnomaTransactionCompose :: Keyword
 kwAnomaTransactionCompose = asciiKw Str.anomaTransactionCompose
 

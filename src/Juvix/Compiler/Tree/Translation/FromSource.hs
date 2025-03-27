@@ -170,6 +170,7 @@ parseAnoma =
     <|> parseAnoma' kwAnomaRandomSplit OpAnomaRandomSplit
     <|> parseAnoma' kwAnomaIsCommitment OpAnomaIsCommitment
     <|> parseAnoma' kwAnomaIsNullifier OpAnomaIsNullifier
+    <|> parseAnoma' kwAnomaCreateFromComplianceInputs OpAnomaCreateFromComplianceInputs
     <|> parseAnoma' kwAnomaActionCreate OpAnomaActionCreate
     <|> parseAnoma' kwAnomaTransactionCompose OpAnomaTransactionCompose
     <|> parseAnoma' kwAnomaSetToList OpAnomaSetToList

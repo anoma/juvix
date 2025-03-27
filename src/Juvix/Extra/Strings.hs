@@ -449,6 +449,9 @@ anomaIsCommitment = "anoma-is-commitment"
 anomaIsNullifier :: (IsString s) => s
 anomaIsNullifier = "anoma-is-nullifier"
 
+anomaCreateFromComplianceInputs :: (IsString s) => s
+anomaCreateFromComplianceInputs = "anoma-create-from-compliance-inputs"
+
 anomaSet :: (IsString s) => s
 anomaSet = "anoma-set"
 
@@ -1058,6 +1061,24 @@ monad = "monad"
 pair :: (IsString s) => s
 pair = "pair"
 
+json :: (IsString s) => s
+json = "json"
+
+jsonArray :: (IsString s) => s
+jsonArray = "jsonArray"
+
+jsonObject :: (IsString s) => s
+jsonObject = "jsonObject"
+
+jsonString :: (IsString s) => s
+jsonString = "jsonString"
+
+jsonNumber :: (IsString s) => s
+jsonNumber = "jsonNumber"
+
+jsonBool :: (IsString s) => s
+jsonBool = "jsonBool"
+
 unary :: (IsString s) => s
 unary = "unary"
 
@@ -1139,11 +1160,23 @@ anomaResource = "anoma-resource"
 anomaAction :: (IsString s) => s
 anomaAction = "anoma-action"
 
+anomaComplianceInputs :: (IsString s) => s
+anomaComplianceInputs = "anoma-compliance-inputs"
+
+anomaShieldedTransaction :: (IsString s) => s
+anomaShieldedTransaction = "anoma-transaction"
+
 anomaMkResource :: (IsString s) => s
 anomaMkResource = "mkResource"
 
 anomaMkAction :: (IsString s) => s
 anomaMkAction = "mkAction"
+
+anomaMkComplianceInputs :: (IsString s) => s
+anomaMkComplianceInputs = "mkComplianceInputs"
+
+anomaMkShieldedTransaction :: (IsString s) => s
+anomaMkShieldedTransaction = "mkShieldedTransaction"
 
 mkEq :: (IsString s) => s
 mkEq = "mkEq"

@@ -57,6 +57,7 @@ data RmFunction
   | RmMakeDelta
   | RmIsCommitment
   | RmIsNullifier
+  | RmCreateFromComplianceInputs
   | RmActionCreate
   | RmTransactionCompose
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
@@ -134,6 +135,7 @@ instance Pretty RmFunction where
     RmIsNullifier -> "is-nullifier"
     RmActionCreate -> "action-create"
     RmTransactionCompose -> "transaction-compose"
+    RmCreateFromComplianceInputs -> "create-from-compliance-inputs"
 
 instance Pretty RmValue where
   pretty = \case

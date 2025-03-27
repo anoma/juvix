@@ -104,6 +104,7 @@ computeNodeTypeInfo md = umapL go
           OpAnomaRandomSplit -> mkDynamic'
           OpAnomaIsCommitment -> mkTypeBool'
           OpAnomaIsNullifier -> mkTypeBool'
+          OpAnomaCreateFromComplianceInputs -> mkDynamic'
           OpAnomaActionCreate -> mkDynamic'
           OpAnomaTransactionCompose -> mkDynamic'
           OpAnomaSetToList -> mkDynamic'

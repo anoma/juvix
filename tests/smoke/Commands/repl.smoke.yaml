@@ -146,7 +146,7 @@ tests:
     stdout:
       matches:
         regex: |
-          Juvix REPL version ([0-9]+\.[0-9]+\.[0-9]\-[a-z0-9]+): .*
+          Juvix REPL version ([0-9]+\.[0-9]+\.[0-9]+\-[a-z0-9]+): .*
           OK loaded: .*
           Stdlib.Prelude> \1
     exit-status: 0
