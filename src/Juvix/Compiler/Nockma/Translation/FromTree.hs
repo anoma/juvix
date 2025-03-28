@@ -1175,22 +1175,10 @@ curryClosure f args newArity = do
     ModulesLibrary -> OpQuote # modulesLibraryPlaceHolder
     AnomaLibrary -> OpQuote # anomaLibPlaceholder
 
--- | TODO: This is quite inefficient in most circumstances. We need to only
--- perform `n` replacement operations if we're modifying `n` callable paths in
--- the subject, but we're remaking the entire subject each time.
-replaceSubject' :: (Member (Reader CompilerCtx) r) => Text -> (AnomaCallablePathId -> Maybe (Term Natural)) -> Sem r (Term Natural)
-replaceSubject' tag f = do
-  lst <- forM allElements $ \s -> do
-    case f s of
-      Nothing -> opAddress tag <$> stackPath s
-      Just t' -> return t'
-  return $ remakeList lst
-
 replaceArgsWithTerm :: (Member (Reader CompilerCtx) r) => Text -> Term Natural -> Sem r (Term Natural)
-replaceArgsWithTerm tag term =
-  replaceSubject' ("replaceArgsWithTerm-" <> tag) $ \case
-    ArgsTuple -> Just term
-    _ -> Nothing
+replaceArgsWithTerm tag term = do
+  subjectPath <- getSubjectBasePath
+  return $ opReplace tag (pathFromEnum ArgsTuple) term (opAddress "replaceArgsWithTerm-getSubject" subjectPath)
 
 -- | Replace the arguments in the ArgsTuple stack with the passed arguments.
 -- Resets the temporary stack to empty. Returns the new subject.
