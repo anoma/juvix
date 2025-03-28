@@ -85,5 +85,9 @@ tests =
     NegTest
       "Test014: Non-exhaustive left-hand side pattern"
       $(mkRelDir ".")
-      $(mkRelFile "test014.juvix")
+      $(mkRelFile "test014.juvix"),
+    NegTest
+      "Test015: Using `todo`"
+      $(mkRelDir ".")
+      $(mkRelFile "test015.juvix")
   ]

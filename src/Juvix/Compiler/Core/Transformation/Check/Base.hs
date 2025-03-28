@@ -8,9 +8,14 @@ import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.LocationInfo (getInfoLocation, getNodeLocation)
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
+import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base (mapT')
-import Juvix.Data.NameKind
-import Juvix.Data.PPOutput
+import Juvix.Compiler.Core.Transformation.Optimize.FilterUnreachable (filterUnreachable)
+
+checkAll :: (Module -> Sem r Module) -> Module -> Sem r Module
+checkAll f md = do
+  f (filterUnreachable (combineInfoTables md))
+  return md
 
 dynamicTypeError :: Node -> Maybe Location -> CoreError
 dynamicTypeError node loc =
@@ -26,7 +31,7 @@ axiomError sym loc = do
   let nameTxt = identName md sym
   throw
     CoreError
-      { _coreErrorMsg = ppOutput ("The symbol" <+> annotate (AnnKind KNameAxiom) (pretty nameTxt) <> " is defined as an axiom and thus it cannot be compiled"),
+      { _coreErrorMsg = ppOutput ("The function" <+> annotate (AnnKind KNameFunction) (pretty nameTxt) <> " uses an axiom and thus it cannot be compiled"),
         _coreErrorNode = Nothing,
         _coreErrorLoc = fromMaybe defaultLoc loc
       }
@@ -97,7 +102,7 @@ checkBuiltins' unsupportedOps unsupportedTypes = dmapRM go
 -- create `Bottom` is when translating axioms that are not builtin. Hence it is
 -- enough to check the root only.
 checkNoAxioms :: forall r. (Member (Error CoreError) r) => Module -> Sem r ()
-checkNoAxioms = void . mapT' checkNodeNoAxiom
+checkNoAxioms = void . mapT' (umapM . checkNodeNoAxiom)
   where
     checkNodeNoAxiom :: Symbol -> Node -> Sem (InfoTableBuilder ': r) Node
     checkNodeNoAxiom sym n = case n of
