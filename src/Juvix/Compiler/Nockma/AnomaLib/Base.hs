@@ -12,6 +12,8 @@ instance Hashable AnomaFunction
 
 instance NFData AnomaFunction
 
+instance Serialize AnomaFunction
+
 data StdlibFunction
   = StdlibDec
   | StdlibAdd
@@ -45,6 +47,8 @@ instance Hashable StdlibFunction
 
 instance NFData StdlibFunction
 
+instance Serialize StdlibFunction
+
 -- | Anoma Resource Machine client library functions
 data RmFunction
   = RmCommit
@@ -66,6 +70,8 @@ instance Hashable RmFunction
 
 instance NFData RmFunction
 
+instance Serialize RmFunction
+
 newtype AnomaValue
   = AnomaRmValue RmValue
   deriving stock (Show, Lift, Eq, Generic)
@@ -73,6 +79,8 @@ newtype AnomaValue
 instance Hashable AnomaValue
 
 instance NFData AnomaValue
+
+instance Serialize AnomaValue
 
 -- | Anoma Resource Machine client library values
 data RmValue
@@ -83,6 +91,8 @@ instance Hashable RmValue
 
 instance NFData RmValue
 
+instance Serialize RmValue
+
 data AnomaLib
   = AnomaLibFunction AnomaFunction
   | AnomaLibValue AnomaValue
@@ -91,6 +101,8 @@ data AnomaLib
 instance Hashable AnomaLib
 
 instance NFData AnomaLib
+
+instance Serialize AnomaLib
 
 instance Pretty StdlibFunction where
   pretty = \case

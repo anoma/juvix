@@ -1,15 +1,9 @@
 module Juvix.Compiler.Nockma.Translation.FromTree
   ( fromEntryPoint,
-    fromTreeTable,
-    AnomaResult (..),
-    anomaClosure,
-    compilerFunctionId,
-    compilerFunctionName,
+    fromTreeModule,
     AnomaCallablePathId (..),
     CompilerOptions (..),
-    CompilerFunction (..),
     FunctionCtx (..),
-    FunctionId (..),
     closurePath,
     foldTermsOrNil,
     foldTermsOrQuotedNil,
@@ -21,32 +15,30 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     foldTerms,
     pathToArg,
     makeList,
-    runCompilerWith,
     emptyCompilerCtx,
     CompilerCtx (..),
     curryClosure,
     IndexTupleArgs (..),
     indexTuple,
+    makeMainFunction,
   )
 where
 
+import Crypto.Hash.SHA256 qualified as SHA256
 import Data.ByteString qualified as BS
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Nockma.AnomaLib
+import Juvix.Compiler.Nockma.Data.Module
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Encoding.Ed25519 qualified as E
 import Juvix.Compiler.Nockma.Language.Path
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
+import Juvix.Compiler.Tree.Data.Module qualified as Tree
 import Juvix.Compiler.Tree.Language qualified as Tree
 import Juvix.Compiler.Tree.Language.Rep
-import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding (Atom, Path)
-
-newtype AnomaResult = AnomaResult
-  { _anomaClosure :: Term Natural
-  }
 
 nockStringLiteral :: Text -> Term Natural
 nockStringLiteral t =
@@ -85,15 +77,6 @@ data NockmaBuiltinTag
   = NockmaBuiltinBool Bool
   | NockmaBuiltinJson Text
 
-type UserFunctionId = Symbol
-
-data FunctionId
-  = UserFunction UserFunctionId
-  | BuiltinFunction BuiltinFunctionId
-  deriving stock (Generic, Eq)
-
-instance Hashable FunctionId
-
 data BuiltinFunctionId
   = -- | Not intended to be used, it exists only so the Enum and Bounded instances can be derived.
     BuiltinPlaceholder
@@ -107,12 +90,6 @@ fromEntryPoint :: EntryPoint -> CompilerOptions
 fromEntryPoint EntryPoint {} =
   CompilerOptions
 
-data FunctionInfo = FunctionInfo
-  { _functionInfoPath :: Path,
-    _functionInfoArity :: Natural,
-    _functionInfoName :: Text
-  }
-
 newtype FunctionCtx = FunctionCtx
   { _functionCtxArity :: Natural
   }
@@ -121,38 +98,42 @@ newtype TempRef = TempRef
   { _tempRefIndex :: Int
   }
 
+data ConstructorInfo = ConstructorInfo
+  { _constructorInfoArity :: Natural,
+    _constructorInfoMemRep :: NockmaMemRep
+  }
+
+data ModuleInfo = ModuleInfo
+  { -- | Module path within the modules library
+    _moduleInfoPath :: Path
+  }
+
 data CompilerCtx = CompilerCtx
-  { _compilerFunctionInfos :: HashMap FunctionId FunctionInfo,
-    _compilerConstructorInfos :: ConstructorInfos,
+  { _compilerFunctionInfos :: HashMap Symbol FunctionInfo,
+    _compilerConstructorInfos :: HashMap Tree.Tag ConstructorInfo,
+    _compilerModuleInfos :: HashMap ModuleId ModuleInfo,
     -- | Maps temporary variables to their stack indices.
     _compilerTempVarMap :: HashMap Int TempRef,
     _compilerTempVarsNum :: Int,
     _compilerStackHeight :: Int
   }
 
+makeLenses ''CompilerOptions
+makeLenses ''CompilerCtx
+makeLenses ''FunctionCtx
+makeLenses ''ConstructorInfo
+makeLenses ''ModuleInfo
+
 emptyCompilerCtx :: CompilerCtx
 emptyCompilerCtx =
   CompilerCtx
     { _compilerFunctionInfos = mempty,
       _compilerConstructorInfos = mempty,
+      _compilerModuleInfos = mempty,
       _compilerTempVarMap = mempty,
       _compilerTempVarsNum = 0,
       _compilerStackHeight = 0
     }
-
-data ConstructorInfo = ConstructorInfo
-  { _constructorInfoArity :: Natural,
-    _constructorInfoMemRep :: NockmaMemRep
-  }
-
-type ConstructorInfos = HashMap Tree.Tag ConstructorInfo
-
-data CompilerFunction = CompilerFunction
-  { _compilerFunctionId :: FunctionId,
-    _compilerFunctionName :: Text,
-    _compilerFunctionArity :: Natural,
-    _compilerFunction :: Sem '[Reader CompilerCtx, Reader FunctionCtx] (Term Natural)
-  }
 
 -- | The FunCode and ArgsTuple constructors must be first and second
 -- respectively. This is because the stack must have the structure of a Nock
@@ -166,7 +147,7 @@ data AnomaCallablePathId
   | ArgsTuple
   | ---
     ClosureRemainingArgsNum
-  | FunctionsLibrary
+  | ModulesLibrary
   | AnomaLibrary
   deriving stock (Enum, Bounded, Eq, Show)
 
@@ -201,14 +182,6 @@ indexTuple IndexTupleArgs {..}
             | otherwise = [L]
        in replicate _indexTupleArgsIndex R ++ lastL
 
-makeLenses ''CompilerOptions
-makeLenses ''AnomaResult
-makeLenses ''CompilerFunction
-makeLenses ''CompilerCtx
-makeLenses ''FunctionCtx
-makeLenses ''ConstructorInfo
-makeLenses ''FunctionInfo
-
 stackPath :: (Member (Reader CompilerCtx) r, Enum field) => field -> Sem r Path
 stackPath s = do
   h <- asks (^. compilerStackHeight)
@@ -218,6 +191,9 @@ getSubjectBasePath :: (Member (Reader CompilerCtx) r) => Sem r Path
 getSubjectBasePath = do
   h <- asks (^. compilerStackHeight)
   return $ replicate h R
+
+opGetSubject :: Term Natural
+opGetSubject = opAddress "getSubject" []
 
 -- | Pushes a temporary value onto the subject stack and continues compilation
 -- with the provided continuation function.
@@ -236,6 +212,7 @@ getSubjectBasePath = do
 -- withTemp doSth $ \ref -> do
 --   val <- addressTempRef ref
 --   return $ val # val
+-- ```
 withTemp ::
   (Member (Reader CompilerCtx) r) =>
   Term Natural ->
@@ -283,13 +260,6 @@ popTempVar cont = do
     . local (over compilerTempVarsNum (\x -> x - 1))
     $ cont
 
-runCompilerFunction :: CompilerCtx -> CompilerFunction -> Term Natural
-runCompilerFunction ctx fun =
-  run
-    . runReader (FunctionCtx (fun ^. compilerFunctionArity))
-    . runReader ctx
-    $ fun ^. compilerFunction
-
 pathToArg :: (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Natural -> Sem r Path
 pathToArg n = do
   ari <- asks (^. functionCtxArity)
@@ -331,20 +301,17 @@ foldTermsOrQuotedNil = maybe (OpQuote # nockNilTagged "foldTermsOrQuotedNil") fo
 foldTerms :: NonEmpty (Term Natural) -> Term Natural
 foldTerms = foldr1 (#)
 
-allConstructors :: Tree.InfoTable -> Tree.ConstructorInfo -> NonEmpty Tree.ConstructorInfo
-allConstructors Tree.InfoTable {..} ci =
-  let indInfo = getInductiveInfo (ci ^. Tree.constructorInductive)
-   in nonEmpty' (getConstructorInfo'' <$> indInfo ^. Tree.inductiveConstructors)
-  where
-    getInductiveInfo :: Symbol -> Tree.InductiveInfo
-    getInductiveInfo s = _infoInductives ^?! at s . _Just
+mkScry :: [Term Natural] -> Term Natural
+mkScry key = OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # (foldTermsOrQuotedNil key)
 
-    getConstructorInfo'' :: Tree.Tag -> Tree.ConstructorInfo
-    getConstructorInfo'' t = _infoConstrs ^?! at t . _Just
+allConstructors :: Tree.Module -> Tree.ConstructorInfo -> NonEmpty Tree.ConstructorInfo
+allConstructors md ci =
+  let indInfo = Tree.lookupInductiveInfo md (ci ^. Tree.constructorInductive)
+   in nonEmpty' (Tree.lookupConstrInfo md <$> indInfo ^. Tree.inductiveConstructors)
 
-supportsListNockmaRep :: Tree.InfoTable -> Tree.ConstructorInfo -> Maybe NockmaMemRep
-supportsListNockmaRep tab ci =
-  NockmaMemRepList <$> case allConstructors tab ci of
+supportsListNockmaRep :: Tree.Module -> Tree.ConstructorInfo -> Maybe NockmaMemRep
+supportsListNockmaRep md ci =
+  NockmaMemRepList <$> case allConstructors md ci of
     c1 :| [c2]
       | [0, 2] `elem` permutations ((^. Tree.constructorArgsNum) <$> [c1, c2]) -> Just $ case ci ^. Tree.constructorArgsNum of
           0 -> NockmaMemRepListConstrNil
@@ -353,9 +320,9 @@ supportsListNockmaRep tab ci =
       | otherwise -> Nothing
     _ -> Nothing
 
-supportsMaybeNockmaRep :: Tree.InfoTable -> Tree.ConstructorInfo -> Maybe NockmaMemRep
-supportsMaybeNockmaRep tab ci =
-  NockmaMemRepMaybe <$> case allConstructors tab ci of
+supportsMaybeNockmaRep :: Tree.Module -> Tree.ConstructorInfo -> Maybe NockmaMemRep
+supportsMaybeNockmaRep md ci =
+  NockmaMemRepMaybe <$> case allConstructors md ci of
     c1 :| [c2]
       | [0, 1] `elem` permutations ((^. Tree.constructorArgsNum) <$> [c1, c2]) -> Just $ case ci ^. Tree.constructorArgsNum of
           0 -> NockmaMemRepMaybeConstrNothing
@@ -364,53 +331,184 @@ supportsMaybeNockmaRep tab ci =
       | otherwise -> Nothing
     _ -> Nothing
 
--- | Use `Tree.toNockma` before calling this function. The result is an unquoted subject.
-fromTreeTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => Tree.InfoTable -> Sem r AnomaResult
-fromTreeTable t = case t ^. Tree.infoMainFunction of
-  Just mainFun -> do
-    opts <- ask
-    return (fromTree opts mainFun t)
-  Nothing -> throw @JuvixError (error "TODO missing main")
+compileFunction :: CompilerCtx -> Tree.FunctionInfo -> Term Natural
+compileFunction ctx Tree.FunctionInfo {..} =
+  run
+    . runReader ctx
+    . runReader (FunctionCtx (fromIntegral _functionArgsNum))
+    $ compile _functionCode
+
+-- The result is not quoted and cannot be evaluated.
+makeLibraryFunction :: Text -> Natural -> Term Natural -> Term Natural
+makeLibraryFunction funName funArity funCode =
+  ("def-" <> funName)
+    @ makeRawClosure
+      ( \p ->
+          let nockNilHere = nockNilTagged ("makeLibraryFunction-" <> show p)
+           in case p of
+                FunCode -> ("funCode-" <> funName) @ funCode
+                ArgsTuple -> ("argsTuple-" <> funName) @ argsTuplePlaceholder "libraryFunction" funArity
+                ClosureRemainingArgsNum -> ("closureRemainingArgsNum-" <> funName) @ nockNilHere
+                ModulesLibrary -> ("moduleLibrary-" <> funName) @ modulesLibraryPlaceHolder
+                AnomaLibrary -> ("stdlib-" <> funName) @ anomaLibPlaceholder
+      )
+
+-- The result is not quoted and cannot be evaluated directly.
+makeMainFunction :: Natural -> Term Natural -> Term Natural
+makeMainFunction arity funCode = makeRawClosure $ \case
+  FunCode -> funCode
+  ArgsTuple -> argsTuplePlaceholder "mainFunction" arity
+  ClosureRemainingArgsNum -> nockNilTagged ("makeMainFunction-ClosureRemainingArgsNum")
+  ModulesLibrary -> "moduleLibrary" @ modulesLibraryPlaceHolder
+  AnomaLibrary -> anomaLib
+
+-- The result is an unquoted subject which cannot be evaluated directly. Its
+-- head needs to be called with the Anoma calling convention.
+compileToSubject :: CompilerCtx -> HashMap ModuleId ByteString -> [ModuleId] -> [Tree.FunctionInfo] -> Maybe Symbol -> Term Natural
+compileToSubject ctx importsSHA256 importedModuleIds userFuns msym =
+  makeMainFunction mainArity mainCode
   where
-    fromTree :: CompilerOptions -> Tree.Symbol -> Tree.InfoTable -> AnomaResult
-    fromTree opts mainSym tab@Tree.InfoTable {..} =
-      let funs = map compileFunction allFunctions
-          mkConstructorInfo :: Tree.ConstructorInfo -> ConstructorInfo
-          mkConstructorInfo ci@Tree.ConstructorInfo {..} =
+    mainCode :: Term Natural
+    mainCode = case msym of
+      Nothing -> modulesLib
+      Just mainSym -> run $ runReader ctx $ mkMainClosureCode mainSym
+
+    mainArity :: Natural
+    mainArity = case msym of
+      Nothing -> 0
+      Just mainSym -> fromJust (HashMap.lookup mainSym (ctx ^. compilerFunctionInfos)) ^. functionInfoArity
+
+    -- This term is not quoted and cannot be evaluated.
+    funcsLib :: Term Natural
+    funcsLib = "functionsLibrary" @ makeList compiledFuns
+      where
+        compiledFuns :: [Term Natural]
+        compiledFuns =
+          map
+            ( \f ->
+                makeLibraryFunction
+                  (f ^. Tree.functionName)
+                  (fromIntegral (f ^. Tree.functionArgsNum))
+                  (compileFunction ctx f)
+            )
+            userFuns
+
+    -- The term _must_ be evaluated.
+    modulesLib :: Term Natural
+    modulesLib = remakeList ((OpQuote # funcsLib) : map mkImport importedModuleIds)
+
+    mkImport :: ModuleId -> Term Natural
+    mkImport mid = mkScry [key]
+      where
+        key =
+          TermAtom
+            . mkEmptyAtom
+            . byteStringToNatural
+            . fromJust
+            . HashMap.lookup mid
+            $ importsSHA256
+
+    mkMainClosureCode :: (Member (Reader CompilerCtx) r) => Symbol -> Sem r (Term Natural)
+    mkMainClosureCode sym = do
+      libpath <- stackPath ModulesLibrary
+      let newSubject = opReplace "replace-mainClosure-modulesLib" libpath modulesLib opGetSubject
+      fpath <- getFunctionPath sym
+      return (opCall ("callFun-main") (fpath ++ closurePath FunCode) newSubject)
+
+-- | Use `Tree.toNockma` before calling this function. The result is an unquoted
+-- subject whose head needs to be called with the Anoma calling convention.
+--
+-- `importsTab` is the combined info table for (all) transitive imports
+fromTreeModule :: (ModuleId -> Sem r Module) -> InfoTable -> Tree.Module -> Sem r Module
+fromTreeModule fetchModule importsTab md = do
+  importsSHA256 :: HashMap ModuleId ByteString <-
+    HashMap.fromList
+      . map (\m -> (m ^. moduleId, fromJust (m ^. moduleInfoTable . infoSHA256)))
+      <$> mapM fetchModule importedModuleIds
+  let moduleCode = compileToSubject compilerCtx importsSHA256 importedModuleIds userFuns (md ^. Tree.moduleInfoTable . Tree.infoMainFunction)
+      jammedCode = jamToByteString moduleCode
+      tab =
+        InfoTable
+          { _infoFunctions = userFunInfos,
+            _infoImports = HashSet.fromList importedModuleIds,
+            _infoCode = Just moduleCode,
+            _infoJammedCode = Just jammedCode,
+            _infoSHA256 = Just (SHA256.hash jammedCode)
+          }
+  return
+    Module
+      { _moduleInfoTable = tab,
+        _moduleImportsTable = importsTab,
+        _moduleSHA256 = md ^. moduleSHA256,
+        _moduleImports = md ^. moduleImports,
+        _moduleId = md ^. moduleId
+      }
+  where
+    importedFuns :: [FunctionInfo]
+    importedFuns = HashMap.elems (importsTab ^. infoFunctions)
+
+    -- Transitive imports
+    importedModuleIds :: [ModuleId]
+    importedModuleIds =
+      nubSort
+        . fmap (^. functionInfoModuleId)
+        $ importedFuns
+
+    allModuleIds :: [ModuleId]
+    allModuleIds = md ^. Tree.moduleId : importedModuleIds
+
+    combinedInfoTab :: Tree.InfoTable
+    combinedInfoTab = computeCombinedInfoTable md
+
+    allConstrs :: [Tree.ConstructorInfo]
+    allConstrs = HashMap.elems (combinedInfoTab ^. Tree.infoConstrs)
+
+    userFuns :: [Tree.FunctionInfo]
+    userFuns = HashMap.elems (md ^. Tree.moduleInfoTable . Tree.infoFunctions)
+
+    userFunInfos :: HashMap Symbol FunctionInfo
+    userFunInfos = hashMap (run (runStreamOfNaturals (toList <$> funInfos)))
+      where
+        funInfos :: (Members '[StreamOf Natural] r) => Sem r [(Symbol, FunctionInfo)]
+        funInfos = forM userFuns $ \Tree.FunctionInfo {..} -> do
+          i <- yield
+          return
+            ( _functionSymbol,
+              FunctionInfo
+                { _functionInfoPath = indexStack i,
+                  _functionInfoArity = fromIntegral _functionArgsNum,
+                  _functionInfoName = _functionName,
+                  _functionInfoModuleId = md ^. Tree.moduleId
+                }
+            )
+
+    compilerCtx :: CompilerCtx
+    compilerCtx =
+      emptyCompilerCtx
+        { _compilerFunctionInfos =
+            userFunInfos <> importsTab ^. infoFunctions,
+          _compilerConstructorInfos =
+            HashMap.fromList $ map mkConstructorInfo allConstrs,
+          _compilerModuleInfos =
+            HashMap.fromList $ map mkModuleInfo [0 .. length allModuleIds - 1]
+        }
+      where
+        mkModuleInfo :: Int -> (ModuleId, ModuleInfo)
+        mkModuleInfo i = (allModuleIds !! i, ModuleInfo (pathFromEnum i))
+
+        mkConstructorInfo :: Tree.ConstructorInfo -> (Tree.Tag, ConstructorInfo)
+        mkConstructorInfo ci@Tree.ConstructorInfo {..} =
+          ( _constructorTag,
             ConstructorInfo
               { _constructorInfoArity = fromIntegral _constructorArgsNum,
                 _constructorInfoMemRep = rep
               }
-            where
-              rep :: NockmaMemRep
-              rep = fromMaybe r (supportsListNockmaRep tab ci <|> supportsMaybeNockmaRep tab ci)
-                where
-                  r = nockmaMemRep (memRep ci (getInductiveInfo (ci ^. Tree.constructorInductive)))
-
-          constrs :: ConstructorInfos
-          constrs = mkConstructorInfo <$> _infoConstrs
-
-          getInductiveInfo :: Symbol -> Tree.InductiveInfo
-          getInductiveInfo s = _infoInductives ^?! at s . _Just
-       in runCompilerWith opts constrs funs mainFun
-      where
-        mainFun :: CompilerFunction
-        mainFun = compileFunction (_infoFunctions ^?! at mainSym . _Just)
-
-        allFunctions :: [Tree.FunctionInfo]
-        allFunctions = filter notMain (toList _infoFunctions)
+          )
           where
-            notMain :: Tree.FunctionInfo -> Bool
-            notMain Tree.FunctionInfo {..} = _functionSymbol /= mainSym
-
-        compileFunction :: Tree.FunctionInfo -> CompilerFunction
-        compileFunction Tree.FunctionInfo {..} =
-          CompilerFunction
-            { _compilerFunctionId = UserFunction _functionSymbol,
-              _compilerFunctionName = _functionName,
-              _compilerFunctionArity = fromIntegral _functionArgsNum,
-              _compilerFunction = compile _functionCode
-            }
+            rep :: NockmaMemRep
+            rep = fromMaybe r (supportsListNockmaRep md ci <|> supportsMaybeNockmaRep md ci)
+              where
+                r = nockmaMemRep (memRep ci (Tree.lookupInductiveInfo md (ci ^. Tree.constructorInductive)))
 
         memRep :: Tree.ConstructorInfo -> Tree.InductiveInfo -> Tree.MemRep
         memRep ci ind
@@ -625,7 +723,7 @@ compile = \case
       Tree.OpUInt8ToInt -> compile arg
 
     goAnomaGet :: [Term Natural] -> Term Natural
-    goAnomaGet key = OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # (foldTermsOrQuotedNil key)
+    goAnomaGet = mkScry
 
     goAnomaEncode :: [Term Natural] -> Sem r (Term Natural)
     goAnomaEncode = callStdlib StdlibEncode
@@ -822,16 +920,16 @@ compile = \case
 
     goAllocClosure :: Tree.NodeAllocClosure -> Sem r (Term Natural)
     goAllocClosure Tree.NodeAllocClosure {..} = do
-      let fun = UserFunction _nodeAllocClosureFunSymbol
+      let fun = _nodeAllocClosureFunSymbol
       base <- getSubjectBasePath
       fpath <- getFunctionPath fun
       farity <- getFunctionArity fun
       args <- mapM compile _nodeAllocClosureArgs
-      let funLib = opAddress "functionsLibrary" (base <> closurePath FunctionsLibrary)
+      let modulesLib = opAddress "modulesLibrary" (base <> closurePath ModulesLibrary)
           anomaLibrary = opAddress "anomaLibrary" (base <> closurePath AnomaLibrary)
           closure =
             opReplace "putAnomaLib" (closurePath AnomaLibrary) anomaLibrary
-              . opReplace "putFunLib" (closurePath FunctionsLibrary) funLib
+              . opReplace "putModulesLib" (closurePath ModulesLibrary) modulesLib
               $ opAddress "goAllocClosure-getFunction" (base <> fpath)
           newArity = farity - fromIntegral (length args)
       massert (newArity > 0)
@@ -852,7 +950,7 @@ compile = \case
       case _nodeCallType of
         Tree.CallFun fun -> do
           newargs <- mapM compile _nodeCallArgs
-          callFunWithArgs (UserFunction fun) newargs
+          callFunWithArgs fun newargs
         Tree.CallClosure f -> do
           closure <- compile f
           withTemp closure $ \ref -> do
@@ -878,8 +976,6 @@ nockNatLiteral = nockIntegralLiteral
 nockIntegralLiteral :: (Integral a) => a -> Term Natural
 nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
 
--- [call L [replace [RL [seq [@ R] a]] [@ (locStdlib <> fPath)]]] ?
---
 -- Calling convention for Anoma library
 --
 -- [push
@@ -1017,79 +1113,6 @@ makeList ts = foldTerms (toList ts `prependList` pure (nockNilTagged "makeList")
 remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged "remakeList"))
 
--- | The result is unquoted.
-runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> AnomaResult
-runCompilerWith _opts constrs moduleFuns mainFun =
-  AnomaResult
-    { _anomaClosure = mainClosure
-    }
-  where
-    libFuns :: [CompilerFunction]
-    libFuns = moduleFuns ++ (builtinFunction <$> allElements)
-
-    allFuns :: NonEmpty CompilerFunction
-    allFuns = mainFun :| libFuns
-
-    compilerCtx :: CompilerCtx
-    compilerCtx =
-      emptyCompilerCtx
-        { _compilerFunctionInfos = functionInfos,
-          _compilerConstructorInfos = constrs
-        }
-
-    mainClosure :: Term Natural
-    mainClosure = makeMainFunction (runCompilerFunction compilerCtx mainFun)
-
-    -- This term is not quoted and cannot be evaluated.
-    funcsLib :: Term Natural
-    funcsLib = Str.theFunctionsLibrary @ makeList compiledFuns
-      where
-        compiledFuns :: [Term Natural]
-        compiledFuns =
-          (nockNilTagged "mainFunctionPlaceholder")
-            : ( makeLibraryFunction
-                  <$> [(f ^. compilerFunctionName, f ^. compilerFunctionArity, runCompilerFunction compilerCtx f) | f <- libFuns]
-              )
-
-    -- The result is not quoted and cannot be evaluated.
-    makeLibraryFunction :: (Text, Natural, Term Natural) -> Term Natural
-    makeLibraryFunction (funName, funArity, c) =
-      ("def-" <> funName)
-        @ makeRawClosure
-          ( \p ->
-              let nockNilHere = nockNilTagged ("makeLibraryFunction-" <> show p)
-               in case p of
-                    FunCode -> ("funCode-" <> funName) @ c
-                    ArgsTuple -> ("argsTuple-" <> funName) @ argsTuplePlaceholder "libraryFunction" funArity
-                    ClosureRemainingArgsNum -> ("closureRemainingArgsNum-" <> funName) @ nockNilHere
-                    FunctionsLibrary -> ("functionsLibrary-" <> funName) @ functionsLibraryPlaceHolder
-                    AnomaLibrary -> ("stdlib-" <> funName) @ anomaLibPlaceholder
-          )
-
-    -- The result is not quoted and cannot be evaluated directly.
-    makeMainFunction :: Term Natural -> Term Natural
-    makeMainFunction funCode = makeRawClosure $ \case
-      FunCode -> funCode
-      ArgsTuple -> argsTuplePlaceholder "mainFunction" (mainFun ^. compilerFunctionArity)
-      ClosureRemainingArgsNum -> nockNilTagged ("makeMainFunction-ClosureRemainingArgsNum")
-      FunctionsLibrary -> funcsLib
-      AnomaLibrary -> anomaLib
-
-    functionInfos :: HashMap FunctionId FunctionInfo
-    functionInfos = hashMap (run (runStreamOfNaturals (toList <$> userFunctions)))
-
-    userFunctions :: (Members '[StreamOf Natural] r) => Sem r (NonEmpty (FunctionId, FunctionInfo))
-    userFunctions = forM allFuns $ \CompilerFunction {..} -> do
-      i <- yield
-      return
-        ( _compilerFunctionId,
-          FunctionInfo
-            { _functionInfoPath = pathFromEnum FunctionsLibrary ++ indexStack i,
-              _functionInfoArity = _compilerFunctionArity,
-              _functionInfoName = _compilerFunctionName
-            }
-        )
-
 anomaLibPlaceholder :: Term Natural
 anomaLibPlaceholder =
   TermAtom
@@ -1103,8 +1126,8 @@ anomaLibPlaceholder =
         _atom = 0 :: Natural
       }
 
-functionsLibraryPlaceHolder :: Term Natural
-functionsLibraryPlaceHolder =
+modulesLibraryPlaceHolder :: Term Natural
+modulesLibraryPlaceHolder =
   TermAtom
     Atom
       { _atomInfo =
@@ -1116,21 +1139,11 @@ functionsLibraryPlaceHolder =
         _atom = 0 :: Natural
       }
 
-builtinFunction :: BuiltinFunctionId -> CompilerFunction
-builtinFunction = \case
-  BuiltinPlaceholder ->
-    CompilerFunction
-      { _compilerFunctionId = BuiltinFunction BuiltinPlaceholder,
-        _compilerFunctionArity = 0,
-        _compilerFunction = return crash,
-        _compilerFunctionName = "builtinPlaceholderName"
-      }
-
 -- | Call a function with the passed arguments
 callFunWithArgs ::
   forall r.
   (Member (Reader CompilerCtx) r) =>
-  FunctionId ->
+  Symbol ->
   [Term Natural] ->
   Sem r (Term Natural)
 callFunWithArgs fun args = do
@@ -1157,37 +1170,34 @@ curryClosure f args newArity = do
     FunCode -> (OpQuote # OpCall) # (OpQuote # closurePath FunCode) # (OpQuote # OpReplace) # ((OpQuote # closurePath ArgsTuple) # args') # (OpQuote # OpQuote) # f
     ArgsTuple -> OpQuote # nockNilTagged "argsTuple" -- We assume the arguments tuple is never accessed before being replaced by the caller.
     ClosureRemainingArgsNum -> newArity
-    -- The functions library and the standard library are always taken from the
+    -- The modules library and the standard library are always taken from the
     -- closure `f`. The environment of `f` is used when evaluating the call.
-    FunctionsLibrary -> OpQuote # functionsLibraryPlaceHolder
+    ModulesLibrary -> OpQuote # modulesLibraryPlaceHolder
     AnomaLibrary -> OpQuote # anomaLibPlaceholder
 
-replaceSubject' :: (Member (Reader CompilerCtx) r) => Text -> (AnomaCallablePathId -> Maybe (Term Natural)) -> Sem r (Term Natural)
-replaceSubject' tag f = do
-  lst <- forM allElements $ \s -> do
-    case f s of
-      Nothing -> opAddress tag <$> stackPath s
-      Just t' -> return t'
-  return $ remakeList lst
-
 replaceArgsWithTerm :: (Member (Reader CompilerCtx) r) => Text -> Term Natural -> Sem r (Term Natural)
-replaceArgsWithTerm tag term =
-  replaceSubject' ("replaceArgsWithTerm-" <> tag) $ \case
-    ArgsTuple -> Just term
-    _ -> Nothing
+replaceArgsWithTerm tag term = do
+  subjectPath <- getSubjectBasePath
+  return $ opReplace tag (pathFromEnum ArgsTuple) term (opAddress "replaceArgsWithTerm-getSubject" subjectPath)
 
 -- | Replace the arguments in the ArgsTuple stack with the passed arguments.
 -- Resets the temporary stack to empty. Returns the new subject.
 replaceArgs :: (Member (Reader CompilerCtx) r) => [Term Natural] -> Sem r (Term Natural)
 replaceArgs = replaceArgsWithTerm "replaceArgs" . foldTermsOrQuotedNil
 
-getFunctionInfo :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r FunctionInfo
-getFunctionInfo funId = asks (^?! compilerFunctionInfos . at funId . _Just)
+getModuleInfo :: (Members '[Reader CompilerCtx] r) => ModuleId -> Sem r ModuleInfo
+getModuleInfo mid = fromJust . HashMap.lookup mid <$> asks (^. compilerModuleInfos)
 
-getFunctionPath :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Path
-getFunctionPath funId = (^. functionInfoPath) <$> getFunctionInfo funId
+getFunctionInfo :: (HasCallStack) => (Members '[Reader CompilerCtx] r) => Symbol -> Sem r FunctionInfo
+getFunctionInfo funId = fromJust . HashMap.lookup funId <$> asks (^. compilerFunctionInfos)
 
-getFunctionName :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Text
+getFunctionPath :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Path
+getFunctionPath funId = do
+  finfo <- getFunctionInfo funId
+  minfo <- getModuleInfo (finfo ^. functionInfoModuleId)
+  return $ pathFromEnum ModulesLibrary ++ minfo ^. moduleInfoPath ++ finfo ^. functionInfoPath
+
+getFunctionName :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Text
 getFunctionName funId = (^. functionInfoName) <$> getFunctionInfo funId
 
 builtinTagToTerm :: NockmaBuiltinTag -> Term Natural
@@ -1317,7 +1327,7 @@ branch ::
   Term Natural
 branch cond t f = OpIf # cond # t # f
 
-getFunctionArity :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Natural
+getFunctionArity :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Natural
 getFunctionArity s = asks (^?! compilerFunctionInfos . at s . _Just . functionInfoArity)
 
 getConstructorInfo :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r ConstructorInfo

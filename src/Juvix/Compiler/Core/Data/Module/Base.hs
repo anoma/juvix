@@ -20,6 +20,7 @@ data Module' t = Module
     -- module M imports A but not B, but A imports B, then all identifiers from
     -- B will be in the imports table of M nonetheless.
     _moduleImportsTable :: t,
+    -- | SHA256 hash of the module's Juvix source code.
     _moduleSHA256 :: Maybe Text
   }
   deriving stock (Generic)

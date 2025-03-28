@@ -4,7 +4,6 @@ import Anoma.Client.Base
 import Anoma.Effect
 import Base
 import Juvix.Compiler.Nockma.Language hiding (Path)
-import Juvix.Compiler.Nockma.Translation.FromTree (anomaClosure)
 import Juvix.Prelude.Pretty
 
 root :: Path Abs Dir
@@ -28,8 +27,7 @@ fromClientTest t = testCaseSteps (t ^. clientTestTag) assertion
     assertion :: (Text -> IO ()) -> Assertion
     assertion stepFun = runM . runProcess . runSimpleErrorHUnit . ignoreLogger . runStep stepFun $ do
       step "Compiling"
-      res :: AnomaResult <- liftIO $ withRootCopy (compileMain False (t ^. clientRelRoot) (t ^. clientMainFile))
-      let program :: Term Natural = (res ^. anomaClosure)
+      program :: Term Natural <- liftIO $ withRootCopy (compileAnomaMain False (t ^. clientRelRoot) (t ^. clientMainFile))
       p <- envAnomaPath
       runAnomaEphemeral p ((t ^. clientAssertion) program)
 

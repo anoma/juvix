@@ -13,7 +13,7 @@ import Commands.Dev.Tree.Compile.Wasi qualified as Wasi
 
 runCommand ::
   forall r.
-  (Members '[EmbedIO, App, TaggedLock] r) =>
+  (Members '[EmbedIO, App, TaggedLock, Files] r) =>
   CompileCommand ->
   Sem r ()
 runCommand = \case

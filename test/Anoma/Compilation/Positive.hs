@@ -57,9 +57,9 @@ fromAnomaTest a@AnomaTest {..} =
             | enableDebug = baseTestname <> " debug"
             | otherwise = baseTestname <> " non-debug"
           tIO :: IO Test = do
-            anomaRes <- withRootCopy (compileMain enableDebug _anomaRelRoot _anomaMainFile)
+            anomaProgram <- withRootCopy (compileAnomaMain enableDebug _anomaRelRoot _anomaMainFile)
             let _testProgramFormula = anomaCall (map (opQuote "Quote arg") _anomaArgs)
-                _testProgramSubject = anomaRes ^. anomaClosure
+                _testProgramSubject = anomaProgram
                 _testEvalOptions = defaultEvalOptions
                 _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Nothing
             return
@@ -92,7 +92,7 @@ mkAnomaNodeTest a@AnomaTest {..} =
   where
     assertion :: Assertion
     assertion = do
-      program :: Term Natural <- (^. anomaClosure) <$> withRootCopy (compileMain False _anomaRelRoot _anomaMainFile)
+      program :: Term Natural <- withRootCopy (compileAnomaMain False _anomaRelRoot _anomaMainFile)
       testAnomaPath <- envAnomaPath
       runM
         . ignoreLogger

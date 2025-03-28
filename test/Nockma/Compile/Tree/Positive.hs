@@ -2,11 +2,11 @@ module Nockma.Compile.Tree.Positive where
 
 import Base
 import Juvix.Compiler.Nockma.Anoma
+import Juvix.Compiler.Nockma.Data.Module qualified as Nockma
 import Juvix.Compiler.Nockma.EvalCompiled
 import Juvix.Compiler.Nockma.Evaluator qualified as NockmaEval
 import Juvix.Compiler.Nockma.Language qualified as Nockma
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
-import Juvix.Compiler.Nockma.Translation.FromTree
 import Juvix.Compiler.Tree
 import Tree.Eval.Base
 import Tree.Eval.Positive qualified as Tree
@@ -15,7 +15,7 @@ runNockmaAssertion :: Path Abs Dir -> Handle -> Symbol -> Module -> IO ()
 runNockmaAssertion root hout _main md = do
   entryPoint <- testDefaultEntryPointNoFileIO root
   let entryPoint' = entryPoint {_entryPointDebug = True}
-  anomaRes :: AnomaResult <-
+  md' :: Nockma.Module <-
     runM
       . runErrorIO' @JuvixError
       . runReader entryPoint'
@@ -26,7 +26,7 @@ runNockmaAssertion root hout _main md = do
         (hPutStrLn hout . Nockma.ppTest)
       . runReader NockmaEval.defaultEvalOptions
       . NockmaEval.ignoreOpCounts
-      $ evalCompiledNock' (anomaRes ^. anomaClosure) (anomaCall [])
+      $ evalCompiledNock' (Nockma.getModuleCode md') (anomaCall [])
   let ret = getReturn res
   whenJust ret (hPutStrLn hout . Nockma.ppTest)
   where

@@ -53,6 +53,8 @@ instance (Hashable a) => Hashable (Term a)
 
 instance (NFData a) => NFData (Term a)
 
+instance (Serialize a) => Serialize (Term a)
+
 data AnomaLibCall a = AnomaLibCall
   { _anomaLibCallRef :: AnomaLib,
     _anomaLibCallArgs :: Term a
@@ -63,6 +65,8 @@ instance (Hashable a) => Hashable (AnomaLibCall a)
 
 instance (NFData a) => NFData (AnomaLibCall a)
 
+instance (Serialize a) => Serialize (AnomaLibCall a)
+
 newtype Tag = Tag
   { _unTag :: Text
   }
@@ -71,6 +75,8 @@ newtype Tag = Tag
 instance Hashable Tag
 
 instance NFData Tag
+
+instance Serialize Tag
 
 data CellInfo a = CellInfo
   { _cellInfoLoc :: Irrelevant (Maybe Interval),
@@ -83,6 +89,8 @@ instance (Hashable a) => Hashable (CellInfo a)
 
 instance (NFData a) => NFData (CellInfo a)
 
+instance (Serialize a) => Serialize (CellInfo a)
+
 data Cell a = Cell'
   { _cellLeft :: Term a,
     _cellRight :: Term a,
@@ -93,6 +101,8 @@ data Cell a = Cell'
 instance (Hashable a) => Hashable (Cell a)
 
 instance (NFData a) => NFData (Cell a)
+
+instance (Serialize a) => Serialize (Cell a)
 
 data AtomInfo = AtomInfo
   { _atomInfoHint :: Maybe AtomHint,
@@ -105,6 +115,8 @@ instance Hashable AtomInfo
 
 instance NFData AtomInfo
 
+instance Serialize AtomInfo
+
 data Atom a = Atom
   { _atom :: a,
     _atomInfo :: AtomInfo
@@ -114,6 +126,8 @@ data Atom a = Atom
 instance (Hashable a) => Hashable (Atom a)
 
 instance (NFData a) => NFData (Atom a)
+
+instance (Serialize a) => Serialize (Atom a)
 
 data AtomHint
   = AtomHintOp
@@ -129,6 +143,8 @@ data AtomHint
 instance Hashable AtomHint
 
 instance NFData AtomHint
+
+instance Serialize AtomHint
 
 data NockOp
   = OpAddress
@@ -147,6 +163,10 @@ data NockOp
   deriving stock (Show, Bounded, Enum, Eq, Generic, Lift)
 
 instance Hashable NockOp
+
+instance NFData NockOp
+
+instance Serialize NockOp
 
 instance Pretty NockOp where
   pretty = \case
