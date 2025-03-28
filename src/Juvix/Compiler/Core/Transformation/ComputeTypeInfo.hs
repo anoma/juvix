@@ -96,8 +96,6 @@ computeNodeTypeInfo md = umapL go
           OpAnomaResourceDelta -> mkDynamic'
           OpAnomaActionDelta -> mkDynamic'
           OpAnomaActionsDelta -> mkDynamic'
-          OpAnomaProveAction -> mkTypeInteger'
-          OpAnomaProveDelta -> mkTypeInteger'
           OpAnomaZeroDelta -> mkDynamic'
           OpAnomaAddDelta -> mkDynamic'
           OpAnomaSubDelta -> mkDynamic'
@@ -107,6 +105,8 @@ computeNodeTypeInfo md = umapL go
           OpAnomaIsCommitment -> mkTypeBool'
           OpAnomaIsNullifier -> mkTypeBool'
           OpAnomaCreateFromComplianceInputs -> mkDynamic'
+          OpAnomaActionCreate -> mkDynamic'
+          OpAnomaTransactionCompose -> mkDynamic'
           OpAnomaSetToList -> mkDynamic'
           OpAnomaSetFromList -> mkDynamic'
           OpPoseidonHash -> case _builtinAppArgs of

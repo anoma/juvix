@@ -235,8 +235,6 @@ geval opts herr tab env0 = eval' env0
       OpAnomaResourceDelta -> normalizeOrUnsupported opcode
       OpAnomaActionDelta -> normalizeOrUnsupported opcode
       OpAnomaActionsDelta -> normalizeOrUnsupported opcode
-      OpAnomaProveAction -> normalizeOrUnsupported opcode
-      OpAnomaProveDelta -> normalizeOrUnsupported opcode
       OpAnomaZeroDelta -> normalizeOrUnsupported opcode
       OpAnomaAddDelta -> normalizeOrUnsupported opcode
       OpAnomaSubDelta -> normalizeOrUnsupported opcode
@@ -246,6 +244,8 @@ geval opts herr tab env0 = eval' env0
       OpAnomaIsCommitment -> normalizeOrUnsupported opcode
       OpAnomaIsNullifier -> normalizeOrUnsupported opcode
       OpAnomaCreateFromComplianceInputs -> normalizeOrUnsupported opcode
+      OpAnomaActionCreate -> normalizeOrUnsupported opcode
+      OpAnomaTransactionCompose -> normalizeOrUnsupported opcode
       OpAnomaSetToList -> normalizeOrUnsupported opcode
       OpAnomaSetFromList -> normalizeOrUnsupported opcode
       OpPoseidonHash -> poseidonHashOp

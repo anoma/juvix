@@ -431,12 +431,6 @@ anomaAddDelta = "anoma-add-delta"
 anomaSubDelta :: (IsString s) => s
 anomaSubDelta = "anoma-sub-delta"
 
-anomaProveDelta :: (IsString s) => s
-anomaProveDelta = "anoma-prove-delta"
-
-anomaProveAction :: (IsString s) => s
-anomaProveAction = "anoma-prove-action"
-
 anomaRandomGenerator :: (IsString s) => s
 anomaRandomGenerator = "anoma-random-generator"
 
@@ -463,6 +457,12 @@ anomaSet = "anoma-set"
 
 anomaSetToList :: (IsString s) => s
 anomaSetToList = "anoma-set-to-list"
+
+anomaTransactionCompose :: (IsString s) => s
+anomaTransactionCompose = "anoma-transaction-compose"
+
+anomaActionCreate :: (IsString s) => s
+anomaActionCreate = "anoma-action-create"
 
 anomaSetFromList :: (IsString s) => s
 anomaSetFromList = "anoma-set-from-list"

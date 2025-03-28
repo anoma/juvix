@@ -61,7 +61,7 @@ runNockma i = do
           { _runNockmaResult = result,
             _runNockmaTraces = traces
           }
-    ResponseError err -> throw (SimpleError (mkAnsiText (err ^. errorError)))
+    ResponseError err -> throw (SimpleError (mkAnsiText @Text "runNockma failed:\n" <> mkAnsiText (err ^. errorError)))
   where
     prepareArgument :: RunNockmaArg -> NockInput
     prepareArgument =

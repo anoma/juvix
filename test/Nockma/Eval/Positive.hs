@@ -390,7 +390,7 @@ juvixCallingConventionTests =
            compilerTestM "length-bytes 255 == 1" (callStdlib StdlibLengthBytes [nockNatLiteral 255]) (eqNock [nock| 1 |]),
            compilerTestM "length-bytes 1 == 1" (callStdlib StdlibLengthBytes [nockNatLiteral 1]) (eqNock [nock| 1 |]),
            compilerTestM "length-bytes 0 == 0" (callStdlib StdlibLengthBytes [nockNatLiteral 0]) (eqNock [nock| 0 |]),
-           compilerTestM "zero-delta == 0" (rmValue RmZeroDelta) (eqNock [nock| 0 |])
+           compilerTestM "zero-delta == 2" (rmValue RmZeroDelta) (eqNock [nock| 2 |])
          ]
 
 -- These tests can only be run with stdlib interception as running the raw nock code is too slow

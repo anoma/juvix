@@ -162,8 +162,6 @@ parseAnoma =
     <|> parseAnoma' kwAnomaResourceDelta OpAnomaResourceDelta
     <|> parseAnoma' kwAnomaActionDelta OpAnomaActionDelta
     <|> parseAnoma' kwAnomaActionsDelta OpAnomaActionsDelta
-    <|> parseAnoma' kwAnomaProveAction OpAnomaProveAction
-    <|> parseAnoma' kwAnomaProveDelta OpAnomaProveDelta
     <|> parseAnoma' kwAnomaZeroDelta OpAnomaZeroDelta
     <|> parseAnoma' kwAnomaAddDelta OpAnomaAddDelta
     <|> parseAnoma' kwAnomaSubDelta OpAnomaSubDelta
@@ -173,6 +171,8 @@ parseAnoma =
     <|> parseAnoma' kwAnomaIsCommitment OpAnomaIsCommitment
     <|> parseAnoma' kwAnomaIsNullifier OpAnomaIsNullifier
     <|> parseAnoma' kwAnomaCreateFromComplianceInputs OpAnomaCreateFromComplianceInputs
+    <|> parseAnoma' kwAnomaActionCreate OpAnomaActionCreate
+    <|> parseAnoma' kwAnomaTransactionCompose OpAnomaTransactionCompose
     <|> parseAnoma' kwAnomaSetToList OpAnomaSetToList
     <|> parseAnoma' kwAnomaSetFromList OpAnomaSetFromList
 

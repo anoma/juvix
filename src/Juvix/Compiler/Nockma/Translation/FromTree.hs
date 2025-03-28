@@ -667,8 +667,6 @@ compile = \case
         Tree.OpAnomaResourceDelta -> callRm RmResourceDelta args
         Tree.OpAnomaActionDelta -> callRm RmActionDelta args
         Tree.OpAnomaActionsDelta -> callRm RmMakeDelta args
-        Tree.OpAnomaProveAction -> callRm RmProveAction args
-        Tree.OpAnomaProveDelta -> callRm RmProveDelta args
         Tree.OpAnomaZeroDelta -> rmValue RmZeroDelta
         Tree.OpAnomaAddDelta -> callRm RmDeltaAdd args
         Tree.OpAnomaSubDelta -> callRm RmDeltaSub args
@@ -678,6 +676,8 @@ compile = \case
         Tree.OpAnomaIsCommitment -> callRm RmIsCommitment args
         Tree.OpAnomaIsNullifier -> callRm RmIsNullifier args
         Tree.OpAnomaCreateFromComplianceInputs -> callRm RmCreateFromComplianceInputs args
+        Tree.OpAnomaActionCreate -> callRm RmActionCreate args
+        Tree.OpAnomaTransactionCompose -> callRm RmTransactionCompose args
         Tree.OpAnomaSetToList -> goAnomaSetToList args
         Tree.OpAnomaSetFromList -> goAnomaSetFromList args
 

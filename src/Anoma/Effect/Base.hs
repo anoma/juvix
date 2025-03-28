@@ -11,6 +11,7 @@ module Anoma.Effect.Base
     runAnomaWithClient,
     fromJSONErr,
     logMessageValue,
+    withLoggerThread,
     module Anoma.Rpc.Base,
     module Anoma.Client.Base,
   )
@@ -98,16 +99,28 @@ grpcCliListProcess = do
         ]
     )
 
+-- | TODO Consider using Logger effect instead of putStrLn
+withLoggerThread :: forall r a. (Members '[Concurrent, EmbedIO] r) => Handle -> Sem r a -> Sem r a
+withLoggerThread h m = withAsync catLines (const m)
+  where
+    catLines :: Sem r ()
+    catLines = forever $ do
+      t <- hGetLine h
+      putStrLn t
+
 runAnomaEphemeral :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
 runAnomaEphemeral anomapath body = runEnvironment . runReader anomapath . runProcess $ do
   cproc <- anomaClientCreateProcess LaunchModeAttached
-  withCreateProcess cproc $ \_stdin mstdout _stderr _procHandle -> do
-    grpcInfo <- hardcodeNodeId <$> setupAnomaClientProcess (fromJust mstdout)
-    runReader grpcInfo $ do
-      (`interpret` inject body) $ \case
-        AnomaRpc method i -> anomaRpc' method i
-        AnomaListMethods -> anomaListMethods'
-        GetNodeInfo -> return NodeInfo {_nodeInfoId = grpcInfo ^. anomaClientInfoNodeId}
+  withCreateProcess cproc $ \_stdin mstdout mstderr _procHandle -> do
+    let stdOut = fromJust mstdout
+        stdErr = fromJust mstderr
+    grpcInfo <- hardcodeNodeId <$> setupAnomaClientProcess stdOut
+    runConcurrent . withLoggerThread stdOut . withLoggerThread stdErr $
+      runReader grpcInfo $ do
+        (`interpret` inject body) $ \case
+          AnomaRpc method i -> anomaRpc' method i
+          AnomaListMethods -> anomaListMethods'
+          GetNodeInfo -> return NodeInfo {_nodeInfoId = grpcInfo ^. anomaClientInfoNodeId}
 
 runAnomaWithClient :: forall r a. (Members '[EmbedIO, Error SimpleError] r) => AnomaClientInfo -> Sem (Anoma ': r) a -> Sem r a
 runAnomaWithClient grpcInfo body = do

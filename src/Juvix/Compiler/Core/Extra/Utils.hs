@@ -226,8 +226,6 @@ isDebugOp = \case
       OpAnomaResourceDelta -> False
       OpAnomaActionDelta -> False
       OpAnomaActionsDelta -> False
-      OpAnomaProveAction -> False
-      OpAnomaProveDelta -> False
       OpAnomaZeroDelta -> False
       OpAnomaAddDelta -> False
       OpAnomaSubDelta -> False
@@ -237,6 +235,8 @@ isDebugOp = \case
       OpAnomaIsCommitment -> False
       OpAnomaIsNullifier -> False
       OpAnomaCreateFromComplianceInputs -> False
+      OpAnomaTransactionCompose -> False
+      OpAnomaActionCreate -> False
       OpAnomaSetToList -> False
       OpAnomaSetFromList -> False
       OpEc -> False
@@ -533,14 +533,14 @@ builtinOpArgTypes = \case
   OpAnomaResourceDelta -> [mkDynamic']
   OpAnomaActionDelta -> [mkDynamic']
   OpAnomaActionsDelta -> [mkDynamic']
-  OpAnomaProveAction -> [mkDynamic']
-  OpAnomaProveDelta -> [mkDynamic']
   OpAnomaZeroDelta -> []
   OpAnomaAddDelta -> [mkDynamic', mkDynamic']
   OpAnomaSubDelta -> [mkDynamic', mkDynamic']
   OpAnomaRandomGeneratorInit -> [mkTypeInteger']
   OpAnomaRandomNextBytes -> [mkTypeInteger', mkTypeRandomGenerator']
   OpAnomaRandomSplit -> [mkTypeRandomGenerator']
+  OpAnomaActionCreate -> [mkDynamic', mkDynamic', mkDynamic']
+  OpAnomaTransactionCompose -> [mkDynamic', mkDynamic']
   OpAnomaIsCommitment -> [mkTypeInteger']
   OpAnomaIsNullifier -> [mkTypeInteger']
   OpAnomaCreateFromComplianceInputs -> [mkDynamic', mkDynamic', mkDynamic', mkDynamic', mkDynamic']
