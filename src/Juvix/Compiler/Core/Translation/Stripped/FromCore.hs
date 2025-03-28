@@ -146,8 +146,6 @@ fromCore' tab =
         BuiltinAnomaAddDelta -> False
         BuiltinAnomaSubDelta -> False
         BuiltinAnomaZeroDelta -> False
-        BuiltinAnomaProveAction -> False
-        BuiltinAnomaProveDelta -> False
         BuiltinAnomaRandomGenerator -> False
         BuiltinAnomaRandomGeneratorInit -> False
         BuiltinAnomaRandomNextBytes -> False
@@ -155,6 +153,8 @@ fromCore' tab =
         BuiltinAnomaIsCommitment -> False
         BuiltinAnomaIsNullifier -> False
         BuiltinAnomaCreateFromComplianceInputs -> False
+        BuiltinAnomaTransactionCompose -> False
+        BuiltinAnomaActionCreate -> False
         BuiltinAnomaSet -> False
         BuiltinAnomaSetToList -> False
         BuiltinAnomaSetFromList -> False

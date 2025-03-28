@@ -553,12 +553,6 @@ kwAnomaActionDelta = asciiKw Str.anomaActionDelta
 kwAnomaActionsDelta :: Keyword
 kwAnomaActionsDelta = asciiKw Str.anomaActionsDelta
 
-kwAnomaProveAction :: Keyword
-kwAnomaProveAction = asciiKw Str.anomaProveAction
-
-kwAnomaProveDelta :: Keyword
-kwAnomaProveDelta = asciiKw Str.anomaProveDelta
-
 kwAnomaZeroDelta :: Keyword
 kwAnomaZeroDelta = asciiKw Str.anomaZeroDelta
 
@@ -585,6 +579,12 @@ kwAnomaIsNullifier = asciiKw Str.anomaIsNullifier
 
 kwAnomaCreateFromComplianceInputs :: Keyword
 kwAnomaCreateFromComplianceInputs = asciiKw Str.anomaCreateFromComplianceInputs
+
+kwAnomaTransactionCompose :: Keyword
+kwAnomaTransactionCompose = asciiKw Str.anomaTransactionCompose
+
+kwAnomaActionCreate :: Keyword
+kwAnomaActionCreate = asciiKw Str.anomaActionCreate
 
 kwAnomaSetToList :: Keyword
 kwAnomaSetToList = asciiKw Str.anomaSetToList

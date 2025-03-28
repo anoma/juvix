@@ -602,8 +602,6 @@ builtinAppExpr varsNum vars = do
       <|> (kw kwAnomaResourceDelta $> OpAnomaResourceDelta)
       <|> (kw kwAnomaActionDelta $> OpAnomaActionDelta)
       <|> (kw kwAnomaActionsDelta $> OpAnomaActionsDelta)
-      <|> (kw kwAnomaProveAction $> OpAnomaProveAction)
-      <|> (kw kwAnomaProveDelta $> OpAnomaProveDelta)
       <|> (kw kwAnomaZeroDelta $> OpAnomaZeroDelta)
       <|> (kw kwAnomaAddDelta $> OpAnomaAddDelta)
       <|> (kw kwAnomaSubDelta $> OpAnomaSubDelta)

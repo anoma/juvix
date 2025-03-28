@@ -295,8 +295,6 @@ data BuiltinAxiom
   | BuiltinAnomaZeroDelta
   | BuiltinAnomaAddDelta
   | BuiltinAnomaSubDelta
-  | BuiltinAnomaProveAction
-  | BuiltinAnomaProveDelta
   | BuiltinAnomaRandomGenerator
   | BuiltinAnomaRandomGeneratorInit
   | BuiltinAnomaRandomNextBytes
@@ -304,6 +302,8 @@ data BuiltinAxiom
   | BuiltinAnomaIsCommitment
   | BuiltinAnomaIsNullifier
   | BuiltinAnomaCreateFromComplianceInputs
+  | BuiltinAnomaActionCreate
+  | BuiltinAnomaTransactionCompose
   | BuiltinAnomaSet
   | BuiltinAnomaSetToList
   | BuiltinAnomaSetFromList
@@ -366,8 +366,6 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaZeroDelta -> KNameFunction
     BuiltinAnomaAddDelta -> KNameFunction
     BuiltinAnomaSubDelta -> KNameFunction
-    BuiltinAnomaProveAction -> KNameFunction
-    BuiltinAnomaProveDelta -> KNameFunction
     BuiltinAnomaRandomGenerator -> KNameInductive
     BuiltinAnomaRandomGeneratorInit -> KNameFunction
     BuiltinAnomaRandomNextBytes -> KNameFunction
@@ -375,6 +373,8 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaIsCommitment -> KNameFunction
     BuiltinAnomaIsNullifier -> KNameFunction
     BuiltinAnomaCreateFromComplianceInputs -> KNameFunction
+    BuiltinAnomaActionCreate -> KNameFunction
+    BuiltinAnomaTransactionCompose -> KNameFunction
     BuiltinPoseidon -> KNameFunction
     BuiltinEcOp -> KNameFunction
     BuiltinRandomEcPoint -> KNameFunction
@@ -444,8 +444,6 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaZeroDelta -> Str.anomaZeroDelta
     BuiltinAnomaAddDelta -> Str.anomaAddDelta
     BuiltinAnomaSubDelta -> Str.anomaSubDelta
-    BuiltinAnomaProveDelta -> Str.anomaProveDelta
-    BuiltinAnomaProveAction -> Str.anomaProveAction
     BuiltinAnomaRandomGenerator -> Str.anomaRandomGenerator
     BuiltinAnomaRandomGeneratorInit -> Str.anomaRandomGeneratorInit
     BuiltinAnomaRandomNextBytes -> Str.anomaRandomNextBytes
@@ -453,6 +451,8 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaIsCommitment -> Str.anomaIsCommitment
     BuiltinAnomaIsNullifier -> Str.anomaIsNullifier
     BuiltinAnomaCreateFromComplianceInputs -> Str.anomaCreateFromComplianceInputs
+    BuiltinAnomaTransactionCompose -> Str.anomaTransactionCompose
+    BuiltinAnomaActionCreate -> Str.anomaActionCreate
     BuiltinAnomaSet -> Str.anomaSet
     BuiltinAnomaSetToList -> Str.anomaSetToList
     BuiltinAnomaSetFromList -> Str.anomaSetFromList
