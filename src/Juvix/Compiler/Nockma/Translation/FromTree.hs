@@ -1198,12 +1198,12 @@ replaceArgs :: (Member (Reader CompilerCtx) r) => [Term Natural] -> Sem r (Term 
 replaceArgs = replaceArgsWithTerm "replaceArgs" . foldTermsOrQuotedNil
 
 getModuleInfo :: (Members '[Reader CompilerCtx] r) => ModuleId -> Sem r ModuleInfo
-getModuleInfo mid = asks (^?! compilerModuleInfos . at mid . _Just)
+getModuleInfo mid = fromJust . HashMap.lookup mid <$> asks (^. compilerModuleInfos)
 
 getFunctionInfo :: (HasCallStack) => (Members '[Reader CompilerCtx] r) => Symbol -> Sem r FunctionInfo
-getFunctionInfo funId = asks (^?! compilerFunctionInfos . at funId . _Just)
+getFunctionInfo funId = fromJust . HashMap.lookup funId <$> asks (^. compilerFunctionInfos)
 
-getFunctionPath :: (HasCallStack) => (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Path
+getFunctionPath :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Path
 getFunctionPath funId = do
   finfo <- getFunctionInfo funId
   minfo <- getModuleInfo (finfo ^. functionInfoModuleId)

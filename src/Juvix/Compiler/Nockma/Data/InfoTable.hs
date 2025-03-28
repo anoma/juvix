@@ -32,6 +32,10 @@ instance Serialize FunctionInfo
 
 instance Serialize InfoTable
 
+instance NFData FunctionInfo
+
+instance NFData InfoTable
+
 instance Semigroup InfoTable where
   t1 <> t2 =
     InfoTable

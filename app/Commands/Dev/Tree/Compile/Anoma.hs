@@ -5,7 +5,6 @@ import Commands.Compile.Anoma
 import Commands.Compile.Anoma.Options
 import Commands.Extra.NewCompile
 import Juvix.Compiler.Nockma.Data.Module qualified as Anoma
-import Juvix.Compiler.Nockma.Pretty qualified as Anoma
 import Juvix.Compiler.Tree.Data.Module
 import Juvix.Compiler.Tree.Translation.FromSource qualified as Tree
 

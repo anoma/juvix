@@ -16,6 +16,8 @@ instance Show Direction where
 
 instance Serialize Direction
 
+instance NFData Direction
+
 type Path = [Direction]
 
 newtype EncodedPath = EncodedPath
