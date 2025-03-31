@@ -615,7 +615,7 @@ compile = \case
       Tree.ConstString t -> nockStringLiteral t
       Tree.ConstUnit -> OpQuote # constUnit
       Tree.ConstVoid -> OpQuote # constVoid
-      Tree.ConstField {} -> fieldErr
+      Tree.ConstField {} -> crash
       Tree.ConstUInt8 i -> nockIntegralLiteral i
       Tree.ConstByteArray bs -> OpQuote # (toNock @Natural (fromIntegral (BS.length bs)) # toNock (byteStringToNatural bs))
 
@@ -714,11 +714,11 @@ compile = \case
 
     goPrimUnop :: Tree.UnaryOp -> Tree.Node -> Sem r (Term Natural)
     goPrimUnop op arg = case op of
-      Tree.OpShow -> stringsErr "show"
-      Tree.OpStrToInt -> stringsErr "strToInt"
+      Tree.OpShow -> return crash
+      Tree.OpStrToInt -> return crash
       Tree.OpArgsNum -> getClosureField ClosureRemainingArgsNum <$> compile arg
-      Tree.OpIntToField -> fieldErr
-      Tree.OpFieldToInt -> fieldErr
+      Tree.OpIntToField -> return crash
+      Tree.OpFieldToInt -> return crash
       Tree.OpIntToUInt8 -> compile arg >>= intToUInt8
       Tree.OpUInt8ToInt -> compile arg
 
@@ -913,10 +913,10 @@ compile = \case
           Tree.OpBool Tree.OpIntLe -> callStdlib StdlibLe args
           Tree.OpBool Tree.OpEq -> testEq _nodeBinopArg1 _nodeBinopArg2
           Tree.OpStrConcat -> callStdlib StdlibCatBytes args
-          Tree.OpFieldAdd -> fieldErr
-          Tree.OpFieldSub -> fieldErr
-          Tree.OpFieldMul -> fieldErr
-          Tree.OpFieldDiv -> fieldErr
+          Tree.OpFieldAdd -> return crash
+          Tree.OpFieldSub -> return crash
+          Tree.OpFieldMul -> return crash
+          Tree.OpFieldDiv -> return crash
 
     goAllocClosure :: Tree.NodeAllocClosure -> Sem r (Term Natural)
     goAllocClosure Tree.NodeAllocClosure {..} = do
@@ -1049,19 +1049,19 @@ directRefPath = \case
         ref = fromJust $ HashMap.lookup tempIdx varMap
     tempRefPath ref
 
-nockmaBuiltinTag :: Tree.BuiltinDataTag -> NockmaBuiltinTag
+nockmaBuiltinTag :: Tree.BuiltinDataTag -> Maybe NockmaBuiltinTag
 nockmaBuiltinTag = \case
-  Tree.TagTrue -> NockmaBuiltinBool True
-  Tree.TagFalse -> NockmaBuiltinBool False
-  Tree.TagJsonArray -> NockmaBuiltinJson "a"
-  Tree.TagJsonBool -> NockmaBuiltinJson "b"
-  Tree.TagJsonObject -> NockmaBuiltinJson "o"
-  Tree.TagJsonNumber -> NockmaBuiltinJson "n"
-  Tree.TagJsonString -> NockmaBuiltinJson "s"
-  Tree.TagReturn -> impossible
-  Tree.TagBind -> impossible
-  Tree.TagWrite -> impossible
-  Tree.TagReadLn -> impossible
+  Tree.TagTrue -> Just $ NockmaBuiltinBool True
+  Tree.TagFalse -> Just $ NockmaBuiltinBool False
+  Tree.TagJsonArray -> Just $ NockmaBuiltinJson "a"
+  Tree.TagJsonBool -> Just $ NockmaBuiltinJson "b"
+  Tree.TagJsonObject -> Just $ NockmaBuiltinJson "o"
+  Tree.TagJsonNumber -> Just $ NockmaBuiltinJson "n"
+  Tree.TagJsonString -> Just $ NockmaBuiltinJson "s"
+  Tree.TagReturn -> Nothing
+  Tree.TagBind -> Nothing
+  Tree.TagWrite -> Nothing
+  Tree.TagReadLn -> Nothing
 
 -- | Generic constructors are encoded as [tag args], where args is a
 -- nil terminated list.
@@ -1069,8 +1069,9 @@ goConstructor :: NockmaMemRep -> Tree.Tag -> [Term Natural] -> Term Natural
 goConstructor mr t args = assert (all isCell args) $
   case t of
     Tree.BuiltinTag b -> case nockmaBuiltinTag b of
-      NockmaBuiltinBool v -> nockBoolLiteral v
-      NockmaBuiltinJson s -> nockStringLiteral s
+      Just (NockmaBuiltinBool v) -> nockBoolLiteral v
+      Just (NockmaBuiltinJson s) -> nockStringLiteral s
+      Nothing -> crash
     Tree.UserTag tag -> case mr of
       NockmaMemRepConstr ->
         makeConstructor $ \case
@@ -1095,12 +1096,6 @@ goConstructor mr t args = assert (all isCell args) $
 
 unsupported :: Text -> a
 unsupported thing = error ("The Nockma backend does not support " <> thing)
-
-stringsErr :: Text -> a
-stringsErr t = unsupported ("string operations: " <> t)
-
-fieldErr :: a
-fieldErr = unsupported "the field type"
 
 cairoErr :: a
 cairoErr = unsupported "cairo builtins"
@@ -1208,7 +1203,7 @@ builtinTagToTerm = \case
 constructorTagToTerm :: Tree.Tag -> Term Natural
 constructorTagToTerm = \case
   Tree.UserTag t -> OpQuote # toNock (fromIntegral (t ^. Tree.tagUserWord) :: Natural)
-  Tree.BuiltinTag b -> builtinTagToTerm (nockmaBuiltinTag b)
+  Tree.BuiltinTag b -> maybe crash builtinTagToTerm (nockmaBuiltinTag b)
 
 -- Creates a case command from the reference `ref` to the compiled value and the
 -- compiled branches.
@@ -1223,8 +1218,9 @@ caseCmd ref defaultBranch = \case
   [] -> return (fromJust defaultBranch)
   (tag, b) : bs -> case tag of
     Tree.BuiltinTag t -> case nockmaBuiltinTag t of
-      NockmaBuiltinBool v -> goBoolTag v b bs
-      NockmaBuiltinJson {} -> goRepConstr tag b bs
+      Just (NockmaBuiltinBool v) -> goBoolTag v b bs
+      Just (NockmaBuiltinJson {}) -> goRepConstr tag b bs
+      Nothing -> return crash
     Tree.UserTag {} -> do
       rep <- getConstructorMemRep tag
       case rep of
@@ -1293,8 +1289,9 @@ caseCmd ref defaultBranch = \case
         f (tag', br) = case tag' of
           Tree.UserTag {} -> impossible
           Tree.BuiltinTag tag -> case nockmaBuiltinTag tag of
-            NockmaBuiltinBool v' -> guard (v /= v') $> br
-            NockmaBuiltinJson {} -> impossible
+            Just (NockmaBuiltinBool v') -> guard (v /= v') $> br
+            Just (NockmaBuiltinJson {}) -> impossible
+            Nothing -> Nothing
 
     goRepList :: NonEmpty (NockmaMemRepListConstr, Term Natural) -> Sem r (Term Natural)
     goRepList ((c, b) :| bs) = do
