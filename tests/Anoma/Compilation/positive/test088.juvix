@@ -1,0 +1,39 @@
+module test088;
+
+import Juvix.Builtin.V1.Nat open;
+import Juvix.Builtin.V1.Bool open;
+import Juvix.Builtin.V1.List open;
+
+-- -- Internally, it would be the identity function
+-- -- derived instances
+-- trait
+-- type Reify (T : Type) :=
+--   mk@{
+--     reify : T -> Term;
+--   };
+
+-- -- TODO nonempty-list
+-- type NockmaTypeRep := NockmaTypeRep (List NockmaConstructorRep);
+
+-- type NockmaConstructorRep :=
+--   | atom
+--   | cell@{
+--       left : NockmaTypeRep;
+--       right : NockmaTypeRep;
+--     };
+
+-- trait
+-- type HasNockmaRep (T : Type) := mk NockmaTypeRep;
+
+-- -- checkShape {T} {{Reify T}} {{HasNockmaRep T}} (t : T) : Bool := todo;
+
+type Term :=
+  | atom Nat
+  | cell@{
+      left : Term;
+      right : Term;
+    };
+
+t : Term := Term.cell (Term.atom 3) (Term.cell (Term.atom 4) (Term.atom 8));
+
+main : Term := t;
