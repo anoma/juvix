@@ -24,6 +24,7 @@ data Node
   | Cairo NodeCairo
   | Anoma NodeAnoma
   | ByteArray NodeByteArray
+  | TypeRep NodeNockmaTypeRep
   | -- | A constant value.
     Constant NodeConstant
   | -- | A memory reference.
@@ -81,6 +82,7 @@ data TreeOp
   = TreeBinaryOpcode BinaryOpcode
   | TreeUnaryOpcode UnaryOpcode
   | TreeByteArrayOp ByteArrayOp
+  | TreeNockmaTypeRepOp NockmaTypeRepOp
   | TreeCairoOp CairoOp
   | TreeAnomaOp AnomaOp
   deriving stock (Generic)
@@ -117,6 +119,15 @@ data NodeUnop = NodeUnop
   deriving stock (Generic)
 
 instance Serialize NodeUnop
+
+data NodeNockmaTypeRep = NodeNockmaTypeRep
+  { _nodeNockmaTypeRepInfo :: NodeInfo,
+    _nodeNockmaTypeRepOpcode :: NockmaTypeRepOp,
+    _nodeNockmaTypeRepArgs :: [Node]
+  }
+  deriving stock (Generic)
+
+instance Serialize NodeNockmaTypeRep
 
 data NodeByteArray = NodeByteArray
   { _nodeByteArrayInfo :: NodeInfo,
