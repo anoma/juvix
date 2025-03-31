@@ -1,7 +1,6 @@
 module Nockma.Compile.Tree.Positive where
 
 import Base
-import Juvix.Compiler.Nockma.Anoma
 import Juvix.Compiler.Nockma.Data.Module qualified as Nockma
 import Juvix.Compiler.Nockma.EvalCompiled
 import Juvix.Compiler.Nockma.Evaluator qualified as NockmaEval
@@ -26,7 +25,8 @@ runNockmaAssertion root hout _main md = do
         (hPutStrLn hout . Nockma.ppTest)
       . runReader NockmaEval.defaultEvalOptions
       . NockmaEval.ignoreOpCounts
-      $ evalCompiledNock' (Nockma.getModuleCode md') (anomaCall [])
+      . runSimpleErrorIO
+      $ evalCompiledNockModule' md'
   let ret = getReturn res
   whenJust ret (hPutStrLn hout . Nockma.ppTest)
   where

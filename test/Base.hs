@@ -285,5 +285,27 @@ compileAnomaMain enableDebug relRoot mainFile rootCopyDir = do
       | enableDebug = id
       | otherwise = removeInfoRec
 
+compileAnomaModular :: Bool -> Path Rel Dir -> Path Rel File -> Path Abs Dir -> IO (ModuleId, Nockma.ModuleTable)
+compileAnomaModular enableDebug relRoot mainFile rootCopyDir = do
+  let testRootDir = rootCopyDir <//> relRoot
+  entryPoint <-
+    set entryPointPipeline (Just PipelineExec)
+      . set entryPointTarget (Just TargetAnoma)
+      . set entryPointDebug enableDebug
+      <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
+  r <- testRunIOModular (Just Core.CheckAnoma) entryPoint modularCoreToAnoma
+  case r of
+    Left err -> assertFailure (renderStringDefault err)
+    Right (mid, mtab) -> do
+      return (mid, removeInfoUnlessDebug mtab)
+      where
+        removeInfoUnlessDebug :: Nockma.ModuleTable -> Nockma.ModuleTable
+        removeInfoUnlessDebug = over Nockma.moduleTable (fmap (over Nockma.moduleInfoTable (over Nockma.infoCode (fmap removeInfoUnlessDebug'))))
+
+        removeInfoUnlessDebug' :: Term Natural -> Term Natural
+        removeInfoUnlessDebug'
+          | enableDebug = id
+          | otherwise = removeInfoRec
+
 envAnomaPath :: (MonadIO m) => m AnomaPath
 envAnomaPath = AnomaPath <$> getAnomaPathAbs

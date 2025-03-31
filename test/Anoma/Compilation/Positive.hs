@@ -4,6 +4,7 @@ import Anoma.Effect.Base
 import Anoma.Effect.RunNockma
 import Base
 import Juvix.Compiler.Nockma.Anoma
+import Juvix.Compiler.Nockma.Data.Module
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
@@ -57,15 +58,17 @@ fromAnomaTest a@AnomaTest {..} =
             | enableDebug = baseTestname <> " debug"
             | otherwise = baseTestname <> " non-debug"
           tIO :: IO Test = do
-            anomaProgram <- withRootCopy (compileAnomaMain enableDebug _anomaRelRoot _anomaMainFile)
-            let _testProgramFormula = anomaCall (map (opQuote "Quote arg") _anomaArgs)
-                _testProgramSubject = anomaProgram
+            (mid, mtab) <- withRootCopy (compileAnomaModular enableDebug _anomaRelRoot _anomaMainFile)
+            ms <- runM . runSimpleErrorIO $ mkModuleStorage mtab
+            let md = lookupModuleTable mtab mid
+                _testProgramFormula = anomaCall (map (opQuote "Quote arg") _anomaArgs)
+                _testProgramSubject = getModuleCode md
                 _testEvalOptions = defaultEvalOptions
                 _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Nothing
             return
               Test
                 { _testCheck = _anomaCheck,
-                  _testProgramStorage = _anomaProgramStorage,
+                  _testProgramStorage = _anomaProgramStorage <> ms,
                   _testName = testName',
                   ..
                 }

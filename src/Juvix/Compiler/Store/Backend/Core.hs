@@ -26,7 +26,7 @@ fromModuleInfo Store.ModuleInfo {..} = do
         _moduleInfoTable = _moduleInfoCoreTable,
         _moduleImports = _moduleInfoInternalModule ^. Internal.internalModuleImports,
         _moduleOptions = fromEntryPoint ep,
-        _moduleSHA256 = _moduleInfoSHA256
+        _moduleSHA256 = Just _moduleInfoSHA256
       }
 
 fromModuleInfoTable :: (Member (Reader EntryPoint) r) => Store.ModuleTable -> Sem r ModuleTable
