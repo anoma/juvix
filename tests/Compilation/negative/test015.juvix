@@ -1,0 +1,6 @@
+-- Using `todo`
+module test015;
+
+import Stdlib.Prelude open;
+
+main : Nat := todo;
