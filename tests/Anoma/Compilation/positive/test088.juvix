@@ -1,31 +1,19 @@
+-- Noun representation
 module test088;
 
+import Juvix.Builtin.V1.Fixity open;
 import Juvix.Builtin.V1.Nat open;
 import Juvix.Builtin.V1.Bool open;
 import Juvix.Builtin.V1.List open;
 
--- -- Internally, it would be the identity function
--- -- derived instances
--- trait
--- type Reify (T : Type) :=
---   mk@{
---     reify : T -> Term;
---   };
+builtin trace
+axiom trace : {A : Type} -> A -> A;
 
--- -- TODO nonempty-list
--- type NockmaTypeRep := NockmaTypeRep (List NockmaConstructorRep);
+syntax operator >-> seq;
 
--- type NockmaConstructorRep :=
---   | atom
---   | cell@{
---       left : NockmaTypeRep;
---       right : NockmaTypeRep;
---     };
-
--- trait
--- type HasNockmaRep (T : Type) := mk NockmaTypeRep;
-
--- -- checkShape {T} {{Reify T}} {{HasNockmaRep T}} (t : T) : Bool := todo;
+builtin seq
+>-> : {A B : Type} -> A -> B -> B
+  | x y := y;
 
 type Term :=
   | atom Nat
@@ -34,6 +22,15 @@ type Term :=
       right : Term;
     };
 
-t : Term := Term.cell (Term.atom 3) (Term.cell (Term.atom 4) (Term.atom 8));
+type T := mk;
 
-main : Term := t;
+type FakeTerm :=
+  | atom T
+  | cell@{
+      left : FakeTerm;
+      right : FakeTerm;
+    };
+
+t : Term := Term.cell (Term.atom 30) (Term.cell (Term.atom 40) (Term.atom 80));
+
+main : _ := trace t >-> trace (Term.atom 80) >-> FakeTerm.cell;

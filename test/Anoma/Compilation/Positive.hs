@@ -1055,5 +1055,14 @@ allTests =
               $(mkRelDir ".")
               $(mkRelFile "test087.juvix")
               [testList]
-              $ checkTracesAndOutput [expectedOutput]
+              $ checkTracesAndOutput [expectedOutput],
+        let expectedOutput :: Term Natural = [nock| [2 1 nil] |]
+         in mkAnomaTest
+              88
+              AnomaTestModeFull
+              "Noun type representation"
+              $(mkRelDir ".")
+              $(mkRelFile "test088.juvix")
+              []
+              $ checkTracesAndOutput [[nock| [30 40 80] |], [nock| 80 |], [nock| [0 0] |]]
       ]

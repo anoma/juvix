@@ -39,6 +39,7 @@ import Juvix.Compiler.Nockma.Language.Path
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
+import Juvix.Compiler.Tree.Extra.Type qualified as Tree
 import Juvix.Compiler.Tree.Language qualified as Tree
 import Juvix.Compiler.Tree.Language.Rep
 import Juvix.Extra.Strings qualified as Str
@@ -362,6 +363,35 @@ supportsListNockmaRep tab ci =
       | otherwise -> Nothing
     _ -> Nothing
 
+-- | false negatives are ok
+typeRepresentedAsAtom :: Tree.Type -> Bool
+typeRepresentedAsAtom = \case
+  Tree.TyInteger {} -> True
+  Tree.TyBool {} -> True
+  Tree.TyString {} -> True
+  Tree.TyUnit {} -> True
+  --
+  Tree.TyField {} -> False
+  Tree.TyVoid {} -> False
+  Tree.TyInductive {} -> False
+  Tree.TyConstr {} -> False
+  Tree.TyFun {} -> False
+  Tree.TyByteArray {} -> False
+  Tree.TyDynamic -> False
+  Tree.TyRandomGenerator {} -> False
+
+supportsNounNockmaRep :: Tree.InfoTable -> Tree.ConstructorInfo -> Maybe NockmaMemRep
+supportsNounNockmaRep tab ci = fmap NockmaMemRepNoun . run . runFail $ do
+  c1 :| [c2] <- pure (allConstructors tab ci)
+  failUnless ([1, 2] `elem` permutations ((^. Tree.constructorArgsNum) <$> [c1, c2]))
+  case ci ^. Tree.constructorArgsNum of
+    1 -> do
+      ([arg], _) <- pure (Tree.unfoldType (ci ^. Tree.constructorType))
+      failUnless (typeRepresentedAsAtom arg)
+      return NockmaMemRepAtom
+    2 -> return NockmaMemRepCell
+    _ -> impossible
+
 supportsMaybeNockmaRep :: Tree.InfoTable -> Tree.ConstructorInfo -> Maybe NockmaMemRep
 supportsMaybeNockmaRep tab ci =
   NockmaMemRepMaybe <$> case allConstructors tab ci of
@@ -384,6 +414,7 @@ fromTreeTable t = case t ^. Tree.infoMainFunction of
     fromTree :: CompilerOptions -> Tree.Symbol -> Tree.InfoTable -> AnomaResult
     fromTree opts mainSym tab@Tree.InfoTable {..} =
       let funs = map compileFunction allFunctions
+
           mkConstructorInfo :: Tree.ConstructorInfo -> ConstructorInfo
           mkConstructorInfo ci@Tree.ConstructorInfo {..} =
             ConstructorInfo
@@ -392,7 +423,13 @@ fromTreeTable t = case t ^. Tree.infoMainFunction of
               }
             where
               rep :: NockmaMemRep
-              rep = fromMaybe r (supportsListNockmaRep tab ci <|> supportsMaybeNockmaRep tab ci)
+              rep =
+                fromMaybe
+                  r
+                  ( supportsListNockmaRep tab ci
+                      <|> supportsMaybeNockmaRep tab ci
+                      <|> supportsNounNockmaRep tab ci
+                  )
                 where
                   r = nockmaMemRep (memRep ci (getInductiveInfo (ci ^. Tree.constructorInductive)))
 
@@ -1005,7 +1042,7 @@ goConstructor mr t args = assert (all isCell args) $
           _ -> impossible
       NockmaMemRepNoun constr -> case constr of
         NockmaMemRepAtom -> case args of
-          [arg@(TermAtom _)] -> arg
+          [arg] -> arg
           _ -> impossible
         NockmaMemRepCell -> foldTerms (nonEmpty' args)
       NockmaMemRepMaybe constr -> case constr of
@@ -1241,6 +1278,9 @@ caseCmd ref defaultBranch = \case
         NockmaMemRepTuple
           | null bs, isNothing defaultBranch -> return b
           | otherwise -> error "redundant branch. Impossible?"
+        NockmaMemRepNoun constr -> do
+          bs' <- mapM (firstM asNockmaMemRepNounConstr) bs
+          goRepNoun ((constr, b) :| bs')
         NockmaMemRepList constr -> do
           bs' <- mapM (firstM asNockmaMemRepListConstr) bs
           goRepList ((constr, b) :| bs')
