@@ -76,6 +76,13 @@ data CairoOp
 
 instance Serialize CairoOp
 
+-- | Builtin TypeRep operations
+data NockmaTypeRepOp
+  = NockmaTypeRepOp
+  deriving stock (Eq, Generic)
+
+instance Serialize NockmaTypeRepOp
+
 -- | Builtin ByteArray operations
 data ByteArrayOp
   = -- | Convert a list of UInt8 to a ByteArray

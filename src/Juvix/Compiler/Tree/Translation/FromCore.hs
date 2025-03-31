@@ -239,6 +239,9 @@ genCode md fi =
               _nodeAnomaOpcode = op,
               _nodeAnomaArgs = args
             }
+      TreeNockmaTypeRepOp NockmaTypeRepOp -> case args of
+        [_argTy :: Node] -> todo
+        _ -> impossible
       TreeBinaryOpcode op -> case args of
         [arg1, arg2] ->
           Binop $

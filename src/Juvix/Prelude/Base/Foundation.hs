@@ -517,7 +517,7 @@ _nonEmpty f x = maybe [] toList <$> f (nonEmpty x)
 error :: (HasCallStack) => Text -> a
 error = Err.error . unpack
 
-{-# DEPRECATED todo "todo" #-}
+-- {-# DEPRECATED todo "todo" #-}
 todo :: (HasCallStack) => a
 todo = Err.error "TODO"
 
