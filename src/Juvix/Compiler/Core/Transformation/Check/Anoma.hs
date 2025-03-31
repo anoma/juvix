@@ -6,7 +6,7 @@ import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Check.Base
 
 checkAnoma :: forall r. (Member (Error CoreError) r) => Module -> Sem r Module
-checkAnoma md = do
+checkAnoma = checkAll $ \md -> do
   checkMainExists md
   checkNoAxioms md
   mapAllNodesM checkNoIO md

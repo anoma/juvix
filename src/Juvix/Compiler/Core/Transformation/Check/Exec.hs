@@ -6,7 +6,7 @@ import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Check.Base
 
 checkExec :: forall r. (Member (Error CoreError) r) => Module -> Sem r Module
-checkExec md = do
+checkExec = checkAll $ \md -> do
   checkNoAxioms md
   checkMainExists md
   checkMainTypeExec md
