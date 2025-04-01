@@ -76,7 +76,7 @@ builtinCategory = \case
   OpByteArrayFromListByte -> BuiltinCategoryByteArray
   OpByteArrayLength -> BuiltinCategoryByteArray
 
--- Builtin operations which the evaluator and the code generator treat
+-- | Builtin operations which the evaluator and the code generator treat
 -- specially and non-uniformly.
 data BuiltinOp
   = OpIntAdd
@@ -143,7 +143,7 @@ instance Serialize BuiltinOp
 
 instance NFData BuiltinOp
 
--- Builtin data tags
+-- | Builtin data tags
 data BuiltinDataTag
   = TagTrue
   | TagFalse
@@ -324,7 +324,6 @@ builtinsInCategory c = filter ((== c) . builtinCategory) allElements
 builtinsString :: [BuiltinOp]
 builtinsString = builtinsInCategory BuiltinCategoryString
 
--- to this list
 builtinsCairo :: [BuiltinOp]
 builtinsCairo = builtinsInCategory BuiltinCategoryCairo
 
