@@ -16,6 +16,7 @@ inferType md funInfo = goInfer mempty
       Binop x -> goBinop bl x
       Unop x -> goUnop bl x
       ByteArray x -> goByteArray bl x
+      Nockma x -> goNockma bl x
       Cairo x -> goCairo bl x
       Anoma x -> goAnoma bl x
       Constant x -> goConst bl x
@@ -90,6 +91,11 @@ inferType md funInfo = goInfer mempty
     goByteArray :: BinderList Type -> NodeByteArray -> Sem r Type
     goByteArray bl NodeByteArray {..} = do
       mapM_ (\arg -> checkType bl arg TyDynamic) _nodeByteArrayArgs
+      return TyDynamic
+
+    goNockma :: BinderList Type -> NodeNockma -> Sem r Type
+    goNockma bl NodeNockma {..} = do
+      mapM_ (\arg -> checkType bl arg TyDynamic) _nodeNockmaArgs
       return TyDynamic
 
     goCairo :: BinderList Type -> NodeCairo -> Sem r Type

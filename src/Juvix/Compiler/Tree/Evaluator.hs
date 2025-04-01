@@ -40,6 +40,7 @@ hEval hout md = eval' [] mempty
       Unop x -> goUnop x
       ByteArray x -> goByteArrayOp x
       Anoma {} -> evalError "unsupported: Anoma builtin"
+      Nockma {} -> evalError "unsupported: Nockma builtin"
       Cairo {} -> evalError "unsupported: Cairo builtin"
       Constant c -> goConstant c
       MemRef x -> goMemRef x
