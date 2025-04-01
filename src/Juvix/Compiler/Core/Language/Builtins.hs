@@ -6,7 +6,77 @@ import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Prettyprinter
 
--- Builtin operations which the evaluator and the code generator treat
+data BuiltinCategory
+  = BuiltinCategoryString
+  | BuiltinCategoryCairo
+  | BuiltinCategoryAnoma
+  | BuiltinCategoryUInt8
+  | BuiltinCategoryByteArray
+  | BuiltinCategoryNone
+  deriving stock (Eq, Enum, Ord, Bounded, Show, Data, Generic)
+
+builtinCategory :: BuiltinOp -> BuiltinCategory
+builtinCategory = \case
+  OpIntAdd -> BuiltinCategoryNone
+  OpIntSub -> BuiltinCategoryNone
+  OpIntMul -> BuiltinCategoryNone
+  OpIntDiv -> BuiltinCategoryNone
+  OpIntMod -> BuiltinCategoryNone
+  OpIntLt -> BuiltinCategoryNone
+  OpIntLe -> BuiltinCategoryNone
+  OpFieldAdd -> BuiltinCategoryNone
+  OpFieldSub -> BuiltinCategoryNone
+  OpFieldMul -> BuiltinCategoryNone
+  OpFieldDiv -> BuiltinCategoryNone
+  OpFieldFromInt -> BuiltinCategoryNone
+  OpFieldToInt -> BuiltinCategoryNone
+  OpEq -> BuiltinCategoryNone
+  OpShow -> BuiltinCategoryString
+  OpStrConcat -> BuiltinCategoryString
+  OpStrToInt -> BuiltinCategoryString
+  OpSeq -> BuiltinCategoryNone
+  OpAssert -> BuiltinCategoryNone
+  OpTrace -> BuiltinCategoryNone
+  OpFail -> BuiltinCategoryNone
+  OpAnomaGet -> BuiltinCategoryAnoma
+  OpAnomaEncode -> BuiltinCategoryAnoma
+  OpAnomaDecode -> BuiltinCategoryAnoma
+  OpAnomaVerifyDetached -> BuiltinCategoryAnoma
+  OpAnomaSign -> BuiltinCategoryAnoma
+  OpAnomaSignDetached -> BuiltinCategoryAnoma
+  OpAnomaVerifyWithMessage -> BuiltinCategoryAnoma
+  OpAnomaByteArrayToAnomaContents -> BuiltinCategoryAnoma
+  OpAnomaByteArrayFromAnomaContents -> BuiltinCategoryAnoma
+  OpAnomaSha256 -> BuiltinCategoryAnoma
+  OpAnomaResourceCommitment -> BuiltinCategoryAnoma
+  OpAnomaResourceNullifier -> BuiltinCategoryAnoma
+  OpAnomaResourceKind -> BuiltinCategoryAnoma
+  OpAnomaResourceDelta -> BuiltinCategoryAnoma
+  OpAnomaActionDelta -> BuiltinCategoryAnoma
+  OpAnomaActionsDelta -> BuiltinCategoryAnoma
+  OpAnomaZeroDelta -> BuiltinCategoryAnoma
+  OpAnomaAddDelta -> BuiltinCategoryAnoma
+  OpAnomaSubDelta -> BuiltinCategoryAnoma
+  OpAnomaRandomGeneratorInit -> BuiltinCategoryAnoma
+  OpAnomaRandomNextBytes -> BuiltinCategoryAnoma
+  OpAnomaRandomSplit -> BuiltinCategoryAnoma
+  OpAnomaIsCommitment -> BuiltinCategoryAnoma
+  OpAnomaIsNullifier -> BuiltinCategoryAnoma
+  OpAnomaCreateFromComplianceInputs -> BuiltinCategoryAnoma
+  OpAnomaTransactionCompose -> BuiltinCategoryAnoma
+  OpAnomaActionCreate -> BuiltinCategoryAnoma
+  OpAnomaSetToList -> BuiltinCategoryAnoma
+  OpAnomaSetFromList -> BuiltinCategoryAnoma
+  OpPoseidonHash -> BuiltinCategoryCairo
+  OpEc -> BuiltinCategoryCairo
+  OpRandomEcPoint -> BuiltinCategoryCairo
+  OpRangeCheck -> BuiltinCategoryCairo
+  OpUInt8ToInt -> BuiltinCategoryUInt8
+  OpUInt8FromInt -> BuiltinCategoryUInt8
+  OpByteArrayFromListByte -> BuiltinCategoryByteArray
+  OpByteArrayLength -> BuiltinCategoryByteArray
+
+-- | Builtin operations which the evaluator and the code generator treat
 -- specially and non-uniformly.
 data BuiltinOp
   = OpIntAdd
@@ -73,7 +143,7 @@ instance Serialize BuiltinOp
 
 instance NFData BuiltinOp
 
--- Builtin data tags
+-- | Builtin data tags
 data BuiltinDataTag
   = TagTrue
   | TagFalse
@@ -248,83 +318,20 @@ builtinIsFoldable = \case
   OpByteArrayFromListByte -> False
   OpByteArrayLength -> False
 
--- TODO should be refactored so that you don't need to remember to add a builtin
--- to this list
-builtinsString :: [BuiltinOp]
-builtinsString = [OpStrConcat, OpStrToInt, OpShow]
+builtinsInCategory :: BuiltinCategory -> [BuiltinOp]
+builtinsInCategory c = filter ((== c) . builtinCategory) allElements
 
--- TODO should be refactored so that you don't need to remember to add a builtin
--- to this list
+builtinsString :: [BuiltinOp]
+builtinsString = builtinsInCategory BuiltinCategoryString
+
 builtinsCairo :: [BuiltinOp]
-builtinsCairo = [OpPoseidonHash, OpEc, OpRandomEcPoint, OpRangeCheck]
+builtinsCairo = builtinsInCategory BuiltinCategoryCairo
 
 builtinsAnoma :: [BuiltinOp]
-builtinsAnoma = filter isBuiltinAnoma allElements
-  where
-    isBuiltinAnoma :: BuiltinOp -> Bool
-    isBuiltinAnoma = \case
-      OpAnomaGet -> True
-      OpAnomaEncode -> True
-      OpAnomaDecode -> True
-      OpAnomaVerifyDetached -> True
-      OpAnomaSign -> True
-      OpAnomaVerifyWithMessage -> True
-      OpAnomaSignDetached -> True
-      OpAnomaByteArrayToAnomaContents -> True
-      OpAnomaByteArrayFromAnomaContents -> True
-      OpAnomaSha256 -> True
-      OpAnomaResourceCommitment -> True
-      OpAnomaResourceNullifier -> True
-      OpAnomaResourceKind -> True
-      OpAnomaResourceDelta -> True
-      OpAnomaActionDelta -> True
-      OpAnomaActionsDelta -> True
-      OpAnomaZeroDelta -> True
-      OpAnomaAddDelta -> True
-      OpAnomaSubDelta -> True
-      OpAnomaRandomGeneratorInit -> True
-      OpAnomaRandomNextBytes -> True
-      OpAnomaRandomSplit -> True
-      OpAnomaSetToList -> True
-      OpAnomaSetFromList -> True
-      OpAnomaIsCommitment -> True
-      OpAnomaIsNullifier -> True
-      OpAnomaTransactionCompose -> True
-      OpAnomaActionCreate -> True
-      OpAnomaCreateFromComplianceInputs -> True
-      --
-      OpIntAdd -> False
-      OpIntSub -> False
-      OpIntMul -> False
-      OpIntMod -> False
-      OpIntDiv -> False
-      OpIntLt -> False
-      OpIntLe -> False
-      OpFieldAdd -> False
-      OpFieldSub -> False
-      OpFieldMul -> False
-      OpFieldDiv -> False
-      OpFieldFromInt -> False
-      OpFieldToInt -> False
-      OpEq -> False
-      OpShow -> False
-      OpSeq -> False
-      OpStrConcat -> False
-      OpStrToInt -> False
-      OpAssert -> False
-      OpTrace -> False
-      OpFail -> False
-      OpRangeCheck -> False
-      OpPoseidonHash -> False
-      OpEc -> False
-      OpRandomEcPoint -> False
-      OpUInt8FromInt -> False
-      OpUInt8ToInt -> False
-      OpByteArrayLength -> False
-      OpByteArrayFromListByte -> False
+builtinsAnoma = builtinsInCategory BuiltinCategoryAnoma
 
 builtinsUInt8 :: [BuiltinOp]
-builtinsUInt8 = [OpUInt8FromInt, OpUInt8ToInt]
+builtinsUInt8 = builtinsInCategory BuiltinCategoryUInt8
 
 builtinsByteArray :: [BuiltinOp]
-builtinsByteArray = [OpByteArrayFromListByte, OpByteArrayLength]
+builtinsByteArray = builtinsInCategory BuiltinCategoryByteArray
