@@ -398,7 +398,7 @@ compileToSubject ctx importsSHA256 importedModuleIds userFuns msym =
     modulesLib = remakeList ((OpQuote # funcsLib) : map mkImport importedModuleIds)
 
     mkImport :: ModuleId -> Term Natural
-    mkImport mid = mkScry [key]
+    mkImport mid = mkScry [OpQuote # key]
       where
         key =
           TermAtom
