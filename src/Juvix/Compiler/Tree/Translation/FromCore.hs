@@ -7,6 +7,7 @@ import Juvix.Compiler.Tree.Data.Module
 import Juvix.Compiler.Tree.Extra.Base
 import Juvix.Compiler.Tree.Extra.Type
 import Juvix.Compiler.Tree.Language
+import Juvix.Compiler.Tree.Pretty
 
 type BinderList = BL.BinderList
 
@@ -240,12 +241,14 @@ genCode md fi =
               _nodeAnomaArgs = args
             }
       TreeNockmaOp op ->
-        Nockma $
-          NodeNockma
-            { _nodeNockmaInfo = mempty,
-              _nodeNockmaOpcode = op,
-              _nodeNockmaArgs = args
-            }
+        trace ("TreeNockmaOp: " <> ppTrace' emptyOptions op) $
+          trace ("Args: " <> ppTrace' emptyOptions args) $
+            Nockma $
+              NodeNockma
+                { _nodeNockmaInfo = mempty,
+                  _nodeNockmaOpcode = op,
+                  _nodeNockmaArgs = args
+                }
       TreeBinaryOpcode op -> case args of
         [arg1, arg2] ->
           Binop $
