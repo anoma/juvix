@@ -326,7 +326,7 @@ builtinsString = builtinsInCategory BuiltinCategoryString
 
 -- to this list
 builtinsCairo :: [BuiltinOp]
-builtinsCairo = builtinsInCategory BuiltinCategoryString
+builtinsCairo = builtinsInCategory BuiltinCategoryCairo
 
 builtinsAnoma :: [BuiltinOp]
 builtinsAnoma = builtinsInCategory BuiltinCategoryAnoma
