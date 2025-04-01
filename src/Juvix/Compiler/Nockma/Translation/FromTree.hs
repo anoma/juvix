@@ -302,9 +302,6 @@ foldTermsOrNil = maybe (nockNilTagged "foldTermsOrNil") foldTerms . nonEmpty
 foldTermsOrQuotedNil :: [Term Natural] -> Term Natural
 foldTermsOrQuotedNil = maybe (OpQuote # nockNilTagged "foldTermsOrQuotedNil") foldTerms . nonEmpty
 
-foldTerms :: NonEmpty (Term Natural) -> Term Natural
-foldTerms = foldr1 (#)
-
 mkScry :: [Term Natural] -> Term Natural
 mkScry key = OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # (foldTermsOrQuotedNil key)
 
@@ -436,7 +433,6 @@ fromTreeModule fetchModule importsTab md = do
           { _infoFunctions = userFunInfos,
             _infoImports = HashSet.fromList importedModuleIds,
             _infoCode = Just moduleCode,
-            _infoJammedCode = Just jammedCode,
             _infoSHA256 = Just (SHA256.hash jammedCode)
           }
   return
@@ -1114,14 +1110,6 @@ unsupported thing = error ("The Nockma backend does not support " <> thing)
 
 cairoErr :: a
 cairoErr = unsupported "cairo builtins"
-
--- | The elements will not be evaluated.
-makeList :: (Foldable f) => f (Term Natural) -> Term Natural
-makeList ts = foldTerms (toList ts `prependList` pure (nockNilTagged "makeList"))
-
--- | The elements of the list will be evaluated to create the list.
-remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
-remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged "remakeList"))
 
 anomaLibPlaceholder :: Term Natural
 anomaLibPlaceholder =

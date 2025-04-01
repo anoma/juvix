@@ -10,7 +10,6 @@ data InfoTable = InfoTable
     _infoImports :: HashSet ModuleId,
     -- | Unquoted code.
     _infoCode :: Maybe (Term Natural),
-    _infoJammedCode :: Maybe ByteString,
     -- | SHA256 hash of the code.
     _infoSHA256 :: Maybe ByteString
   }
@@ -42,7 +41,6 @@ instance Semigroup InfoTable where
       { _infoFunctions = t1 ^. infoFunctions <> t2 ^. infoFunctions,
         _infoImports = t1 ^. infoImports <> t2 ^. infoImports,
         _infoCode = Nothing,
-        _infoJammedCode = Nothing,
         _infoSHA256 = Nothing
       }
 
@@ -52,7 +50,6 @@ instance Monoid InfoTable where
       { _infoFunctions = mempty,
         _infoImports = mempty,
         _infoCode = Nothing,
-        _infoJammedCode = Nothing,
         _infoSHA256 = Nothing
       }
 

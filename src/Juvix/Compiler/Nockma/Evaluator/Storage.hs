@@ -67,46 +67,34 @@ instance (NockmaEq a, Hashable a) => Monoid (Storage a) where
 emptyStorage :: (NockmaEq a, Hashable a) => Storage a
 emptyStorage = Storage {_storageKeyValueData = mempty}
 
-mkModuleStorage :: forall r. (Member (Error SimpleError) r) => ModuleTable -> Sem r (Storage Natural)
-mkModuleStorage mtab = do
-  elems <- mapM mkStorageElem (HashMap.elems (mtab ^. moduleTable))
-  return
-    Storage
-      { _storageKeyValueData =
-          HashMap.fromList elems
-      }
-  where
-    mkStorageElem :: Module -> Sem r (StorageKey Natural, Term Natural)
-    mkStorageElem md' = do
-      jammedCode <- decodeCue (fromJust (md' ^. moduleInfoTable . infoJammedCode))
-      return
-        ( StorageKey
-            { _storageKeyTerm =
-                TermAtom
-                  . mkEmptyAtom
-                  . byteStringToNatural
-                  . fromJust
-                  $ (md' ^. moduleInfoTable . infoSHA256)
-            },
-          jammedCode
-        )
-
-insertJammedStorage :: Term Natural -> Storage Natural -> Storage Natural
-insertJammedStorage term storage = do
+mkModuleStorage :: ModuleTable -> Storage Natural
+mkModuleStorage mtab =
   Storage
     { _storageKeyValueData =
-        HashMap.insert (StorageKey sha256) jterm (storage ^. storageKeyValueData)
+        HashMap.fromList (map mkStorageElem (HashMap.elems (mtab ^. moduleTable)))
     }
   where
-    jammedCode = jamToByteString term
-    jterm =
-      TermAtom
-        . mkEmptyAtom
-        . byteStringToNatural
-        $ jammedCode
+    mkStorageElem :: Module -> (StorageKey Natural, Term Natural)
+    mkStorageElem md' =
+      ( StorageKey
+          { _storageKeyTerm =
+              TermAtom
+                . mkEmptyAtom
+                . byteStringToNatural
+                . fromJust
+                $ (md' ^. moduleInfoTable . infoSHA256)
+          },
+        fromJust (md' ^. moduleInfoTable . infoCode)
+      )
+
+insertJammedStorage :: Term Natural -> Storage Natural -> Storage Natural
+insertJammedStorage term =
+  over storageKeyValueData (HashMap.insert (StorageKey sha256) term)
+  where
     sha256 =
       TermAtom
         . mkEmptyAtom
         . byteStringToNatural
         . SHA256.hash
-        $ jammedCode
+        . jamToByteString
+        $ term

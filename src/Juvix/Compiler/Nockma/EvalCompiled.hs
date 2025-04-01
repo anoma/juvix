@@ -23,11 +23,10 @@ evalCompiledNock storage stack mainTerm = do
 evalCompiledNock' :: (Members '[State OpCounts, Reader EvalOptions, Output (Term Natural)] r) => Term Natural -> Term Natural -> Sem r (Term Natural)
 evalCompiledNock' = evalCompiledNock emptyStorage
 
-evalCompiledNockModule :: forall r. (Members '[State OpCounts, Reader EvalOptions, Output (Term Natural), Error SimpleError] r) => ModuleTable -> Module -> Sem r (Term Natural)
+evalCompiledNockModule :: forall r. (Members '[State OpCounts, Reader EvalOptions, Output (Term Natural)] r) => ModuleTable -> Module -> Sem r (Term Natural)
 evalCompiledNockModule mtab md = do
-  s <- mkModuleStorage mtab
-  evalCompiledNock s (getModuleCode md) (anomaCall [])
+  evalCompiledNock (mkModuleStorage mtab) (getModuleCode md) (anomaCall [])
 
-evalCompiledNockModule' :: (Members '[State OpCounts, Reader EvalOptions, Output (Term Natural), Error SimpleError] r) => Module -> Sem r (Term Natural)
+evalCompiledNockModule' :: (Members '[State OpCounts, Reader EvalOptions, Output (Term Natural)] r) => Module -> Sem r (Term Natural)
 evalCompiledNockModule' md = do
   evalCompiledNockModule mempty md

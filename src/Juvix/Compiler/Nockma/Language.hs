@@ -635,3 +635,14 @@ unfoldTuple1 = nonEmpty' . run . execOutputList . go
       case t of
         TermAtom {} -> output t
         TermCell (Cell l r) -> output l >> go r
+
+foldTerms :: NonEmpty (Term Natural) -> Term Natural
+foldTerms = foldr1 (#)
+
+-- | The elements will not be evaluated.
+makeList :: (Foldable f) => f (Term Natural) -> Term Natural
+makeList ts = foldTerms (toList ts `prependList` pure (nockNilTagged "makeList"))
+
+-- | The elements of the list will be evaluated to create the list.
+remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
+remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged "remakeList"))
