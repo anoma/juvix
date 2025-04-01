@@ -374,25 +374,25 @@ supportsNounNockmaRep tab ci = fmap NockmaMemRepNoun . run . runFail $ do
       return NockmaMemRepAtom
     2 -> return NockmaMemRepCell
     _ -> impossible
-    where
-      -- Returns True if all elements of some type are representable with an
-      -- Atom. There may be false negatives. In that case, a less optimal
-      -- representation might be chosen, but it shouldn't effect correctness.
-      typeRepresentedAsAtom :: Tree.Type -> Bool
-      typeRepresentedAsAtom = \case
-        Tree.TyInteger {} -> True
-        Tree.TyBool {} -> True
-        Tree.TyString {} -> True
-        Tree.TyUnit {} -> True
-        --
-        Tree.TyField {} -> False
-        Tree.TyVoid {} -> False
-        Tree.TyInductive {} -> False
-        Tree.TyConstr {} -> False
-        Tree.TyFun {} -> False
-        Tree.TyByteArray {} -> False
-        Tree.TyDynamic -> False
-        Tree.TyRandomGenerator {} -> False
+  where
+    -- Returns True if all elements of some type are representable with an
+    -- Atom. There may be false negatives. In that case, a less optimal
+    -- representation might be chosen, but it shouldn't effect correctness.
+    typeRepresentedAsAtom :: Tree.Type -> Bool
+    typeRepresentedAsAtom = \case
+      Tree.TyInteger {} -> True
+      Tree.TyBool {} -> True
+      Tree.TyString {} -> True
+      Tree.TyUnit {} -> True
+      --
+      Tree.TyField {} -> False
+      Tree.TyVoid {} -> False
+      Tree.TyInductive {} -> False
+      Tree.TyConstr {} -> False
+      Tree.TyFun {} -> False
+      Tree.TyByteArray {} -> False
+      Tree.TyDynamic -> False
+      Tree.TyRandomGenerator {} -> False
 
 supportsMaybeNockmaRep :: Tree.InfoTable -> Tree.ConstructorInfo -> Maybe NockmaMemRep
 supportsMaybeNockmaRep tab ci =
