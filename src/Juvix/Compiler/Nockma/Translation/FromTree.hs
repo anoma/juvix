@@ -370,13 +370,10 @@ makeMainFunction arity funCode = makeRawClosure $ \case
 -- head needs to be called with the Anoma calling convention.
 compileToSubject :: CompilerCtx -> HashMap ModuleId ByteString -> [ModuleId] -> [Tree.FunctionInfo] -> Maybe Symbol -> Term Natural
 compileToSubject ctx importsSHA256 importedModuleIds userFuns msym =
-  makeMainFunction mainArity mainCode
+  case msym of
+    Nothing -> modulesLib
+    Just mainSym -> makeMainFunction mainArity (run . runReader ctx $ mkMainClosureCode mainSym)
   where
-    mainCode :: Term Natural
-    mainCode = case msym of
-      Nothing -> modulesLib
-      Just mainSym -> run $ runReader ctx $ mkMainClosureCode mainSym
-
     mainArity :: Natural
     mainArity = case msym of
       Nothing -> 0
