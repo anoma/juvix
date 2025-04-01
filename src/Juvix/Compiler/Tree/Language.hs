@@ -24,8 +24,9 @@ data Node
   | Cairo NodeCairo
   | Anoma NodeAnoma
   | ByteArray NodeByteArray
-  | TypeRep NodeNockmaTypeRep
-  | -- | A constant value.
+  | --- | TypeRep NodeNockmaTypeRep
+
+    -- | A constant value.
     Constant NodeConstant
   | -- | A memory reference.
     MemRef NodeMemRef
@@ -97,6 +98,7 @@ data UnaryOpcode
     OpTrace
   | -- | Interrupt execution with a runtime error printing the argument.
     OpFail
+  | OpGetNockmaTypeRep
   deriving stock (Generic)
 
 instance Serialize UnaryOpcode

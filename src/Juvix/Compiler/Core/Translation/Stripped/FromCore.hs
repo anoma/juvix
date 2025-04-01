@@ -92,6 +92,10 @@ fromCore' tab =
       BuiltinMkAnomaAction -> True
       BuiltinMkAnomaComplianceInputs -> True
       BuiltinMkAnomaShieldedTransaction -> True
+      BuiltinMkTypeNockmaRep -> True
+      BuiltinConstructorNockmaRepAtom -> True
+      BuiltinConstructorNockmaRepCell -> True
+      --
       BuiltinNatZero -> False
       BuiltinNatSuc -> False
       BuiltinBoolTrue -> False
@@ -103,6 +107,7 @@ fromCore' tab =
     shouldKeepType = \case
       BuiltinTypeAxiom a -> case a of
         BuiltinIO -> True
+        --
         BuiltinNatPrint -> False
         BuiltinNatToString -> False
         BuiltinStringPrint -> False
@@ -125,6 +130,7 @@ fromCore' tab =
         BuiltinFail -> False
         BuiltinIntToString -> False
         BuiltinIntPrint -> False
+        BuiltinGetNockmaTypeRep -> False
         BuiltinAnomaGet -> False
         BuiltinAnomaEncode -> False
         BuiltinAnomaDecode -> False
@@ -186,6 +192,8 @@ fromCore' tab =
         BuiltinAnomaAction -> True
         BuiltinAnomaComplianceInputs -> True
         BuiltinAnomaShieldedTransaction -> True
+        BuiltinTypeNockmaRep -> True
+        BuiltinConstructorNockmaRep -> True
 
 translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
 translateFunctionInfo tab IdentifierInfo {..} =
