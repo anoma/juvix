@@ -112,6 +112,8 @@ data CompilerCtx = CompilerCtx
   { _compilerFunctionInfos :: HashMap Symbol FunctionInfo,
     _compilerConstructorInfos :: HashMap Tree.Tag ConstructorInfo,
     _compilerModuleInfos :: HashMap ModuleId ModuleInfo,
+    _compilerModuleId :: ModuleId,
+    _compilerBatch :: Bool,
     -- | Maps temporary variables to their stack indices.
     _compilerTempVarMap :: HashMap Int TempRef,
     _compilerTempVarsNum :: Int,
@@ -130,6 +132,8 @@ emptyCompilerCtx =
     { _compilerFunctionInfos = mempty,
       _compilerConstructorInfos = mempty,
       _compilerModuleInfos = mempty,
+      _compilerModuleId = defaultModuleId,
+      _compilerBatch = True,
       _compilerTempVarMap = mempty,
       _compilerTempVarsNum = 0,
       _compilerStackHeight = 0
@@ -398,7 +402,9 @@ compileToSubject ctx importsSHA256 importedModuleIds userFuns msym =
     modulesLib = remakeList ((OpQuote # funcsLib) : map mkImport importedModuleIds)
 
     mkImport :: ModuleId -> Term Natural
-    mkImport mid = mkScry [OpQuote # key]
+    mkImport mid =
+      -- We evaluate the imported module's code here: the result should be a module library
+      OpApply # opGetSubject # mkScry [OpQuote # key]
       where
         key =
           TermAtom
@@ -412,7 +418,8 @@ compileToSubject ctx importsSHA256 importedModuleIds userFuns msym =
     mkMainClosureCode sym = do
       libpath <- stackPath ModulesLibrary
       let newSubject = opReplace "replace-mainClosure-modulesLib" libpath modulesLib opGetSubject
-      fpath <- getFunctionPath sym
+      finfo <- getFunctionInfo sym
+      fpath <- getFunctionInfoPath finfo
       return (opCall ("callFun-main") (fpath ++ closurePath FunCode) newSubject)
 
 -- | Use `Tree.toNockma` before calling this function. The result is an unquoted
@@ -490,7 +497,9 @@ fromTreeModule fetchModule importsTab md = do
           _compilerConstructorInfos =
             HashMap.fromList $ map mkConstructorInfo allConstrs,
           _compilerModuleInfos =
-            HashMap.fromList $ map mkModuleInfo [0 .. length allModuleIds - 1]
+            HashMap.fromList $ map mkModuleInfo [0 .. length allModuleIds - 1],
+          _compilerModuleId = md ^. Tree.moduleId,
+          _compilerBatch = null importedFuns
         }
       where
         mkModuleInfo :: Int -> (ModuleId, ModuleInfo)
@@ -922,10 +931,19 @@ compile = \case
     goAllocClosure Tree.NodeAllocClosure {..} = do
       let fun = _nodeAllocClosureFunSymbol
       base <- getSubjectBasePath
-      fpath <- getFunctionPath fun
+      finfo <- getFunctionInfo fun
+      minfo <- getModuleInfo (finfo ^. functionInfoModuleId)
+      fpath <- getFunctionInfoPath finfo
       farity <- getFunctionArity fun
+      mid <- asks (^. compilerModuleId)
+      batch <- asks (^. compilerBatch)
       args <- mapM compile _nodeAllocClosureArgs
-      let modulesLib = opAddress "modulesLibrary" (base <> closurePath ModulesLibrary)
+      let modulesLib =
+            if
+                | batch || mid == finfo ^. functionInfoModuleId ->
+                    opAddress "modulesLibrary" (base <> closurePath ModulesLibrary)
+                | otherwise ->
+                    opAddress "modulesLibrary" (base <> closurePath ModulesLibrary <> minfo ^. moduleInfoPath)
           anomaLibrary = opAddress "anomaLibrary" (base <> closurePath AnomaLibrary)
           closure =
             opReplace "putAnomaLib" (closurePath AnomaLibrary) anomaLibrary
@@ -1143,10 +1161,21 @@ callFunWithArgs ::
   Sem r (Term Natural)
 callFunWithArgs fun args = do
   newSubject <- replaceArgs args
-  fpath <- getFunctionPath fun
-  fname <- getFunctionName fun
-  let p' = fpath ++ closurePath FunCode
-  return (opCall ("callFun-" <> fname) p' newSubject)
+  finfo <- getFunctionInfo fun
+  minfo <- getModuleInfo (finfo ^. functionInfoModuleId)
+  let fname = finfo ^. functionInfoName
+  fpath <- getFunctionInfoPath finfo
+  mid <- asks (^. compilerModuleId)
+  batch <- asks (^. compilerBatch)
+  if
+      | batch || mid == finfo ^. functionInfoModuleId -> do
+          return (opCall ("callFun-" <> fname) (fpath ++ closurePath FunCode) newSubject)
+      | otherwise -> do
+          -- The function is in a different module. We need to call the function
+          -- with its module's module library.
+          let modLib = opAddress "callFun-modLib" (pathFromEnum ModulesLibrary ++ minfo ^. moduleInfoPath)
+              newSubject' = opReplace "callFun-modLib" (closurePath ModulesLibrary) modLib newSubject
+          return (opCall ("callFun-" <> fname) (fpath ++ closurePath FunCode) newSubject')
 
 callClosure :: (Member (Reader CompilerCtx) r) => TempRef -> [Term Natural] -> Sem r (Term Natural)
 callClosure ref args = do
@@ -1186,14 +1215,16 @@ getModuleInfo mid = fromJust . HashMap.lookup mid <$> asks (^. compilerModuleInf
 getFunctionInfo :: (HasCallStack) => (Members '[Reader CompilerCtx] r) => Symbol -> Sem r FunctionInfo
 getFunctionInfo funId = fromJust . HashMap.lookup funId <$> asks (^. compilerFunctionInfos)
 
-getFunctionPath :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Path
-getFunctionPath funId = do
-  finfo <- getFunctionInfo funId
-  minfo <- getModuleInfo (finfo ^. functionInfoModuleId)
-  return $ pathFromEnum ModulesLibrary ++ minfo ^. moduleInfoPath ++ finfo ^. functionInfoPath
-
-getFunctionName :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Text
-getFunctionName funId = (^. functionInfoName) <$> getFunctionInfo funId
+getFunctionInfoPath :: (Members '[Reader CompilerCtx] r) => FunctionInfo -> Sem r Path
+getFunctionInfoPath finfo = do
+  mid <- asks (^. compilerModuleId)
+  batch <- asks (^. compilerBatch)
+  if
+      | batch || mid == finfo ^. functionInfoModuleId ->
+          return (pathFromEnum ModulesLibrary ++ [L] ++ finfo ^. functionInfoPath)
+      | otherwise -> do
+          minfo <- getModuleInfo (finfo ^. functionInfoModuleId)
+          return (pathFromEnum ModulesLibrary ++ minfo ^. moduleInfoPath ++ [L] ++ finfo ^. functionInfoPath)
 
 builtinTagToTerm :: NockmaBuiltinTag -> Term Natural
 builtinTagToTerm = \case
