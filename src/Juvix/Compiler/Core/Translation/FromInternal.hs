@@ -249,6 +249,9 @@ goConstructor sym ctor = do
         Internal.BuiltinJsonNumber -> return (BuiltinTag TagJsonNumber)
         Internal.BuiltinJsonString -> return (BuiltinTag TagJsonString)
         Internal.BuiltinMaybeNothing -> freshTag
+        Internal.BuiltinMkTypeNockmaRep -> freshTag
+        Internal.BuiltinConstructorNockmaRepAtom -> freshTag
+        Internal.BuiltinConstructorNockmaRepCell -> freshTag
         Internal.BuiltinMaybeJust -> freshTag
         Internal.BuiltinPairConstr -> freshTag
         Internal.BuiltinMkPoseidonState -> freshTag
@@ -725,6 +728,7 @@ builtinInductive a =
         Internal.BuiltinByteArrayFromListByte -> Nothing
         Internal.BuiltinByteArrayLength -> Nothing
         Internal.BuiltinRangeCheck -> Nothing
+        Internal.BuiltinGetNockmaTypeRep -> Nothing
   where
     registerInductiveAxiom :: forall r. (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader InternalTyped.InfoTable, NameIdGen, Error BadScope] r) => Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
     registerInductiveAxiom ax ctrs = do
@@ -866,7 +870,11 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               mkSmallUniv
               (mkLambda' natType (mkBuiltinApp' OpAnomaDecode [mkVar' 0]))
           )
+      Internal.BuiltinGetNockmaTypeRep -> do
+        registerAxiomDef $
+          mkBuiltinExpanded' [mkSmallUniv] OpNockmaGetTypeRep
       Internal.BuiltinAnomaVerifyDetached -> do
+        -- TODO I think the type is wrong
         natType <- getNatType
         registerAxiomDef
           ( mkLambda'
@@ -1468,132 +1476,128 @@ goApplication ::
   Sem r Node
 goApplication a = do
   let (f, args) = second toList (Internal.unfoldApplication a)
-      exprArgs :: Sem r [Node]
-      exprArgs = mapM goExpression args
-
-      app :: Sem r Node
+  exprArgs :: [Node] <- mapM goExpression args
+  let app :: Sem r Node
       app = do
         fExpr <- goExpression f
-        mkApps' fExpr <$> exprArgs
+        return (mkApps' fExpr exprArgs)
+
+      builtinWithArity b ari
+        | length exprArgs == ari = return (mkBuiltinApp' b exprArgs)
+        | otherwise = app
+
+      builtin b = builtinWithArity b (builtinOpArgsNum b)
 
   case f of
     Internal.ExpressionIden (Internal.IdenAxiom n) -> do
       axiomInfoBuiltin <- Internal.getAxiomBuiltinInfo n
       case axiomInfoBuiltin of
-        Just Internal.BuiltinNatPrint -> app
-        Just Internal.BuiltinStringPrint -> app
-        Just Internal.BuiltinBoolPrint -> app
-        Just Internal.BuiltinString -> app
-        Just Internal.BuiltinIO -> app
-        Just Internal.BuiltinIOSequence -> do
-          ioSym <- getIOSymbol
-          as <- exprArgs
-          return $ case as of
-            (arg1 : arg2 : xs) ->
-              mkApps'
-                ( mkConstr'
-                    (BuiltinTag TagBind)
-                    [arg1, mkLambda' (mkTypeConstr (setInfoName Str.io mempty) ioSym []) (shift 1 arg2)]
-                )
-                xs
-            _ -> error "internal to core: >> must be called with 2 arguments"
-        Just Internal.BuiltinIOReadline -> app
-        Just Internal.BuiltinStringConcat -> app
-        Just Internal.BuiltinStringEq -> app
-        Just Internal.BuiltinStringToNat -> app
-        Just Internal.BuiltinNatToString -> app
-        Just Internal.BuiltinTrace -> app
-        Just Internal.BuiltinFail -> app
-        Just Internal.BuiltinIntToString -> app
-        Just Internal.BuiltinIntPrint -> app
-        Just Internal.BuiltinField -> app
-        Just Internal.BuiltinFieldEq -> app
-        Just Internal.BuiltinFieldAdd -> app
-        Just Internal.BuiltinFieldSub -> app
-        Just Internal.BuiltinFieldMul -> app
-        Just Internal.BuiltinFieldDiv -> app
-        Just Internal.BuiltinFieldFromInt -> do
-          as <- exprArgs
-          case as of
-            [x] -> return $ mkBuiltinApp' OpFieldFromInt [x]
-            _ -> app
-        Just Internal.BuiltinFieldToNat -> app
-        Just Internal.BuiltinAnomaGet -> app
-        Just Internal.BuiltinAnomaEncode -> app
-        Just Internal.BuiltinAnomaDecode -> app
-        Just Internal.BuiltinAnomaVerifyDetached -> app
-        Just Internal.BuiltinAnomaSign -> app
-        Just Internal.BuiltinAnomaSignDetached -> app
-        Just Internal.BuiltinAnomaVerifyWithMessage -> app
-        Just Internal.BuiltinAnomaByteArrayToAnomaContents -> app
-        Just Internal.BuiltinAnomaByteArrayFromAnomaContents -> app
-        Just Internal.BuiltinAnomaSha256 -> app
-        Just Internal.BuiltinAnomaDelta -> app
-        Just Internal.BuiltinAnomaKind -> app
-        Just Internal.BuiltinAnomaResourceCommitment -> app
-        Just Internal.BuiltinAnomaResourceNullifier -> app
-        Just Internal.BuiltinAnomaResourceDelta -> app
-        Just Internal.BuiltinAnomaResourceKind -> app
-        Just Internal.BuiltinAnomaActionDelta -> app
-        Just Internal.BuiltinAnomaActionsDelta -> app
-        Just Internal.BuiltinAnomaZeroDelta -> app
-        Just Internal.BuiltinAnomaAddDelta -> app
-        Just Internal.BuiltinAnomaSubDelta -> app
-        Just Internal.BuiltinAnomaRandomGenerator -> app
-        Just Internal.BuiltinAnomaRandomGeneratorInit -> app
-        Just Internal.BuiltinAnomaRandomNextBytes -> app
-        Just Internal.BuiltinAnomaRandomSplit -> app
-        Just Internal.BuiltinAnomaIsCommitment -> app
-        Just Internal.BuiltinAnomaIsNullifier -> app
-        Just Internal.BuiltinAnomaTransactionCompose -> app
-        Just Internal.BuiltinAnomaActionCreate -> app
-        Just Internal.BuiltinAnomaCreateFromComplianceInputs -> app
-        Just Internal.BuiltinAnomaSet -> app
-        Just Internal.BuiltinAnomaSetToList -> app
-        Just Internal.BuiltinAnomaSetFromList -> app
-        Just Internal.BuiltinPoseidon -> app
-        Just Internal.BuiltinEcOp -> app
-        Just Internal.BuiltinRandomEcPoint -> app
-        Just Internal.BuiltinRangeCheck -> app
-        Just Internal.BuiltinByte -> app
-        Just Internal.BuiltinByteEq -> app
-        Just Internal.BuiltinByteToNat -> app
-        Just Internal.BuiltinByteFromNat -> app
-        Just Internal.BuiltinByteArray -> app
-        Just Internal.BuiltinByteArrayFromListByte -> app
-        Just Internal.BuiltinByteArrayLength -> app
         Nothing -> app
+        Just b -> case b of
+          Internal.BuiltinNatPrint -> app
+          Internal.BuiltinStringPrint -> app
+          Internal.BuiltinBoolPrint -> app
+          Internal.BuiltinString -> app
+          Internal.BuiltinIO -> app
+          Internal.BuiltinIOSequence -> do
+            ioSym <- getIOSymbol
+            return $ case exprArgs of
+              (arg1 : arg2 : xs) ->
+                mkApps'
+                  ( mkConstr'
+                      (BuiltinTag TagBind)
+                      [arg1, mkLambda' (mkTypeConstr (setInfoName Str.io mempty) ioSym []) (shift 1 arg2)]
+                  )
+                  xs
+              _ -> error ("internal to core: " <> Str.ioSequence <> " must be called with 2 arguments")
+          Internal.BuiltinIOReadline -> app
+          Internal.BuiltinStringConcat -> app
+          Internal.BuiltinStringEq -> app
+          Internal.BuiltinStringToNat -> app
+          Internal.BuiltinNatToString -> app
+          Internal.BuiltinTrace -> app
+          Internal.BuiltinFail -> app
+          Internal.BuiltinIntToString -> app
+          Internal.BuiltinIntPrint -> app
+          Internal.BuiltinField -> app
+          Internal.BuiltinFieldEq -> app
+          Internal.BuiltinFieldAdd -> app
+          Internal.BuiltinFieldSub -> app
+          Internal.BuiltinFieldMul -> app
+          Internal.BuiltinFieldDiv -> app
+          Internal.BuiltinFieldFromInt -> builtin OpFieldFromInt
+          Internal.BuiltinGetNockmaTypeRep -> builtin OpNockmaGetTypeRep
+          Internal.BuiltinFieldToNat -> app
+          Internal.BuiltinAnomaGet -> app
+          Internal.BuiltinAnomaEncode -> app
+          Internal.BuiltinAnomaDecode -> app
+          Internal.BuiltinAnomaVerifyDetached -> app
+          Internal.BuiltinAnomaSign -> app
+          Internal.BuiltinAnomaSignDetached -> app
+          Internal.BuiltinAnomaVerifyWithMessage -> app
+          Internal.BuiltinAnomaByteArrayToAnomaContents -> app
+          Internal.BuiltinAnomaByteArrayFromAnomaContents -> app
+          Internal.BuiltinAnomaSha256 -> app
+          Internal.BuiltinAnomaDelta -> app
+          Internal.BuiltinAnomaKind -> app
+          Internal.BuiltinAnomaResourceCommitment -> app
+          Internal.BuiltinAnomaResourceNullifier -> app
+          Internal.BuiltinAnomaResourceDelta -> app
+          Internal.BuiltinAnomaResourceKind -> app
+          Internal.BuiltinAnomaActionDelta -> app
+          Internal.BuiltinAnomaActionsDelta -> app
+          Internal.BuiltinAnomaZeroDelta -> app
+          Internal.BuiltinAnomaAddDelta -> app
+          Internal.BuiltinAnomaSubDelta -> app
+          Internal.BuiltinAnomaRandomGenerator -> app
+          Internal.BuiltinAnomaRandomGeneratorInit -> app
+          Internal.BuiltinAnomaRandomNextBytes -> app
+          Internal.BuiltinAnomaRandomSplit -> app
+          Internal.BuiltinAnomaIsCommitment -> app
+          Internal.BuiltinAnomaIsNullifier -> app
+          Internal.BuiltinAnomaTransactionCompose -> app
+          Internal.BuiltinAnomaActionCreate -> app
+          Internal.BuiltinAnomaCreateFromComplianceInputs -> app
+          Internal.BuiltinAnomaSet -> app
+          Internal.BuiltinAnomaSetToList -> app
+          Internal.BuiltinAnomaSetFromList -> app
+          Internal.BuiltinPoseidon -> app
+          Internal.BuiltinEcOp -> app
+          Internal.BuiltinRandomEcPoint -> app
+          Internal.BuiltinRangeCheck -> app
+          Internal.BuiltinByte -> app
+          Internal.BuiltinByteEq -> app
+          Internal.BuiltinByteToNat -> app
+          Internal.BuiltinByteFromNat -> app
+          Internal.BuiltinByteArray -> app
+          Internal.BuiltinByteArrayFromListByte -> app
+          Internal.BuiltinByteArrayLength -> app
     Internal.ExpressionIden (Internal.IdenFunction n) -> do
       funInfoBuiltin <- Internal.getFunctionBuiltinInfo n
       case funInfoBuiltin of
         Just Internal.BuiltinBoolIf -> do
           sym <- getBoolSymbol
-          as <- exprArgs
-          case as of
-            (_ : v : b1 : b2 : xs) -> return (mkApps' (mkIf' sym v b1 b2) xs)
+          case exprArgs of
+            _ : v : b1 : b2 : xs -> return (mkApps' (mkIf' sym v b1 b2) xs)
             _ -> error "internal to core: if must be called with 3 arguments"
         Just Internal.BuiltinBoolOr -> do
           sym <- getBoolSymbol
-          as <- exprArgs
-          case as of
-            (x : y : xs) -> return (mkApps' (mkIf' sym x (mkConstr' (BuiltinTag TagTrue) []) y) xs)
+          case exprArgs of
+            x : y : xs -> return (mkApps' (mkIf' sym x (mkConstr' (BuiltinTag TagTrue) []) y) xs)
             _ -> error "internal to core: || must be called with 2 arguments"
         Just Internal.BuiltinBoolAnd -> do
           sym <- getBoolSymbol
-          as <- exprArgs
-          case as of
-            (x : y : xs) -> return (mkApps' (mkIf' sym x y (mkConstr' (BuiltinTag TagFalse) [])) xs)
+          case exprArgs of
+            x : y : xs -> return (mkApps' (mkIf' sym x y (mkConstr' (BuiltinTag TagFalse) [])) xs)
             _ -> error "internal to core: && must be called with 2 arguments"
         Just Internal.BuiltinSeq -> do
-          as <- exprArgs
-          case as of
-            (_ : _ : arg1 : arg2 : xs) ->
+          case exprArgs of
+            _ : _ : arg1 : arg2 : xs ->
               return (mkApps' (mkBuiltinApp' OpSeq [arg1, arg2]) xs)
             _ -> error "internal to core: seq must be called with 2 arguments"
         Just Internal.BuiltinAssert -> do
-          as <- exprArgs
-          case as of
-            (x : xs) -> return (mkApps' (mkBuiltinApp' OpAssert [x]) xs)
+          case exprArgs of
+            x : xs -> return (mkApps' (mkBuiltinApp' OpAssert [x]) xs)
             _ -> error "internal to core: assert must be called with 1 argument"
         _ -> app
     _ -> app

@@ -239,6 +239,7 @@ isDebugOp = \case
       OpAnomaActionCreate -> False
       OpAnomaSetToList -> False
       OpAnomaSetFromList -> False
+      OpNockmaGetTypeRep -> False
       OpEc -> False
       OpFieldAdd -> False
       OpFieldDiv -> False
@@ -546,6 +547,7 @@ builtinOpArgTypes = \case
   OpAnomaCreateFromComplianceInputs -> [mkDynamic', mkDynamic', mkDynamic', mkDynamic', mkDynamic']
   OpAnomaSetToList -> [mkDynamic']
   OpAnomaSetFromList -> [mkDynamic']
+  OpNockmaGetTypeRep -> [mkSmallUniv]
   OpPoseidonHash -> [mkDynamic']
   OpEc -> [mkDynamic', mkTypeField', mkDynamic']
   OpRandomEcPoint -> []
