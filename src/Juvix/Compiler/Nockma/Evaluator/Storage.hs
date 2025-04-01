@@ -1,5 +1,6 @@
 module Juvix.Compiler.Nockma.Evaluator.Storage where
 
+import Crypto.Hash.SHA256 qualified as SHA256
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Nockma.Data.Module
 import Juvix.Compiler.Nockma.Encoding
@@ -89,3 +90,23 @@ mkModuleStorage mtab = do
             },
           jammedCode
         )
+
+insertJammedStorage :: Term Natural -> Storage Natural -> Storage Natural
+insertJammedStorage term storage = do
+  Storage
+    { _storageKeyValueData =
+        HashMap.insert (StorageKey sha256) jterm (storage ^. storageKeyValueData)
+    }
+  where
+    jammedCode = jamToByteString term
+    jterm =
+      TermAtom
+        . mkEmptyAtom
+        . byteStringToNatural
+        $ jammedCode
+    sha256 =
+      TermAtom
+        . mkEmptyAtom
+        . byteStringToNatural
+        . SHA256.hash
+        $ jammedCode
