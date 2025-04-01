@@ -10,12 +10,12 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Info.PragmaInfo
+import Juvix.Compiler.Core.Pretty (ppTrace)
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Int
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat
 import Juvix.Compiler.Core.Translation.FromInternal.Data
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Internal.Extra qualified as Internal
-import Juvix.Compiler.Internal.Pretty (ppPrint)
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
@@ -432,7 +432,7 @@ mkFunBody ::
   Sem r Node
 mkFunBody ty f =
   mkBody
-    (WithLoc (getLoc f) (ppPrint f))
+    (WithLoc (getLoc f) (Internal.ppPrint f))
     ty
     (f ^. Internal.funDefName . nameLoc)
     (pure (Internal.unfoldLambda (f ^. Internal.funDefBody)))
@@ -520,7 +520,7 @@ mkBody ppLam ty loc clauses
       _ ->
         error $
           "internal-to-core: all clauses must have the same number of patterns. Offending lambda at"
-            <> ppPrint (getLoc ppLam)
+            <> Internal.ppPrint (getLoc ppLam)
             <> "\n"
             <> (ppLam ^. withLocParam)
 
@@ -611,7 +611,7 @@ goLambda ::
   Sem r Node
 goLambda l = do
   ty <- goType (fromJust (l ^. Internal.lambdaType))
-  mkBody (WithLoc (getLoc l) (ppPrint l)) ty (getLoc l) (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
+  mkBody (WithLoc (getLoc l) (Internal.ppPrint l)) ty (getLoc l) (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
 
 goLet ::
   forall r.
@@ -1526,7 +1526,10 @@ goApplication a = do
           Internal.BuiltinFieldMul -> app
           Internal.BuiltinFieldDiv -> app
           Internal.BuiltinFieldFromInt -> builtin OpFieldFromInt
-          Internal.BuiltinGetNockmaTypeRep -> builtin OpNockmaGetTypeRep
+          Internal.BuiltinGetNockmaTypeRep -> do
+            x <- builtin OpNockmaGetTypeRep
+            traceM ("Core OpNockmaGetTypeRep: " <> ppTrace x)
+            pure x
           Internal.BuiltinFieldToNat -> app
           Internal.BuiltinAnomaGet -> app
           Internal.BuiltinAnomaEncode -> app
