@@ -37,6 +37,7 @@ eval md = runReader emptyEvalCtx . eval'
       ByteArray x -> goByteArrayOp x
       Anoma {} -> evalError "unsupported: Anoma builtins"
       Cairo {} -> evalError "unsupported: Cairo builtins"
+      Nockma {} -> evalError "unsupported: Nockma builtins"
       Constant c -> return (goConstant c)
       MemRef x -> goMemRef x
       AllocConstr x -> goAllocConstr x

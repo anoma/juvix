@@ -42,6 +42,7 @@ import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
 import Juvix.Compiler.Tree.Extra.Type qualified as Tree
 import Juvix.Compiler.Tree.Language qualified as Tree
 import Juvix.Compiler.Tree.Language.Rep
+import Juvix.Compiler.Tree.Pretty qualified as Tree
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding (Atom, Path)
 
@@ -487,6 +488,7 @@ compile = \case
   Tree.Unop b -> goUnop b
   Tree.ByteArray b -> goByteArrayOp b
   Tree.Cairo {} -> cairoErr
+  Tree.Nockma b -> goNockma b
   Tree.Anoma b -> goAnomaOp b
   Tree.Constant c -> return (goConstant (c ^. Tree.nodeConstant))
   Tree.MemRef c -> goMemRef (c ^. Tree.nodeMemRef)
@@ -602,6 +604,11 @@ compile = \case
       iftrue <- compile _nodeBranchTrue
       iffalse <- compile _nodeBranchFalse
       return (branch arg iftrue iffalse)
+
+    goNockma :: Tree.NodeNockma -> Sem r (Term Natural)
+    goNockma t = do
+      traceM (Tree.ppTrace' Tree.emptyOptions t)
+      error "goNockma"
 
     goAnomaOp :: Tree.NodeAnoma -> Sem r (Term Natural)
     goAnomaOp Tree.NodeAnoma {..} = do
@@ -1076,7 +1083,12 @@ remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged "remakeList"))
 
 -- | The result is unquoted.
-runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> AnomaResult
+runCompilerWith ::
+  CompilerOptions ->
+  ConstructorInfos ->
+  [CompilerFunction] ->
+  CompilerFunction ->
+  AnomaResult
 runCompilerWith _opts constrs moduleFuns mainFun =
   AnomaResult
     { _anomaClosure = mainClosure

@@ -77,11 +77,11 @@ data CairoOp
 instance Serialize CairoOp
 
 -- | Builtin TypeRep operations
-data NockmaTypeRepOp
-  = NockmaTypeRepOp
+data NockmaOp
+  = NockmaOpGetTypeRep
   deriving stock (Eq, Generic)
 
-instance Serialize NockmaTypeRepOp
+instance Serialize NockmaOp
 
 -- | Builtin ByteArray operations
 data ByteArrayOp
