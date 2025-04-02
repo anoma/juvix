@@ -8,7 +8,6 @@ import Juvix.Compiler.Nockma.Data.Module
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
-import Juvix.Compiler.Nockma.Translation.FromTree
 import Juvix.Prelude qualified as Prelude
 import Nockma.Eval.Positive (Check, Test (..), eqNock, eqTraces)
 import Nockma.Eval.Positive qualified as NockmaEval
@@ -59,8 +58,8 @@ fromAnomaTest a@AnomaTest {..} =
             | otherwise = baseTestname <> " non-debug"
           tIO :: IO Test = do
             (mid, mtab) <- withRootCopy (compileAnomaModular enableDebug _anomaRelRoot _anomaMainFile)
-            ms <- runM . runSimpleErrorIO $ mkModuleStorage mtab
-            let md = lookupModuleTable mtab mid
+            let ms = mkModuleStorage mtab
+                md = lookupModuleTable mtab mid
                 _testProgramFormula = anomaCall (map (opQuote "Quote arg") _anomaArgs)
                 _testProgramSubject = getModuleCode md
                 _testEvalOptions = defaultEvalOptions
