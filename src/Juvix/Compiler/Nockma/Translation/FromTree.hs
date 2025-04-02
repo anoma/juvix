@@ -427,13 +427,12 @@ fromTreeModule fetchModule importsTab md = do
       . map (\m -> (m ^. moduleId, fromJust (m ^. moduleInfoTable . infoSHA256)))
       <$> mapM fetchModule importedModuleIds
   let moduleCode = compileToSubject compilerCtx importsSHA256 importedModuleIds userFuns (md ^. Tree.moduleInfoTable . Tree.infoMainFunction)
-      jammedCode = jamToByteString moduleCode
       tab =
         InfoTable
           { _infoFunctions = userFunInfos,
             _infoImports = HashSet.fromList importedModuleIds,
             _infoCode = Just moduleCode,
-            _infoSHA256 = Just (SHA256.hash jammedCode)
+            _infoSHA256 = Just (SHA256.hash (jamToByteString moduleCode))
           }
   return
     Module

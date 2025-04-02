@@ -96,9 +96,13 @@ data Cell a = Cell'
     _cellRight :: Term a,
     _cellInfo :: CellInfo a
   }
-  deriving stock (Show, Eq, Lift, Generic)
+  deriving stock (Show, Lift, Generic)
 
-instance (Hashable a) => Hashable (Cell a)
+instance (Eq a) => Eq (Cell a) where
+  Cell' l r _ == Cell' l' r' _ = l == l' && r == r'
+
+instance (Hashable a) => Hashable (Cell a) where
+  hashWithSalt salt (Cell' l r _) = hashWithSalt salt (l, r)
 
 instance (NFData a) => NFData (Cell a)
 
@@ -121,9 +125,13 @@ data Atom a = Atom
   { _atom :: a,
     _atomInfo :: AtomInfo
   }
-  deriving stock (Show, Eq, Lift, Generic)
+  deriving stock (Show, Lift, Generic)
 
-instance (Hashable a) => Hashable (Atom a)
+instance (Eq a) => Eq (Atom a) where
+  Atom a _ == Atom b _ = a == b
+
+instance (Hashable a) => Hashable (Atom a) where
+  hashWithSalt salt (Atom a _) = hashWithSalt salt a
 
 instance (NFData a) => NFData (Atom a)
 

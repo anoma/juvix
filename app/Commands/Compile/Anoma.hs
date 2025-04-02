@@ -5,7 +5,7 @@ import Commands.Compile.Anoma.Options
 import Commands.Extra.NewCompile
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Nockma.Data.Module qualified as Nockma
-import Juvix.Compiler.Nockma.Encoding.Jam qualified as Encoding
+import Juvix.Compiler.Nockma.Encoding qualified as Encoding
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Compiler.Pipeline.Modular
 
@@ -39,10 +39,9 @@ outputAnomaModuleTable debugOutput nockmaFile mid mtab = do
   let md = Nockma.lookupModuleTable mtab mid
   outputAnomaModule debugOutput nockmaFile md
   let storageNockmaFile = replaceExtensions' nockmaStorageFileExts nockmaFile
-      modules =
-        Encoding.jamToByteString
-          . Nockma.makeList
-          . map Nockma.getModuleCode
+      moduleTerms =
+        map Nockma.getModuleCode
           . HashMap.elems
           $ mtab ^. Nockma.moduleTable
-  writeFileBS storageNockmaFile modules
+      modules = Nockma.makeList moduleTerms
+  writeFileBS storageNockmaFile (Encoding.jamToByteString modules)
