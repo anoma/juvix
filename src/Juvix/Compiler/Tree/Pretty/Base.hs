@@ -271,9 +271,14 @@ instance PrettyCode ByteArrayOp where
       OpByteArrayFromListUInt8 -> Str.instrByteArrayFromListUInt8
       OpByteArrayLength -> Str.instrByteArrayLength
 
+instance PrettyCode Symbol where
+  ppCode sym = return (pretty sym)
+
 instance PrettyCode NockmaOp where
-  ppCode op = return . primitive $ case op of
-    NockmaOpGetTypeRep -> Str.getNockmaTypeRep
+  ppCode op = case op of
+    NockmaOpGetTypeRep ind -> do
+      ty <- parens <$> ppCode ind
+      return (primitive Str.getNockmaTypeRep <> ty)
 
 instance PrettyCode CairoOp where
   ppCode op = return . primitive $ case op of

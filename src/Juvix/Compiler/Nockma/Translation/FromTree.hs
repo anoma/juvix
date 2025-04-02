@@ -5,6 +5,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     anomaClosure,
     compilerFunctionId,
     compilerFunctionName,
+    compilerInductiveInfos, -- TODO remove
     AnomaCallablePathId (..),
     CompilerOptions (..),
     CompilerFunction (..),
@@ -135,6 +136,7 @@ newtype TempRef = TempRef
 data CompilerCtx = CompilerCtx
   { _compilerFunctionInfos :: HashMap FunctionId FunctionInfo,
     _compilerConstructorInfos :: ConstructorInfos,
+    _compilerInductiveInfos :: InductiveInfos,
     -- | Maps temporary variables to their stack indices.
     _compilerTempVarMap :: HashMap Int TempRef,
     _compilerTempVarsNum :: Int,
@@ -146,6 +148,7 @@ emptyCompilerCtx =
   CompilerCtx
     { _compilerFunctionInfos = mempty,
       _compilerConstructorInfos = mempty,
+      _compilerInductiveInfos = mempty,
       _compilerTempVarMap = mempty,
       _compilerTempVarsNum = 0,
       _compilerStackHeight = 0
@@ -153,10 +156,17 @@ emptyCompilerCtx =
 
 data ConstructorInfo = ConstructorInfo
   { _constructorInfoArity :: Natural,
+    _constructorTag :: Tree.Tag,
     _constructorInfoMemRep :: NockmaMemRep
   }
 
+newtype InductiveInfo = InductiveInfo
+  { _inductiveConstructors :: [ConstructorInfo]
+  }
+
 type ConstructorInfos = HashMap Tree.Tag ConstructorInfo
+
+type InductiveInfos = HashMap Symbol InductiveInfo
 
 data CompilerFunction = CompilerFunction
   { _compilerFunctionId :: FunctionId,
@@ -218,6 +228,7 @@ makeLenses ''CompilerFunction
 makeLenses ''CompilerCtx
 makeLenses ''FunctionCtx
 makeLenses ''ConstructorInfo
+makeLenses ''InductiveInfo
 makeLenses ''FunctionInfo
 
 stackPath :: (Member (Reader CompilerCtx) r, Enum field) => field -> Sem r Path
@@ -418,30 +429,34 @@ fromTreeTable t = case t ^. Tree.infoMainFunction of
     fromTree opts mainSym tab@Tree.InfoTable {..} =
       let funs = map compileFunction allFunctions
 
-          mkConstructorInfo :: Tree.ConstructorInfo -> ConstructorInfo
-          mkConstructorInfo ci@Tree.ConstructorInfo {..} =
-            ConstructorInfo
-              { _constructorInfoArity = fromIntegral _constructorArgsNum,
-                _constructorInfoMemRep = rep
-              }
+          mkInductiveInfo :: Tree.InductiveInfo -> InductiveInfo
+          mkInductiveInfo ind =
+            let ctags :: [Tree.Tag] = ind ^. Tree.inductiveConstructors
+                getConstr ctag = mkConstructorInfo (fromJust (_infoConstrs ^. at ctag))
+             in InductiveInfo
+                  { _inductiveConstructors = map getConstr ctags
+                  }
             where
-              rep :: NockmaMemRep
-              rep =
-                fromMaybe
-                  r
-                  ( supportsListNockmaRep tab ci
-                      <|> supportsMaybeNockmaRep tab ci
-                      <|> supportsNounNockmaRep tab ci
-                  )
+              mkConstructorInfo :: Tree.ConstructorInfo -> ConstructorInfo
+              mkConstructorInfo ci@Tree.ConstructorInfo {..} =
+                ConstructorInfo
+                  { _constructorInfoArity = fromIntegral _constructorArgsNum,
+                    _constructorInfoMemRep = rep,
+                    _constructorTag
+                  }
                 where
-                  r = nockmaMemRep (memRep ci (getInductiveInfo (ci ^. Tree.constructorInductive)))
-
-          constrs :: ConstructorInfos
-          constrs = mkConstructorInfo <$> _infoConstrs
-
-          getInductiveInfo :: Symbol -> Tree.InductiveInfo
-          getInductiveInfo s = _infoInductives ^?! at s . _Just
-       in runCompilerWith opts constrs funs mainFun
+                  rep :: NockmaMemRep
+                  rep =
+                    fromMaybe
+                      r
+                      ( supportsListNockmaRep tab ci
+                          <|> supportsMaybeNockmaRep tab ci
+                          <|> supportsNounNockmaRep tab ci
+                      )
+                    where
+                      r = nockmaMemRep (memRep ci ind)
+          allInds :: HashMap Symbol InductiveInfo = mkInductiveInfo <$> _infoInductives
+       in runCompilerWith opts allInds funs mainFun
       where
         mainFun :: CompilerFunction
         mainFun = compileFunction (_infoFunctions ^?! at mainSym . _Just)
@@ -607,7 +622,7 @@ compile = \case
 
     goNockma :: Tree.NodeNockma -> Sem r (Term Natural)
     goNockma t = do
-      traceM (Tree.ppTrace' Tree.emptyOptions t)
+      traceM ("goNockma: " <> Tree.ppTrace' Tree.emptyOptions t)
       error "goNockma"
 
     goAnomaOp :: Tree.NodeAnoma -> Sem r (Term Natural)
@@ -1085,11 +1100,11 @@ remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged
 -- | The result is unquoted.
 runCompilerWith ::
   CompilerOptions ->
-  ConstructorInfos ->
+  InductiveInfos ->
   [CompilerFunction] ->
   CompilerFunction ->
   AnomaResult
-runCompilerWith _opts constrs moduleFuns mainFun =
+runCompilerWith _opts inductives moduleFuns mainFun =
   AnomaResult
     { _anomaClosure = mainClosure
     }
@@ -1104,7 +1119,8 @@ runCompilerWith _opts constrs moduleFuns mainFun =
     compilerCtx =
       emptyCompilerCtx
         { _compilerFunctionInfos = functionInfos,
-          _compilerConstructorInfos = constrs
+          _compilerInductiveInfos = inductives,
+          _compilerConstructorInfos = indexedByHash (^. constructorTag) (concatMap (^. inductiveConstructors) inductives)
         }
 
     mainClosure :: Term Natural

@@ -10,7 +10,6 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Info.PragmaInfo
-import Juvix.Compiler.Core.Pretty (ppTrace)
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Int
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat
 import Juvix.Compiler.Core.Translation.FromInternal.Data
@@ -1526,10 +1525,7 @@ goApplication a = do
           Internal.BuiltinFieldMul -> app
           Internal.BuiltinFieldDiv -> app
           Internal.BuiltinFieldFromInt -> builtin OpFieldFromInt
-          Internal.BuiltinGetNockmaTypeRep -> do
-            x <- builtin OpNockmaGetTypeRep
-            traceM ("Core OpNockmaGetTypeRep: " <> ppTrace x)
-            pure x
+          Internal.BuiltinGetNockmaTypeRep -> builtin OpNockmaGetTypeRep
           Internal.BuiltinFieldToNat -> app
           Internal.BuiltinAnomaGet -> app
           Internal.BuiltinAnomaEncode -> app
