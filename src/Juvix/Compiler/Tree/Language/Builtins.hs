@@ -1,6 +1,6 @@
 module Juvix.Compiler.Tree.Language.Builtins where
 
-import Juvix.Prelude
+import Juvix.Compiler.Core.Language.Base
 
 data BoolOp
   = OpIntLt
@@ -77,8 +77,7 @@ data CairoOp
 instance Serialize CairoOp
 
 -- | Builtin TypeRep operations
-data NockmaOp
-  = NockmaOpGetTypeRep
+newtype NockmaOp = NockmaOpGetTypeRep {_typeRepInductiveName :: Symbol}
   deriving stock (Eq, Generic)
 
 instance Serialize NockmaOp
