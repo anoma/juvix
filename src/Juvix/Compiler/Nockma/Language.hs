@@ -94,15 +94,17 @@ instance (Serialize a) => Serialize (CellInfo a)
 data Cell a = Cell'
   { _cellLeft :: Term a,
     _cellRight :: Term a,
-    _cellInfo :: CellInfo a
+    _cellInfo :: CellInfo a,
+    _cellHash :: Int
   }
   deriving stock (Show, Lift, Generic)
 
 instance (Eq a) => Eq (Cell a) where
-  Cell' l r _ == Cell' l' r' _ = l == l' && r == r'
+  Cell' l r _ _ == Cell' l' r' _ _ = l == l' && r == r'
 
 instance (Hashable a) => Hashable (Cell a) where
-  hashWithSalt salt (Cell' l r _) = hashWithSalt salt (l, r)
+  hashWithSalt salt (Cell' _ _ _ h) = hashWithSalt salt h
+  hash (Cell' _ _ _ h) = h
 
 instance (NFData a) => NFData (Cell a)
 
@@ -280,8 +282,14 @@ makeLenses ''WithStack
 makeLenses ''AtomInfo
 makeLenses ''CellInfo
 
-singletonProgram :: Term a -> Program a
-singletonProgram t = Program [StatementStandalone t]
+mkCell :: (Hashable a) => Term a -> Term a -> Cell a
+mkCell l r =
+  Cell'
+    { _cellLeft = l,
+      _cellRight = r,
+      _cellInfo = emptyCellInfo,
+      _cellHash = hash (l, r)
+    }
 
 isCell :: Term a -> Bool
 isCell = \case
@@ -294,8 +302,11 @@ isAtom = not . isCell
 atomHint :: Lens' (Atom a) (Maybe AtomHint)
 atomHint = atomInfo . atomInfoHint
 
+singletonProgram :: Term a -> Program a
+singletonProgram t = Program [StatementStandalone t]
+
 -- | Removes all extra information recursively
-removeInfoRec :: Term a -> Term a
+removeInfoRec :: forall a. (Hashable a) => Term a -> Term a
 removeInfoRec = go
   where
     go :: Term a -> Term a
@@ -557,17 +568,17 @@ opTrace' msg val = OpHint # (nockNilTagged "opTrace'" # msg) # val
 
 {-# COMPLETE Cell #-}
 
-pattern Cell :: Term a -> Term a -> Cell a
-pattern Cell {_cellLeft', _cellRight'} <- Cell' _cellLeft' _cellRight' _
+pattern Cell :: (Hashable a) => Term a -> Term a -> Cell a
+pattern Cell {_cellLeft', _cellRight'} <- Cell' _cellLeft' _cellRight' _ _cellHash'
   where
-    Cell a b = Cell' a b emptyCellInfo
+    Cell a b = mkCell a b
 
 {-# COMPLETE TCell, TAtom #-}
 
-pattern TCell :: Term a -> Term a -> Term a
-pattern TCell l r <- TermCell (Cell' l r _)
+pattern TCell :: (Hashable a) => Term a -> Term a -> Term a
+pattern TCell l r <- TermCell (Cell' l r _ _)
   where
-    TCell a b = TermCell (Cell a b)
+    TCell a b = TermCell (mkCell a b)
 
 pattern TAtom :: a -> Term a
 pattern TAtom a <- TermAtom (Atom a _)
@@ -605,14 +616,14 @@ instance (NockmaEq a) => NockmaEq [a] where
 instance (NockmaEq a) => NockmaEq (Atom a) where
   nockmaEq = nockmaEq `on` (^. atom)
 
-instance (NockmaEq a) => NockmaEq (Term a) where
+instance (Hashable a, NockmaEq a) => NockmaEq (Term a) where
   nockmaEq = \cases
     (TermAtom a) (TermAtom b) -> nockmaEq a b
     (TermCell a) (TermCell b) -> nockmaEq a b
     TermCell {} TermAtom {} -> False
     TermAtom {} TermCell {} -> False
 
-instance (NockmaEq a) => NockmaEq (Cell a) where
+instance (Hashable a, NockmaEq a) => NockmaEq (Cell a) where
   nockmaEq (Cell l r) (Cell l' r') = nockmaEq l l' && nockmaEq r r'
 
 crash :: Term Natural

@@ -302,7 +302,7 @@ evalProfile inistack initerm =
             goAnomaSetFromList :: Term a -> Term a
             goAnomaSetFromList arg =
               foldr
-                (\t acc -> TermCell (Cell' t acc emptyCellInfo))
+                (\t acc -> TermCell (mkCell t acc))
                 (TermAtom nockNil)
                 (nubHashable (checkTermToList arg))
 
@@ -480,7 +480,7 @@ evalProfile inistack initerm =
 
             goOpHint :: Sem r (Term a)
             goOpHint = do
-              Cell' l r _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
+              Cell' l r _ _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
               case l of
                 TAtom {} -> evalArg crumbEvalFirst stack r
                 TCell t1 t2 -> do
@@ -502,8 +502,8 @@ evalProfile inistack initerm =
 
             goOpReplace :: Sem r (Term a)
             goOpReplace = do
-              Cell' rot1 t2 _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
-              Cell' ro t1 _ <- withCrumb (crumb crumbDecodeSecond) (asCell rot1)
+              Cell' rot1 t2 _ _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
+              Cell' ro t1 _ _ <- withCrumb (crumb crumbDecodeSecond) (asCell rot1)
               r <- withCrumb (crumb crumbDecodeThird) (asPath ro)
               t1' <- evalArg crumbEvalFirst stack t1
               t2' <- evalArg crumbEvalSecond stack t2
@@ -520,7 +520,7 @@ evalProfile inistack initerm =
             goOpIf = do
               cellTerm <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
               let t0 = cellTerm ^. cellLeft
-              Cell' t1 t2 _ <- withCrumb (crumb crumbDecodeSecond) (asCell (cellTerm ^. cellRight))
+              Cell' t1 t2 _ _ <- withCrumb (crumb crumbDecodeSecond) (asCell (cellTerm ^. cellRight))
               cond <- evalArg crumbEvalFirst stack t0 >>= asBool
               if
                   | cond -> evalArg crumbTrueBranch stack t1
@@ -558,7 +558,7 @@ evalProfile inistack initerm =
 
             goOpScry :: Sem r (Term a)
             goOpScry = do
-              Cell' typeFormula subFormula _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
+              Cell' typeFormula subFormula _ _ <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
               void (evalArg crumbEvalFirst stack typeFormula)
               key <- evalArg crumbEvalSecond stack subFormula
               fromMaybeM (throwKeyNotInStorage key) (HashMap.lookup (StorageKey key) <$> asks (^. storageKeyValueData))
