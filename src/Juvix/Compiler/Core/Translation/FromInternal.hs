@@ -260,6 +260,8 @@ goConstructor sym ctor = do
         Internal.BuiltinOrderingLT -> freshTag
         Internal.BuiltinOrderingGT -> freshTag
         Internal.BuiltinOrderingEQ -> freshTag
+        Internal.BuiltinNockmaAtom -> freshTag
+        Internal.BuiltinNockmaCell -> freshTag
 
     ctorType :: Sem r Type
     ctorType =

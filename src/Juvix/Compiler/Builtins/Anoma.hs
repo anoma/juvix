@@ -4,6 +4,7 @@ import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 
 checkAnomaGet :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkAnomaGet f = do
@@ -125,6 +126,14 @@ checkResource d = do
   unless (isSmallUniverse' (d ^. inductiveType)) (err "AnomaResource should be in the small universe")
   unless (length (d ^. inductiveConstructors) == 1) (err "AnomaResource should have exactly one constructor")
 
+checkNockmaNoun :: (Members '[Error ScoperError] r) => InductiveDef -> Sem r ()
+checkNockmaNoun d = do
+  let err = builtinsErrorText (getLoc d)
+      nounStr :: Text = prettyText BuiltinNockmaNoun
+  unless (null (d ^. inductiveParameters)) (err (nounStr <> " should have no type parameters"))
+  unless (isSmallUniverse' (d ^. inductiveType)) (err (nounStr <> " should be in the small universe"))
+  unless (length (d ^. inductiveConstructors) == 2) (err (nounStr <> " should have exactly two constructors"))
+
 checkAction :: (Members '[Error ScoperError] r) => InductiveDef -> Sem r ()
 checkAction d = do
   let err = builtinsErrorText (getLoc d)
@@ -232,16 +241,16 @@ checkAnomaRandomGeneratorInit f = do
   unless (f ^. axiomType === (nat_ --> gen)) $
     builtinsErrorText l "initRandomGenerator must be of type Nat -> AnomaRandomGenerator"
 
-checkNockmaReify :: (Members '[Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkNockmaReify :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkNockmaReify f = do
   let ftype = f ^. axiomType
       u = ExpressionUniverse smallUniverseNoLoc
       l = getLoc f
   reifyTy <- freshVar l "reifyT"
-  retTy <- freshVar l "retType"
-  let freeVars = hashSet [reifyTy, retTy]
-  unless ((ftype ==% (u <>--> reifyTy --> retTy)) freeVars) $
-    builtinsErrorText (getLoc f) "anomaEncode must be of type {A : Type} -> A -> _"
+  noun <- getBuiltinNameScoper l BuiltinNockmaNoun
+  let freeVars = hashSet [reifyTy]
+  unless ((ftype ==% (u <>--> reifyTy --> noun)) freeVars) $
+    builtinsErrorText (getLoc f) (prettyText BuiltinNockmaReify <> " must be of type {A : Type} -> A -> " <> (prettyText BuiltinNockmaNoun))
 
 checkAnomaRandomNextBytes :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaRandomNextBytes f = do

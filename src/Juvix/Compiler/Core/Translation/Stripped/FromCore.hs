@@ -92,6 +92,8 @@ fromCore' tab =
       BuiltinMkAnomaAction -> True
       BuiltinMkAnomaComplianceInputs -> True
       BuiltinMkAnomaShieldedTransaction -> True
+      BuiltinNockmaAtom -> True
+      BuiltinNockmaCell -> True
       --
       BuiltinNatZero -> False
       BuiltinNatSuc -> False
@@ -189,6 +191,7 @@ fromCore' tab =
         BuiltinAnomaAction -> True
         BuiltinAnomaComplianceInputs -> True
         BuiltinAnomaShieldedTransaction -> True
+        BuiltinNockmaNoun -> True
 
 translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
 translateFunctionInfo tab IdentifierInfo {..} =
