@@ -236,6 +236,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   85 -> ClassWorking
   86 -> ClassExpectedFail
   87 -> ClassWorking
+  88 -> ClassWorking
   _ -> error "non-exhaustive test classification"
 
 allTests :: TestTree
@@ -1055,5 +1056,13 @@ allTests =
               $(mkRelDir ".")
               $(mkRelFile "test087.juvix")
               [testList]
-              $ checkTracesAndOutput [expectedOutput]
+              $ checkTracesAndOutput [expectedOutput],
+        mkAnomaTest
+          88
+          AnomaTestModeFull
+          "Noun type representation"
+          $(mkRelDir ".")
+          $(mkRelFile "test088.juvix")
+          []
+          $ checkTracesAndOutput [[nock| [30 40 80] |], [nock| 80 |], [nock| [0 0] |]]
       ]
