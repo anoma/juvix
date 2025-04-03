@@ -67,7 +67,7 @@ builtinCategory = \case
   OpAnomaActionCreate -> BuiltinCategoryAnoma
   OpAnomaSetToList -> BuiltinCategoryAnoma
   OpAnomaSetFromList -> BuiltinCategoryAnoma
-  OpNockmaGetTypeRep -> BuiltinCategoryAnoma
+  OpNockmaReify -> BuiltinCategoryAnoma
   OpPoseidonHash -> BuiltinCategoryCairo
   OpEc -> BuiltinCategoryCairo
   OpRandomEcPoint -> BuiltinCategoryCairo
@@ -131,7 +131,7 @@ data BuiltinOp
   | OpAnomaActionCreate
   | OpAnomaSetToList
   | OpAnomaSetFromList
-  | OpNockmaGetTypeRep
+  | OpNockmaReify
   | OpPoseidonHash
   | OpEc
   | OpRandomEcPoint
@@ -243,7 +243,7 @@ builtinOpArgsNum = \case
   OpUInt8FromInt -> 1
   OpByteArrayFromListByte -> 1
   OpByteArrayLength -> 1
-  OpNockmaGetTypeRep -> 1
+  OpNockmaReify -> 1
 
 builtinConstrArgsNum :: BuiltinDataTag -> Int
 builtinConstrArgsNum = \case
@@ -312,7 +312,7 @@ builtinIsFoldable = \case
   OpAnomaActionCreate -> False
   OpAnomaSetToList -> False
   OpAnomaSetFromList -> False
-  OpNockmaGetTypeRep -> False
+  OpNockmaReify -> False
   OpPoseidonHash -> False
   OpEc -> False
   OpRandomEcPoint -> False

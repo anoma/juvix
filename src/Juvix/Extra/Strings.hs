@@ -380,8 +380,8 @@ anomaVerifyDetached = "anoma-verify-detached"
 anomaSign :: (IsString s) => s
 anomaSign = "anoma-sign"
 
-getNockmaTypeRep :: (IsString s) => s
-getNockmaTypeRep = "get-nockma-type-rep"
+nockmaReify :: (IsString s) => s
+nockmaReify = "nockma-reify"
 
 builtinMonadBind :: (IsString s) => s
 builtinMonadBind = "monad-bind"

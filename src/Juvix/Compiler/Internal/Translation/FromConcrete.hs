@@ -1102,7 +1102,7 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinByteArrayFromListByte -> checkByteArrayFromListByte d
   BuiltinByteArrayLength -> checkByteArrayLength d
   BuiltinRangeCheck -> checkRangeCheck d
-  BuiltinGetNockmaTypeRep -> checkGetNockmaTypeRep d
+  BuiltinNockmaReify -> checkNockmaReify d
 
 goInductive ::
   ( Members

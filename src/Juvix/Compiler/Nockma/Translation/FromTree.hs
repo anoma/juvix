@@ -43,7 +43,6 @@ import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
 import Juvix.Compiler.Tree.Extra.Type qualified as Tree
 import Juvix.Compiler.Tree.Language qualified as Tree
 import Juvix.Compiler.Tree.Language.Rep
-import Juvix.Compiler.Tree.Pretty qualified as Tree
 import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding (Atom, Path)
 
@@ -621,9 +620,11 @@ compile = \case
       return (branch arg iftrue iffalse)
 
     goNockma :: Tree.NodeNockma -> Sem r (Term Natural)
-    goNockma t = do
-      traceM ("goNockma: " <> Tree.ppTrace' Tree.emptyOptions t)
-      error "goNockma"
+    goNockma Tree.NodeNockma {..} = do
+      case _nodeNockmaOpcode of
+        Tree.NockmaOpReify -> case _nodeNockmaArgs of
+          [arg] -> compile arg
+          _ -> impossible
 
     goAnomaOp :: Tree.NodeAnoma -> Sem r (Term Natural)
     goAnomaOp Tree.NodeAnoma {..} = do

@@ -58,6 +58,7 @@ mkLambda i bi b = NLam (Lambda i bi b)
 
 -- | If b is a builtin with arguments ty1 ty2
 -- it returns: `\lambda (x1 : ty1) (x2 : ty2) := b x1 x2`
+-- FIXME this
 mkBuiltinExpanded' :: [Type] -> BuiltinOp -> Node
 mkBuiltinExpanded' argTys b =
   let numArgs = length argTys

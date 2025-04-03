@@ -84,7 +84,7 @@ instance PrettyCode BuiltinOp where
     OpAnomaTransactionCompose -> return primTransactionCompose
     OpAnomaSetToList -> return primAnomaSetToList
     OpAnomaSetFromList -> return primAnomaSetFromList
-    OpNockmaGetTypeRep -> return primNockmaGetTypeRep
+    OpNockmaReify -> return primNockmaReify
     OpPoseidonHash -> return primPoseidonHash
     OpEc -> return primEc
     OpRandomEcPoint -> return primRandomEcPoint
@@ -1040,8 +1040,8 @@ primAnomaSetToList = primitive Str.anomaSetToList
 primAnomaSetFromList :: Doc Ann
 primAnomaSetFromList = primitive Str.anomaSetFromList
 
-primNockmaGetTypeRep :: Doc Ann
-primNockmaGetTypeRep = primitive Str.getNockmaTypeRep
+primNockmaReify :: Doc Ann
+primNockmaReify = primitive Str.nockmaReify
 
 primPoseidonHash :: Doc Ann
 primPoseidonHash = primitive Str.cairoPoseidon

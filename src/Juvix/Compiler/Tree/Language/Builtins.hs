@@ -76,8 +76,8 @@ data CairoOp
 
 instance Serialize CairoOp
 
--- | Builtin TypeRep operations
-newtype NockmaOp = NockmaOpGetTypeRep {_typeRepInductiveName :: Symbol}
+-- | Builtin Nockma operations
+data NockmaOp = NockmaOpReify
   deriving stock (Eq, Generic)
 
 instance Serialize NockmaOp

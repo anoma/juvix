@@ -7,7 +7,6 @@ import Juvix.Compiler.Tree.Data.Module
 import Juvix.Compiler.Tree.Extra.Base
 import Juvix.Compiler.Tree.Extra.Type
 import Juvix.Compiler.Tree.Language
-import Juvix.Compiler.Tree.Pretty
 
 type BinderList = BL.BinderList
 
@@ -59,7 +58,7 @@ toTreeOp = \case
   Core.OpUInt8ToInt -> TreeUnaryOpcode (PrimUnop OpUInt8ToInt)
   Core.OpAssert -> TreeUnaryOpcode OpAssert
   -- TreeAnomaOp
-  Core.OpNockmaGetTypeRep -> TreeNockmaOp (NockmaOpGetTypeRep impossible)
+  Core.OpNockmaReify -> TreeNockmaOp NockmaOpReify
   Core.OpAnomaGet -> TreeAnomaOp OpAnomaGet
   Core.OpAnomaEncode -> TreeAnomaOp OpAnomaEncode
   Core.OpAnomaDecode -> TreeAnomaOp OpAnomaDecode
@@ -241,17 +240,12 @@ genCode md fi =
               _nodeAnomaArgs = args
             }
       TreeNockmaOp op ->
-        case op of
-          NockmaOpGetTypeRep _undefined ->
-            trace ("TreeNockmaOp: " <> ppTrace' emptyOptions op) $
-              trace ("Args: " <> ppTrace' emptyOptions args) $
-                let sym = todo
-                 in Nockma $
-                      NodeNockma
-                        { _nodeNockmaInfo = mempty,
-                          _nodeNockmaOpcode = NockmaOpGetTypeRep sym,
-                          _nodeNockmaArgs = args
-                        }
+        Nockma $
+          NodeNockma
+            { _nodeNockmaInfo = mempty,
+              _nodeNockmaOpcode = op,
+              _nodeNockmaArgs = args
+            }
       TreeBinaryOpcode op -> case args of
         [arg1, arg2] ->
           Binop $

@@ -229,7 +229,7 @@ geval opts herr tab env0 = eval' env0
       OpAnomaByteArrayToAnomaContents -> anomaByteArrayToAnomaContents
       OpAnomaByteArrayFromAnomaContents -> anomaByteArrayFromAnomaContents
       OpAnomaSha256 -> anomaSha256
-      OpNockmaGetTypeRep -> normalizeOrUnsupported opcode
+      OpNockmaReify -> normalizeOrUnsupported opcode
       OpAnomaResourceCommitment -> normalizeOrUnsupported opcode
       OpAnomaResourceNullifier -> normalizeOrUnsupported opcode
       OpAnomaResourceKind -> normalizeOrUnsupported opcode

@@ -330,7 +330,7 @@ data BuiltinAxiom
   | BuiltinByteArrayFromListByte
   | BuiltinByteArrayLength
   | BuiltinRangeCheck
-  | BuiltinGetNockmaTypeRep
+  | BuiltinNockmaReify
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance HasNameKind BuiltinAxiom where
@@ -402,7 +402,7 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaSetToList -> KNameFunction
     BuiltinAnomaSetFromList -> KNameFunction
     BuiltinRangeCheck -> KNameFunction
-    BuiltinGetNockmaTypeRep -> KNameFunction
+    BuiltinNockmaReify -> KNameFunction
   getNameKindPretty :: BuiltinAxiom -> NameKind
   getNameKindPretty = getNameKind
 
@@ -481,7 +481,7 @@ instance Pretty BuiltinAxiom where
     BuiltinByteArrayFromListByte -> Str.byteArrayFromListByte
     BuiltinByteArrayLength -> Str.byteArrayLength
     BuiltinRangeCheck -> Str.rangeCheck
-    BuiltinGetNockmaTypeRep -> Str.getNockmaTypeRep
+    BuiltinNockmaReify -> Str.nockmaReify
 
 data BuiltinType
   = BuiltinTypeInductive BuiltinInductive

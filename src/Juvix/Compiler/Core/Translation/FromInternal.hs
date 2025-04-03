@@ -727,7 +727,7 @@ builtinInductive a =
         Internal.BuiltinByteArrayFromListByte -> Nothing
         Internal.BuiltinByteArrayLength -> Nothing
         Internal.BuiltinRangeCheck -> Nothing
-        Internal.BuiltinGetNockmaTypeRep -> Nothing
+        Internal.BuiltinNockmaReify -> Nothing
   where
     registerInductiveAxiom :: forall r. (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader InternalTyped.InfoTable, NameIdGen, Error BadScope] r) => Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
     registerInductiveAxiom ax ctrs = do
@@ -869,9 +869,12 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               mkSmallUniv
               (mkLambda' natType (mkBuiltinApp' OpAnomaDecode [mkVar' 0]))
           )
-      Internal.BuiltinGetNockmaTypeRep -> do
-        registerAxiomDef $
-          mkBuiltinExpanded' [mkSmallUniv] OpNockmaGetTypeRep
+      Internal.BuiltinNockmaReify -> do
+        registerAxiomDef
+          ( mkLambda'
+              mkSmallUniv
+              (mkLambda' (mkVar' 0) (mkBuiltinApp' OpNockmaReify [mkVar' 0]))
+          )
       Internal.BuiltinAnomaVerifyDetached -> do
         -- TODO I think the type is wrong
         natType <- getNatType
@@ -1525,7 +1528,7 @@ goApplication a = do
           Internal.BuiltinFieldMul -> app
           Internal.BuiltinFieldDiv -> app
           Internal.BuiltinFieldFromInt -> builtin OpFieldFromInt
-          Internal.BuiltinGetNockmaTypeRep -> builtin OpNockmaGetTypeRep
+          Internal.BuiltinNockmaReify -> builtin OpNockmaReify
           Internal.BuiltinFieldToNat -> app
           Internal.BuiltinAnomaGet -> app
           Internal.BuiltinAnomaEncode -> app

@@ -275,10 +275,8 @@ instance PrettyCode Symbol where
   ppCode sym = return (pretty sym)
 
 instance PrettyCode NockmaOp where
-  ppCode op = case op of
-    NockmaOpGetTypeRep ind -> do
-      ty <- parens <$> ppCode ind
-      return (primitive Str.getNockmaTypeRep <> ty)
+  ppCode op = return $ case op of
+    NockmaOpReify -> primitive Str.nockmaReify
 
 instance PrettyCode CairoOp where
   ppCode op = return . primitive $ case op of

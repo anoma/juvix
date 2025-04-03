@@ -130,7 +130,7 @@ fromCore' tab =
         BuiltinFail -> False
         BuiltinIntToString -> False
         BuiltinIntPrint -> False
-        BuiltinGetNockmaTypeRep -> False
+        BuiltinNockmaReify -> False
         BuiltinAnomaGet -> False
         BuiltinAnomaEncode -> False
         BuiltinAnomaDecode -> False
