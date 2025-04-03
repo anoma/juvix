@@ -587,21 +587,6 @@ ord = "ord"
 ordering :: (IsString s) => s
 ordering = "ordering"
 
-constructorNockmaRep :: (IsString s) => s
-constructorNockmaRep = "constructorNockmaRep"
-
-mkTypeNockmaRep :: (IsString s) => s
-mkTypeNockmaRep = "mkTypeNockmaRep"
-
-constructorNockmaRepAtom :: (IsString s) => s
-constructorNockmaRepAtom = "constructorNockmaRepAtom"
-
-constructorNockmaRepCell :: (IsString s) => s
-constructorNockmaRepCell = "constructorNockmaRepCell"
-
-typeNockmaRep :: (IsString s) => s
-typeNockmaRep = "typeNockmaRep"
-
 assert_ :: (IsString s) => s
 assert_ = "assert"
 

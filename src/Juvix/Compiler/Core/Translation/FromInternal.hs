@@ -248,9 +248,6 @@ goConstructor sym ctor = do
         Internal.BuiltinJsonNumber -> return (BuiltinTag TagJsonNumber)
         Internal.BuiltinJsonString -> return (BuiltinTag TagJsonString)
         Internal.BuiltinMaybeNothing -> freshTag
-        Internal.BuiltinMkTypeNockmaRep -> freshTag
-        Internal.BuiltinConstructorNockmaRepAtom -> freshTag
-        Internal.BuiltinConstructorNockmaRepCell -> freshTag
         Internal.BuiltinMaybeJust -> freshTag
         Internal.BuiltinPairConstr -> freshTag
         Internal.BuiltinMkPoseidonState -> freshTag

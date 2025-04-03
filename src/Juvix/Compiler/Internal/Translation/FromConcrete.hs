@@ -983,8 +983,6 @@ checkBuiltinInductive d b = localBuiltins $ case b of
   BuiltinAnomaAction -> checkAction d
   BuiltinAnomaComplianceInputs -> checkComplianceInputs d
   BuiltinAnomaShieldedTransaction -> checkShieldedTransaction d
-  BuiltinTypeNockmaRep -> return ()
-  BuiltinConstructorNockmaRep -> return ()
 
 localBuiltins :: (Members '[Reader S.InfoTable] r) => Sem (Reader BuiltinsTable ': r) a -> Sem r a
 localBuiltins m = do

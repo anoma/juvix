@@ -65,8 +65,6 @@ builtinConstructors = \case
   BuiltinEq -> [BuiltinMkEq]
   BuiltinOrd -> [BuiltinMkOrd]
   BuiltinOrdering -> [BuiltinOrderingLT, BuiltinOrderingEQ, BuiltinOrderingGT]
-  BuiltinTypeNockmaRep -> [BuiltinMkTypeNockmaRep]
-  BuiltinConstructorNockmaRep -> [BuiltinConstructorNockmaRepAtom, BuiltinConstructorNockmaRepCell]
 
 data BuiltinInductive
   = BuiltinNat
@@ -85,8 +83,6 @@ data BuiltinInductive
   | BuiltinAnomaAction
   | BuiltinAnomaComplianceInputs
   | BuiltinAnomaShieldedTransaction
-  | BuiltinTypeNockmaRep
-  | BuiltinConstructorNockmaRep
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinInductive
@@ -107,8 +103,6 @@ instance Pretty BuiltinInductive where
     BuiltinEq -> Str.eq
     BuiltinOrd -> Str.ord
     BuiltinOrdering -> Str.ordering
-    BuiltinTypeNockmaRep -> Str.typeNockmaRep
-    BuiltinConstructorNockmaRep -> Str.constructorNockmaRep
     BuiltinPoseidonState -> Str.cairoPoseidonState
     BuiltinEcPoint -> Str.cairoEcPoint
     BuiltinAnomaResource -> Str.anomaResource
@@ -145,9 +139,6 @@ instance Pretty BuiltinConstructor where
     BuiltinOrderingLT -> Str.lt
     BuiltinOrderingEQ -> Str.eq
     BuiltinOrderingGT -> Str.gt
-    BuiltinMkTypeNockmaRep -> Str.mkTypeNockmaRep
-    BuiltinConstructorNockmaRepAtom -> Str.constructorNockmaRepAtom
-    BuiltinConstructorNockmaRepCell -> Str.constructorNockmaRepCell
 
 data BuiltinConstructor
   = BuiltinNatZero
@@ -177,9 +168,6 @@ data BuiltinConstructor
   | BuiltinMkAnomaAction
   | BuiltinMkAnomaComplianceInputs
   | BuiltinMkAnomaShieldedTransaction
-  | BuiltinMkTypeNockmaRep
-  | BuiltinConstructorNockmaRepAtom
-  | BuiltinConstructorNockmaRepCell
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable BuiltinConstructor
