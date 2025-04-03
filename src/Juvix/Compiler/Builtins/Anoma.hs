@@ -3,8 +3,8 @@ module Juvix.Compiler.Builtins.Anoma where
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Pretty
 import Juvix.Prelude
-import Juvix.Prelude.Pretty
 
 checkAnomaGet :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkAnomaGet f = do
@@ -250,7 +250,7 @@ checkNockmaReify f = do
   noun <- getBuiltinNameScoper l BuiltinNockmaNoun
   let freeVars = hashSet [reifyTy]
   unless ((ftype ==% (u <>--> reifyTy --> noun)) freeVars) $
-    builtinsErrorText (getLoc f) (prettyText BuiltinNockmaReify <> " must be of type {A : Type} -> A -> " <> (prettyText BuiltinNockmaNoun))
+    builtinsErrorText (getLoc f) (prettyText BuiltinNockmaReify <> " must be of type {A : Type} -> A -> " <> ppPrint noun)
 
 checkAnomaRandomNextBytes :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaRandomNextBytes f = do

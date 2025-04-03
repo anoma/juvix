@@ -1064,5 +1064,5 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test088.juvix")
           []
-          $ checkTracesAndOutput [[nock| [30 40 80] |], [nock| 80 |], [nock| [0 0] |]]
+          $ checkTracesAndOutput [[nock| [30 40 80] |], [nock| [30 40 80] |], [nock| 80 |], [nock| [0 0] |]]
       ]

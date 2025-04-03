@@ -15,6 +15,7 @@ builtin seq
 >-> : {A B : Type} -> A -> B -> B
   | x y := y;
 
+builtin nockma-noun
 type Term :=
   | atom Nat
   | cell@{
@@ -31,6 +32,10 @@ type FakeTerm :=
       right : FakeTerm;
     };
 
+builtin nockma-reify
+axiom reify {A} : A -> Term;
+
 t : Term := Term.cell (Term.atom 30) (Term.cell (Term.atom 40) (Term.atom 80));
 
-main : _ := trace t >-> trace (Term.atom 80) >-> FakeTerm.cell;
+main : _ :=
+  trace t >-> trace (reify t) >-> trace (Term.atom 80) >-> FakeTerm.cell;
