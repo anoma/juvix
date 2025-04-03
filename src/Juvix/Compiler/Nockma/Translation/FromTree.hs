@@ -538,7 +538,7 @@ compile = \case
                               _indexTupleArgsIndex = argIx
                             }
                     NockmaMemRepNoun n -> case n of
-                      NockmaMemRepAtom -> []
+                      NockmaMemRepAtom -> emptyPath
                       NockmaMemRepCell ->
                         indexTuple
                           IndexTupleArgs
