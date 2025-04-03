@@ -408,6 +408,7 @@ compileToSubject ctx importsSHA256 importedModuleIds userFuns msym =
             . HashMap.lookup mid
             $ importsSHA256
 
+    -- assumption: subject base path = []
     mkMainClosureCode :: (Member (Reader CompilerCtx) r) => Symbol -> Sem r (Term Natural)
     mkMainClosureCode sym = do
       libpath <- stackPath ModulesLibrary
@@ -646,7 +647,7 @@ compile = \case
       arg <- compile _nodeBranchArg
       iftrue <- compile _nodeBranchTrue
       iffalse <- compile _nodeBranchFalse
-      return (branch arg iftrue iffalse)
+      return (branch "if" arg iftrue iffalse)
 
     goAnomaOp :: Tree.NodeAnoma -> Sem r (Term Natural)
     goAnomaOp Tree.NodeAnoma {..} = do
@@ -705,7 +706,7 @@ compile = \case
           arg <- compile _nodeUnopArg
           withTemp arg $ \ref -> do
             tmp <- addressTempRef ref
-            return (branch tmp tmp crash)
+            return (branch "assert" tmp tmp crash)
         Tree.OpFail -> do
           arg <- compile _nodeUnopArg
           goFail arg
@@ -861,7 +862,7 @@ compile = \case
           decJust <- goDecodeResultJust ref
           res <- addressTempRef ref
           return $
-            branch (OpIsCell # res) decJust res
+            branch "is-cell" (OpIsCell # res) decJust res
 
         goDecodeResultJust :: TempRef -> Sem r (Term Natural)
         goDecodeResultJust ref = do
@@ -1148,7 +1149,7 @@ callFunWithArgs fun args = do
   finfo <- getFunctionInfo fun
   minfo <- getModuleInfo (finfo ^. functionInfoModuleId)
   let fname = finfo ^. functionInfoName
-  fpath <- getFunctionInfoPath finfo
+      fpath = pathFromEnum ModulesLibrary ++ [L] ++ finfo ^. functionInfoPath
   mid <- asks (^. compilerModuleId)
   batch <- asks (^. compilerBatch)
   if
@@ -1157,7 +1158,8 @@ callFunWithArgs fun args = do
       | otherwise -> do
           -- The function is in a different module. We need to call the function
           -- with its module's module library.
-          let modLib = opAddress "callFun-modLib" (pathFromEnum ModulesLibrary ++ minfo ^. moduleInfoPath)
+          base <- getSubjectBasePath
+          let modLib = opAddress "callFun-modLib" (base ++ closurePath ModulesLibrary ++ minfo ^. moduleInfoPath)
               newSubject' = opReplace "callFun-modLib" (closurePath ModulesLibrary) modLib newSubject
           return (opCall ("callFun-" <> fname) (fpath ++ closurePath FunCode) newSubject')
 
@@ -1168,7 +1170,7 @@ callClosure ref args = do
   -- the behaviour with calls to known functions which may have zero arguments.
   massert (not (null args))
   closure <- addressTempRef ref
-  let closure' = OpReplace # (closurePath ArgsTuple # foldTermsOrQuotedNil args) # closure
+  let closure' = opReplace "replace-args-call-closure" (closurePath ArgsTuple) (foldTermsOrQuotedNil args) closure
   return (opCall "callClosure" (closurePath FunCode) closure')
 
 curryClosure :: Term Natural -> [Term Natural] -> Term Natural -> Sem r (Term Natural)
@@ -1264,10 +1266,10 @@ caseCmd ref defaultBranch = \case
       case nonEmpty bs of
         Nothing -> case defaultBranch of
           Nothing -> return b
-          Just defbr -> return (branch cond b defbr)
+          Just defbr -> return (branch "default" cond b defbr)
         Just ((t', b') :| bs') -> do
           elseBr <- goRepConstr t' b' bs'
-          return (branch cond b elseBr)
+          return (branch "branch" cond b elseBr)
 
     asNockmaMemRepListConstr :: Tree.Tag -> Sem r NockmaMemRepListConstr
     asNockmaMemRepListConstr tag = case tag of
@@ -1297,8 +1299,8 @@ caseCmd ref defaultBranch = \case
       let otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
       return $
         if
-            | v -> branch arg b otherBranch
-            | otherwise -> branch arg otherBranch b
+            | v -> branch "bool-true" arg b otherBranch
+            | otherwise -> branch "bool-false" arg otherBranch b
       where
         f :: (Tree.Tag, Term Natural) -> Maybe (Term Natural)
         f (tag', br) = case tag' of
@@ -1314,8 +1316,8 @@ caseCmd ref defaultBranch = \case
       let cond = OpIsCell # arg
           otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
       return $ case c of
-        NockmaMemRepListConstrCons -> branch cond b otherBranch
-        NockmaMemRepListConstrNil -> branch cond otherBranch b
+        NockmaMemRepListConstrCons -> branch "list-cons" cond b otherBranch
+        NockmaMemRepListConstrNil -> branch "list-nil" cond otherBranch b
       where
         f :: (NockmaMemRepListConstr, Term Natural) -> Maybe (Term Natural)
         f (c', br) = guard (c /= c') $> br
@@ -1326,18 +1328,19 @@ caseCmd ref defaultBranch = \case
       let cond = OpIsCell # arg
           otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
       return $ case c of
-        NockmaMemRepMaybeConstrJust -> branch cond b otherBranch
-        NockmaMemRepMaybeConstrNothing -> branch cond otherBranch b
+        NockmaMemRepMaybeConstrJust -> branch "maybe-just" cond b otherBranch
+        NockmaMemRepMaybeConstrNothing -> branch "maybe-nothing" cond otherBranch b
       where
         f :: (NockmaMemRepMaybeConstr, Term Natural) -> Maybe (Term Natural)
         f (c', br) = guard (c /= c') $> br
 
 branch ::
+  Text ->
   Term Natural ->
   Term Natural ->
   Term Natural ->
   Term Natural
-branch cond t f = OpIf # cond # t # f
+branch tag cond t f = tag @ OpIf # cond # t # f
 
 getFunctionArity :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Natural
 getFunctionArity s = asks (^?! compilerFunctionInfos . at s . _Just . functionInfoArity)
