@@ -232,8 +232,16 @@ checkAnomaRandomGeneratorInit f = do
   unless (f ^. axiomType === (nat_ --> gen)) $
     builtinsErrorText l "initRandomGenerator must be of type Nat -> AnomaRandomGenerator"
 
-checkNockmaReify :: AxiomDef -> Sem r ()
-checkNockmaReify _ = return ()
+checkNockmaReify :: (Members '[Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkNockmaReify f = do
+  let ftype = f ^. axiomType
+      u = ExpressionUniverse smallUniverseNoLoc
+      l = getLoc f
+  reifyTy <- freshVar l "reifyT"
+  retTy <- freshVar l "retType"
+  let freeVars = hashSet [reifyTy, retTy]
+  unless ((ftype ==% (u <>--> reifyTy --> retTy)) freeVars) $
+    builtinsErrorText (getLoc f) "anomaEncode must be of type {A : Type} -> A -> _"
 
 checkAnomaRandomNextBytes :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaRandomNextBytes f = do
