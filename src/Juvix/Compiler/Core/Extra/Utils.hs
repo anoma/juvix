@@ -529,7 +529,7 @@ builtinOpArgTypes = \case
   OpAnomaByteArrayFromAnomaContents -> [mkTypeInteger', mkTypeInteger']
   OpAnomaSha256 -> [mkTypeInteger']
   OpAnomaResourceCommitment -> [mkDynamic']
-  OpAnomaResourceNullifier -> [mkDynamic']
+  OpAnomaResourceNullifier -> [mkDynamic', mkDynamic']
   OpAnomaResourceKind -> [mkDynamic']
   OpAnomaResourceDelta -> [mkDynamic']
   OpAnomaActionDelta -> [mkDynamic']
