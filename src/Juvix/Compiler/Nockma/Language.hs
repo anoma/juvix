@@ -81,11 +81,10 @@ instance Serialize Tag
 data CellInfo a = CellInfo
   { _cellInfoLoc :: Irrelevant (Maybe Interval),
     _cellInfoTag :: Maybe Tag,
-    _cellInfoCall :: Maybe (AnomaLibCall a)
+    _cellInfoCall :: Maybe (AnomaLibCall a),
+    _cellInfoHash :: Int
   }
   deriving stock (Show, Eq, Lift, Generic)
-
-instance (Hashable a) => Hashable (CellInfo a)
 
 instance (NFData a) => NFData (CellInfo a)
 
@@ -94,17 +93,16 @@ instance (Serialize a) => Serialize (CellInfo a)
 data Cell a = Cell'
   { _cellLeft :: Term a,
     _cellRight :: Term a,
-    _cellInfo :: CellInfo a,
-    _cellHash :: Int
+    _cellInfo :: CellInfo a
   }
   deriving stock (Show, Lift, Generic)
 
 instance (Eq a) => Eq (Cell a) where
-  Cell' l r _ _ == Cell' l' r' _ _ = l == l' && r == r'
+  Cell' l r _ == Cell' l' r' _ = l == l' && r == r'
 
 instance (Hashable a) => Hashable (Cell a) where
-  hashWithSalt salt (Cell' _ _ _ h) = hashWithSalt salt h
-  hash (Cell' _ _ _ h) = h
+  hashWithSalt salt (Cell' _ _ CellInfo {..}) = hashWithSalt salt _cellInfoHash
+  hash (Cell' _ _ CellInfo {..}) = _cellInfoHash
 
 instance (NFData a) => NFData (Cell a)
 
@@ -287,8 +285,7 @@ mkCell l r =
   Cell'
     { _cellLeft = l,
       _cellRight = r,
-      _cellInfo = emptyCellInfo,
-      _cellHash = hash (l, r)
+      _cellInfo = emptyCellInfo {_cellInfoHash = hash (l, r)}
     }
 
 isCell :: Term a -> Bool
@@ -569,14 +566,14 @@ opTrace' msg val = OpHint # (nockNilTagged "opTrace'" # msg) # val
 {-# COMPLETE Cell #-}
 
 pattern Cell :: (Hashable a) => Term a -> Term a -> Cell a
-pattern Cell {_cellLeft', _cellRight'} <- Cell' _cellLeft' _cellRight' _ _cellHash'
+pattern Cell {_cellLeft', _cellRight'} <- Cell' _cellLeft' _cellRight' _
   where
     Cell a b = mkCell a b
 
 {-# COMPLETE TCell, TAtom #-}
 
 pattern TCell :: (Hashable a) => Term a -> Term a -> Term a
-pattern TCell l r <- TermCell (Cell' l r _ _)
+pattern TCell l r <- TermCell (Cell' l r _)
   where
     TCell a b = TermCell (mkCell a b)
 
@@ -590,7 +587,8 @@ emptyCellInfo =
   CellInfo
     { _cellInfoCall = Nothing,
       _cellInfoTag = Nothing,
-      _cellInfoLoc = Irrelevant Nothing
+      _cellInfoLoc = Irrelevant Nothing,
+      _cellInfoHash = 0
     }
 
 emptyAtomInfo :: AtomInfo
