@@ -59,6 +59,7 @@ builtinConstructors = \case
   BuiltinPoseidonState -> [BuiltinMkPoseidonState]
   BuiltinEcPoint -> [BuiltinMkEcPoint]
   BuiltinAnomaResource -> [BuiltinMkAnomaResource]
+  BuiltinAnomaNullifierKey -> [BuiltinMkAnomaNullifierKey]
   BuiltinAnomaAction -> [BuiltinMkAnomaAction]
   BuiltinAnomaComplianceInputs -> [BuiltinMkAnomaComplianceInputs]
   BuiltinAnomaShieldedTransaction -> [BuiltinMkAnomaShieldedTransaction]
@@ -81,6 +82,7 @@ data BuiltinInductive
   | BuiltinPoseidonState
   | BuiltinEcPoint
   | BuiltinAnomaResource
+  | BuiltinAnomaNullifierKey
   | BuiltinAnomaAction
   | BuiltinAnomaComplianceInputs
   | BuiltinAnomaShieldedTransaction
@@ -108,6 +110,7 @@ instance Pretty BuiltinInductive where
     BuiltinPoseidonState -> Str.cairoPoseidonState
     BuiltinEcPoint -> Str.cairoEcPoint
     BuiltinAnomaResource -> Str.anomaResource
+    BuiltinAnomaNullifierKey -> Str.anomaNullifierKey
     BuiltinAnomaAction -> Str.anomaAction
     BuiltinAnomaComplianceInputs -> Str.anomaComplianceInputs
     BuiltinAnomaShieldedTransaction -> Str.anomaShieldedTransaction
@@ -134,6 +137,7 @@ instance Pretty BuiltinConstructor where
     BuiltinMkPoseidonState -> Str.cairoMkPoseidonState
     BuiltinMkEcPoint -> Str.cairoMkEcPoint
     BuiltinMkAnomaResource -> Str.anomaMkResource
+    BuiltinMkAnomaNullifierKey -> Str.anomaMkResource
     BuiltinMkAnomaAction -> Str.anomaMkAction
     BuiltinMkAnomaComplianceInputs -> Str.anomaMkComplianceInputs
     BuiltinMkAnomaShieldedTransaction -> Str.anomaMkShieldedTransaction
@@ -170,6 +174,7 @@ data BuiltinConstructor
   | BuiltinMkPoseidonState
   | BuiltinMkEcPoint
   | BuiltinMkAnomaResource
+  | BuiltinMkAnomaNullifierKey
   | BuiltinMkAnomaAction
   | BuiltinMkAnomaComplianceInputs
   | BuiltinMkAnomaShieldedTransaction

@@ -119,6 +119,14 @@ checkAnomaSha256 f = do
     (ftype === (nat_ --> byteArray))
     $ builtinsErrorText l "anomaSha256 must be of type Nat -> ByteArray"
 
+checkNullifierKey :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
+checkNullifierKey d = do
+  let err = builtinsErrorText (getLoc d)
+      name = ppPrint BuiltinAnomaNullifierKey
+  unless (null (d ^. inductiveParameters)) (err (name <> " should have no type parameters"))
+  unless (isSmallUniverse' (d ^. inductiveType)) (err (name <> " should be in the small universe"))
+  unless (length (d ^. inductiveConstructors) == 1) (err (name <> " should have exactly one constructor"))
+
 checkResource :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
 checkResource d = do
   let err = builtinsErrorText (getLoc d)
@@ -176,10 +184,13 @@ checkResourceCommitment f = do
 checkResourceNullifier :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkResourceNullifier f = do
   let l = getLoc f
+      name = ppPrint BuiltinAnomaResourceNullifier
   resource <- getBuiltinNameScoper l BuiltinAnomaResource
   nat_ <- getBuiltinNameScoper l BuiltinNat
-  unless (f ^. axiomType === (resource --> nat_)) $
-    builtinsErrorText l "resourceNullifier must be of type AnomaResource -> Nat"
+  nk <- getBuiltinNameScoper l BuiltinAnomaNullifierKey
+  let expectedTy = nk --> resource --> nat_
+  unless (f ^. axiomType === expectedTy) $
+    builtinsErrorText l (name <> " must be of type " <> ppPrint expectedTy)
 
 checkResourceKind :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkResourceKind f = do

@@ -218,7 +218,7 @@ builtinOpArgsNum = \case
   OpAnomaByteArrayFromAnomaContents -> 2
   OpAnomaSha256 -> 1
   OpAnomaResourceCommitment -> 1
-  OpAnomaResourceNullifier -> 1
+  OpAnomaResourceNullifier -> 2
   OpAnomaResourceKind -> 1
   OpAnomaResourceDelta -> 1
   OpAnomaActionDelta -> 1
