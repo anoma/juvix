@@ -5,7 +5,6 @@ module Juvix.Compiler.Nockma.Evaluator.Error
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Evaluator.Crumbs
 import Juvix.Compiler.Nockma.Evaluator.Storage
@@ -187,14 +186,7 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (KeyNotInStorage a) where
   ppCode :: forall r. (Member (Reader Options) r) => KeyNotInStorage a -> Sem r (Doc Ann)
   ppCode KeyNotInStorage {..} = do
     tm <- ppCode _keyNotInStorageKey
-    hashMapKvs <- vsep <$> mapM combineKeyValue (HashMap.toList (_keyNotInStorageStorage ^. storageKeyValueData))
-    return ("The key" <+> tm <+> "is not found in the storage." <> line <> "Storage contains the following key value pairs:" <> line <> hashMapKvs)
-    where
-      combineKeyValue :: (StorageKey a, Term a) -> Sem r (Doc Ann)
-      combineKeyValue (t1, t2) = do
-        pt1 <- ppCode t1
-        pt2 <- ppCode t2
-        return (pt1 <+> ":=" <+> pt2)
+    return ("The key" <+> tm <+> "is not found in the storage.")
 
 instance (PrettyCode a, NockNatural a) => PrettyCode (DecodingFailed a) where
   ppCode DecodingFailed {..} = do

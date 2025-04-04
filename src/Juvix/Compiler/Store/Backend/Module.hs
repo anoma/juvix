@@ -19,7 +19,7 @@ data Module' t = Module
     -- the module.
     _moduleImports :: [ModuleId],
     _moduleOptions :: Options,
-    _moduleSHA256 :: Text
+    _moduleSHA256 :: Maybe Text
   }
   deriving stock (Generic)
 
@@ -53,7 +53,7 @@ toBaseModule imports Module {..} =
       _moduleInfoTable = _moduleInfoTable,
       _moduleImports = _moduleImports,
       _moduleImportsTable = mconcatMap Core.computeCombinedInfoTable imports,
-      _moduleSHA256 = Just _moduleSHA256
+      _moduleSHA256 = _moduleSHA256
     }
 
 fromBaseModule :: Options -> Core.Module' t -> Module' t
@@ -63,5 +63,5 @@ fromBaseModule opts Core.Module {..} =
       _moduleInfoTable = _moduleInfoTable,
       _moduleImports = _moduleImports,
       _moduleOptions = opts,
-      _moduleSHA256 = fromJust _moduleSHA256
+      _moduleSHA256 = _moduleSHA256
     }

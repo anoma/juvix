@@ -1,15 +1,9 @@
 module Juvix.Compiler.Nockma.Translation.FromTree
   ( fromEntryPoint,
-    fromTreeTable,
-    AnomaResult (..),
-    anomaClosure,
-    compilerFunctionId,
-    compilerFunctionName,
+    fromTreeModule,
     AnomaCallablePathId (..),
     CompilerOptions (..),
-    CompilerFunction (..),
     FunctionCtx (..),
-    FunctionId (..),
     closurePath,
     foldTermsOrNil,
     foldTermsOrQuotedNil,
@@ -21,33 +15,31 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     foldTerms,
     pathToArg,
     makeList,
-    runCompilerWith,
     emptyCompilerCtx,
     CompilerCtx (..),
     curryClosure,
     IndexTupleArgs (..),
     indexTuple,
+    makeMainFunction,
   )
 where
 
+import Crypto.Hash.SHA256 qualified as SHA256
 import Data.ByteString qualified as BS
 import Data.HashMap.Strict qualified as HashMap
+import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Nockma.AnomaLib
+import Juvix.Compiler.Nockma.Data.Module
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Encoding.Ed25519 qualified as E
 import Juvix.Compiler.Nockma.Language.Path
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Compiler.Tree.Data.InfoTable qualified as Tree
+import Juvix.Compiler.Tree.Data.Module qualified as Tree
 import Juvix.Compiler.Tree.Extra.Type qualified as Tree
 import Juvix.Compiler.Tree.Language qualified as Tree
 import Juvix.Compiler.Tree.Language.Rep
-import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding (Atom, Path)
-
-newtype AnomaResult = AnomaResult
-  { _anomaClosure :: Term Natural
-  }
 
 nockStringLiteral :: Text -> Term Natural
 nockStringLiteral t =
@@ -95,15 +87,6 @@ data NockmaBuiltinTag
   = NockmaBuiltinBool Bool
   | NockmaBuiltinJson Text
 
-type UserFunctionId = Symbol
-
-data FunctionId
-  = UserFunction UserFunctionId
-  | BuiltinFunction BuiltinFunctionId
-  deriving stock (Generic, Eq)
-
-instance Hashable FunctionId
-
 data BuiltinFunctionId
   = -- | Not intended to be used, it exists only so the Enum and Bounded instances can be derived.
     BuiltinPlaceholder
@@ -117,12 +100,6 @@ fromEntryPoint :: EntryPoint -> CompilerOptions
 fromEntryPoint EntryPoint {} =
   CompilerOptions
 
-data FunctionInfo = FunctionInfo
-  { _functionInfoPath :: Path,
-    _functionInfoArity :: Natural,
-    _functionInfoName :: Text
-  }
-
 newtype FunctionCtx = FunctionCtx
   { _functionCtxArity :: Natural
   }
@@ -131,38 +108,46 @@ newtype TempRef = TempRef
   { _tempRefIndex :: Int
   }
 
+data ConstructorInfo = ConstructorInfo
+  { _constructorInfoArity :: Natural,
+    _constructorInfoMemRep :: NockmaMemRep
+  }
+
+data ModuleInfo = ModuleInfo
+  { -- | Module path within the modules library
+    _moduleInfoPath :: Path
+  }
+
 data CompilerCtx = CompilerCtx
-  { _compilerFunctionInfos :: HashMap FunctionId FunctionInfo,
-    _compilerConstructorInfos :: ConstructorInfos,
+  { _compilerFunctionInfos :: HashMap Symbol FunctionInfo,
+    _compilerConstructorInfos :: HashMap Tree.Tag ConstructorInfo,
+    _compilerModuleInfos :: HashMap ModuleId ModuleInfo,
+    _compilerModuleId :: ModuleId,
+    _compilerBatch :: Bool,
     -- | Maps temporary variables to their stack indices.
     _compilerTempVarMap :: HashMap Int TempRef,
     _compilerTempVarsNum :: Int,
     _compilerStackHeight :: Int
   }
 
+makeLenses ''CompilerOptions
+makeLenses ''CompilerCtx
+makeLenses ''FunctionCtx
+makeLenses ''ConstructorInfo
+makeLenses ''ModuleInfo
+
 emptyCompilerCtx :: CompilerCtx
 emptyCompilerCtx =
   CompilerCtx
     { _compilerFunctionInfos = mempty,
       _compilerConstructorInfos = mempty,
+      _compilerModuleInfos = mempty,
+      _compilerModuleId = defaultModuleId,
+      _compilerBatch = True,
       _compilerTempVarMap = mempty,
       _compilerTempVarsNum = 0,
       _compilerStackHeight = 0
     }
-
-data ConstructorInfo = ConstructorInfo
-  { _constructorInfoArity :: Natural,
-    _constructorInfoMemRep :: NockmaMemRep
-  }
-
-type ConstructorInfos = HashMap Tree.Tag ConstructorInfo
-
-data CompilerFunction = CompilerFunction
-  { _compilerFunctionId :: FunctionId,
-    _compilerFunctionName :: Text,
-    _compilerFunctionArity :: Natural,
-    _compilerFunction :: Sem '[Reader CompilerCtx, Reader FunctionCtx] (Term Natural)
-  }
 
 -- | The FunCode and ArgsTuple constructors must be first and second
 -- respectively. This is because the stack must have the structure of a Nock
@@ -176,7 +161,7 @@ data AnomaCallablePathId
   | ArgsTuple
   | ---
     ClosureRemainingArgsNum
-  | FunctionsLibrary
+  | ModulesLibrary
   | AnomaLibrary
   deriving stock (Enum, Bounded, Eq, Show)
 
@@ -211,14 +196,6 @@ indexTuple IndexTupleArgs {..}
             | otherwise = [L]
        in replicate _indexTupleArgsIndex R ++ lastL
 
-makeLenses ''CompilerOptions
-makeLenses ''AnomaResult
-makeLenses ''CompilerFunction
-makeLenses ''CompilerCtx
-makeLenses ''FunctionCtx
-makeLenses ''ConstructorInfo
-makeLenses ''FunctionInfo
-
 stackPath :: (Member (Reader CompilerCtx) r, Enum field) => field -> Sem r Path
 stackPath s = do
   h <- asks (^. compilerStackHeight)
@@ -228,6 +205,9 @@ getSubjectBasePath :: (Member (Reader CompilerCtx) r) => Sem r Path
 getSubjectBasePath = do
   h <- asks (^. compilerStackHeight)
   return $ replicate h R
+
+opGetSubject :: Term Natural
+opGetSubject = opAddress "getSubject" []
 
 -- | Pushes a temporary value onto the subject stack and continues compilation
 -- with the provided continuation function.
@@ -246,6 +226,7 @@ getSubjectBasePath = do
 -- withTemp doSth $ \ref -> do
 --   val <- addressTempRef ref
 --   return $ val # val
+-- ```
 withTemp ::
   (Member (Reader CompilerCtx) r) =>
   Term Natural ->
@@ -293,13 +274,6 @@ popTempVar cont = do
     . local (over compilerTempVarsNum (\x -> x - 1))
     $ cont
 
-runCompilerFunction :: CompilerCtx -> CompilerFunction -> Term Natural
-runCompilerFunction ctx fun =
-  run
-    . runReader (FunctionCtx (fun ^. compilerFunctionArity))
-    . runReader ctx
-    $ fun ^. compilerFunction
-
 pathToArg :: (Members '[Reader FunctionCtx, Reader CompilerCtx] r) => Natural -> Sem r Path
 pathToArg n = do
   ari <- asks (^. functionCtxArity)
@@ -338,23 +312,17 @@ foldTermsOrNil = maybe (nockNilTagged "foldTermsOrNil") foldTerms . nonEmpty
 foldTermsOrQuotedNil :: [Term Natural] -> Term Natural
 foldTermsOrQuotedNil = maybe (OpQuote # nockNilTagged "foldTermsOrQuotedNil") foldTerms . nonEmpty
 
-foldTerms :: NonEmpty (Term Natural) -> Term Natural
-foldTerms = foldr1 (#)
+mkScry :: [Term Natural] -> Term Natural
+mkScry key = OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # (foldTermsOrQuotedNil key)
 
-allConstructors :: Tree.InfoTable -> Tree.ConstructorInfo -> NonEmpty Tree.ConstructorInfo
-allConstructors Tree.InfoTable {..} ci =
-  let indInfo = getInductiveInfo (ci ^. Tree.constructorInductive)
-   in nonEmpty' (getConstructorInfo'' <$> indInfo ^. Tree.inductiveConstructors)
-  where
-    getInductiveInfo :: Symbol -> Tree.InductiveInfo
-    getInductiveInfo s = _infoInductives ^?! at s . _Just
+allConstructors :: Tree.Module -> Tree.ConstructorInfo -> NonEmpty Tree.ConstructorInfo
+allConstructors md ci =
+  let indInfo = Tree.lookupInductiveInfo md (ci ^. Tree.constructorInductive)
+   in nonEmpty' (Tree.lookupConstrInfo md <$> indInfo ^. Tree.inductiveConstructors)
 
-    getConstructorInfo'' :: Tree.Tag -> Tree.ConstructorInfo
-    getConstructorInfo'' t = _infoConstrs ^?! at t . _Just
-
-supportsListNockmaRep :: Tree.InfoTable -> Tree.ConstructorInfo -> Maybe NockmaMemRep
-supportsListNockmaRep tab ci =
-  NockmaMemRepList <$> case allConstructors tab ci of
+supportsListNockmaRep :: Tree.Module -> Tree.ConstructorInfo -> Maybe NockmaMemRep
+supportsListNockmaRep md ci =
+  NockmaMemRepList <$> case allConstructors md ci of
     c1 :| [c2]
       | [0, 2] `elem` permutations ((^. Tree.constructorArgsNum) <$> [c1, c2]) -> Just $ case ci ^. Tree.constructorArgsNum of
           0 -> NockmaMemRepListConstrNil
@@ -363,9 +331,9 @@ supportsListNockmaRep tab ci =
       | otherwise -> Nothing
     _ -> Nothing
 
-supportsNounNockmaRep :: Tree.InfoTable -> Tree.ConstructorInfo -> Maybe NockmaMemRep
-supportsNounNockmaRep tab ci = fmap NockmaMemRepNoun . run . runFail $ do
-  c1 :| [c2] <- pure (allConstructors tab ci)
+supportsNounNockmaRep :: Tree.Module -> Tree.ConstructorInfo -> Maybe NockmaMemRep
+supportsNounNockmaRep md ci = fmap NockmaMemRepNoun . run . runFail $ do
+  c1 :| [c2] <- pure (allConstructors md ci)
   failUnless ([1, 2] `elem` permutations ((^. Tree.constructorArgsNum) <$> [c1, c2]))
   case ci ^. Tree.constructorArgsNum of
     1 -> do
@@ -394,9 +362,9 @@ supportsNounNockmaRep tab ci = fmap NockmaMemRepNoun . run . runFail $ do
       Tree.TyDynamic -> False
       Tree.TyRandomGenerator {} -> False
 
-supportsMaybeNockmaRep :: Tree.InfoTable -> Tree.ConstructorInfo -> Maybe NockmaMemRep
-supportsMaybeNockmaRep tab ci =
-  NockmaMemRepMaybe <$> case allConstructors tab ci of
+supportsMaybeNockmaRep :: Tree.Module -> Tree.ConstructorInfo -> Maybe NockmaMemRep
+supportsMaybeNockmaRep md ci =
+  NockmaMemRepMaybe <$> case allConstructors md ci of
     c1 :| [c2]
       | [0, 1] `elem` permutations ((^. Tree.constructorArgsNum) <$> [c1, c2]) -> Just $ case ci ^. Tree.constructorArgsNum of
           0 -> NockmaMemRepMaybeConstrNothing
@@ -405,60 +373,191 @@ supportsMaybeNockmaRep tab ci =
       | otherwise -> Nothing
     _ -> Nothing
 
--- | Use `Tree.toNockma` before calling this function. The result is an unquoted subject.
-fromTreeTable :: (Members '[Error JuvixError, Reader CompilerOptions] r) => Tree.InfoTable -> Sem r AnomaResult
-fromTreeTable t = case t ^. Tree.infoMainFunction of
-  Just mainFun -> do
-    opts <- ask
-    return (fromTree opts mainFun t)
-  Nothing -> throw @JuvixError (error "TODO missing main")
-  where
-    fromTree :: CompilerOptions -> Tree.Symbol -> Tree.InfoTable -> AnomaResult
-    fromTree opts mainSym tab@Tree.InfoTable {..} =
-      let funs = map compileFunction allFunctions
+compileFunction :: CompilerCtx -> Tree.FunctionInfo -> Term Natural
+compileFunction ctx Tree.FunctionInfo {..} =
+  run
+    . runReader ctx
+    . runReader (FunctionCtx (fromIntegral _functionArgsNum))
+    $ compile _functionCode
 
-          mkConstructorInfo :: Tree.ConstructorInfo -> ConstructorInfo
-          mkConstructorInfo ci@Tree.ConstructorInfo {..} =
+-- The result is not quoted and cannot be evaluated.
+makeLibraryFunction :: Text -> Natural -> Term Natural -> Term Natural
+makeLibraryFunction funName funArity funCode =
+  ("def-" <> funName)
+    @ makeRawClosure
+      ( \p ->
+          let nockNilHere = nockNilTagged ("makeLibraryFunction-" <> show p)
+           in case p of
+                FunCode -> ("funCode-" <> funName) @ funCode
+                ArgsTuple -> ("argsTuple-" <> funName) @ argsTuplePlaceholder "libraryFunction" funArity
+                ClosureRemainingArgsNum -> ("closureRemainingArgsNum-" <> funName) @ nockNilHere
+                ModulesLibrary -> ("moduleLibrary-" <> funName) @ modulesLibraryPlaceHolder
+                AnomaLibrary -> ("stdlib-" <> funName) @ anomaLibPlaceholder
+      )
+
+-- The result is not quoted and cannot be evaluated directly.
+makeMainFunction :: Natural -> Term Natural -> Term Natural
+makeMainFunction arity funCode = makeRawClosure $ \case
+  FunCode -> funCode
+  ArgsTuple -> argsTuplePlaceholder "mainFunction" arity
+  ClosureRemainingArgsNum -> nockNilTagged ("makeMainFunction-ClosureRemainingArgsNum")
+  ModulesLibrary -> "moduleLibrary" @ modulesLibraryPlaceHolder
+  AnomaLibrary -> anomaLib
+
+-- The result is an unquoted subject which cannot be evaluated directly. Its
+-- head needs to be called with the Anoma calling convention.
+compileToSubject :: CompilerCtx -> HashMap ModuleId ByteString -> [ModuleId] -> [Tree.FunctionInfo] -> Maybe Symbol -> Term Natural
+compileToSubject ctx importsSHA256 importedModuleIds userFuns msym =
+  case msym of
+    Nothing -> modulesLib
+    Just mainSym -> makeMainFunction mainArity (run . runReader ctx $ mkMainClosureCode mainSym)
+  where
+    mainArity :: Natural
+    mainArity = case msym of
+      Nothing -> 0
+      Just mainSym -> fromJust (HashMap.lookup mainSym (ctx ^. compilerFunctionInfos)) ^. functionInfoArity
+
+    -- This term is not quoted and cannot be evaluated.
+    funcsLib :: Term Natural
+    funcsLib = "functionsLibrary" @ makeList compiledFuns
+      where
+        compiledFuns :: [Term Natural]
+        compiledFuns =
+          map
+            ( \f ->
+                makeLibraryFunction
+                  (f ^. Tree.functionName)
+                  (fromIntegral (f ^. Tree.functionArgsNum))
+                  (compileFunction ctx f)
+            )
+            userFuns
+
+    -- The term _must_ be evaluated.
+    modulesLib :: Term Natural
+    modulesLib = remakeList ((OpQuote # funcsLib) : map mkImport importedModuleIds)
+
+    mkImport :: ModuleId -> Term Natural
+    mkImport mid =
+      -- We evaluate the imported module's code here: the result should be a module library
+      OpApply # opGetSubject # mkScry [OpQuote # key]
+      where
+        key =
+          TermAtom
+            . mkEmptyAtom
+            . byteStringToNatural
+            . fromJust
+            . HashMap.lookup mid
+            $ importsSHA256
+
+    -- assumption: subject base path = []
+    mkMainClosureCode :: (Member (Reader CompilerCtx) r) => Symbol -> Sem r (Term Natural)
+    mkMainClosureCode sym = do
+      libpath <- stackPath ModulesLibrary
+      let newSubject = opReplace "replace-mainClosure-modulesLib" libpath modulesLib opGetSubject
+      finfo <- getFunctionInfo sym
+      fpath <- getFunctionInfoPath finfo
+      return (opCall ("callFun-main") (fpath ++ closurePath FunCode) newSubject)
+
+-- | Use `Tree.toNockma` before calling this function. The result is an unquoted
+-- subject whose head needs to be called with the Anoma calling convention.
+--
+-- `importsTab` is the combined info table for (all) transitive imports
+fromTreeModule :: (ModuleId -> Sem r Module) -> InfoTable -> Tree.Module -> Sem r Module
+fromTreeModule fetchModule importsTab md = do
+  importsSHA256 :: HashMap ModuleId ByteString <-
+    HashMap.fromList
+      . map (\m -> (m ^. moduleId, fromJust (m ^. moduleInfoTable . infoSHA256)))
+      <$> mapM fetchModule importedModuleIds
+  let moduleCode = compileToSubject compilerCtx importsSHA256 importedModuleIds userFuns (md ^. Tree.moduleInfoTable . Tree.infoMainFunction)
+      tab =
+        InfoTable
+          { _infoFunctions = userFunInfos,
+            _infoImports = HashSet.fromList importedModuleIds,
+            _infoCode = Just moduleCode,
+            _infoSHA256 = Just (SHA256.hash (jamToByteString moduleCode))
+          }
+  return
+    Module
+      { _moduleInfoTable = tab,
+        _moduleImportsTable = importsTab,
+        _moduleSHA256 = md ^. moduleSHA256,
+        _moduleImports = md ^. moduleImports,
+        _moduleId = md ^. moduleId
+      }
+  where
+    importedFuns :: [FunctionInfo]
+    importedFuns = HashMap.elems (importsTab ^. infoFunctions)
+
+    -- Transitive imports
+    importedModuleIds :: [ModuleId]
+    importedModuleIds =
+      nubSort
+        . fmap (^. functionInfoModuleId)
+        $ importedFuns
+
+    allModuleIds :: [ModuleId]
+    allModuleIds = md ^. Tree.moduleId : importedModuleIds
+
+    combinedInfoTab :: Tree.InfoTable
+    combinedInfoTab = computeCombinedInfoTable md
+
+    allConstrs :: [Tree.ConstructorInfo]
+    allConstrs = HashMap.elems (combinedInfoTab ^. Tree.infoConstrs)
+
+    userFuns :: [Tree.FunctionInfo]
+    userFuns = HashMap.elems (md ^. Tree.moduleInfoTable . Tree.infoFunctions)
+
+    userFunInfos :: HashMap Symbol FunctionInfo
+    userFunInfos = hashMap (run (runStreamOfNaturals (toList <$> funInfos)))
+      where
+        funInfos :: (Members '[StreamOf Natural] r) => Sem r [(Symbol, FunctionInfo)]
+        funInfos = forM userFuns $ \Tree.FunctionInfo {..} -> do
+          i <- yield
+          return
+            ( _functionSymbol,
+              FunctionInfo
+                { _functionInfoPath = indexStack i,
+                  _functionInfoArity = fromIntegral _functionArgsNum,
+                  _functionInfoName = _functionName,
+                  _functionInfoModuleId = md ^. Tree.moduleId
+                }
+            )
+
+    compilerCtx :: CompilerCtx
+    compilerCtx =
+      emptyCompilerCtx
+        { _compilerFunctionInfos =
+            userFunInfos <> importsTab ^. infoFunctions,
+          _compilerConstructorInfos =
+            HashMap.fromList $ map mkConstructorInfo allConstrs,
+          _compilerModuleInfos =
+            HashMap.fromList $ map mkModuleInfo [0 .. length allModuleIds - 1],
+          _compilerModuleId = md ^. Tree.moduleId,
+          _compilerBatch = null importedFuns
+        }
+      where
+        mkModuleInfo :: Int -> (ModuleId, ModuleInfo)
+        mkModuleInfo i = (allModuleIds !! i, ModuleInfo (pathFromEnum i))
+
+        mkConstructorInfo :: Tree.ConstructorInfo -> (Tree.Tag, ConstructorInfo)
+        mkConstructorInfo ci@Tree.ConstructorInfo {..} =
+          ( _constructorTag,
             ConstructorInfo
               { _constructorInfoArity = fromIntegral _constructorArgsNum,
                 _constructorInfoMemRep = rep
               }
-            where
-              rep :: NockmaMemRep
-              rep =
-                fromMaybe
-                  r
-                  ( supportsListNockmaRep tab ci
-                      <|> supportsMaybeNockmaRep tab ci
-                      <|> supportsNounNockmaRep tab ci
-                  )
-                where
-                  r = nockmaMemRep (memRep ci (getInductiveInfo (ci ^. Tree.constructorInductive)))
-
-          constrs :: ConstructorInfos
-          constrs = mkConstructorInfo <$> _infoConstrs
-
-          getInductiveInfo :: Symbol -> Tree.InductiveInfo
-          getInductiveInfo s = _infoInductives ^?! at s . _Just
-       in runCompilerWith opts constrs funs mainFun
-      where
-        mainFun :: CompilerFunction
-        mainFun = compileFunction (_infoFunctions ^?! at mainSym . _Just)
-
-        allFunctions :: [Tree.FunctionInfo]
-        allFunctions = filter notMain (toList _infoFunctions)
+          )
           where
-            notMain :: Tree.FunctionInfo -> Bool
-            notMain Tree.FunctionInfo {..} = _functionSymbol /= mainSym
-
-        compileFunction :: Tree.FunctionInfo -> CompilerFunction
-        compileFunction Tree.FunctionInfo {..} =
-          CompilerFunction
-            { _compilerFunctionId = UserFunction _functionSymbol,
-              _compilerFunctionName = _functionName,
-              _compilerFunctionArity = fromIntegral _functionArgsNum,
-              _compilerFunction = compile _functionCode
-            }
+            rep :: NockmaMemRep
+            rep =
+              fromMaybe
+                r
+                ( supportsListNockmaRep md ci
+                    <|> supportsMaybeNockmaRep md ci
+                    <|> supportsNounNockmaRep md ci
+                )
+              where
+                r = nockmaMemRep (memRep ci (Tree.lookupInductiveInfo md (ci ^. Tree.constructorInductive)))
 
         memRep :: Tree.ConstructorInfo -> Tree.InductiveInfo -> Tree.MemRep
         memRep ci ind
@@ -571,7 +670,7 @@ compile = \case
       Tree.ConstString t -> nockStringLiteral t
       Tree.ConstUnit -> OpQuote # constUnit
       Tree.ConstVoid -> OpQuote # constVoid
-      Tree.ConstField {} -> fieldErr
+      Tree.ConstField {} -> crash
       Tree.ConstUInt8 i -> nockIntegralLiteral i
       Tree.ConstByteArray bs -> OpQuote # (toNock @Natural (fromIntegral (BS.length bs)) # toNock (byteStringToNatural bs))
 
@@ -601,7 +700,7 @@ compile = \case
       arg <- compile _nodeBranchArg
       iftrue <- compile _nodeBranchTrue
       iffalse <- compile _nodeBranchFalse
-      return (branch arg iftrue iffalse)
+      return (branch "if" arg iftrue iffalse)
 
     goAnomaOp :: Tree.NodeAnoma -> Sem r (Term Natural)
     goAnomaOp Tree.NodeAnoma {..} = do
@@ -660,7 +759,7 @@ compile = \case
           arg <- compile _nodeUnopArg
           withTemp arg $ \ref -> do
             tmp <- addressTempRef ref
-            return (branch tmp tmp crash)
+            return (branch "assert" tmp tmp crash)
         Tree.OpFail -> do
           arg <- compile _nodeUnopArg
           goFail arg
@@ -670,16 +769,16 @@ compile = \case
 
     goPrimUnop :: Tree.UnaryOp -> Tree.Node -> Sem r (Term Natural)
     goPrimUnop op arg = case op of
-      Tree.OpShow -> stringsErr "show"
-      Tree.OpStrToInt -> stringsErr "strToInt"
+      Tree.OpShow -> return crash
+      Tree.OpStrToInt -> return crash
       Tree.OpArgsNum -> getClosureField ClosureRemainingArgsNum <$> compile arg
-      Tree.OpIntToField -> fieldErr
-      Tree.OpFieldToInt -> fieldErr
+      Tree.OpIntToField -> return crash
+      Tree.OpFieldToInt -> return crash
       Tree.OpIntToUInt8 -> compile arg >>= intToUInt8
       Tree.OpUInt8ToInt -> compile arg
 
     goAnomaGet :: [Term Natural] -> Term Natural
-    goAnomaGet key = OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # (foldTermsOrQuotedNil key)
+    goAnomaGet = mkScry
 
     goAnomaEncode :: [Term Natural] -> Sem r (Term Natural)
     goAnomaEncode = callStdlib StdlibEncode
@@ -816,7 +915,7 @@ compile = \case
           decJust <- goDecodeResultJust ref
           res <- addressTempRef ref
           return $
-            branch (OpIsCell # res) decJust res
+            branch "is-cell" (OpIsCell # res) decJust res
 
         goDecodeResultJust :: TempRef -> Sem r (Term Natural)
         goDecodeResultJust ref = do
@@ -869,23 +968,32 @@ compile = \case
           Tree.OpBool Tree.OpIntLe -> callStdlib StdlibLe args
           Tree.OpBool Tree.OpEq -> testEq _nodeBinopArg1 _nodeBinopArg2
           Tree.OpStrConcat -> callStdlib StdlibCatBytes args
-          Tree.OpFieldAdd -> fieldErr
-          Tree.OpFieldSub -> fieldErr
-          Tree.OpFieldMul -> fieldErr
-          Tree.OpFieldDiv -> fieldErr
+          Tree.OpFieldAdd -> return crash
+          Tree.OpFieldSub -> return crash
+          Tree.OpFieldMul -> return crash
+          Tree.OpFieldDiv -> return crash
 
     goAllocClosure :: Tree.NodeAllocClosure -> Sem r (Term Natural)
     goAllocClosure Tree.NodeAllocClosure {..} = do
-      let fun = UserFunction _nodeAllocClosureFunSymbol
+      let fun = _nodeAllocClosureFunSymbol
       base <- getSubjectBasePath
-      fpath <- getFunctionPath fun
+      finfo <- getFunctionInfo fun
+      minfo <- getModuleInfo (finfo ^. functionInfoModuleId)
+      fpath <- getFunctionInfoPath finfo
       farity <- getFunctionArity fun
+      mid <- asks (^. compilerModuleId)
+      batch <- asks (^. compilerBatch)
       args <- mapM compile _nodeAllocClosureArgs
-      let funLib = opAddress "functionsLibrary" (base <> closurePath FunctionsLibrary)
+      let modulesLib =
+            if
+                | batch || mid == finfo ^. functionInfoModuleId ->
+                    opAddress "modulesLibrary" (base <> closurePath ModulesLibrary)
+                | otherwise ->
+                    opAddress "modulesLibrary" (base <> closurePath ModulesLibrary <> minfo ^. moduleInfoPath)
           anomaLibrary = opAddress "anomaLibrary" (base <> closurePath AnomaLibrary)
           closure =
             opReplace "putAnomaLib" (closurePath AnomaLibrary) anomaLibrary
-              . opReplace "putFunLib" (closurePath FunctionsLibrary) funLib
+              . opReplace "putModulesLib" (closurePath ModulesLibrary) modulesLib
               $ opAddress "goAllocClosure-getFunction" (base <> fpath)
           newArity = farity - fromIntegral (length args)
       massert (newArity > 0)
@@ -906,7 +1014,7 @@ compile = \case
       case _nodeCallType of
         Tree.CallFun fun -> do
           newargs <- mapM compile _nodeCallArgs
-          callFunWithArgs (UserFunction fun) newargs
+          callFunWithArgs fun newargs
         Tree.CallClosure f -> do
           closure <- compile f
           withTemp closure $ \ref -> do
@@ -932,8 +1040,6 @@ nockNatLiteral = nockIntegralLiteral
 nockIntegralLiteral :: (Integral a) => a -> Term Natural
 nockIntegralLiteral = (OpQuote #) . toNock @Natural . fromIntegral
 
--- [call L [replace [RL [seq [@ R] a]] [@ (locStdlib <> fPath)]]] ?
---
 -- Calling convention for Anoma library
 --
 -- [push
@@ -1007,19 +1113,19 @@ directRefPath = \case
         ref = fromJust $ HashMap.lookup tempIdx varMap
     tempRefPath ref
 
-nockmaBuiltinTag :: Tree.BuiltinDataTag -> NockmaBuiltinTag
+nockmaBuiltinTag :: Tree.BuiltinDataTag -> Maybe NockmaBuiltinTag
 nockmaBuiltinTag = \case
-  Tree.TagTrue -> NockmaBuiltinBool True
-  Tree.TagFalse -> NockmaBuiltinBool False
-  Tree.TagJsonArray -> NockmaBuiltinJson "a"
-  Tree.TagJsonBool -> NockmaBuiltinJson "b"
-  Tree.TagJsonObject -> NockmaBuiltinJson "o"
-  Tree.TagJsonNumber -> NockmaBuiltinJson "n"
-  Tree.TagJsonString -> NockmaBuiltinJson "s"
-  Tree.TagReturn -> impossible
-  Tree.TagBind -> impossible
-  Tree.TagWrite -> impossible
-  Tree.TagReadLn -> impossible
+  Tree.TagTrue -> Just $ NockmaBuiltinBool True
+  Tree.TagFalse -> Just $ NockmaBuiltinBool False
+  Tree.TagJsonArray -> Just $ NockmaBuiltinJson "a"
+  Tree.TagJsonBool -> Just $ NockmaBuiltinJson "b"
+  Tree.TagJsonObject -> Just $ NockmaBuiltinJson "o"
+  Tree.TagJsonNumber -> Just $ NockmaBuiltinJson "n"
+  Tree.TagJsonString -> Just $ NockmaBuiltinJson "s"
+  Tree.TagReturn -> Nothing
+  Tree.TagBind -> Nothing
+  Tree.TagWrite -> Nothing
+  Tree.TagReadLn -> Nothing
 
 -- | Generic constructors are encoded as [tag args], where args is a
 -- nil terminated list.
@@ -1027,8 +1133,9 @@ goConstructor :: NockmaMemRep -> Tree.Tag -> [Term Natural] -> Term Natural
 goConstructor mr t args = assert (all isCell args) $
   case t of
     Tree.BuiltinTag b -> case nockmaBuiltinTag b of
-      NockmaBuiltinBool v -> nockBoolLiteral v
-      NockmaBuiltinJson s -> nockStringLiteral s
+      Just (NockmaBuiltinBool v) -> nockBoolLiteral v
+      Just (NockmaBuiltinJson s) -> nockStringLiteral s
+      Nothing -> crash
     Tree.UserTag tag -> case mr of
       NockmaMemRepConstr ->
         makeConstructor $ \case
@@ -1058,95 +1165,8 @@ goConstructor mr t args = assert (all isCell args) $
 unsupported :: Text -> a
 unsupported thing = error ("The Nockma backend does not support " <> thing)
 
-stringsErr :: Text -> a
-stringsErr t = unsupported ("string operations: " <> t)
-
-fieldErr :: a
-fieldErr = unsupported "the field type"
-
 cairoErr :: a
 cairoErr = unsupported "cairo builtins"
-
--- | The elements will not be evaluated.
-makeList :: (Foldable f) => f (Term Natural) -> Term Natural
-makeList ts = foldTerms (toList ts `prependList` pure (nockNilTagged "makeList"))
-
--- | The elements of the list will be evaluated to create the list.
-remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
-remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged "remakeList"))
-
--- | The result is unquoted.
-runCompilerWith :: CompilerOptions -> ConstructorInfos -> [CompilerFunction] -> CompilerFunction -> AnomaResult
-runCompilerWith _opts constrs moduleFuns mainFun =
-  AnomaResult
-    { _anomaClosure = mainClosure
-    }
-  where
-    libFuns :: [CompilerFunction]
-    libFuns = moduleFuns ++ (builtinFunction <$> allElements)
-
-    allFuns :: NonEmpty CompilerFunction
-    allFuns = mainFun :| libFuns
-
-    compilerCtx :: CompilerCtx
-    compilerCtx =
-      emptyCompilerCtx
-        { _compilerFunctionInfos = functionInfos,
-          _compilerConstructorInfos = constrs
-        }
-
-    mainClosure :: Term Natural
-    mainClosure = makeMainFunction (runCompilerFunction compilerCtx mainFun)
-
-    -- This term is not quoted and cannot be evaluated.
-    funcsLib :: Term Natural
-    funcsLib = Str.theFunctionsLibrary @ makeList compiledFuns
-      where
-        compiledFuns :: [Term Natural]
-        compiledFuns =
-          (nockNilTagged "mainFunctionPlaceholder")
-            : ( makeLibraryFunction
-                  <$> [(f ^. compilerFunctionName, f ^. compilerFunctionArity, runCompilerFunction compilerCtx f) | f <- libFuns]
-              )
-
-    -- The result is not quoted and cannot be evaluated.
-    makeLibraryFunction :: (Text, Natural, Term Natural) -> Term Natural
-    makeLibraryFunction (funName, funArity, c) =
-      ("def-" <> funName)
-        @ makeRawClosure
-          ( \p ->
-              let nockNilHere = nockNilTagged ("makeLibraryFunction-" <> show p)
-               in case p of
-                    FunCode -> ("funCode-" <> funName) @ c
-                    ArgsTuple -> ("argsTuple-" <> funName) @ argsTuplePlaceholder "libraryFunction" funArity
-                    ClosureRemainingArgsNum -> ("closureRemainingArgsNum-" <> funName) @ nockNilHere
-                    FunctionsLibrary -> ("functionsLibrary-" <> funName) @ functionsLibraryPlaceHolder
-                    AnomaLibrary -> ("stdlib-" <> funName) @ anomaLibPlaceholder
-          )
-
-    -- The result is not quoted and cannot be evaluated directly.
-    makeMainFunction :: Term Natural -> Term Natural
-    makeMainFunction funCode = makeRawClosure $ \case
-      FunCode -> funCode
-      ArgsTuple -> argsTuplePlaceholder "mainFunction" (mainFun ^. compilerFunctionArity)
-      ClosureRemainingArgsNum -> nockNilTagged ("makeMainFunction-ClosureRemainingArgsNum")
-      FunctionsLibrary -> funcsLib
-      AnomaLibrary -> anomaLib
-
-    functionInfos :: HashMap FunctionId FunctionInfo
-    functionInfos = hashMap (run (runStreamOfNaturals (toList <$> userFunctions)))
-
-    userFunctions :: (Members '[StreamOf Natural] r) => Sem r (NonEmpty (FunctionId, FunctionInfo))
-    userFunctions = forM allFuns $ \CompilerFunction {..} -> do
-      i <- yield
-      return
-        ( _compilerFunctionId,
-          FunctionInfo
-            { _functionInfoPath = pathFromEnum FunctionsLibrary ++ indexStack i,
-              _functionInfoArity = _compilerFunctionArity,
-              _functionInfoName = _compilerFunctionName
-            }
-        )
 
 anomaLibPlaceholder :: Term Natural
 anomaLibPlaceholder =
@@ -1161,8 +1181,8 @@ anomaLibPlaceholder =
         _atom = 0 :: Natural
       }
 
-functionsLibraryPlaceHolder :: Term Natural
-functionsLibraryPlaceHolder =
+modulesLibraryPlaceHolder :: Term Natural
+modulesLibraryPlaceHolder =
   TermAtom
     Atom
       { _atomInfo =
@@ -1174,29 +1194,31 @@ functionsLibraryPlaceHolder =
         _atom = 0 :: Natural
       }
 
-builtinFunction :: BuiltinFunctionId -> CompilerFunction
-builtinFunction = \case
-  BuiltinPlaceholder ->
-    CompilerFunction
-      { _compilerFunctionId = BuiltinFunction BuiltinPlaceholder,
-        _compilerFunctionArity = 0,
-        _compilerFunction = return crash,
-        _compilerFunctionName = "builtinPlaceholderName"
-      }
-
 -- | Call a function with the passed arguments
 callFunWithArgs ::
   forall r.
   (Member (Reader CompilerCtx) r) =>
-  FunctionId ->
+  Symbol ->
   [Term Natural] ->
   Sem r (Term Natural)
 callFunWithArgs fun args = do
   newSubject <- replaceArgs args
-  fpath <- getFunctionPath fun
-  fname <- getFunctionName fun
-  let p' = fpath ++ closurePath FunCode
-  return (opCall ("callFun-" <> fname) p' newSubject)
+  finfo <- getFunctionInfo fun
+  minfo <- getModuleInfo (finfo ^. functionInfoModuleId)
+  let fname = finfo ^. functionInfoName
+      fpath = pathFromEnum ModulesLibrary ++ [L] ++ finfo ^. functionInfoPath
+  mid <- asks (^. compilerModuleId)
+  batch <- asks (^. compilerBatch)
+  if
+      | batch || mid == finfo ^. functionInfoModuleId -> do
+          return (opCall ("callFun-" <> fname) (fpath ++ closurePath FunCode) newSubject)
+      | otherwise -> do
+          -- The function is in a different module. We need to call the function
+          -- with its module's module library.
+          base <- getSubjectBasePath
+          let modLib = opAddress "callFun-modLib" (base ++ closurePath ModulesLibrary ++ minfo ^. moduleInfoPath)
+              newSubject' = opReplace "callFun-modLib" (closurePath ModulesLibrary) modLib newSubject
+          return (opCall ("callFun-" <> fname) (fpath ++ closurePath FunCode) newSubject')
 
 callClosure :: (Member (Reader CompilerCtx) r) => TempRef -> [Term Natural] -> Sem r (Term Natural)
 callClosure ref args = do
@@ -1205,7 +1227,7 @@ callClosure ref args = do
   -- the behaviour with calls to known functions which may have zero arguments.
   massert (not (null args))
   closure <- addressTempRef ref
-  let closure' = OpReplace # (closurePath ArgsTuple # foldTermsOrQuotedNil args) # closure
+  let closure' = opReplace "replace-args-call-closure" (closurePath ArgsTuple) (foldTermsOrQuotedNil args) closure
   return (opCall "callClosure" (closurePath FunCode) closure')
 
 curryClosure :: Term Natural -> [Term Natural] -> Term Natural -> Sem r (Term Natural)
@@ -1215,38 +1237,37 @@ curryClosure f args newArity = do
     FunCode -> (OpQuote # OpCall) # (OpQuote # closurePath FunCode) # (OpQuote # OpReplace) # ((OpQuote # closurePath ArgsTuple) # args') # (OpQuote # OpQuote) # f
     ArgsTuple -> OpQuote # nockNilTagged "argsTuple" -- We assume the arguments tuple is never accessed before being replaced by the caller.
     ClosureRemainingArgsNum -> newArity
-    -- The functions library and the standard library are always taken from the
+    -- The modules library and the standard library are always taken from the
     -- closure `f`. The environment of `f` is used when evaluating the call.
-    FunctionsLibrary -> OpQuote # functionsLibraryPlaceHolder
+    ModulesLibrary -> OpQuote # modulesLibraryPlaceHolder
     AnomaLibrary -> OpQuote # anomaLibPlaceholder
 
-replaceSubject' :: (Member (Reader CompilerCtx) r) => Text -> (AnomaCallablePathId -> Maybe (Term Natural)) -> Sem r (Term Natural)
-replaceSubject' tag f = do
-  lst <- forM allElements $ \s -> do
-    case f s of
-      Nothing -> opAddress tag <$> stackPath s
-      Just t' -> return t'
-  return $ remakeList lst
-
 replaceArgsWithTerm :: (Member (Reader CompilerCtx) r) => Text -> Term Natural -> Sem r (Term Natural)
-replaceArgsWithTerm tag term =
-  replaceSubject' ("replaceArgsWithTerm-" <> tag) $ \case
-    ArgsTuple -> Just term
-    _ -> Nothing
+replaceArgsWithTerm tag term = do
+  subjectPath <- getSubjectBasePath
+  return $ opReplace tag (pathFromEnum ArgsTuple) term (opAddress "replaceArgsWithTerm-getSubject" subjectPath)
 
 -- | Replace the arguments in the ArgsTuple stack with the passed arguments.
 -- Resets the temporary stack to empty. Returns the new subject.
 replaceArgs :: (Member (Reader CompilerCtx) r) => [Term Natural] -> Sem r (Term Natural)
 replaceArgs = replaceArgsWithTerm "replaceArgs" . foldTermsOrQuotedNil
 
-getFunctionInfo :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r FunctionInfo
-getFunctionInfo funId = asks (^?! compilerFunctionInfos . at funId . _Just)
+getModuleInfo :: (Members '[Reader CompilerCtx] r) => ModuleId -> Sem r ModuleInfo
+getModuleInfo mid = fromJust . HashMap.lookup mid <$> asks (^. compilerModuleInfos)
 
-getFunctionPath :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Path
-getFunctionPath funId = (^. functionInfoPath) <$> getFunctionInfo funId
+getFunctionInfo :: (HasCallStack) => (Members '[Reader CompilerCtx] r) => Symbol -> Sem r FunctionInfo
+getFunctionInfo funId = fromJust . HashMap.lookup funId <$> asks (^. compilerFunctionInfos)
 
-getFunctionName :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Text
-getFunctionName funId = (^. functionInfoName) <$> getFunctionInfo funId
+getFunctionInfoPath :: (Members '[Reader CompilerCtx] r) => FunctionInfo -> Sem r Path
+getFunctionInfoPath finfo = do
+  mid <- asks (^. compilerModuleId)
+  batch <- asks (^. compilerBatch)
+  if
+      | batch || mid == finfo ^. functionInfoModuleId ->
+          return (pathFromEnum ModulesLibrary ++ [L] ++ finfo ^. functionInfoPath)
+      | otherwise -> do
+          minfo <- getModuleInfo (finfo ^. functionInfoModuleId)
+          return (pathFromEnum ModulesLibrary ++ minfo ^. moduleInfoPath ++ [L] ++ finfo ^. functionInfoPath)
 
 builtinTagToTerm :: NockmaBuiltinTag -> Term Natural
 builtinTagToTerm = \case
@@ -1256,7 +1277,7 @@ builtinTagToTerm = \case
 constructorTagToTerm :: Tree.Tag -> Term Natural
 constructorTagToTerm = \case
   Tree.UserTag t -> OpQuote # toNock (fromIntegral (t ^. Tree.tagUserWord) :: Natural)
-  Tree.BuiltinTag b -> builtinTagToTerm (nockmaBuiltinTag b)
+  Tree.BuiltinTag b -> maybe crash builtinTagToTerm (nockmaBuiltinTag b)
 
 -- | Creates a case command from the reference `ref` to the compiled value and the
 -- compiled branches.
@@ -1271,8 +1292,9 @@ caseCmd ref defaultBranch = \case
   [] -> return (fromJust defaultBranch)
   (tag, b) : bs -> case tag of
     Tree.BuiltinTag t -> case nockmaBuiltinTag t of
-      NockmaBuiltinBool v -> goBoolTag v b bs
-      NockmaBuiltinJson {} -> goRepConstr tag b bs
+      Just (NockmaBuiltinBool v) -> goBoolTag v b bs
+      Just (NockmaBuiltinJson {}) -> goRepConstr tag b bs
+      Nothing -> return crash
     Tree.UserTag {} -> do
       rep <- getConstructorMemRep tag
       case rep of
@@ -1304,10 +1326,10 @@ caseCmd ref defaultBranch = \case
       case nonEmpty bs of
         Nothing -> case defaultBranch of
           Nothing -> return b
-          Just defbr -> return (branch cond b defbr)
+          Just defbr -> return (branch "default" cond b defbr)
         Just ((t', b') :| bs') -> do
           elseBr <- goRepConstr t' b' bs'
-          return (branch cond b elseBr)
+          return (branch "branch" cond b elseBr)
 
     asNockmaMemRepListConstr :: Tree.Tag -> Sem r NockmaMemRepListConstr
     asNockmaMemRepListConstr tag = case tag of
@@ -1346,15 +1368,16 @@ caseCmd ref defaultBranch = \case
       let otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
       return $
         if
-            | v -> branch arg b otherBranch
-            | otherwise -> branch arg otherBranch b
+            | v -> branch "bool-true" arg b otherBranch
+            | otherwise -> branch "bool-false" arg otherBranch b
       where
         f :: (Tree.Tag, Term Natural) -> Maybe (Term Natural)
         f (tag', br) = case tag' of
           Tree.UserTag {} -> impossible
           Tree.BuiltinTag tag -> case nockmaBuiltinTag tag of
-            NockmaBuiltinBool v' -> guard (v /= v') $> br
-            NockmaBuiltinJson {} -> impossible
+            Just (NockmaBuiltinBool v') -> guard (v /= v') $> br
+            Just (NockmaBuiltinJson {}) -> impossible
+            Nothing -> Nothing
 
     goRepList :: NonEmpty (NockmaMemRepListConstr, Term Natural) -> Sem r (Term Natural)
     goRepList ((c, b) :| bs) = do
@@ -1362,8 +1385,8 @@ caseCmd ref defaultBranch = \case
       let cond = OpIsCell # arg
           otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
       return $ case c of
-        NockmaMemRepListConstrCons -> branch cond b otherBranch
-        NockmaMemRepListConstrNil -> branch cond otherBranch b
+        NockmaMemRepListConstrCons -> branch "list-cons" cond b otherBranch
+        NockmaMemRepListConstrNil -> branch "list-nil" cond otherBranch b
       where
         f :: (NockmaMemRepListConstr, Term Natural) -> Maybe (Term Natural)
         f (c', br) = guard (c /= c') $> br
@@ -1374,8 +1397,8 @@ caseCmd ref defaultBranch = \case
       let cond = OpIsCell # arg
           otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
       return $ case c of
-        NockmaMemRepCell -> branch cond b otherBranch
-        NockmaMemRepAtom -> branch cond otherBranch b
+        NockmaMemRepCell -> branch "cell" cond b otherBranch
+        NockmaMemRepAtom -> branch "atom" cond otherBranch b
       where
         f :: (NockmaMemRepNounConstr, Term Natural) -> Maybe (Term Natural)
         f (c', br) = guard (c /= c') $> br
@@ -1386,20 +1409,21 @@ caseCmd ref defaultBranch = \case
       let cond = OpIsCell # arg
           otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
       return $ case c of
-        NockmaMemRepMaybeConstrJust -> branch cond b otherBranch
-        NockmaMemRepMaybeConstrNothing -> branch cond otherBranch b
+        NockmaMemRepMaybeConstrJust -> branch "maybe-just" cond b otherBranch
+        NockmaMemRepMaybeConstrNothing -> branch "maybe-nothing" cond otherBranch b
       where
         f :: (NockmaMemRepMaybeConstr, Term Natural) -> Maybe (Term Natural)
         f (c', br) = guard (c /= c') $> br
 
 branch ::
+  Text ->
   Term Natural ->
   Term Natural ->
   Term Natural ->
   Term Natural
-branch cond t f = OpIf # cond # t # f
+branch tag cond t f = tag @ OpIf # cond # t # f
 
-getFunctionArity :: (Members '[Reader CompilerCtx] r) => FunctionId -> Sem r Natural
+getFunctionArity :: (Members '[Reader CompilerCtx] r) => Symbol -> Sem r Natural
 getFunctionArity s = asks (^?! compilerFunctionInfos . at s . _Just . functionInfoArity)
 
 getConstructorInfo :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r ConstructorInfo

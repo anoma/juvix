@@ -37,7 +37,7 @@ naturalToBase64 :: Natural -> Text
 naturalToBase64 = decodeUtf8 . Base64.encode . naturalToByteString
 
 byteStringToIntegerLE :: ByteString -> Integer
-byteStringToIntegerLE = BS.foldr (\b acc -> acc `shiftL` 8 .|. fromIntegral b) 0
+byteStringToIntegerLE = byteStringToIntegerLEChunked
 
 byteStringToIntegerLEChunked :: ByteString -> Integer
 byteStringToIntegerLEChunked = foldr' go 0 . map (first byteStringChunkToInteger) . chunkByteString
@@ -58,6 +58,7 @@ byteStringToIntegerLEChunked = foldr' go 0 . map (first byteStringChunkToInteger
     byteStringChunkToInteger :: ByteString -> Integer
     byteStringChunkToInteger = BS.foldr' (\b acc -> acc `shiftL` 8 .|. fromIntegral b) 0
 
+-- | TODO: this is quadratic (`shiftR` is O(n))
 naturalToByteStringLE :: Natural -> ByteString
 naturalToByteStringLE = BS.toStrict . BS.toLazyByteString . go
   where

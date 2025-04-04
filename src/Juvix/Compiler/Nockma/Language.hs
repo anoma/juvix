@@ -53,6 +53,8 @@ instance (Hashable a) => Hashable (Term a)
 
 instance (NFData a) => NFData (Term a)
 
+instance (Serialize a) => Serialize (Term a)
+
 data AnomaLibCall a = AnomaLibCall
   { _anomaLibCallRef :: AnomaLib,
     _anomaLibCallArgs :: Term a
@@ -63,6 +65,8 @@ instance (Hashable a) => Hashable (AnomaLibCall a)
 
 instance (NFData a) => NFData (AnomaLibCall a)
 
+instance (Serialize a) => Serialize (AnomaLibCall a)
+
 newtype Tag = Tag
   { _unTag :: Text
   }
@@ -71,6 +75,8 @@ newtype Tag = Tag
 instance Hashable Tag
 
 instance NFData Tag
+
+instance Serialize Tag
 
 data CellInfo a = CellInfo
   { _cellInfoLoc :: Irrelevant (Maybe Interval),
@@ -83,16 +89,24 @@ instance (Hashable a) => Hashable (CellInfo a)
 
 instance (NFData a) => NFData (CellInfo a)
 
+instance (Serialize a) => Serialize (CellInfo a)
+
 data Cell a = Cell'
   { _cellLeft :: Term a,
     _cellRight :: Term a,
     _cellInfo :: CellInfo a
   }
-  deriving stock (Show, Eq, Lift, Generic)
+  deriving stock (Show, Lift, Generic)
 
-instance (Hashable a) => Hashable (Cell a)
+instance (Eq a) => Eq (Cell a) where
+  Cell' l r _ == Cell' l' r' _ = l == l' && r == r'
+
+instance (Hashable a) => Hashable (Cell a) where
+  hashWithSalt salt (Cell' l r _) = hashWithSalt salt (l, r)
 
 instance (NFData a) => NFData (Cell a)
+
+instance (Serialize a) => Serialize (Cell a)
 
 data AtomInfo = AtomInfo
   { _atomInfoHint :: Maybe AtomHint,
@@ -105,15 +119,23 @@ instance Hashable AtomInfo
 
 instance NFData AtomInfo
 
+instance Serialize AtomInfo
+
 data Atom a = Atom
   { _atom :: a,
     _atomInfo :: AtomInfo
   }
-  deriving stock (Show, Eq, Lift, Generic)
+  deriving stock (Show, Lift, Generic)
 
-instance (Hashable a) => Hashable (Atom a)
+instance (Eq a) => Eq (Atom a) where
+  Atom a _ == Atom b _ = a == b
+
+instance (Hashable a) => Hashable (Atom a) where
+  hashWithSalt salt (Atom a _) = hashWithSalt salt a
 
 instance (NFData a) => NFData (Atom a)
+
+instance (Serialize a) => Serialize (Atom a)
 
 data AtomHint
   = AtomHintOp
@@ -129,6 +151,8 @@ data AtomHint
 instance Hashable AtomHint
 
 instance NFData AtomHint
+
+instance Serialize AtomHint
 
 data NockOp
   = OpAddress
@@ -147,6 +171,10 @@ data NockOp
   deriving stock (Show, Bounded, Enum, Eq, Generic, Lift)
 
 instance Hashable NockOp
+
+instance NFData NockOp
+
+instance Serialize NockOp
 
 instance Pretty NockOp where
   pretty = \case
@@ -615,3 +643,14 @@ unfoldTuple1 = nonEmpty' . run . execOutputList . go
       case t of
         TermAtom {} -> output t
         TermCell (Cell l r) -> output l >> go r
+
+foldTerms :: NonEmpty (Term Natural) -> Term Natural
+foldTerms = foldr1 (#)
+
+-- | The elements will not be evaluated.
+makeList :: (Foldable f) => f (Term Natural) -> Term Natural
+makeList ts = foldTerms (toList ts `prependList` pure (nockNilTagged "makeList"))
+
+-- | The elements of the list will be evaluated to create the list.
+remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
+remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged "remakeList"))
