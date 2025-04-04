@@ -24,6 +24,7 @@ data Node
   | Cairo NodeCairo
   | Anoma NodeAnoma
   | ByteArray NodeByteArray
+  | Nockma NodeNockma
   | -- | A constant value.
     Constant NodeConstant
   | -- | A memory reference.
@@ -81,6 +82,7 @@ data TreeOp
   = TreeBinaryOpcode BinaryOpcode
   | TreeUnaryOpcode UnaryOpcode
   | TreeByteArrayOp ByteArrayOp
+  | TreeNockmaOp NockmaOp
   | TreeCairoOp CairoOp
   | TreeAnomaOp AnomaOp
   deriving stock (Generic)
@@ -117,6 +119,15 @@ data NodeUnop = NodeUnop
   deriving stock (Generic)
 
 instance Serialize NodeUnop
+
+data NodeNockma = NodeNockma
+  { _nodeNockmaInfo :: NodeInfo,
+    _nodeNockmaOpcode :: NockmaOp,
+    _nodeNockmaArgs :: [Node]
+  }
+  deriving stock (Generic)
+
+instance Serialize NodeNockma
 
 data NodeByteArray = NodeByteArray
   { _nodeByteArrayInfo :: NodeInfo,

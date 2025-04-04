@@ -92,6 +92,9 @@ fromCore' tab =
       BuiltinMkAnomaAction -> True
       BuiltinMkAnomaComplianceInputs -> True
       BuiltinMkAnomaShieldedTransaction -> True
+      BuiltinNockmaAtom -> True
+      BuiltinNockmaCell -> True
+      --
       BuiltinNatZero -> False
       BuiltinNatSuc -> False
       BuiltinBoolTrue -> False
@@ -103,6 +106,7 @@ fromCore' tab =
     shouldKeepType = \case
       BuiltinTypeAxiom a -> case a of
         BuiltinIO -> True
+        --
         BuiltinNatPrint -> False
         BuiltinNatToString -> False
         BuiltinStringPrint -> False
@@ -125,6 +129,7 @@ fromCore' tab =
         BuiltinFail -> False
         BuiltinIntToString -> False
         BuiltinIntPrint -> False
+        BuiltinNockmaReify -> False
         BuiltinAnomaGet -> False
         BuiltinAnomaEncode -> False
         BuiltinAnomaDecode -> False
@@ -186,6 +191,7 @@ fromCore' tab =
         BuiltinAnomaAction -> True
         BuiltinAnomaComplianceInputs -> True
         BuiltinAnomaShieldedTransaction -> True
+        BuiltinNockmaNoun -> True
 
 translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
 translateFunctionInfo tab IdentifierInfo {..} =
@@ -278,22 +284,20 @@ translateNode node = case node of
     Stripped.mkBuiltinApp _builtinAppOp (map translateNode _builtinAppArgs)
   NCtr Constr {..} ->
     Stripped.mkConstr
-      ( Stripped.ConstrInfo
-          { _constrInfoName = getInfoName _constrInfo,
-            _constrInfoLocation = getInfoLocation _constrInfo,
-            _constrInfoType = Stripped.TyDynamic
-          }
-      )
+      Stripped.ConstrInfo
+        { _constrInfoName = getInfoName _constrInfo,
+          _constrInfoLocation = getInfoLocation _constrInfo,
+          _constrInfoType = Stripped.TyDynamic
+        }
       _constrTag
       (map translateNode _constrArgs)
   NLet Let {..} ->
     Stripped.mkLet
-      ( Stripped.Binder
-          { _binderName = _letItem ^. letItemBinder . binderName,
-            _binderLocation = _letItem ^. letItemBinder . binderLocation,
-            _binderType = translateType (_letItem ^. letItemBinder . binderType)
-          }
-      )
+      Stripped.Binder
+        { _binderName = _letItem ^. letItemBinder . binderName,
+          _binderLocation = _letItem ^. letItemBinder . binderLocation,
+          _binderType = translateType (_letItem ^. letItemBinder . binderType)
+        }
       (translateNode (_letItem ^. letItemValue))
       (translateNode _letBody)
   NCase c@Case {..} -> translateCase translateIf dflt c
@@ -341,23 +345,21 @@ translateNode node = case node of
     translateVar :: Var -> Stripped.Var
     translateVar Var {..} =
       Stripped.Var
-        ( Stripped.VarInfo
-            { _varInfoName = getInfoName _varInfo,
-              _varInfoLocation = getInfoLocation _varInfo,
-              _varInfoType = Stripped.TyDynamic
-            }
-        )
+        Stripped.VarInfo
+          { _varInfoName = getInfoName _varInfo,
+            _varInfoLocation = getInfoLocation _varInfo,
+            _varInfoType = Stripped.TyDynamic
+          }
         _varIndex
 
     translateIdent :: Ident -> Stripped.Ident
     translateIdent Ident {..} =
       Stripped.Ident
-        ( Stripped.IdentInfo
-            { _identInfoName = getInfoName _identInfo,
-              _identInfoLocation = getInfoLocation _identInfo,
-              _identInfoType = Stripped.TyDynamic
-            }
-        )
+        Stripped.IdentInfo
+          { _identInfoName = getInfoName _identInfo,
+            _identInfoLocation = getInfoLocation _identInfo,
+            _identInfoType = Stripped.TyDynamic
+          }
         _identSymbol
 
 translateType :: Node -> Stripped.Type

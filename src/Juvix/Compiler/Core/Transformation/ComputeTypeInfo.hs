@@ -80,6 +80,7 @@ computeNodeTypeInfo md = umapL go
             [arg] -> Info.getNodeType arg
             _ -> error "incorrect trace builtin application"
           OpFail -> Info.getNodeType node
+          OpNockmaReify -> Info.getNodeType node
           OpAnomaGet -> Info.getNodeType node
           OpAnomaEncode -> Info.getNodeType node
           OpAnomaDecode -> Info.getNodeType node
