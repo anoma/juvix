@@ -36,6 +36,7 @@ import Juvix.Compiler.Nockma.Language.Path
 import Juvix.Compiler.Nockma.Pretty
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Tree.Data.Module qualified as Tree
+import Juvix.Compiler.Tree.Extra.Type qualified as Tree
 import Juvix.Compiler.Tree.Language qualified as Tree
 import Juvix.Compiler.Tree.Language.Rep
 import Juvix.Prelude hiding (Atom, Path)
@@ -67,9 +68,18 @@ data NockmaMemRepMaybeConstr
   | NockmaMemRepMaybeConstrJust
   deriving stock (Eq)
 
+-- | A type that has two constructors:
+-- 1st constructor has a single argument. This argument must be representable as an atom.
+-- 2nd constructor has *at least* two arguments
+data NockmaMemRepNounConstr
+  = NockmaMemRepAtom
+  | NockmaMemRepCell
+  deriving stock (Eq)
+
 data NockmaMemRep
   = NockmaMemRepConstr
   | NockmaMemRepTuple
+  | NockmaMemRepNoun NockmaMemRepNounConstr
   | NockmaMemRepList NockmaMemRepListConstr
   | NockmaMemRepMaybe NockmaMemRepMaybeConstr
 
@@ -321,6 +331,37 @@ supportsListNockmaRep md ci =
       | otherwise -> Nothing
     _ -> Nothing
 
+supportsNounNockmaRep :: Tree.Module -> Tree.ConstructorInfo -> Maybe NockmaMemRep
+supportsNounNockmaRep md ci = fmap NockmaMemRepNoun . run . runFail $ do
+  c1 :| [c2] <- pure (allConstructors md ci)
+  failUnless ([1, 2] `elem` permutations ((^. Tree.constructorArgsNum) <$> [c1, c2]))
+  case ci ^. Tree.constructorArgsNum of
+    1 -> do
+      ([arg], _) <- pure (Tree.unfoldType (ci ^. Tree.constructorType))
+      failUnless (typeRepresentedAsAtom arg)
+      return NockmaMemRepAtom
+    2 -> return NockmaMemRepCell
+    _ -> impossible
+  where
+    -- Returns True if all elements of some type are representable with an
+    -- Atom. There may be false negatives. In that case, a less optimal
+    -- representation might be chosen, but it shouldn't effect correctness.
+    typeRepresentedAsAtom :: Tree.Type -> Bool
+    typeRepresentedAsAtom = \case
+      Tree.TyInteger {} -> True
+      Tree.TyBool {} -> True
+      Tree.TyString {} -> True
+      Tree.TyUnit {} -> True
+      --
+      Tree.TyField {} -> False
+      Tree.TyVoid {} -> False
+      Tree.TyInductive {} -> False
+      Tree.TyConstr {} -> False
+      Tree.TyFun {} -> False
+      Tree.TyByteArray {} -> False
+      Tree.TyDynamic -> False
+      Tree.TyRandomGenerator {} -> False
+
 supportsMaybeNockmaRep :: Tree.Module -> Tree.ConstructorInfo -> Maybe NockmaMemRep
 supportsMaybeNockmaRep md ci =
   NockmaMemRepMaybe <$> case allConstructors md ci of
@@ -508,7 +549,13 @@ fromTreeModule fetchModule importsTab md = do
           )
           where
             rep :: NockmaMemRep
-            rep = fromMaybe r (supportsListNockmaRep md ci <|> supportsMaybeNockmaRep md ci)
+            rep =
+              fromMaybe
+                r
+                ( supportsListNockmaRep md ci
+                    <|> supportsMaybeNockmaRep md ci
+                    <|> supportsNounNockmaRep md ci
+                )
               where
                 r = nockmaMemRep (memRep ci (Tree.lookupInductiveInfo md (ci ^. Tree.constructorInductive)))
 
@@ -569,38 +616,44 @@ compile = \case
             path :: Sem r Path
             path = do
               fr <- directRefPath _fieldRef
-              return $ case memrep of
-                NockmaMemRepConstr ->
-                  fr
-                    ++ constructorPath ConstructorArgs
-                    ++ indexStack argIx
-                NockmaMemRepTuple ->
-                  fr
-                    ++ indexTuple
-                      IndexTupleArgs
-                        { _indexTupleArgsLength = arity,
-                          _indexTupleArgsIndex = argIx
-                        }
-                NockmaMemRepList constr -> case constr of
-                  NockmaMemRepListConstrNil -> impossible
-                  NockmaMemRepListConstrCons ->
-                    fr
-                      ++ indexTuple
+              return $
+                fr
+                  ++ case memrep of
+                    NockmaMemRepConstr ->
+                      constructorPath ConstructorArgs
+                        ++ indexStack argIx
+                    NockmaMemRepTuple ->
+                      indexTuple
                         IndexTupleArgs
-                          { _indexTupleArgsLength = 2,
+                          { _indexTupleArgsLength = arity,
                             _indexTupleArgsIndex = argIx
                           }
-                NockmaMemRepMaybe constr -> case constr of
-                  NockmaMemRepMaybeConstrNothing -> impossible
-                  -- just x is represented as [nil x] so argument index is offset by 1.
-                  -- argIx will always be 0 because just has one argument
-                  NockmaMemRepMaybeConstrJust ->
-                    fr
-                      ++ indexTuple
-                        IndexTupleArgs
-                          { _indexTupleArgsLength = 2,
-                            _indexTupleArgsIndex = argIx + 1
-                          }
+                    NockmaMemRepList constr -> case constr of
+                      NockmaMemRepListConstrNil -> impossible
+                      NockmaMemRepListConstrCons ->
+                        indexTuple
+                          IndexTupleArgs
+                            { _indexTupleArgsLength = 2,
+                              _indexTupleArgsIndex = argIx
+                            }
+                    NockmaMemRepNoun n -> case n of
+                      NockmaMemRepAtom -> emptyPath
+                      NockmaMemRepCell ->
+                        indexTuple
+                          IndexTupleArgs
+                            { _indexTupleArgsLength = arity,
+                              _indexTupleArgsIndex = argIx
+                            }
+                    NockmaMemRepMaybe constr -> case constr of
+                      NockmaMemRepMaybeConstrNothing -> impossible
+                      -- just x is represented as [nil x] so argument index is offset by 1.
+                      -- argIx will always be 0 because just has one argument
+                      NockmaMemRepMaybeConstrJust ->
+                        indexTuple
+                          IndexTupleArgs
+                            { _indexTupleArgsLength = 2,
+                              _indexTupleArgsIndex = argIx + 1
+                            }
         (opAddress "constrRef") <$> path
       where
         goDirectRef :: Tree.DirectRef -> Sem r (Term Natural)
@@ -1088,8 +1141,7 @@ goConstructor mr t args = assert (all isCell args) $
         makeConstructor $ \case
           ConstructorTag -> OpQuote # (fromIntegral (tag ^. Tree.tagUserWord) :: Natural)
           ConstructorArgs -> remakeList args
-      NockmaMemRepTuple ->
-        foldTerms (nonEmpty' args)
+      NockmaMemRepTuple -> foldTerms (nonEmpty' args)
       NockmaMemRepList constr -> case constr of
         NockmaMemRepListConstrNil
           | null args -> remakeList []
@@ -1097,6 +1149,11 @@ goConstructor mr t args = assert (all isCell args) $
         NockmaMemRepListConstrCons -> case args of
           [l, r] -> TCell l r
           _ -> impossible
+      NockmaMemRepNoun constr -> case constr of
+        NockmaMemRepAtom -> case args of
+          [arg] -> arg
+          _ -> impossible
+        NockmaMemRepCell -> foldTerms (nonEmpty' args)
       NockmaMemRepMaybe constr -> case constr of
         NockmaMemRepMaybeConstrNothing
           | null args -> (OpQuote # nockNilTagged "maybe-constr-nothing")
@@ -1222,7 +1279,7 @@ constructorTagToTerm = \case
   Tree.UserTag t -> OpQuote # toNock (fromIntegral (t ^. Tree.tagUserWord) :: Natural)
   Tree.BuiltinTag b -> maybe crash builtinTagToTerm (nockmaBuiltinTag b)
 
--- Creates a case command from the reference `ref` to the compiled value and the
+-- | Creates a case command from the reference `ref` to the compiled value and the
 -- compiled branches.
 caseCmd ::
   forall r.
@@ -1245,6 +1302,9 @@ caseCmd ref defaultBranch = \case
         NockmaMemRepTuple
           | null bs, isNothing defaultBranch -> return b
           | otherwise -> error "redundant branch. Impossible?"
+        NockmaMemRepNoun constr -> do
+          bs' <- mapM (firstM asNockmaMemRepNounConstr) bs
+          goRepNoun ((constr, b) :| bs')
         NockmaMemRepList constr -> do
           bs' <- mapM (firstM asNockmaMemRepListConstr) bs
           goRepList ((constr, b) :| bs')
@@ -1277,6 +1337,15 @@ caseCmd ref defaultBranch = \case
         rep <- getConstructorMemRep tag
         case rep of
           NockmaMemRepList constr -> return constr
+          _ -> impossible
+      Tree.BuiltinTag {} -> impossible
+
+    asNockmaMemRepNounConstr :: Tree.Tag -> Sem r NockmaMemRepNounConstr
+    asNockmaMemRepNounConstr tag = case tag of
+      Tree.UserTag {} -> do
+        rep <- getConstructorMemRep tag
+        case rep of
+          NockmaMemRepNoun constr -> return constr
           _ -> impossible
       Tree.BuiltinTag {} -> impossible
 
@@ -1320,6 +1389,18 @@ caseCmd ref defaultBranch = \case
         NockmaMemRepListConstrNil -> branch "list-nil" cond otherBranch b
       where
         f :: (NockmaMemRepListConstr, Term Natural) -> Maybe (Term Natural)
+        f (c', br) = guard (c /= c') $> br
+
+    goRepNoun :: NonEmpty (NockmaMemRepNounConstr, Term Natural) -> Sem r (Term Natural)
+    goRepNoun ((c, b) :| bs) = do
+      arg <- addressTempRef ref
+      let cond = OpIsCell # arg
+          otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
+      return $ case c of
+        NockmaMemRepCell -> branch "cell" cond b otherBranch
+        NockmaMemRepAtom -> branch "atom" cond otherBranch b
+      where
+        f :: (NockmaMemRepNounConstr, Term Natural) -> Maybe (Term Natural)
         f (c', br) = guard (c /= c') $> br
 
     goRepMaybe :: NonEmpty (NockmaMemRepMaybeConstr, Term Natural) -> Sem r (Term Natural)
