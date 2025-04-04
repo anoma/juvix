@@ -5,7 +5,7 @@ module Juvix.Compiler.Nockma.Translation.FromTree
     anomaClosure,
     compilerFunctionId,
     compilerFunctionName,
-    compilerInductiveInfos, -- TODO remove
+    compilerInductiveInfos,
     AnomaCallablePathId (..),
     CompilerOptions (..),
     CompilerFunction (..),

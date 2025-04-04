@@ -48,6 +48,7 @@ toTreeOp = \case
   Core.OpEq -> TreeBinaryOpcode (PrimBinop (OpBool OpEq))
   Core.OpStrConcat -> TreeBinaryOpcode (PrimBinop OpStrConcat)
   Core.OpSeq -> TreeBinaryOpcode OpSeq
+  -- TreeUnaryOpcode
   Core.OpShow -> TreeUnaryOpcode (PrimUnop OpShow)
   Core.OpStrToInt -> TreeUnaryOpcode (PrimUnop OpStrToInt)
   Core.OpFieldFromInt -> TreeUnaryOpcode (PrimUnop OpIntToField)
