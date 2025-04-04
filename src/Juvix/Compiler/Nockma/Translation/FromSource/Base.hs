@@ -312,7 +312,8 @@ cell = do
         CellInfo
           { _cellInfoCall = c,
             _cellInfoTag = lbl,
-            _cellInfoLoc = Irrelevant (Just (lloc <> rloc))
+            _cellInfoLoc = Irrelevant (Just (lloc <> rloc)),
+            _cellInfoHash = hash r
           }
   return (set cellInfo info r)
   where

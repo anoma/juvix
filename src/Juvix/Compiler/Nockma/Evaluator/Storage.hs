@@ -16,7 +16,7 @@ newtype StorageKey a = StorageKey {_storageKeyTerm :: Term a}
 makeLenses ''Storage
 makeLenses ''StorageKey
 
-stripMeta :: Term a -> Term a
+stripMeta :: (Hashable a) => Term a -> Term a
 stripMeta = \case
   TermAtom a ->
     TermAtom
@@ -25,17 +25,13 @@ stripMeta = \case
           _atomInfo = emptyAtomInfo
         }
   TermCell c ->
-    TermCell
-      Cell'
-        { _cellLeft = stripMeta (c ^. cellLeft),
-          _cellRight = stripMeta (c ^. cellRight),
-          _cellInfo = emptyCellInfo
-        }
+    TermCell $
+      mkCell (stripMeta (c ^. cellLeft)) (stripMeta (c ^. cellRight))
 
-instance (NockmaEq a) => NockmaEq (StorageKey a) where
+instance (Hashable a, NockmaEq a) => NockmaEq (StorageKey a) where
   nockmaEq (StorageKey s1) (StorageKey s2) = nockmaEq s1 s2
 
-instance (NockmaEq a) => Eq (StorageKey a) where
+instance (Hashable a, NockmaEq a) => Eq (StorageKey a) where
   (==) = nockmaEq
 
 instance (NockmaEq a, Hashable a) => Hashable (StorageKey a) where
@@ -52,10 +48,10 @@ instance (NockmaEq a, Hashable a) => Hashable (StorageKey a) where
         TermAtom a -> goAtom a
         TermCell c -> goCell c
 
-instance (PrettyCode a, NockNatural a) => PrettyCode (StorageKey a) where
+instance (PrettyCode a, Hashable a, NockNatural a) => PrettyCode (StorageKey a) where
   ppCode k = ppCode (stripMeta (k ^. storageKeyTerm))
 
-instance (NockmaEq a) => Semigroup (Storage a) where
+instance (Hashable a, NockmaEq a) => Semigroup (Storage a) where
   Storage s1 <> Storage s2 =
     Storage
       { _storageKeyValueData = HashMap.union s1 s2
