@@ -14,7 +14,6 @@ module Anoma.Effect.Base
     withLoggerThread,
     module Anoma.Rpc.Base,
     module Anoma.Client.Base,
-    module Juvix.Compiler.Nockma.Translation.FromTree,
   )
 where
 
@@ -23,7 +22,6 @@ import Anoma.Rpc.Base
 import Data.ByteString qualified as B
 import Data.Text qualified as T
 import Effectful.Environment
-import Juvix.Compiler.Nockma.Translation.FromTree (AnomaResult)
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 import Juvix.Prelude.Aeson (Value, eitherDecodeStrict, encode)

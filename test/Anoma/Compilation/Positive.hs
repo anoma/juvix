@@ -4,10 +4,10 @@ import Anoma.Effect.Base
 import Anoma.Effect.RunNockma
 import Base
 import Juvix.Compiler.Nockma.Anoma
+import Juvix.Compiler.Nockma.Data.Module
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Translation.FromSource.QQ
-import Juvix.Compiler.Nockma.Translation.FromTree
 import Juvix.Prelude qualified as Prelude
 import Nockma.Eval.Positive (Check, Test (..), eqNock, eqTraces)
 import Nockma.Eval.Positive qualified as NockmaEval
@@ -57,15 +57,17 @@ fromAnomaTest a@AnomaTest {..} =
             | enableDebug = baseTestname <> " debug"
             | otherwise = baseTestname <> " non-debug"
           tIO :: IO Test = do
-            anomaRes <- withRootCopy (compileMain enableDebug _anomaRelRoot _anomaMainFile)
-            let _testProgramFormula = anomaCall (map (opQuote "Quote arg") _anomaArgs)
-                _testProgramSubject = anomaRes ^. anomaClosure
+            (mid, mtab) <- withRootCopy (compileAnomaModular enableDebug _anomaRelRoot _anomaMainFile)
+            let ms = mkModuleStorage mtab
+                md = lookupModuleTable mtab mid
+                _testProgramFormula = anomaCall (map (opQuote "Quote arg") _anomaArgs)
+                _testProgramSubject = getModuleCode md
                 _testEvalOptions = defaultEvalOptions
                 _testAssertEvalError :: Maybe (NockEvalError Natural -> Assertion) = Nothing
             return
               Test
                 { _testCheck = _anomaCheck,
-                  _testProgramStorage = _anomaProgramStorage,
+                  _testProgramStorage = _anomaProgramStorage <> ms,
                   _testName = testName',
                   ..
                 }
@@ -92,7 +94,7 @@ mkAnomaNodeTest a@AnomaTest {..} =
   where
     assertion :: Assertion
     assertion = do
-      program :: Term Natural <- (^. anomaClosure) <$> withRootCopy (compileMain False _anomaRelRoot _anomaMainFile)
+      program :: Term Natural <- withRootCopy (compileAnomaMain False _anomaRelRoot _anomaMainFile)
       testAnomaPath <- envAnomaPath
       runM
         . ignoreLogger

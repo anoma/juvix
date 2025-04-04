@@ -514,7 +514,7 @@ evalProfile inistack initerm =
               cellTerm <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
               t1' <- evalArg crumbEvalFirst stack (cellTerm ^. cellLeft)
               t2' <- evalArg crumbEvalSecond stack (cellTerm ^. cellRight)
-              evalArg crumbEvalSecond t1' t2'
+              evalArg crumbEvalApply t1' t2'
 
             goOpIf :: Sem r (Term a)
             goOpIf = do

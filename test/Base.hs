@@ -19,8 +19,8 @@ import GHC.Generics qualified as GHC
 import Juvix.Compiler.Backend (Target (TargetAnoma))
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
+import Juvix.Compiler.Nockma.Data.Module qualified as Nockma
 import Juvix.Compiler.Nockma.Language hiding (Path)
-import Juvix.Compiler.Nockma.Translation.FromTree (anomaClosure)
 import Juvix.Compiler.Pipeline.EntryPoint.IO
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Modular
@@ -266,20 +266,46 @@ withRootTmpCopy root action = withSystemTempDir "test" $ \tmpRootDir -> do
   copyDirRecur root tmpRootDir
   action tmpRootDir
 
-compileMain :: Bool -> Path Rel Dir -> Path Rel File -> Path Abs Dir -> IO AnomaResult
-compileMain enableDebug relRoot mainFile rootCopyDir = do
+compileAnomaMain :: Bool -> Path Rel Dir -> Path Rel File -> Path Abs Dir -> IO (Term Natural)
+compileAnomaMain enableDebug relRoot mainFile rootCopyDir = do
   let testRootDir = rootCopyDir <//> relRoot
   entryPoint <-
     set entryPointPipeline (Just PipelineExec)
       . set entryPointTarget (Just TargetAnoma)
       . set entryPointDebug enableDebug
       <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
-  (over anomaClosure removeInfoUnlessDebug) . (^. pipelineResult) . snd <$> testRunIO entryPoint upToAnoma
+  removeInfoUnlessDebug
+    . Nockma.getModuleCode
+    . (^. pipelineResult)
+    . snd
+    <$> testRunIO entryPoint upToAnoma
   where
     removeInfoUnlessDebug :: Term Natural -> Term Natural
     removeInfoUnlessDebug
       | enableDebug = id
       | otherwise = removeInfoRec
+
+compileAnomaModular :: Bool -> Path Rel Dir -> Path Rel File -> Path Abs Dir -> IO (ModuleId, Nockma.ModuleTable)
+compileAnomaModular enableDebug relRoot mainFile rootCopyDir = do
+  let testRootDir = rootCopyDir <//> relRoot
+  entryPoint <-
+    set entryPointPipeline (Just PipelineExec)
+      . set entryPointTarget (Just TargetAnoma)
+      . set entryPointDebug enableDebug
+      <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
+  r <- testRunIOModular (Just Core.CheckAnoma) entryPoint modularCoreToAnoma
+  case r of
+    Left err -> assertFailure (renderStringDefault err)
+    Right (mid, mtab) -> do
+      return (mid, removeInfoUnlessDebug mtab)
+      where
+        removeInfoUnlessDebug :: Nockma.ModuleTable -> Nockma.ModuleTable
+        removeInfoUnlessDebug = over Nockma.moduleTable (fmap (over Nockma.moduleInfoTable (over Nockma.infoCode (fmap removeInfoUnlessDebug'))))
+
+        removeInfoUnlessDebug' :: Term Natural -> Term Natural
+        removeInfoUnlessDebug'
+          | enableDebug = id
+          | otherwise = removeInfoRec
 
 envAnomaPath :: (MonadIO m) => m AnomaPath
 envAnomaPath = AnomaPath <$> getAnomaPathAbs

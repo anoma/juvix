@@ -46,6 +46,9 @@ crumbFalseBranch = CrumbTag "Evaluating false branch"
 crumbEvalSecond :: CrumbTag
 crumbEvalSecond = CrumbTag "Evaluating second argument"
 
+crumbEvalApply :: CrumbTag
+crumbEvalApply = CrumbTag "Evaluating application"
+
 data CrumbAutoCons = CrumbAutoCons
   { _crumbAutoConsTag :: CrumbTag,
     _crumbAutoConsLoc :: Maybe Interval

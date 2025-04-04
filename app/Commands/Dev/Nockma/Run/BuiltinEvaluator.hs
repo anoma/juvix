@@ -12,17 +12,21 @@ runCommand :: forall r. (Members AppEffects r) => NockmaRunBuiltinEvaluatorOptio
 runCommand opts = do
   afile <- fromAppPathFile (opts ^. nockmaRunBuiltinFile)
   argsFile <- mapM fromAppPathFile (opts ^. nockmaRunBuiltinArgs)
+  storageFile <- mapM fromAppPathFile (opts ^. nockmaRunBuiltinStorage)
   parsedArgs <- runAppError @JuvixError (mapM Nockma.cueJammedFileOrPretty argsFile)
+  parsedStorage <- runAppError @JuvixError (mapM Nockma.cueJammedFile storageFile)
   parsedTerm <- runAppError @JuvixError (Nockma.cueJammedFileOrPretty afile)
   case parsedTerm of
     TermAtom {} -> exitFailMsg "Expected nockma input to be a cell"
     t@(TermCell {}) -> do
       let formula = anomaCallTuple parsedArgs
+          storageTerms = maybe [] unfoldList parsedStorage
+          storage = foldr insertJammedStorage emptyStorage storageTerms
       (counts, res) <-
         runOpCounts
           . runReader defaultEvalOptions
           . runOutputSem @(Term Natural) (logInfo . mkAnsiText . ppTrace)
-          $ evalCompiledNock' t formula
+          $ evalCompiledNock storage t formula
       putStrLn (ppPrint res)
       when (opts ^. nockmaRunBuiltinProfile) $ do
         let statsFile = replaceExtension' ".profile" afile
