@@ -16,7 +16,7 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Nockma.Encoding qualified as Encoding
-import Juvix.Compiler.Nockma.Encoding.ByteString (byteStringToIntegerLE, naturalToByteStringLELen)
+import Juvix.Compiler.Nockma.Encoding.ByteString (byteStringToIntegerLE)
 import Juvix.Compiler.Nockma.Encoding.Ed25519 qualified as E
 import Juvix.Compiler.Store.Core.Extra qualified as Store
 import Juvix.Data.Field
