@@ -53,12 +53,12 @@ convertNode md = convert mempty
                     End (convert vars h)
                 | otherwise ->
                     End (mkApps (convert vars h) (map (second (convert vars)) args'))
-      NCtr (Constr {..}) ->
+      NCtr Constr {..} ->
         let ci = lookupConstructorInfo md _constrTag
             ty = ci ^. constructorType
             args' = filterArgs id ty _constrArgs
          in End (mkConstr _constrInfo _constrTag (map (convert vars) args'))
-      NCase (Case {..}) ->
+      NCase Case {..} ->
         End (mkCase _caseInfo _caseInductive (convert vars _caseValue) (map convertBranch _caseBranches) (fmap (convert vars) _caseDefault))
         where
           nParams :: Int
@@ -83,19 +83,19 @@ convertNode md = convert mempty
                     _caseBranchBody = body'
                   }
           filterBinders :: BinderList Binder -> [Binder] -> [Binder]
-          filterBinders _ [] = []
-          filterBinders vars' (b : bs)
-            | isTypeConstr md (b ^. binderType) =
-                filterBinders (BL.cons b vars') bs
-          filterBinders vars' (b : bs) =
-            over binderType (convert vars') b : filterBinders (BL.cons b vars') bs
-      NLam (Lambda {..})
+          filterBinders vars' = \case
+            [] -> []
+            b : bs
+              | isTypeConstr md (b ^. binderType) ->
+                  filterBinders (BL.cons b vars') bs
+              | otherwise -> over binderType (convert vars') b : filterBinders (BL.cons b vars') bs
+      NLam Lambda {..}
         | isTypeConstr md (_lambdaBinder ^. binderType) ->
             End (convert (BL.cons _lambdaBinder vars) _lambdaBody)
-      NLet (Let {..})
+      NLet Let {..}
         | isTypeConstr md (_letItem ^. letItemBinder . binderType) ->
             End (convert (BL.cons (_letItem ^. letItemBinder) vars) _letBody)
-      NPi (Pi {..})
+      NPi Pi {..}
         | isTypeConstr md (_piBinder ^. binderType) && not (isTypeConstr md _piBody) ->
             End (convert (BL.cons _piBinder vars) _piBody)
       _ -> Recur node

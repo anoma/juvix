@@ -980,9 +980,11 @@ checkBuiltinInductive d b = localBuiltins $ case b of
   BuiltinPoseidonState -> checkPoseidonStateDef d
   BuiltinEcPoint -> checkEcPointDef d
   BuiltinAnomaResource -> checkResource d
+  BuiltinAnomaNullifierKey -> checkNullifierKey d
   BuiltinAnomaAction -> checkAction d
   BuiltinAnomaComplianceInputs -> checkComplianceInputs d
   BuiltinAnomaShieldedTransaction -> checkShieldedTransaction d
+  BuiltinNockmaNoun -> checkNockmaNoun d
 
 localBuiltins :: (Members '[Reader S.InfoTable] r) => Sem (Reader BuiltinsTable ': r) a -> Sem r a
 localBuiltins m = do
@@ -1100,6 +1102,7 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinByteArrayFromListByte -> checkByteArrayFromListByte d
   BuiltinByteArrayLength -> checkByteArrayLength d
   BuiltinRangeCheck -> checkRangeCheck d
+  BuiltinNockmaReify -> checkNockmaReify d
 
 goInductive ::
   ( Members

@@ -59,6 +59,7 @@ toTreeOp = \case
   Core.OpUInt8ToInt -> TreeUnaryOpcode (PrimUnop OpUInt8ToInt)
   Core.OpAssert -> TreeUnaryOpcode OpAssert
   -- TreeAnomaOp
+  Core.OpNockmaReify -> TreeNockmaOp NockmaOpReify
   Core.OpAnomaGet -> TreeAnomaOp OpAnomaGet
   Core.OpAnomaEncode -> TreeAnomaOp OpAnomaEncode
   Core.OpAnomaDecode -> TreeAnomaOp OpAnomaDecode
@@ -238,6 +239,13 @@ genCode md fi =
             { _nodeAnomaInfo = mempty,
               _nodeAnomaOpcode = op,
               _nodeAnomaArgs = args
+            }
+      TreeNockmaOp op ->
+        Nockma $
+          NodeNockma
+            { _nodeNockmaInfo = mempty,
+              _nodeNockmaOpcode = op,
+              _nodeNockmaArgs = args
             }
       TreeBinaryOpcode op -> case args of
         [arg1, arg2] ->

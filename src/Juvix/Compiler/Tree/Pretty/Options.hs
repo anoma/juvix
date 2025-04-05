@@ -11,6 +11,13 @@ data Options = Options
 
 makeLenses ''Options
 
+emptyOptions :: Options
+emptyOptions =
+  Options
+    { _optSymbolNames = mempty,
+      _optTagNames = mempty
+    }
+
 defaultOptions :: Module'' t e -> Options
 defaultOptions md =
   Options

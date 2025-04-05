@@ -7,7 +7,7 @@ import Juvix.Compiler.Asm.Language
 import Juvix.Compiler.Tree.Data.Module qualified as Tree
 import Juvix.Compiler.Tree.Language qualified as Tree
 
--- DList for O(1) snoc and append
+-- | DList for O(1) snoc and append
 type Code' = DL.DList Command
 
 fromTree :: Tree.Module -> Module
@@ -49,6 +49,7 @@ genCode fi =
       Tree.Unop x -> goUnop isTail x
       Tree.Cairo x -> goCairo isTail x
       Tree.ByteArray {} -> error "ByteArray instructions are not supported in the Asm backend"
+      Tree.Nockma {} -> error "Nockma instructions are not supported in the Asm backend"
       Tree.Anoma {} -> error "Anoma instructions are not supported in the Asm backend"
       Tree.Constant x -> goConstant isTail x
       Tree.MemRef x -> goMemRef isTail x
