@@ -6,7 +6,6 @@ import Crypto.Hash.SHA256 qualified as SHA256
 import Data.Bit (Bit)
 import Data.Bit qualified as Bit
 import Data.ByteString qualified as BS
-import Data.ByteString.Base64 qualified as Base64
 import Juvix.Compiler.Nockma.Encoding.Base
 import Juvix.Compiler.Nockma.Encoding.Effect.BitReader
 import Juvix.Compiler.Nockma.Encoding.Effect.BitWriter
@@ -27,34 +26,6 @@ sha256Atom = fmap sha256Natural . nockNatural
 
 byteStringToAtom :: forall a r. (NockNatural a, Member (Error (ErrNockNatural a)) r) => ByteString -> Sem r (Atom a)
 byteStringToAtom = fmap mkEmptyAtom . fromNatural . byteStringToNatural
-
-byteStringToNatural :: ByteString -> Natural
-byteStringToNatural = fromInteger . byteStringToIntegerLE
-
-naturalToBase64 :: Natural -> Text
-naturalToBase64 = decodeUtf8 . Base64.encode . naturalToByteString
-
-byteStringToIntegerLE :: ByteString -> Integer
-byteStringToIntegerLE = byteStringToIntegerLEChunked
-
-byteStringToIntegerLEChunked :: ByteString -> Integer
-byteStringToIntegerLEChunked = foldr' go 0 . map (first byteStringChunkToInteger) . chunkByteString
-  where
-    chunkSize :: Int
-    chunkSize = 1024
-
-    go :: (Integer, Int) -> Integer -> Integer
-    go (i, size) acc = acc `shiftL` (8 * size) .|. i
-
-    chunkByteString :: ByteString -> [(ByteString, Int)]
-    chunkByteString bs
-      | BS.null bs = []
-      | otherwise =
-          let (chunk, rest) = BS.splitAt chunkSize bs
-           in (chunk, BS.length chunk) : chunkByteString rest
-
-    byteStringChunkToInteger :: ByteString -> Integer
-    byteStringChunkToInteger = BS.foldr' (\b acc -> acc `shiftL` 8 .|. fromIntegral b) 0
 
 textToNatural :: Text -> Natural
 textToNatural = byteStringToNatural . encodeUtf8

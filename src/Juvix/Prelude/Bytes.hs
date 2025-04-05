@@ -3,10 +3,12 @@
 module Juvix.Prelude.Bytes where
 
 import Data.ByteString qualified as BS
+import Data.ByteString.Base64 qualified as Base64
 import Data.ByteString.Builder qualified as BS
 import Data.Primitive.ByteArray qualified as GHCByteArray
 import Data.Primitive.Types
 import GHC.Exts (Word (W#))
+import GHC.Natural
 import Juvix.Prelude.Base.Foundation
 
 byteArrayToList :: (Prim a) => GHCByteArray -> [a]
@@ -35,8 +37,8 @@ padByteStringMod align bs =
           | m == 0 -> bs
           | otherwise -> padByteString ((d + 1) * align) bs
 
-padByteString8 :: ByteString -> ByteString
-padByteString8 = padByteStringMod 8
+padByteStringWord :: ByteString -> ByteString
+padByteStringWord = padByteStringMod bytesPerWord
 
 -- | Pad a ByteString with zeros up to a specified length
 padByteString :: Int -> ByteString -> ByteString
@@ -81,3 +83,46 @@ wordToBytes w = [fromIntegral (w `shiftR` (i * 8)) | i <- [0 .. bytesPerWord - 1
 -- | Platform dependent
 bytesPerWord :: Int
 bytesPerWord = sizeOf (impossible :: Word)
+
+byteStringToNaturalOld :: ByteString -> Natural
+byteStringToNaturalOld = fromInteger . byteStringToIntegerLE
+
+byteStringToNatural :: ByteString -> Natural
+byteStringToNatural = mkNatural . byteStringToWords
+
+byteStringToWords :: ByteString -> [Word]
+byteStringToWords = go []
+  where
+    go :: [Word] -> ByteString -> [Word]
+    go acc b
+      | BS.null b = acc
+      | otherwise =
+          let (w, ws') = BS.splitAt bytesPerWord b
+              new :: Word =
+                BS.foldr' (\wi wacc -> wacc `shiftL` bytesPerWord .|. fromIntegral wi) 0 w
+           in go (new : acc) ws'
+
+naturalToBase64 :: Natural -> Text
+naturalToBase64 = decodeUtf8 . Base64.encode . naturalToByteString
+
+byteStringToIntegerLE :: ByteString -> Integer
+byteStringToIntegerLE = byteStringToIntegerLEChunked
+
+byteStringToIntegerLEChunked :: ByteString -> Integer
+byteStringToIntegerLEChunked = foldr' go 0 . map (first byteStringChunkToInteger) . chunkByteString
+  where
+    chunkSize :: Int
+    chunkSize = 1024
+
+    go :: (Integer, Int) -> Integer -> Integer
+    go (i, size) acc = acc `shiftL` (8 * size) .|. i
+
+    chunkByteString :: ByteString -> [(ByteString, Int)]
+    chunkByteString bs
+      | BS.null bs = []
+      | otherwise =
+          let (chunk, rest) = BS.splitAt chunkSize bs
+           in (chunk, BS.length chunk) : chunkByteString rest
+
+    byteStringChunkToInteger :: ByteString -> Integer
+    byteStringChunkToInteger = BS.foldr' (\b acc -> acc `shiftL` 8 .|. fromIntegral b) 0
