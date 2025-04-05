@@ -7,6 +7,7 @@ import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty.Base
 import Juvix.Prelude hiding (Atom)
+import Juvix.Prelude.Bytes
 
 newtype Storage a = Storage
   {_storageKeyValueData :: HashMap (StorageKey a) (Term a)}
