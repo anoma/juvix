@@ -307,6 +307,13 @@ checkAnomaCreateFromComplianceInputs f = do
   unless (f ^. axiomType === (list_ @@ json_ --> list_ @@ byteArray --> list_ @@ json_ --> list_ @@ byteArray --> list_ @@ json_ --> shieldedTransaction)) $
     builtinsErrorText l "createFromComplianceInputs must be of type: List Json -> List ByteArray -> List Json -> List ByteArray -> List Json -> ShieldedTransaction"
 
+checkAnomaProveDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkAnomaProveDelta f = do
+  let l = getLoc f
+  shieldedTransaction <- getBuiltinNameScoper l BuiltinAnomaShieldedTransaction
+  unless (f ^. axiomType === (shieldedTransaction --> shieldedTransaction)) $
+    builtinsErrorText l "proveDelta must be of type: ShieldedTransaction -> ShieldedTransaction"
+
 checkAnomaSet :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaSet t = do
   let ty = t ^. axiomType

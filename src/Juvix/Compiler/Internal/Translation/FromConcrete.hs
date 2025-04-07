@@ -1088,6 +1088,7 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinAnomaActionCreate -> return ()
   BuiltinAnomaTransactionCompose -> return ()
   BuiltinAnomaCreateFromComplianceInputs -> checkAnomaCreateFromComplianceInputs d
+  BuiltinAnomaProveDelta -> checkAnomaCreateFromComplianceInputs d
   BuiltinAnomaSet -> checkAnomaSet d
   BuiltinAnomaSetToList -> checkAnomaSetToList d
   BuiltinAnomaSetFromList -> checkAnomaSetFromList d

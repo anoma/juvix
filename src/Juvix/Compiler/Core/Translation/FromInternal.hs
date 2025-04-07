@@ -711,6 +711,7 @@ builtinInductive a =
         Internal.BuiltinAnomaIsCommitment -> Nothing
         Internal.BuiltinAnomaIsNullifier -> Nothing
         Internal.BuiltinAnomaCreateFromComplianceInputs -> Nothing
+        Internal.BuiltinAnomaProveDelta -> Nothing
         Internal.BuiltinAnomaActionCreate -> Nothing
         Internal.BuiltinAnomaTransactionCompose -> Nothing
         Internal.BuiltinAnomaSet -> Just (registerInductiveAxiom (Just BuiltinAnomaSet) [])
@@ -1087,6 +1088,12 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
                       )
                   )
               )
+          )
+      Internal.BuiltinAnomaProveDelta -> do
+        registerAxiomDef
+          ( mkLambda'
+              mkDynamic'
+              (mkBuiltinApp' OpAnomaProveDelta [mkVar' 0])
           )
       Internal.BuiltinAnomaSet -> return ()
       Internal.BuiltinAnomaSetToList -> do
