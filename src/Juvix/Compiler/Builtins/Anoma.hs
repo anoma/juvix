@@ -297,6 +297,16 @@ checkAnomaIsNullifier f = do
   unless (f ^. axiomType === (nat_ --> bool_)) $
     builtinsErrorText l "isNullifier must be of type Nat -> Bool"
 
+checkAnomaActionCreate :: AxiomDef -> Sem r ()
+checkAnomaActionCreate _ = return ()
+
+checkAnomaTransactionCompose :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkAnomaTransactionCompose f = do
+  let l = getLoc f
+  shieldedTransaction <- getBuiltinNameScoper l BuiltinAnomaShieldedTransaction
+  unless (f ^. axiomType === (shieldedTransaction --> shieldedTransaction --> shieldedTransaction)) $
+    builtinsErrorText l "transactionCompose must be of type: ShieldedTransaction -> ShieldedTransaction -> ShieldedTransaction"
+
 checkAnomaCreateFromComplianceInputs :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaCreateFromComplianceInputs f = do
   let l = getLoc f
