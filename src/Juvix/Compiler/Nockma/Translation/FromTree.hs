@@ -740,6 +740,7 @@ compile = \case
         Tree.OpAnomaIsCommitment -> callRm RmIsCommitment args
         Tree.OpAnomaIsNullifier -> callRm RmIsNullifier args
         Tree.OpAnomaCreateFromComplianceInputs -> callRm RmCreateFromComplianceInputs args
+        Tree.OpAnomaProveDelta -> callRm RmCairoProveDelta args
         Tree.OpAnomaActionCreate -> callRm RmActionCreate args
         Tree.OpAnomaTransactionCompose -> callRm RmTransactionCompose args
         Tree.OpAnomaSetToList -> goAnomaSetToList args

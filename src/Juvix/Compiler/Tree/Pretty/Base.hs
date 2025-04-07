@@ -312,6 +312,7 @@ instance PrettyCode AnomaOp where
     OpAnomaIsCommitment -> Str.anomaIsCommitment
     OpAnomaIsNullifier -> Str.anomaIsNullifier
     OpAnomaCreateFromComplianceInputs -> Str.anomaCreateFromComplianceInputs
+    OpAnomaProveDelta -> Str.anomaProveDelta
     OpAnomaSetToList -> Str.anomaSetToList
     OpAnomaSetFromList -> Str.anomaSetFromList
     OpAnomaTransactionCompose -> Str.anomaTransactionCompose
