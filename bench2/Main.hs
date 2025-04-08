@@ -9,7 +9,7 @@ import Test.Tasty.Bench
 main :: IO ()
 main =
   defaultMain
-    [ -- Effect.bm,
-      -- Nockma.bm
+    [ Effect.bm,
+      Nockma.bm,
       Natural.bm
     ]

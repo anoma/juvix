@@ -1,5 +1,6 @@
 module Benchmark.Nockma.Encoding.Natural where
 
+import Data.Serialize qualified as Serial
 import Juvix.Prelude
 import Juvix.Prelude.Bytes
 import System.Random
@@ -9,7 +10,7 @@ randomNatural :: IO Natural
 randomNatural = do
   sg <- getStdGen
   let numDigits :: Natural = 1000000
-  return (fst (uniformR (10 ^ numDigits, 10 ^ numDigits + 100) sg))
+  return (fst (uniformR (10 ^ numDigits, 10 ^ numDigits + 10000) sg))
 
 randomNaturalBS :: IO ByteString
 randomNaturalBS = naturalToByteString <$> randomNatural
@@ -27,50 +28,25 @@ bm = bgroup "Natural Encoding" [byteStringToNatBm, natToByteStringBm]
                 (\nat -> bench "Old" (nf old nat)),
               env
                 randomNaturalBS
-                (\nat -> bench "New" (nf new nat)),
-              env
-                randomNaturalBS
-                ( \nat ->
-                    bench
-                      "TEST"
-                      ( nf
-                          ( \i ->
-                              if new i == old i
-                                then True
-                                else error "wrong"
-                          )
-                          nat
-                      )
-                )
+                (\nat -> bench "New" (nf new nat))
             ]
 
     natToByteStringBm =
-      let old = padByteStringWord . naturalToByteStringOld
-          new = padByteStringWord . naturalToByteString
-          new2 = padByteStringWord . naturalToByteStringTest False
+      let shiftBased = padByteStringWord . naturalToByteStringOld
+          wordBased = padByteStringWord . naturalToByteString
+          byteBased = padByteStringWord . naturalToByteStringHelper True
        in bgroup
             "Natural -> ByteString"
             [ env
                 randomNatural
-                (\nat -> bench "Old" (nf old nat)),
+                (\nat -> bench "Shift based" (nf shiftBased nat)),
               env
                 randomNatural
-                (\nat -> bench "New" (nf new nat)),
+                (\nat -> bench "Word64 based" (nf wordBased nat)),
               env
                 randomNatural
-                (\nat -> bench "New2" (nf new2 nat)),
+                (\nat -> bench "Word8 based" (nf byteBased nat)),
               env
                 randomNatural
-                ( \nat ->
-                    bench
-                      "TEST"
-                      ( nf
-                          ( \i ->
-                              if new i == new2 i
-                                then True
-                                else error "wrong"
-                          )
-                          nat
-                      )
-                )
+                (\nat -> bench "Cereal library" (nf Serial.encode nat))
             ]

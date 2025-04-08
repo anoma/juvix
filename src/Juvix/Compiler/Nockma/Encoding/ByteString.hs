@@ -1,5 +1,3 @@
-{-# LANGUAGE MagicHash #-}
-
 module Juvix.Compiler.Nockma.Encoding.ByteString where
 
 import Crypto.Hash.SHA256 qualified as SHA256

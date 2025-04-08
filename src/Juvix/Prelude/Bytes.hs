@@ -29,7 +29,7 @@ naturalToBytes = \case
   NB b -> byteArrayToBytes (GHCByteArray.ByteArray b)
 
 -- | Pad a ByteString with zeros up to the smallest length such that is
--- divisible by the given arg
+-- divisible by `align`
 padByteStringMod :: Int -> ByteString -> ByteString
 padByteStringMod align bs =
   let (d, m) = divMod (BS.length bs) align
@@ -49,23 +49,24 @@ padByteString n bs
 naturalToByteStringLELen :: Int -> Natural -> ByteString
 naturalToByteStringLELen len = padByteString len . naturalToByteStringLE
 
+-- | This is quadratic (`shiftR` is O(n))
 naturalToByteStringOld :: Natural -> ByteString
-naturalToByteStringOld = naturalToByteStringLE
-
--- | TODO: this is quadratic (`shiftR` is O(n))
-naturalToByteStringLE :: Natural -> ByteString
-naturalToByteStringLE = BS.toStrict . BS.toLazyByteString . go
+naturalToByteStringOld = do
+  BS.toStrict . BS.toLazyByteString . go
   where
     go :: Natural -> BS.Builder
     go = \case
       0 -> mempty
       n -> BS.word8 (fromIntegral n) <> go (n `shiftR` 8)
 
+naturalToByteStringLE :: Natural -> ByteString
+naturalToByteStringLE = naturalToByteString
+
 -- | Little endian
-naturalToByteStringTest :: Bool -> Natural -> ByteString
-naturalToByteStringTest word64 n
+naturalToByteStringHelper :: Bool -> Natural -> ByteString
+naturalToByteStringHelper forceWord8 n
   -- most common case
-  | word64 && 8 == bytesPerWord =
+  | (not forceWord8) && 8 == bytesPerWord =
       let w :: [Word64] = naturalToWord64 n
        in build (mconcat (map BS.word64LE w))
   | otherwise = BS.pack (naturalToBytes n)
@@ -74,7 +75,7 @@ naturalToByteStringTest word64 n
     build = BS.toStrict . BS.toLazyByteString
 
 naturalToByteString :: Natural -> ByteString
-naturalToByteString = naturalToByteStringTest True
+naturalToByteString = naturalToByteStringHelper False
 
 -- | Little endian
 wordToBytes :: Word -> [Word8]
