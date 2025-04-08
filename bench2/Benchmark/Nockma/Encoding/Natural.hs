@@ -25,10 +25,10 @@ bm = bgroup "Natural Encoding" [byteStringToNatBm, natToByteStringBm]
             "ByteString -> Natural"
             [ env
                 randomNaturalBS
-                (\nat -> bench "Old" (nf old nat)),
+                (\nat -> bench "Shift based" (nf old nat)),
               env
                 randomNaturalBS
-                (\nat -> bench "New" (nf new nat))
+                (\nat -> bench "Word based" (nf new nat))
             ]
 
     natToByteStringBm =
