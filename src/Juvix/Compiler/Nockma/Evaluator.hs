@@ -302,7 +302,7 @@ evalProfile inistack initerm =
             goAnomaSetFromList :: Term a -> Term a
             goAnomaSetFromList arg =
               foldr
-                (\t acc -> TermCell (Cell' t acc emptyCellInfo))
+                (\t acc -> TermCell (mkCell t acc))
                 (TermAtom nockNil)
                 (nubHashable (checkTermToList arg))
 
