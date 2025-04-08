@@ -165,7 +165,8 @@ atomToBits a' = do
 -- | Transform a vector of bits to a decoded term
 cueFromBits ::
   forall a r.
-  ( NockNatural a,
+  ( Hashable a,
+    NockNatural a,
     Members
       '[ Error DecodingError,
          Error (ErrNockNatural' a)
@@ -191,7 +192,8 @@ cueFromByteStringNatural = cueFromByteString'
 
 cueFromByteString' ::
   forall a r.
-  ( NockNatural a,
+  ( Hashable a,
+    NockNatural a,
     Members
       '[ Error DecodingError,
          Error (ErrNockNatural' a)
@@ -204,7 +206,8 @@ cueFromByteString' = cueFromBits . cloneFromByteString
 
 cueFromBitsSem ::
   forall a r.
-  ( NockNatural a,
+  ( Hashable a,
+    NockNatural a,
     Members
       '[ BitReader,
          Error DecodingError,
@@ -236,9 +239,9 @@ cueFromBitsSem = registerElementStart $ do
 
     goCell :: Sem r (Term a)
     goCell = do
-      _cellLeft <- cueFromBitsSem
-      _cellRight <- cueFromBitsSem
-      let cell = TermCell (Cell' {_cellInfo = emptyCellInfo, ..})
+      l <- cueFromBitsSem
+      r <- cueFromBitsSem
+      let cell = TermCell (mkCell l r)
       cacheCueTerm cell
       return cell
 
@@ -266,7 +269,8 @@ cueFromBitsSem = registerElementStart $ do
 -- | Decode an nock Atom to a nock term
 cue ::
   forall a r.
-  ( NockNatural a,
+  ( Hashable a,
+    NockNatural a,
     Members
       '[ Error DecodingError,
          Error (ErrNockNatural a)
@@ -283,7 +287,8 @@ cue a' =
 -- | A variant of cue with `ErrNockNatural` wrapped in a newtype to disambiguate it from DecodingError
 cue' ::
   forall a r.
-  ( NockNatural a,
+  ( Hashable a,
+    NockNatural a,
     Members
       '[ Error DecodingError,
          Error (ErrNockNatural' a)
@@ -299,7 +304,8 @@ cueEither ::
   -- overlapping instances with `ErrNockNatural a` when errors are handled. See
   -- the comment above `ErrNockNatural' a` for more explanation.
   forall a r.
-  ( NockNatural a,
+  ( Hashable a,
+    NockNatural a,
     Member (Error (ErrNockNatural a)) r
   ) =>
   Atom a ->
@@ -314,7 +320,8 @@ cueFromByteString ::
   -- overlapping instances with `ErrNockNatural a` when errors are handled. See
   -- the comment above `ErrNockNatural' a` for more explanation.
   forall a r.
-  ( NockNatural a,
+  ( Hashable a,
+    NockNatural a,
     Member (Error (ErrNockNatural a)) r
   ) =>
   ByteString ->
@@ -326,7 +333,7 @@ cueFromByteString =
 
 cueFromByteString'' ::
   forall a.
-  (NockNatural a) =>
+  (Hashable a, NockNatural a) =>
   ByteString ->
   Either (ErrNockNatural a) (Either DecodingError (Term a))
 cueFromByteString'' = run . runErrorNoCallStack . cueFromByteString
