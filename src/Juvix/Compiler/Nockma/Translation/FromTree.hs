@@ -40,6 +40,7 @@ import Juvix.Compiler.Tree.Extra.Type qualified as Tree
 import Juvix.Compiler.Tree.Language qualified as Tree
 import Juvix.Compiler.Tree.Language.Rep
 import Juvix.Prelude hiding (Atom, Path)
+import Juvix.Prelude.Bytes
 
 nockStringLiteral :: Text -> Term Natural
 nockStringLiteral t =
