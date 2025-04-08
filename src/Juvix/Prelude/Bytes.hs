@@ -62,6 +62,9 @@ naturalToByteStringOld = do
 naturalToByteStringLE :: Natural -> ByteString
 naturalToByteStringLE = naturalToByteString
 
+nullByte :: Word8
+nullByte = 0
+
 -- | Little endian
 naturalToByteStringHelper :: Bool -> Natural -> ByteString
 naturalToByteStringHelper forceWord8 n
@@ -75,7 +78,7 @@ naturalToByteStringHelper forceWord8 n
     build = BS.toStrict . BS.toLazyByteString
 
 naturalToByteString :: Natural -> ByteString
-naturalToByteString = naturalToByteStringHelper False
+naturalToByteString = BS.dropWhileEnd (== nullByte) . naturalToByteStringHelper False
 
 -- | Little endian
 wordToBytes :: Word -> [Word8]
