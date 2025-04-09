@@ -1,6 +1,6 @@
 module TopCommand where
 
-import Commands.Base hiding (Format)
+import Commands.Base
 import Commands.Clean qualified as Clean
 import Commands.Compile qualified as Compile
 import Commands.Dependencies qualified as Dependencies
