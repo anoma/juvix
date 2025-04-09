@@ -239,7 +239,7 @@ jobs:
         run: |
           curl -L https://risczero.com/install | bash
           ~/.risc0/bin/rzup install
-          ~/.risc0/bin/rzup install r0vm 1.2.5
+          ~/.risc0/bin/rzup install r0vm 1.2.6
 
       - name: Checkout CairoVM
         uses: actions/checkout@v4
