@@ -980,6 +980,7 @@ checkBuiltinInductive d b = localBuiltins $ case b of
   BuiltinPoseidonState -> checkPoseidonStateDef d
   BuiltinEcPoint -> checkEcPointDef d
   BuiltinAnomaResource -> checkResource d
+  BuiltinAnomaNullifierKey -> checkNullifierKey d
   BuiltinAnomaAction -> checkAction d
   BuiltinAnomaComplianceInputs -> checkComplianceInputs d
   BuiltinAnomaShieldedTransaction -> checkShieldedTransaction d

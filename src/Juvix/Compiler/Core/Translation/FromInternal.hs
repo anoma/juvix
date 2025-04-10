@@ -254,6 +254,7 @@ goConstructor sym ctor = do
         Internal.BuiltinMkEcPoint -> freshTag
         Internal.BuiltinMkAnomaAction -> freshTag
         Internal.BuiltinMkAnomaResource -> freshTag
+        Internal.BuiltinMkAnomaNullifierKey -> freshTag
         Internal.BuiltinMkAnomaComplianceInputs -> freshTag
         Internal.BuiltinMkAnomaShieldedTransaction -> freshTag
         Internal.BuiltinMkOrd -> freshTag
@@ -962,8 +963,11 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
         resourceType <- getAnomaResourceType
         registerAxiomDef
           ( mkLambda'
-              resourceType
-              (mkBuiltinApp' OpAnomaResourceNullifier [mkVar' 0])
+              mkDynamic'
+              ( mkLambda'
+                  resourceType
+                  (mkBuiltinApp' OpAnomaResourceNullifier [mkVar' 1, mkVar' 0])
+              )
           )
       Internal.BuiltinAnomaResourceKind -> do
         resourceType <- getAnomaResourceType

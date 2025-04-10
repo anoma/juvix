@@ -89,6 +89,7 @@ fromCore' tab =
       BuiltinMaybeJust -> True
       BuiltinPairConstr -> True
       BuiltinMkAnomaResource -> True
+      BuiltinMkAnomaNullifierKey -> True
       BuiltinMkAnomaAction -> True
       BuiltinMkAnomaComplianceInputs -> True
       BuiltinMkAnomaShieldedTransaction -> True
@@ -175,6 +176,10 @@ fromCore' tab =
         BuiltinByteArrayLength -> False
         BuiltinRangeCheck -> False
       BuiltinTypeInductive i -> case i of
+        BuiltinNat -> False
+        BuiltinInt -> False
+        BuiltinBool -> False
+        --
         BuiltinList -> True
         BuiltinEq -> True
         BuiltinMaybe -> True
@@ -184,10 +189,8 @@ fromCore' tab =
         BuiltinOrdering -> True
         BuiltinPoseidonState -> True
         BuiltinEcPoint -> True
-        BuiltinNat -> False
-        BuiltinInt -> False
-        BuiltinBool -> False
         BuiltinAnomaResource -> True
+        BuiltinAnomaNullifierKey -> True
         BuiltinAnomaAction -> True
         BuiltinAnomaComplianceInputs -> True
         BuiltinAnomaShieldedTransaction -> True

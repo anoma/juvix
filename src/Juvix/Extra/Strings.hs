@@ -1169,6 +1169,9 @@ nockmaCell = "nockma-cell"
 anomaResource :: (IsString s) => s
 anomaResource = "anoma-resource"
 
+anomaNullifierKey :: (IsString s) => s
+anomaNullifierKey = "anoma-nullifier-key"
+
 anomaAction :: (IsString s) => s
 anomaAction = "anoma-action"
 
@@ -1180,6 +1183,9 @@ anomaShieldedTransaction = "anoma-transaction"
 
 anomaMkResource :: (IsString s) => s
 anomaMkResource = "mkResource"
+
+anomaMkNullifierKey :: (IsString s) => s
+anomaMkNullifierKey = "mkNullifierKey"
 
 anomaMkAction :: (IsString s) => s
 anomaMkAction = "mkAction"

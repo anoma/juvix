@@ -666,6 +666,7 @@ instance PrettyCode InfoTable where
               BuiltinPoseidonState -> True
               BuiltinEcPoint -> True
               BuiltinAnomaResource -> True
+              BuiltinAnomaNullifierKey -> True
               BuiltinAnomaAction -> True
               BuiltinAnomaComplianceInputs -> True
               BuiltinAnomaShieldedTransaction -> True

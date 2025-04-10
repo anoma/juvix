@@ -31,6 +31,7 @@ with
 end;
 
 --- The nullifier key type describing a secret required to compute the ;Nullifier; of a resource
+builtin anoma-nullifier-key
 type NullifierKey := privateMk ByteArray
 with
   -- should be mk AnomaAtom
@@ -434,10 +435,10 @@ type NullifiableResource :=
   }
 with
   builtin anoma-resource-nullifier
-  axiom rawNullifier : Resource -> Nat;
+  axiom rawNullifier : NullifierKey -> Resource -> Nat;
 
   nullifier : NullifiableResource -> Nullifier :=
-    resource >> rawNullifier >> Nullifier.fromNat;
+    resource >> rawNullifier NullifierKey.Transparent.mk >> Nullifier.fromNat;
 
   module Transparent;
     mk (resource : Resource) : NullifiableResource :=
