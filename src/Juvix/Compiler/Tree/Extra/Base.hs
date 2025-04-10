@@ -20,6 +20,7 @@ getNodeInfo = \case
   Unop NodeUnop {..} -> _nodeUnopInfo
   ByteArray NodeByteArray {..} -> _nodeByteArrayInfo
   Cairo NodeCairo {..} -> _nodeCairoInfo
+  Nockma NodeNockma {..} -> _nodeNockmaInfo
   Anoma NodeAnoma {..} -> _nodeAnomaInfo
   Constant NodeConstant {..} -> _nodeConstantInfo
   MemRef NodeMemRef {..} -> _nodeMemRefInfo
@@ -163,6 +164,17 @@ destruct = \case
               { _nodeCairoArgs = args,
                 _nodeCairoOpcode,
                 _nodeCairoInfo
+              }
+      }
+  Nockma NodeNockma {..} ->
+    NodeDetails
+      { _nodeChildren = map noTempVar _nodeNockmaArgs,
+        _nodeReassemble = manyChildren $ \args ->
+          Nockma
+            NodeNockma
+              { _nodeNockmaArgs = args,
+                _nodeNockmaOpcode,
+                _nodeNockmaInfo
               }
       }
   Anoma NodeAnoma {..} ->

@@ -587,6 +587,7 @@ compile = \case
   Tree.Unop b -> goUnop b
   Tree.ByteArray b -> goByteArrayOp b
   Tree.Cairo {} -> cairoErr
+  Tree.Nockma b -> goNockma b
   Tree.Anoma b -> goAnomaOp b
   Tree.Constant c -> return (goConstant (c ^. Tree.nodeConstant))
   Tree.MemRef c -> goMemRef (c ^. Tree.nodeMemRef)
@@ -702,6 +703,13 @@ compile = \case
       iftrue <- compile _nodeBranchTrue
       iffalse <- compile _nodeBranchFalse
       return (branch "if" arg iftrue iffalse)
+
+    goNockma :: Tree.NodeNockma -> Sem r (Term Natural)
+    goNockma Tree.NodeNockma {..} = do
+      case _nodeNockmaOpcode of
+        Tree.NockmaOpReify -> case _nodeNockmaArgs of
+          [arg] -> compile arg
+          _ -> impossible
 
     goAnomaOp :: Tree.NodeAnoma -> Sem r (Term Natural)
     goAnomaOp Tree.NodeAnoma {..} = do

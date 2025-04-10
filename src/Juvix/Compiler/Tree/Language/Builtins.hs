@@ -1,6 +1,6 @@
 module Juvix.Compiler.Tree.Language.Builtins where
 
-import Juvix.Prelude
+import Juvix.Compiler.Core.Language.Base
 
 data BoolOp
   = OpIntLt
@@ -75,6 +75,12 @@ data CairoOp
   deriving stock (Eq, Generic)
 
 instance Serialize CairoOp
+
+-- | Builtin Nockma operations
+data NockmaOp = NockmaOpReify
+  deriving stock (Eq, Generic)
+
+instance Serialize NockmaOp
 
 -- | Builtin ByteArray operations
 data ByteArrayOp

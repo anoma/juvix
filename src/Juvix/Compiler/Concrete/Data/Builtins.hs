@@ -65,6 +65,7 @@ builtinConstructors = \case
   BuiltinEq -> [BuiltinMkEq]
   BuiltinOrd -> [BuiltinMkOrd]
   BuiltinOrdering -> [BuiltinOrderingLT, BuiltinOrderingEQ, BuiltinOrderingGT]
+  BuiltinNockmaNoun -> [BuiltinNockmaAtom, BuiltinNockmaCell]
 
 data BuiltinInductive
   = BuiltinNat
@@ -83,6 +84,7 @@ data BuiltinInductive
   | BuiltinAnomaAction
   | BuiltinAnomaComplianceInputs
   | BuiltinAnomaShieldedTransaction
+  | BuiltinNockmaNoun
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinInductive
@@ -109,6 +111,7 @@ instance Pretty BuiltinInductive where
     BuiltinAnomaAction -> Str.anomaAction
     BuiltinAnomaComplianceInputs -> Str.anomaComplianceInputs
     BuiltinAnomaShieldedTransaction -> Str.anomaShieldedTransaction
+    BuiltinNockmaNoun -> Str.nockmaNoun
 
 instance Pretty BuiltinConstructor where
   pretty = \case
@@ -139,6 +142,8 @@ instance Pretty BuiltinConstructor where
     BuiltinOrderingLT -> Str.lt
     BuiltinOrderingEQ -> Str.eq
     BuiltinOrderingGT -> Str.gt
+    BuiltinNockmaAtom -> Str.nockmaAtom
+    BuiltinNockmaCell -> Str.nockmaCell
 
 data BuiltinConstructor
   = BuiltinNatZero
@@ -168,6 +173,8 @@ data BuiltinConstructor
   | BuiltinMkAnomaAction
   | BuiltinMkAnomaComplianceInputs
   | BuiltinMkAnomaShieldedTransaction
+  | BuiltinNockmaAtom
+  | BuiltinNockmaCell
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable BuiltinConstructor
@@ -318,6 +325,7 @@ data BuiltinAxiom
   | BuiltinByteArrayFromListByte
   | BuiltinByteArrayLength
   | BuiltinRangeCheck
+  | BuiltinNockmaReify
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance HasNameKind BuiltinAxiom where
@@ -389,6 +397,7 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaSetToList -> KNameFunction
     BuiltinAnomaSetFromList -> KNameFunction
     BuiltinRangeCheck -> KNameFunction
+    BuiltinNockmaReify -> KNameFunction
   getNameKindPretty :: BuiltinAxiom -> NameKind
   getNameKindPretty = getNameKind
 
@@ -467,6 +476,7 @@ instance Pretty BuiltinAxiom where
     BuiltinByteArrayFromListByte -> Str.byteArrayFromListByte
     BuiltinByteArrayLength -> Str.byteArrayLength
     BuiltinRangeCheck -> Str.rangeCheck
+    BuiltinNockmaReify -> Str.nockmaReify
 
 data BuiltinType
   = BuiltinTypeInductive BuiltinInductive

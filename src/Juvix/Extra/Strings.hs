@@ -380,6 +380,9 @@ anomaVerifyDetached = "anoma-verify-detached"
 anomaSign :: (IsString s) => s
 anomaSign = "anoma-sign"
 
+nockmaReify :: (IsString s) => s
+nockmaReify = "nockma-reify"
+
 builtinMonadBind :: (IsString s) => s
 builtinMonadBind = "monad-bind"
 
@@ -1153,6 +1156,15 @@ cairoEcPoint = "ec_point"
 
 cairoMkEcPoint :: (IsString s) => s
 cairoMkEcPoint = "mkEcPoint"
+
+nockmaNoun :: (IsString s) => s
+nockmaNoun = "nockma-noun"
+
+nockmaAtom :: (IsString s) => s
+nockmaAtom = "nockma-atom"
+
+nockmaCell :: (IsString s) => s
+nockmaCell = "nockma-cell"
 
 anomaResource :: (IsString s) => s
 anomaResource = "anoma-resource"

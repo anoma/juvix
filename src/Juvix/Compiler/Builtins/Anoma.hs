@@ -3,6 +3,7 @@ module Juvix.Compiler.Builtins.Anoma where
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Pretty
 import Juvix.Prelude
 
 checkAnomaGet :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
@@ -125,6 +126,14 @@ checkResource d = do
   unless (isSmallUniverse' (d ^. inductiveType)) (err "AnomaResource should be in the small universe")
   unless (length (d ^. inductiveConstructors) == 1) (err "AnomaResource should have exactly one constructor")
 
+checkNockmaNoun :: (Members '[Error ScoperError] r) => InductiveDef -> Sem r ()
+checkNockmaNoun d = do
+  let err = builtinsErrorText (getLoc d)
+      nounStr :: Text = prettyText BuiltinNockmaNoun
+  unless (null (d ^. inductiveParameters)) (err (nounStr <> " should have no type parameters"))
+  unless (isSmallUniverse' (d ^. inductiveType)) (err (nounStr <> " should be in the small universe"))
+  unless (length (d ^. inductiveConstructors) == 2) (err (nounStr <> " should have exactly two constructors"))
+
 checkAction :: (Members '[Error ScoperError] r) => InductiveDef -> Sem r ()
 checkAction d = do
   let err = builtinsErrorText (getLoc d)
@@ -231,6 +240,17 @@ checkAnomaRandomGeneratorInit f = do
   nat_ <- getBuiltinNameScoper l BuiltinNat
   unless (f ^. axiomType === (nat_ --> gen)) $
     builtinsErrorText l "initRandomGenerator must be of type Nat -> AnomaRandomGenerator"
+
+checkNockmaReify :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkNockmaReify f = do
+  let ftype = f ^. axiomType
+      u = ExpressionUniverse smallUniverseNoLoc
+      l = getLoc f
+  reifyTy <- freshVar l "reifyT"
+  noun <- getBuiltinNameScoper l BuiltinNockmaNoun
+  let freeVars = hashSet [reifyTy]
+  unless ((ftype ==% (u <>--> reifyTy --> noun)) freeVars) $
+    builtinsErrorText (getLoc f) (prettyText BuiltinNockmaReify <> " must be of type {A : Type} -> A -> " <> ppPrint noun)
 
 checkAnomaRandomNextBytes :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaRandomNextBytes f = do
