@@ -67,7 +67,7 @@ anomaClientCreateProcess launchMode = do
       currentEnv <- getEnvironment
       anomapath <- asks (^. anomaPath)
       return
-        (proc "mix" ["run", "--no-halt", "-e", unpack (T.strip (decodeUtf8 anomaStartExs))])
+        (proc "mix" ["phx.server", "--no-halt", "-e", unpack (T.strip (decodeUtf8 anomaStartExs))])
           { std_out = CreatePipe,
             std_err = CreatePipe,
             std_in = NoStream,
@@ -77,7 +77,7 @@ anomaClientCreateProcess launchMode = do
 
 setupAnomaClientProcess :: forall r. (Members '[EmbedIO, Logger, Error SimpleError] r) => Handle -> Sem r AnomaClientInfo
 setupAnomaClientProcess nodeOut = do
-  let x :: IO Text = catchIOError (hGetLine nodeOut) $ \e -> error ("The node client is expected to output two numbers (see include/anoma/start.exs), but there was an IO exception:\n" <> show e)
+  let x :: IO Text = catchIOError (readClientInfo nodeOut) $ \e -> error ("The node client is expected to output two numbers (see include/anoma/start.exs), but there was an IO exception:\n" <> show e)
   ln <- liftIO x
   let parseError = throw (SimpleError (mkAnsiText ("Failed to parse the client grpc port when starting the anoma node and client.\nExpected a number but got " <> ln)))
       parseInt :: Text -> Sem r Int
@@ -94,6 +94,13 @@ setupAnomaClientProcess nodeOut = do
         _anomaClientInfoUrl = "localhost",
         _anomaClientInfoNodeId = nodeId
       }
+  where
+    readClientInfo :: Handle -> IO Text
+    readClientInfo h = do
+      ln <- hGetLine h
+      case T.words ln of
+        ("==>" : _) -> readClientInfo h
+        _ -> return ln
 
 launchAnomaClient :: (Members '[Logger, EmbedIO, Error SimpleError] r) => LaunchMode -> AnomaPath -> Sem r AnomaClientLaunchInfo
 launchAnomaClient launchMode anomapath = runEnvironment . runReader anomapath . runProcess $ do
