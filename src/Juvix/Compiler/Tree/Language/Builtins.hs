@@ -150,6 +150,7 @@ data AnomaOp
   | -- | Returns true if its argument is a nullifier
     OpAnomaIsNullifier
   | OpAnomaCreateFromComplianceInputs
+  | OpAnomaProveDelta
   | OpAnomaSetToList
   | OpAnomaSetFromList
   | OpAnomaTransactionCompose

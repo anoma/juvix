@@ -235,6 +235,7 @@ isDebugOp = \case
       OpAnomaIsCommitment -> False
       OpAnomaIsNullifier -> False
       OpAnomaCreateFromComplianceInputs -> False
+      OpAnomaProveDelta -> False
       OpAnomaTransactionCompose -> False
       OpAnomaActionCreate -> False
       OpAnomaSetToList -> False
@@ -545,6 +546,7 @@ builtinOpArgTypes = \case
   OpAnomaIsCommitment -> [mkTypeInteger']
   OpAnomaIsNullifier -> [mkTypeInteger']
   OpAnomaCreateFromComplianceInputs -> [mkDynamic', mkDynamic', mkDynamic', mkDynamic', mkDynamic']
+  OpAnomaProveDelta -> [mkDynamic']
   OpAnomaSetToList -> [mkDynamic']
   OpAnomaSetFromList -> [mkDynamic']
   OpNockmaReify -> [mkDynamic']

@@ -63,6 +63,7 @@ builtinCategory = \case
   OpAnomaIsCommitment -> BuiltinCategoryAnoma
   OpAnomaIsNullifier -> BuiltinCategoryAnoma
   OpAnomaCreateFromComplianceInputs -> BuiltinCategoryAnoma
+  OpAnomaProveDelta -> BuiltinCategoryAnoma
   OpAnomaTransactionCompose -> BuiltinCategoryAnoma
   OpAnomaActionCreate -> BuiltinCategoryAnoma
   OpAnomaSetToList -> BuiltinCategoryAnoma
@@ -127,6 +128,7 @@ data BuiltinOp
   | OpAnomaIsCommitment
   | OpAnomaIsNullifier
   | OpAnomaCreateFromComplianceInputs
+  | OpAnomaProveDelta
   | OpAnomaTransactionCompose
   | OpAnomaActionCreate
   | OpAnomaSetToList
@@ -234,6 +236,7 @@ builtinOpArgsNum = \case
   OpAnomaIsCommitment -> 1
   OpAnomaIsNullifier -> 1
   OpAnomaCreateFromComplianceInputs -> 5
+  OpAnomaProveDelta -> 1
   OpAnomaSetToList -> 1
   OpAnomaSetFromList -> 1
   OpPoseidonHash -> 1
@@ -308,6 +311,7 @@ builtinIsFoldable = \case
   OpAnomaIsCommitment -> False
   OpAnomaIsNullifier -> False
   OpAnomaCreateFromComplianceInputs -> False
+  OpAnomaProveDelta -> False
   OpAnomaTransactionCompose -> False
   OpAnomaActionCreate -> False
   OpAnomaSetToList -> False

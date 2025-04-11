@@ -80,6 +80,7 @@ instance PrettyCode BuiltinOp where
     OpAnomaIsCommitment -> return primIsCommitment
     OpAnomaIsNullifier -> return primIsNullifier
     OpAnomaCreateFromComplianceInputs -> return primAnomaCreateFromComplianceInputs
+    OpAnomaProveDelta -> return primAnomaProveDelta
     OpAnomaActionCreate -> return primActionCreate
     OpAnomaTransactionCompose -> return primTransactionCompose
     OpAnomaSetToList -> return primAnomaSetToList
@@ -1034,6 +1035,9 @@ primIsNullifier = primitive Str.anomaIsNullifier
 
 primAnomaCreateFromComplianceInputs :: Doc Ann
 primAnomaCreateFromComplianceInputs = primitive Str.anomaCreateFromComplianceInputs
+
+primAnomaProveDelta :: Doc Ann
+primAnomaProveDelta = primitive Str.anomaProveDelta
 
 primAnomaSetToList :: Doc Ann
 primAnomaSetToList = primitive Str.anomaSetToList

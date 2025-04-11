@@ -455,6 +455,9 @@ anomaIsNullifier = "anoma-is-nullifier"
 anomaCreateFromComplianceInputs :: (IsString s) => s
 anomaCreateFromComplianceInputs = "anoma-create-from-compliance-inputs"
 
+anomaProveDelta :: (IsString s) => s
+anomaProveDelta = "anoma-prove-delta"
+
 anomaSet :: (IsString s) => s
 anomaSet = "anoma-set"
 
