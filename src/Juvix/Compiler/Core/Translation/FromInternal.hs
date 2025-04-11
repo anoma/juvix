@@ -1570,6 +1570,7 @@ goApplication a = do
           Internal.BuiltinAnomaTransactionCompose -> app
           Internal.BuiltinAnomaActionCreate -> app
           Internal.BuiltinAnomaCreateFromComplianceInputs -> app
+          Internal.BuiltinAnomaProveDelta -> app
           Internal.BuiltinAnomaSet -> app
           Internal.BuiltinAnomaSetToList -> app
           Internal.BuiltinAnomaSetFromList -> app
