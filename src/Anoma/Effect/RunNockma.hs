@@ -63,8 +63,8 @@ runNockma i = do
           }
     ResponseError err -> throw (SimpleError (mkAnsiText @Text "runNockma failed:\n" <> mkAnsiText (err ^. errorError)))
   where
-    prepareArgument :: RunNockmaArg -> NockInput
+    prepareArgument :: RunNockmaArg -> Text
     prepareArgument =
-      NockInputJammed . \case
+      \case
         RunNockmaArgTerm t -> encodeJam64 t
         RunNockmaArgJammed a -> decodeUtf8 (Base64.encode a)

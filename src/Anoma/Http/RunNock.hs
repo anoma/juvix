@@ -10,32 +10,17 @@ runNockUrl =
   mkEndpointUrl $
     "nock" :| ["prove"]
 
-data NockInput
-  = NockInputText Text
-  | NockInputJammed Text
-
-$( deriveJSON
-     defaultOptions
-       { constructorTagModifier = \case
-           "NockInputText" -> "text"
-           "NockInputJammed" -> "jammed"
-           _ -> impossibleError "All constructors must be covered",
-         sumEncoding = ObjectWithSingleField
-       }
-     ''NockInput
- )
-
 data RunNock = RunNock
   { _runNockJammedProgram :: Text,
-    _runNockPrivateInputs :: [NockInput],
-    _runNockPublicInputs :: [NockInput]
+    _runNockPrivateInputs :: [Text],
+    _runNockPublicInputs :: [Text]
   }
 
 $( deriveJSON
      defaultOptions
        { unwrapUnaryRecords = True,
          fieldLabelModifier = \case
-           "_runNockJammedProgram" -> "jammed_program"
+           "_runNockJammedProgram" -> "program"
            "_runNockPrivateInputs" -> "private_inputs"
            "_runNockPublicInputs" -> "public_inputs"
            _ -> impossibleError "All fields must be covered"
@@ -56,7 +41,7 @@ instance FromJSON NockError where
       . addDefaultValues' defaultValues
     where
       defaultValues :: HashMap Key Value
-      defaultValues = hashMap [("output", Aeson.Array mempty)]
+      defaultValues = hashMap [("result", Aeson.Array mempty)]
 
 data NockSuccess = NockSuccess
   { _successResult :: Text,
@@ -71,7 +56,7 @@ instance FromJSON NockSuccess where
       . addDefaultValues' defaultValues
     where
       defaultValues :: HashMap Key Value
-      defaultValues = hashMap [("output", Aeson.Array mempty)]
+      defaultValues = hashMap [("result", Aeson.Array mempty)]
 
 data Response
   = ResponseSuccess NockSuccess
