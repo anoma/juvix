@@ -314,6 +314,7 @@ data BuiltinAxiom
   | BuiltinAnomaIsCommitment
   | BuiltinAnomaIsNullifier
   | BuiltinAnomaCreateFromComplianceInputs
+  | BuiltinAnomaProveDelta
   | BuiltinAnomaActionCreate
   | BuiltinAnomaTransactionCompose
   | BuiltinAnomaSet
@@ -386,6 +387,7 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaIsCommitment -> KNameFunction
     BuiltinAnomaIsNullifier -> KNameFunction
     BuiltinAnomaCreateFromComplianceInputs -> KNameFunction
+    BuiltinAnomaProveDelta -> KNameFunction
     BuiltinAnomaActionCreate -> KNameFunction
     BuiltinAnomaTransactionCompose -> KNameFunction
     BuiltinPoseidon -> KNameFunction
@@ -465,6 +467,7 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaIsCommitment -> Str.anomaIsCommitment
     BuiltinAnomaIsNullifier -> Str.anomaIsNullifier
     BuiltinAnomaCreateFromComplianceInputs -> Str.anomaCreateFromComplianceInputs
+    BuiltinAnomaProveDelta -> Str.anomaProveDelta
     BuiltinAnomaTransactionCompose -> Str.anomaTransactionCompose
     BuiltinAnomaActionCreate -> Str.anomaActionCreate
     BuiltinAnomaSet -> Str.anomaSet

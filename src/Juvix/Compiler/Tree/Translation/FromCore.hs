@@ -85,6 +85,7 @@ toTreeOp = \case
   Core.OpAnomaIsCommitment -> TreeAnomaOp OpAnomaIsCommitment
   Core.OpAnomaIsNullifier -> TreeAnomaOp OpAnomaIsNullifier
   Core.OpAnomaCreateFromComplianceInputs -> TreeAnomaOp OpAnomaCreateFromComplianceInputs
+  Core.OpAnomaProveDelta -> TreeAnomaOp OpAnomaProveDelta
   Core.OpAnomaActionCreate -> TreeAnomaOp OpAnomaActionCreate
   Core.OpAnomaTransactionCompose -> TreeAnomaOp OpAnomaTransactionCompose
   Core.OpAnomaSetToList -> TreeAnomaOp OpAnomaSetToList

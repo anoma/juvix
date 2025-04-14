@@ -245,6 +245,7 @@ geval opts herr tab env0 = eval' env0
       OpAnomaIsCommitment -> normalizeOrUnsupported opcode
       OpAnomaIsNullifier -> normalizeOrUnsupported opcode
       OpAnomaCreateFromComplianceInputs -> normalizeOrUnsupported opcode
+      OpAnomaProveDelta -> normalizeOrUnsupported opcode
       OpAnomaActionCreate -> normalizeOrUnsupported opcode
       OpAnomaTransactionCompose -> normalizeOrUnsupported opcode
       OpAnomaSetToList -> normalizeOrUnsupported opcode

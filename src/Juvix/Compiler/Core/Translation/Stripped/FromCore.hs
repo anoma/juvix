@@ -159,6 +159,7 @@ fromCore' tab =
         BuiltinAnomaIsCommitment -> False
         BuiltinAnomaIsNullifier -> False
         BuiltinAnomaCreateFromComplianceInputs -> False
+        BuiltinAnomaProveDelta -> False
         BuiltinAnomaTransactionCompose -> False
         BuiltinAnomaActionCreate -> False
         BuiltinAnomaSet -> False

@@ -465,6 +465,7 @@ with
   mk : DeltaProof := privateMk 0;
 end;
 
+builtin anoma-transaction
 type Transaction :=
   privateMk@{
     roots : AnomaSet CommitmentRoot;
