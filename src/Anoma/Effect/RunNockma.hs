@@ -1,11 +1,11 @@
 module Anoma.Effect.RunNockma
   ( module Anoma.Effect.RunNockma,
-    module Anoma.Rpc.RunNock,
+    module Anoma.Http.RunNock,
   )
 where
 
 import Anoma.Effect.Base
-import Anoma.Rpc.RunNock
+import Anoma.Http.RunNock
 import Data.ByteString.Base64 qualified as Base64
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Language qualified as Nockma
@@ -49,7 +49,7 @@ runNockma i = do
             _runNockPublicInputs = []
           }
   logMessageValue "Request Payload" msg
-  resVal :: Value <- anomaRpc runNockGrpcUrl (Aeson.toJSON msg) >>= fromJSONErr
+  resVal :: Value <- anomaPost runNockUrl (Aeson.toJSON msg) >>= fromJSONErr
   logMessageValue "Response Payload" resVal
   res :: Response <- fromJSONErr resVal
   case res of

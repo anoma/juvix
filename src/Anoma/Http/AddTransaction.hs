@@ -1,24 +1,22 @@
-module Anoma.Rpc.AddTransaction where
+module Anoma.Http.AddTransaction where
 
-import Anoma.Rpc.Base
+import Anoma.Http.Base
 import Juvix.Prelude
 import Juvix.Prelude.Aeson
 
-addTransactionGrpcUrl :: GrpcMethodUrl
-addTransactionGrpcUrl =
-  mkGrpcMethodUrl $
-    "Anoma" :| ["Protobuf", "MempoolService", "Add"]
+addTransactionUrl :: EndpointUrl
+addTransactionUrl =
+  mkEndpointUrl $
+    "mempool" :| ["add"]
 
 data AddTransaction = AddTransaction
-  { _addTransactionTransaction :: Text,
-    _addTransactionNodeInfo :: NodeInfo
+  { _addTransactionTransaction :: Text
   }
 
 $( deriveJSON
      defaultOptions
        { fieldLabelModifier = \case
            "_addTransactionTransaction" -> "transaction"
-           "_addTransactionNodeInfo" -> "node_info"
            _ -> impossibleError "All fields must be covered"
        }
      ''AddTransaction

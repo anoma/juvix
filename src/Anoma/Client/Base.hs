@@ -79,18 +79,18 @@ setupAnomaClientProcess :: forall r. (Members '[EmbedIO, Logger, Error SimpleErr
 setupAnomaClientProcess nodeOut = do
   let x :: IO Text = catchIOError (readClientInfo nodeOut) $ \e -> error ("The node client is expected to output two numbers (see include/anoma/start.exs), but there was an IO exception:\n" <> show e)
   ln <- liftIO x
-  let parseError = throw (SimpleError (mkAnsiText ("Failed to parse the client grpc port when starting the anoma node and client.\nExpected a number but got " <> ln)))
+  let parseError = throw (SimpleError (mkAnsiText ("Failed to parse the client http port when starting the anoma node and client.\nExpected a number but got " <> ln)))
       parseInt :: Text -> Sem r Int
       parseInt = either (const parseError) return . readEither . unpack
-  (grpcPort, nodeId) <- case T.words ln of
-    [grpcPortStr, nodeIdStr] -> (,) <$> parseInt grpcPortStr <*> pure nodeIdStr
-    _ -> throw (SimpleError (mkAnsiText ("Could not parse Anoma client output. Expected <grpcPort> <node_id>, got: " <> ln)))
+  (httpPort, nodeId) <- case T.words ln of
+    [httpPortStr, nodeIdStr] -> (,) <$> parseInt httpPortStr <*> pure nodeIdStr
+    _ -> throw (SimpleError (mkAnsiText ("Could not parse Anoma client output. Expected <httpPort> <node_id>, got: " <> ln)))
   logInfo "Anoma node and client successfully started"
   logInfo (mkAnsiText ("Node ID: " <> annotate AnnImportant (pretty nodeId)))
-  logInfo (mkAnsiText ("Listening on port " <> annotate AnnImportant (pretty grpcPort)))
+  logInfo (mkAnsiText ("Listening on port " <> annotate AnnImportant (pretty httpPort)))
   return
     AnomaClientInfo
-      { _anomaClientInfoPort = grpcPort,
+      { _anomaClientInfoPort = httpPort,
         _anomaClientInfoUrl = "localhost",
         _anomaClientInfoNodeId = nodeId
       }

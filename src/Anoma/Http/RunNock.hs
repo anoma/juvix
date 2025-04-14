@@ -1,14 +1,14 @@
-module Anoma.Rpc.RunNock where
+module Anoma.Http.RunNock where
 
-import Anoma.Rpc.Base
-import Anoma.Rpc.RunNock.JsonOptions
+import Anoma.Http.Base
+import Anoma.Http.RunNock.JsonOptions
 import Juvix.Prelude
 import Juvix.Prelude.Aeson as Aeson
 
-runNockGrpcUrl :: GrpcMethodUrl
-runNockGrpcUrl =
-  mkGrpcMethodUrl $
-    "Anoma" :| ["Protobuf", "NockService", "Prove"]
+runNockUrl :: EndpointUrl
+runNockUrl =
+  mkEndpointUrl $
+    "nock" :| ["prove"]
 
 data NockInput
   = NockInputText Text

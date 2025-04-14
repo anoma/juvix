@@ -1,11 +1,11 @@
 module Anoma.Effect.AddTransaction
   ( module Anoma.Effect.AddTransaction,
-    module Anoma.Rpc.AddTransaction,
+    module Anoma.Http.AddTransaction,
   )
 where
 
 import Anoma.Effect.Base
-import Anoma.Rpc.AddTransaction
+import Anoma.Http.AddTransaction
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Language qualified as Nockma
 import Juvix.Prelude
@@ -23,12 +23,10 @@ addTransaction ::
   AddTransactionInput ->
   Sem r ()
 addTransaction i = do
-  nodeInfo <- getNodeInfo
   let msg =
         AddTransaction
-          { _addTransactionNodeInfo = nodeInfo,
-            _addTransactionTransaction = encodeJam64 (i ^. addTransactionInputCandidate)
+          { _addTransactionTransaction = encodeJam64 (i ^. addTransactionInputCandidate)
           }
   logMessageValue "Request payload" msg
   -- addTransaction always returns an empty response
-  void (anomaRpc addTransactionGrpcUrl (Aeson.toJSON msg))
+  void (anomaPost addTransactionUrl (Aeson.toJSON msg))

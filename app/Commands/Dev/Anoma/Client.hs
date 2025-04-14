@@ -14,7 +14,7 @@ isClientRunning :: (Members '[Files, EmbedIO, Error SimpleError] r) => ClientCon
 isClientRunning c =
   runAnomaWithClient
     (c ^. clientConfigHost)
-    (catchError @SimpleError (anomaListMethods >> return True) (\_ _ -> return False))
+    (catchError @SimpleError anomaCheck (\_ _ -> return False))
 
 checkClientRunning :: (Members '[Files, EmbedIO, Error SimpleError] r) => Sem r (Maybe ClientConfig)
 checkClientRunning = do
