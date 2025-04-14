@@ -74,7 +74,7 @@ httpCliProcess method endpoint = do
   let url = httpUrl <> ":" <> show httpPort <> "/" <> show endpoint
   let args = case method of
         HttpGet -> ["-X", "GET", url]
-        HttpPost -> ["-X", "POST", "-d", "@-", url]
+        HttpPost -> ["-X", "POST", url, "-H", "accept: application/json", "-H", "Content-Type: application/json", "-d", "@-"]
   return
     (proc "curl" args)
       { std_in = CreatePipe,

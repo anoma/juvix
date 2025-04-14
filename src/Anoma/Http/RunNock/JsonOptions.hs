@@ -9,8 +9,8 @@ nockErrorOptions :: Aeson.Options
 nockErrorOptions =
   defaultOptions
     { fieldLabelModifier = \case
-        "_errorError" -> "error"
-        "_errorTraces" -> "output"
+        "_errorError" -> "result"
+        "_errorTraces" -> "io"
         _ -> impossibleError "All fields must be covered"
     }
 
@@ -19,6 +19,6 @@ nockSuccessOptions =
   defaultOptions
     { fieldLabelModifier = \case
         "_successResult" -> "result"
-        "_successTraces" -> "output"
+        "_successTraces" -> "io"
         _ -> impossibleError "All fields must be covered"
     }
