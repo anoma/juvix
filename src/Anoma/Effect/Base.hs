@@ -44,14 +44,12 @@ anomaRequest' ::
 anomaRequest' method endpoint mpayload = do
   cproc <- httpCliProcess method endpoint
   withCreateProcess cproc $ \mstdin mstdout _stderr _procHandle -> do
-    let stdinH = fromJust mstdin
-        stdoutH = fromJust mstdout
-    case mpayload of
-      Just payload -> do
-        let inputbs = B.toStrict (encode payload)
-        liftIO (B.hPutStr stdinH inputbs)
-      Nothing -> return ()
-    hClose stdinH
+    whenJust mpayload $ \payload -> do
+      let stdinH = fromJust mstdin
+          inputbs = B.toStrict (encode payload)
+      liftIO (B.hPutStr stdinH inputbs)
+      hClose stdinH
+    let stdoutH = fromJust mstdout
     res <- eitherDecodeStrict <$> liftIO (B.hGetContents stdoutH)
     case res of
       Right r -> return r
@@ -73,11 +71,14 @@ httpCliProcess method endpoint = do
   httpUrl <- asks (^. anomaClientInfoUrl)
   let url = httpUrl <> ":" <> show httpPort <> "/" <> show endpoint
   let args = case method of
-        HttpGet -> ["-s", "-X", "GET", url]
+        HttpGet -> ["-s", "-X", "GET", url, "-H", "accept: application/json"]
         HttpPost -> ["-s", "-X", "POST", url, "-H", "accept: application/json", "-H", "Content-Type: application/json", "-d", "@-"]
   return
     (proc "curl" args)
-      { std_in = CreatePipe,
+      { std_in =
+          case method of
+            HttpGet -> NoStream
+            HttpPost -> CreatePipe,
         std_out = CreatePipe
       }
 
