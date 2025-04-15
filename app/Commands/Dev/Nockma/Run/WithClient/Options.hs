@@ -5,7 +5,7 @@ import CommonOptions
 
 data NockmaRunWithClientOptions = NockmaRunWithClientOptions
   { _nockmaRunWithClientFile :: AppPath File,
-    _nockmaRunWithClientGrpcPort :: Int,
+    _nockmaRunWithClientPort :: Int,
     _nockmaRunWithClientNodeId :: Text,
     _nockmaRunWithClientUrl :: String,
     _nockmaRunWithClientArgs :: [ProveArg]
@@ -18,12 +18,12 @@ parseNockmaRunWithClientOptions :: Parser NockmaRunWithClientOptions
 parseNockmaRunWithClientOptions = do
   _nockmaRunWithClientFile <- parseInputFile FileExtNockma
   _nockmaRunWithClientArgs <- many parseProveArg
-  _nockmaRunWithClientGrpcPort <-
+  _nockmaRunWithClientPort <-
     option
       (fromIntegral <$> naturalNumberOpt)
-      ( long "grpc-port"
+      ( long "http-port"
           <> short 'p'
-          <> help ("The GRPC port of a running Anoma client")
+          <> help ("The HTTP port of a running Anoma client")
           <> metavar "PORT"
       )
   _nockmaRunWithClientNodeId <-

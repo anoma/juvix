@@ -222,12 +222,12 @@ commandAnoma =
                   ( vsep
                       [ descr,
                         "",
-                        "By default, the gRPC request is made to the client that is started by juvix dev anoma start.",
+                        "By default, the HTTP request is made to the client that is started by juvix dev anoma start.",
                         "Use the -c/--config option to use a different Anoma client.",
                         "The config file format is:",
                         "",
                         "url: <ANOMA_CLIENT_URL>",
-                        "port: <ANOMA_CLIENT_GRPC_PORT>",
+                        "port: <ANOMA_CLIENT_HTTP_PORT>",
                         "nodeid: <ANOMA_CLIENT_NODE_ID>"
                       ]
                   )
