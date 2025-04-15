@@ -73,8 +73,8 @@ httpCliProcess method endpoint = do
   httpUrl <- asks (^. anomaClientInfoUrl)
   let url = httpUrl <> ":" <> show httpPort <> "/" <> show endpoint
   let args = case method of
-        HttpGet -> ["-X", "GET", url]
-        HttpPost -> ["-X", "POST", url, "-H", "accept: application/json", "-H", "Content-Type: application/json", "-d", "@-"]
+        HttpGet -> ["-s", "-X", "GET", url]
+        HttpPost -> ["-s", "-X", "POST", url, "-H", "accept: application/json", "-H", "Content-Type: application/json", "-d", "@-"]
   return
     (proc "curl" args)
       { std_in = CreatePipe,
@@ -88,7 +88,8 @@ httpCliCheckProcess = do
   return
     ( proc
         "curl"
-        [ "-I",
+        [ "-s",
+          "-I",
           httpUrl <> ":" <> show httpPort
         ]
     )
