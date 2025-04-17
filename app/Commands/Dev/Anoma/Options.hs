@@ -87,9 +87,9 @@ parseAnomaCommand =
             ( headerDoc
                 ( Just
                     ( vsep
-                        ( [ "The prove command submits a Nockma program to the Anoma.Protobuf.NockService.Prove gRPC endpoint.",
+                        ( [ "The prove command submits a Nockma program to the Anoma prove endpoint.",
                             "",
-                            "The gRPC response (a Nockma program) is saved to a file named <input>.proved.nockma, where <input> is the base name of the input file.",
+                            "The response (a Nockma program) is saved to a file named <input>.proved.nockma, where <input> is the base name of the input file.",
                             "Use the -o/--output option to specify a custom output filename.",
                             "",
                             "If the program generates traces, they will be written to standard output."

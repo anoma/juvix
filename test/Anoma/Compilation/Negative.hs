@@ -43,6 +43,7 @@ checkCoreError e =
 
 allTests :: TestTree
 allTests =
-  testGroup
+  sequentialTestGroup
     "Anoma negative tests"
+    AllFinish
     [mkAnomaNegativeTest "Use of Strings" $(mkRelDir ".") $(mkRelFile "String.juvix") checkCoreError]

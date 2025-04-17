@@ -31,7 +31,7 @@ fromClientTest t = testCaseSteps (t ^. clientTestTag) assertion
       p <- envAnomaPath
       runAnomaEphemeral p ((t ^. clientAssertion) program)
 
--- | Run prove with the given arguements and submit the result to the mempool.
+-- | Run prove with the given arguments and submit the result to the mempool.
 -- Returns the traces from the prove endpoint
 proveAndSubmit ::
   (Members '[Logger, Error SimpleError, Anoma, EmbedIO, TestStep] r) =>

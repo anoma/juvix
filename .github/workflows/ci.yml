@@ -26,9 +26,9 @@ env:
   SKIP: ormolu,format-juvix-files,typecheck-juvix-examples
   CAIRO_VM_VERSION: 6c324e0d761013f38b8b743e515a65ac1a380206
   RISC0_VM_VERSION: v1.0.1
-  # This is the top commit hash in the branch paul/juvix-ci-stable
+  # This is the top commit hash in the branch lukasz/juvix-ci-stable
   # of the anoma repository.
-  ANOMA_VERSION: 9e7f05da098f6ab5a95d62cb154e129ea5e386ef
+  ANOMA_VERSION: 22168f07dab585f45624da2ca7d5bfb0a388067c
   JUST_ARGS: runtimeCcArg=$CC runtimeLibtoolArg=$LIBTOOL
   STACK_BUILD_ARGS: --pedantic -j4 --ghc-options=-j
 
@@ -171,10 +171,6 @@ jobs:
           mix deps.get
           mix compile
           mix do --app anoma_client escript.build
-
-      - name: Install grpcurl
-        run: |
-          curl -sSL "https://github.com/fullstorydev/grpcurl/releases/download/v1.9.1/grpcurl_1.9.1_linux_x86_64.tar.gz" | tar -xz -C ~/.local/bin --no-wildcards grpcurl
 
       - name: Cache LLVM and Clang
         id: cache-llvm
