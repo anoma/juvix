@@ -28,7 +28,7 @@ env:
   RISC0_VM_VERSION: v1.0.1
   # This is the top commit hash in the branch lukasz/juvix-ci-stable
   # of the anoma repository.
-  ANOMA_VERSION: 3c0acfc217241bf7d6eb8e89b5b5ab8f9872d4e3
+  ANOMA_VERSION: 22168f07dab585f45624da2ca7d5bfb0a388067c
   JUST_ARGS: runtimeCcArg=$CC runtimeLibtoolArg=$LIBTOOL
   STACK_BUILD_ARGS: --pedantic -j4 --ghc-options=-j
 
