@@ -966,7 +966,7 @@ compile = \case
       where
         goPrimBinop :: Tree.BinaryOp -> [Term Natural] -> Sem r (Term Natural)
         goPrimBinop op args = case op of
-          Tree.OpIntAdd -> callStdlib StdlibAdd args
+          Tree.OpIntAdd -> goAdd args
           Tree.OpIntSub -> callStdlib StdlibSub args
           Tree.OpIntMul -> callStdlib StdlibMul args
           Tree.OpIntDiv -> callStdlib StdlibDiv args
@@ -979,6 +979,12 @@ compile = \case
           Tree.OpFieldSub -> return crash
           Tree.OpFieldMul -> return crash
           Tree.OpFieldDiv -> return crash
+
+        goAdd :: [Term Natural] -> Sem r (Term Natural)
+        goAdd = \case
+          [arg, TAtom 1] -> return $ OpInc # arg
+          [TAtom 1, arg] -> return $ OpInc # arg
+          args -> callStdlib StdlibAdd args
 
     goAllocClosure :: Tree.NodeAllocClosure -> Sem r (Term Natural)
     goAllocClosure Tree.NodeAllocClosure {..} = do
@@ -1254,6 +1260,7 @@ callClosure ref args = do
   let closure' = opReplace "replace-args-call-closure" (closurePath ArgsTuple) (foldTermsOrQuotedNil args) closure
   return (opCall "callClosure" (closurePath FunCode) closure')
 
+-- TODO: we can optimize this when `length args == 0`?
 curryClosure :: Term Natural -> [Term Natural] -> Term Natural -> Sem r (Term Natural)
 curryClosure f args newArity = do
   let args' = (foldTerms (nonEmpty' $ map (\x -> (OpQuote # OpQuote) # x) args <> [OpQuote # OpAddress # closurePath ArgsTuple]))
