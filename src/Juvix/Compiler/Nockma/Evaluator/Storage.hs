@@ -11,8 +11,14 @@ import Juvix.Prelude.Bytes
 
 newtype Storage a = Storage
   {_storageKeyValueData :: HashMap (StorageKey a) (Term a)}
+  deriving stock (Generic)
 
 newtype StorageKey a = StorageKey {_storageKeyTerm :: Term a}
+  deriving stock (Generic)
+
+instance (NFData a) => NFData (StorageKey a)
+
+instance (NFData a) => NFData (Storage a)
 
 makeLenses ''Storage
 makeLenses ''StorageKey
