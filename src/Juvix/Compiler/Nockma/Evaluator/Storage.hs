@@ -84,14 +84,13 @@ mkModuleStorage mtab =
         fromJust (md' ^. moduleInfoTable . infoCode)
       )
 
-insertJammedStorage :: Term Natural -> Storage Natural -> Storage Natural
-insertJammedStorage term =
-  over storageKeyValueData (HashMap.insert (StorageKey sha256) term)
+insertJammedStorage :: (Member (Error SimpleError) r) => ByteString -> Storage Natural -> Sem r (Storage Natural)
+insertJammedStorage jammedTerm storage = do
+  term <- decodeCue jammedTerm
+  return $ over storageKeyValueData (HashMap.insert (StorageKey sha256) term) storage
   where
     sha256 =
       TermAtom
-        . mkEmptyAtom
-        . byteStringToNatural
+        . byteStringToAtom'
         . SHA256.hash
-        . jamToByteString
-        $ term
+        $ jammedTerm
