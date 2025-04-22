@@ -96,10 +96,14 @@ data BuiltinFunctionId
 instance Hashable BuiltinFunctionId
 
 data CompilerOptions = CompilerOptions
+  { _compilerOptionsNoStdlib :: Bool
+  }
 
 fromEntryPoint :: EntryPoint -> CompilerOptions
-fromEntryPoint EntryPoint {} =
+fromEntryPoint EntryPoint {..} =
   CompilerOptions
+    { _compilerOptionsNoStdlib = _entryPointNoAnomaStdlib
+    }
 
 newtype FunctionCtx = FunctionCtx
   { _functionCtxArity :: Natural
@@ -397,21 +401,21 @@ makeLibraryFunction funName funArity funCode =
       )
 
 -- The result is not quoted and cannot be evaluated directly.
-makeMainFunction :: Natural -> Term Natural -> Term Natural
-makeMainFunction arity funCode = makeRawClosure $ \case
+makeMainFunction :: Bool -> Natural -> Term Natural -> Term Natural
+makeMainFunction bundleAnomaLib arity funCode = makeRawClosure $ \case
   FunCode -> funCode
   ArgsTuple -> argsTuplePlaceholder "mainFunction" arity
-  ClosureRemainingArgsNum -> nockNilTagged ("makeMainFunction-ClosureRemainingArgsNum")
+  ClosureRemainingArgsNum -> nockNilTagged "makeMainFunction-ClosureRemainingArgsNum"
   ModulesLibrary -> "moduleLibrary" @ modulesLibraryPlaceHolder
-  AnomaLibrary -> anomaLib
+  AnomaLibrary -> if bundleAnomaLib then anomaLib else nockNilTagged "noAnomaLibrary"
 
 -- The result is an unquoted subject which cannot be evaluated directly. Its
 -- head needs to be called with the Anoma calling convention.
-compileToSubject :: CompilerCtx -> HashMap ModuleId ByteString -> [ModuleId] -> [Tree.FunctionInfo] -> Maybe Symbol -> Term Natural
-compileToSubject ctx importsSHA256 importedModuleIds userFuns msym =
+compileToSubject :: Bool -> CompilerCtx -> HashMap ModuleId ByteString -> [ModuleId] -> [Tree.FunctionInfo] -> Maybe Symbol -> Term Natural
+compileToSubject bundleAnomaLib ctx importsSHA256 importedModuleIds userFuns msym =
   case msym of
     Nothing -> modulesLib
-    Just mainSym -> makeMainFunction mainArity (run . runReader ctx $ mkMainClosureCode mainSym)
+    Just mainSym -> makeMainFunction bundleAnomaLib mainArity (run . runReader ctx $ mkMainClosureCode mainSym)
   where
     mainArity :: Natural
     mainArity = case msym of
@@ -458,13 +462,14 @@ compileToSubject ctx importsSHA256 importedModuleIds userFuns msym =
 -- subject whose head needs to be called with the Anoma calling convention.
 --
 -- `importsTab` is the combined info table for (all) transitive imports
-fromTreeModule :: (ModuleId -> Sem r Module) -> InfoTable -> Tree.Module -> Sem r Module
+fromTreeModule :: (Member (Reader CompilerOptions) r) => (ModuleId -> Sem r Module) -> InfoTable -> Tree.Module -> Sem r Module
 fromTreeModule fetchModule importsTab md = do
+  optNoStdlib <- asks (^. compilerOptionsNoStdlib)
   importsSHA256 :: HashMap ModuleId ByteString <-
     HashMap.fromList
       . map (\m -> (m ^. moduleId, fromJust (m ^. moduleInfoTable . infoSHA256)))
       <$> mapM fetchModule importedModuleIds
-  let moduleCode = compileToSubject compilerCtx importsSHA256 importedModuleIds userFuns (md ^. Tree.moduleInfoTable . Tree.infoMainFunction)
+  let moduleCode = compileToSubject (not optNoStdlib) compilerCtx importsSHA256 importedModuleIds userFuns (md ^. Tree.moduleInfoTable . Tree.infoMainFunction)
       jammedCode = jamToByteString moduleCode
       tab =
         InfoTable
