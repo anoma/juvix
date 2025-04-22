@@ -251,8 +251,9 @@ allTests =
   where
     anomaNodeTests :: TestTree
     anomaNodeTests =
-      testGroup
+      sequentialTestGroup
         "AnomaNode"
+        AllFinish
         (map mkAnomaNodeTest (filter shouldRun anomaTests))
       where
         shouldRun :: AnomaTest -> Bool

@@ -6,8 +6,9 @@ import Base
 
 allTests :: TestTree
 allTests =
-  testGroup
+  sequentialTestGroup
     "Anoma tests"
+    AllFinish
     [ Compilation.allTests,
       Client.allTests
     ]

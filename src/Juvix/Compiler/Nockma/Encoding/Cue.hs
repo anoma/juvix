@@ -362,7 +362,10 @@ decodeCue encoded =
     Right (Right r) -> return r
 
 decodeCue64 :: (Members '[Error SimpleError] r) => Text -> Sem r (Term Natural)
-decodeCue64 encoded =
+decodeCue64 = decode64 >=> decodeCue
+
+decode64 :: (Members '[Error SimpleError] r) => Text -> Sem r ByteString
+decode64 encoded =
   case Base64.decode (encodeUtf8 encoded) of
     Left err -> throw (SimpleError (mkAnsiText err))
-    Right bs' -> decodeCue bs'
+    Right bs' -> return bs'
