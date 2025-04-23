@@ -433,31 +433,26 @@ compileToSubject ctx importsSHA256 importedModuleIds userFuns msym =
             )
             userFuns
 
-    -- The term _must_ be evaluated.
+    -- The term is not quoted and cannot be evaluated.
     modulesLib :: Term Natural
-    modulesLib = remakeList ((OpQuote # funcsLib) : map mkImport importedModuleIds)
+    modulesLib = makeList (funcsLib : map mkImport importedModuleIds)
 
     mkImport :: ModuleId -> Term Natural
     mkImport mid =
-      -- We evaluate the imported module's code here: the result should be a module library
-      OpApply # opGetSubject # mkScry [OpQuote # key]
-      where
-        key =
-          TermAtom
-            . mkEmptyAtom
-            . byteStringToNatural
-            . fromJust
-            . HashMap.lookup mid
-            $ importsSHA256
+      TermAtom
+        . mkEmptyAtom
+        . byteStringToNatural
+        . fromJust
+        . HashMap.lookup mid
+        $ importsSHA256
 
     -- assumption: subject base path = []
     mkMainClosureCode :: (Member (Reader CompilerCtx) r) => Symbol -> Sem r (Term Natural)
     mkMainClosureCode sym = do
       libpath <- stackPath ModulesLibrary
-      let newSubject = opReplace "replace-mainClosure-modulesLib" libpath modulesLib opGetSubject
+      let newSubject = opReplace "replace-mainClosure-modulesLib" libpath (OpQuote # modulesLib) opGetSubject
       finfo <- getFunctionInfo sym
-      fpath <- getFunctionInfoPath finfo
-      return (opCall ("callFun-main") (fpath ++ closurePath FunCode) newSubject)
+      return (opCall ("callFun-main") (libpath <> [L] <> finfo ^. functionInfoPath <> closurePath FunCode) newSubject)
 
 -- | Use `Tree.toNockma` before calling this function. The result is an unquoted
 -- subject whose head needs to be called with the Anoma calling convention.
@@ -540,7 +535,7 @@ fromTreeModule fetchModule importsTab md = do
         }
       where
         mkModuleInfo :: Int -> (ModuleId, ModuleInfo)
-        mkModuleInfo i = (allModuleIds !! i, ModuleInfo (pathFromEnum i))
+        mkModuleInfo i = (allModuleIds !! i, ModuleInfo {_moduleInfoPath = pathFromEnum i})
 
         mkConstructorInfo :: Tree.ConstructorInfo -> (Tree.Tag, ConstructorInfo)
         mkConstructorInfo ci@Tree.ConstructorInfo {..} =
@@ -991,22 +986,39 @@ compile = \case
       base <- getSubjectBasePath
       finfo <- getFunctionInfo fun
       minfo <- getModuleInfo (finfo ^. functionInfoModuleId)
-      fpath <- getFunctionInfoPath finfo
       farity <- getFunctionArity fun
       mid <- asks (^. compilerModuleId)
       batch <- asks (^. compilerBatch)
       args <- mapM compile _nodeAllocClosureArgs
-      let modulesLib =
+      let closure =
             if
                 | batch || mid == finfo ^. functionInfoModuleId ->
-                    opAddress "modulesLibrary" (base <> closurePath ModulesLibrary)
+                    opReplace
+                      "putAnomaLib"
+                      (closurePath AnomaLibrary)
+                      (opAddress "anomaLibrary" (base <> closurePath AnomaLibrary))
+                      $ opReplace
+                        "putModulesLib"
+                        (closurePath ModulesLibrary)
+                        (opAddress "modulesLibrary" (base <> closurePath ModulesLibrary))
+                      $ opAddress
+                        "goAllocClosure-getFunction"
+                        (base <> closurePath ModulesLibrary <> [L] <> finfo ^. functionInfoPath)
                 | otherwise ->
-                    opAddress "modulesLibrary" (base <> closurePath ModulesLibrary <> minfo ^. moduleInfoPath)
-          anomaLibrary = opAddress "anomaLibrary" (base <> closurePath AnomaLibrary)
-          closure =
-            opReplace "putAnomaLib" (closurePath AnomaLibrary) anomaLibrary
-              . opReplace "putModulesLib" (closurePath ModulesLibrary) modulesLib
-              $ opAddress "goAllocClosure-getFunction" (base <> fpath)
+                    OpPush
+                      # mkScry [opAddress "modulesLibrary" (base <> closurePath ModulesLibrary <> minfo ^. moduleInfoPath)]
+                      # ( opReplace
+                            "putAnomaLib"
+                            (closurePath AnomaLibrary)
+                            (opAddress "anomaLibrary" ([R] <> base <> closurePath AnomaLibrary))
+                            $ opReplace
+                              "putModulesLib"
+                              (closurePath ModulesLibrary)
+                              (opAddress "getModulesLibrary" [L])
+                            $ opAddress
+                              "goAllocClosure-getFunction"
+                              ([L, L] <> finfo ^. functionInfoPath)
+                        )
           newArity = farity - fromIntegral (length args)
       massert (newArity > 0)
       curryClosure closure args (nockNatLiteral newArity)
@@ -1228,7 +1240,7 @@ callFunWithArgs fun args = do
           -- The function is in a different module. We need to call the function
           -- with its module's module library.
           base <- getSubjectBasePath
-          let modLib = opAddress "callFun-modLib" (base ++ closurePath ModulesLibrary ++ minfo ^. moduleInfoPath)
+          let modLib = mkScry [opAddress "callFun-modLib" (base ++ closurePath ModulesLibrary ++ minfo ^. moduleInfoPath)]
               newSubject' = opReplace "callFun-modLib" (closurePath ModulesLibrary) modLib newSubject
           return (opCall ("callFun-" <> fname) (fpath ++ closurePath FunCode) newSubject')
 
@@ -1269,17 +1281,6 @@ getModuleInfo mid = fromJust . HashMap.lookup mid <$> asks (^. compilerModuleInf
 
 getFunctionInfo :: (HasCallStack) => (Members '[Reader CompilerCtx] r) => Symbol -> Sem r FunctionInfo
 getFunctionInfo funId = fromJust . HashMap.lookup funId <$> asks (^. compilerFunctionInfos)
-
-getFunctionInfoPath :: (Members '[Reader CompilerCtx] r) => FunctionInfo -> Sem r Path
-getFunctionInfoPath finfo = do
-  mid <- asks (^. compilerModuleId)
-  batch <- asks (^. compilerBatch)
-  if
-      | batch || mid == finfo ^. functionInfoModuleId ->
-          return (pathFromEnum ModulesLibrary ++ [L] ++ finfo ^. functionInfoPath)
-      | otherwise -> do
-          minfo <- getModuleInfo (finfo ^. functionInfoModuleId)
-          return (pathFromEnum ModulesLibrary ++ minfo ^. moduleInfoPath ++ [L] ++ finfo ^. functionInfoPath)
 
 builtinTagToTerm :: NockmaBuiltinTag -> Term Natural
 builtinTagToTerm = \case
