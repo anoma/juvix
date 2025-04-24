@@ -982,8 +982,9 @@ compile = \case
 
         goAdd :: [Term Natural] -> Sem r (Term Natural)
         goAdd = \case
-          [arg, TAtom 1] -> return $ OpInc # arg
-          [TAtom 1, arg] -> return $ OpInc # arg
+          -- remember that 1 is quoted: we match [quote 1]
+          [arg, TCell (TAtom 1) (TAtom 1)] -> return $ OpInc # arg
+          [TCell (TAtom 1) (TAtom 1), arg] -> return $ OpInc # arg
           args -> callStdlib StdlibAdd args
 
     goAllocClosure :: Tree.NodeAllocClosure -> Sem r (Term Natural)
