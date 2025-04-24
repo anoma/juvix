@@ -20,6 +20,7 @@ instance NFData InstanceParam
 data InstanceAppHead
   = InstanceAppHeadInductive Name
   | InstanceAppHeadAxiom Name
+  | InstanceAppHeadConstructor Name
   deriving stock (Eq, Ord, Generic)
 
 instance Serialize InstanceAppHead
@@ -44,6 +45,7 @@ instanceAppHeadName :: Lens' InstanceAppHead Name
 instanceAppHeadName f = \case
   InstanceAppHeadInductive n -> InstanceAppHeadInductive <$> f n
   InstanceAppHeadAxiom n -> InstanceAppHeadAxiom <$> f n
+  InstanceAppHeadConstructor n -> InstanceAppHeadConstructor <$> f n
 
 data InstanceFun = InstanceFun
   { _instanceFunLeft :: InstanceParam,

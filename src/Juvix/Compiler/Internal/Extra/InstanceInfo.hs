@@ -103,6 +103,7 @@ paramFromExpression metaVars e = case e of
     mkInstanceAppHeadIden = \case
       IdenInductive n -> Just (InstanceAppHeadInductive n)
       IdenAxiom n -> Just (InstanceAppHeadAxiom n)
+      IdenConstructor n -> Just (InstanceAppHeadConstructor n)
       _ -> Nothing
 
     mkInstanceAppHead :: Expression -> Maybe InstanceAppHead
