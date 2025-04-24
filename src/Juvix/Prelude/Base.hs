@@ -47,3 +47,16 @@ findRepeated = map (head . snd . fst) . findRepeatedOn id
 
 allDifferent :: forall a. (Ord a) => [a] -> Bool
 allDifferent = null . findRepeated
+
+-- Function to group elements in fixed-size chunks
+groupEvery :: Int -> [a] -> [[a]]
+groupEvery _ [] = []
+groupEvery n xs = take n xs : groupEvery n (drop n xs)
+
+-- Format a number with dots every three digits
+-- For example, 1234567890 becomes "1.234.567.890"
+formatWithDots :: (Show a) => a -> String
+formatWithDots n =
+  let str = reverse (show n)
+      groups = groupEvery 3 str
+   in reverse (intercalate "." groups)

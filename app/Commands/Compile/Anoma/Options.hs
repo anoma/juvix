@@ -13,6 +13,7 @@ data AnomaOptions (k :: InputKind) = AnomaOptions
   { _anomaCompileCommonOptions :: CompileCommonOptions k,
     _anomaModular :: Bool,
     _anomaOutputText :: Bool,
+    _anomaOutputHoon :: Bool,
     _anomaNoStdlib :: Bool
   }
 
@@ -32,6 +33,11 @@ parseAnoma = do
     switch
       ( long "text"
           <> help "Output code in textual format"
+      )
+  _anomaOutputHoon <-
+    switch
+      ( long "hoon"
+          <> help "Output Hoon code which can be run with 'urbit eval'"
       )
   _anomaNoStdlib <-
     switch
