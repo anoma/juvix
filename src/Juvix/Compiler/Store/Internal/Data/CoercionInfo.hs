@@ -8,7 +8,7 @@ import Juvix.Prelude
 
 data CoercionInfo = CoercionInfo
   { -- | The inductive name of the trait on the right of `:`
-    _coercionInfoInductive :: Name,
+    _coercionInfoInductive :: InductiveName,
     -- | The parameters of the coercion are the arguments of the trait on the right of `:`
     _coercionInfoParams :: [InstanceParam],
     -- | The target instance argument of the coercion instance
