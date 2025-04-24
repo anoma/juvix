@@ -317,7 +317,9 @@ cloneFunctionDefSameName f = do
   return (set funDefName (f ^. funDefName) f')
 
 subsInstanceHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap InstanceHole Expression -> a -> Sem r a
-subsInstanceHoles s = umapM helper
+subsInstanceHoles s
+  | null s = return
+  | otherwise = umapM helper
   where
     helper :: Expression -> Sem r Expression
     helper le = case le of
@@ -329,7 +331,9 @@ subsInstanceHoles s = umapM helper
         e = toExpression le
 
 subsHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
-subsHoles s = umapM helper
+subsHoles s
+  | null s = return
+  | otherwise = umapM helper
   where
     helper :: Expression -> Sem r Expression
     helper le = case le of

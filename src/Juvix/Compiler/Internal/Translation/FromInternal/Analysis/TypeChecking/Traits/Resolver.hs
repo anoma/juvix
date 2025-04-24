@@ -8,7 +8,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Data.LocalVars
-import Juvix.Compiler.Internal.Data.TypedHole
+import Juvix.Compiler.Internal.Data.TypedInstanceHole
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Extra.CoercionInfo
 import Juvix.Compiler.Internal.Extra.InstanceInfo
@@ -30,16 +30,16 @@ isTrait tab name = maybe False (^. inductiveInfoTrait) (HashMap.lookup name (tab
 
 resolveTraitInstance ::
   (Members '[Error TypeCheckerError, NameIdGen, Inference, ResultBuilder, Reader InfoTable] r) =>
-  TypedHole ->
+  TypedInstanceHole ->
   Sem r Expression
-resolveTraitInstance TypedHole {..} = do
-  vars <- overM localTypes (mapM strongNormalize_) _typedHoleLocalVars
+resolveTraitInstance TypedInstanceHole {..} = do
+  vars <- overM localTypes (mapM strongNormalize_) _typedInstanceHoleLocalVars
   infoTab <- ask
   combtabs <- getCombinedTables
   let tab0 = combtabs ^. typeCheckingTablesInstanceTable
       tab = foldr (flip updateInstanceTable) tab0 (varsToInstances infoTab vars)
       ctab = combtabs ^. typeCheckingTablesCoercionTable
-  ty <- strongNormalize _typedHoleType
+  ty <- strongNormalize _typedInstanceHoleType
   is <- lookupInstance ctab tab (ty ^. normalizedExpression)
   case is of
     [(cs, ii, subs)] -> do
@@ -51,7 +51,7 @@ resolveTraitInstance TypedHole {..} = do
     _ ->
       throw (ErrAmbiguousInstances (AmbiguousInstances ty (map snd3 is) loc))
   where
-    loc = getLoc _typedHoleHole
+    loc = getLoc _typedInstanceHoleHole
 
 subsumingInstances ::
   forall r.

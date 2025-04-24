@@ -1457,7 +1457,7 @@ goExpression = \case
     return (goLiteral (fromJust $ getInfoLiteralIntToNat md) (fromJust $ getInfoLiteralIntToInt md) l)
   Internal.ExpressionIden i -> goIden i
   Internal.ExpressionApplication a -> do
-    traceM (Internal.ppTrace a)
+    traceM ("FromInternal: " <> Internal.ppTrace a)
     goApplication a
   Internal.ExpressionSimpleLambda l -> goSimpleLambda l
   Internal.ExpressionLambda l -> goLambda l
