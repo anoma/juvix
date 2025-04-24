@@ -17,6 +17,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
     rememberFunctionDef,
     matchTypes,
     queryMetavarFinal,
+    inferenceSubsInstanceHoles,
   )
 where
 
@@ -41,9 +42,14 @@ data MatchError = MatchError
   }
 
 makeLenses ''MatchError
+makePrisms ''MetavarState
+
+instance HasExpressions MetavarState where
+  directExpressions = _Refined
 
 data Inference :: Effect where
   MatchTypes :: Expression -> Expression -> Inference m (Maybe MatchError)
+  InferenceSubsInstanceHoles :: HashMap InstanceHole Expression -> Inference m ()
   QueryMetavar :: Hole -> Inference m (Maybe Expression)
   RegisterIdenType :: Name -> Expression -> Inference m ()
   RememberFunctionDef :: FunctionDef -> Inference m ()
@@ -314,11 +320,18 @@ runInferenceState ::
 runInferenceState inis = reinterpret (runState inis) $ \case
   MatchTypes a b -> matchTypes' a b
   QueryMetavar h -> queryMetavar' h
+  InferenceSubsInstanceHoles h -> inferenceSubsInstanceHoles' h
   RememberFunctionDef f -> modify' (over inferenceFunctionsStash (f :))
   RegisterIdenType i ty -> registerIdenType' i ty
   StrongNormalize ty -> strongNormalize' ty
   WeakNormalize ty -> weakNormalize' ty
   where
+    inferenceSubsInstanceHoles' :: (Members '[NameIdGen, State InferenceState] r) => HashMap InstanceHole Expression -> Sem r ()
+    inferenceSubsInstanceHoles' subs = do
+      m <- gets (^. inferenceMap)
+      m' <- mapM (subsInstanceHoles subs) m
+      modify (set inferenceMap m')
+
     registerIdenType' :: (Members '[State InferenceState] r) => Name -> Expression -> Sem r ()
     registerIdenType' i ty = modify (over (inferenceIdens . typesTable) (HashMap.insert (i ^. nameId) ty))
 
@@ -366,8 +379,8 @@ runInferenceState inis = reinterpret (runState inis) $ \case
                 (_, ExpressionUniverse {}) -> err
                 (ExpressionLambda {}, _) -> err
                 (_, ExpressionLambda {}) -> err
-                (_, ExpressionCase {}) -> error "not implemented"
-                (ExpressionCase {}, _) -> error "not implemented"
+                (_, ExpressionCase {}) -> err
+                (ExpressionCase {}, _) -> err
                 (ExpressionLiteral l, ExpressionLiteral l') -> check (l == l')
               where
                 ok :: Sem r (Maybe MatchError)
