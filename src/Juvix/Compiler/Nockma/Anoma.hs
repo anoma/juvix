@@ -14,6 +14,7 @@ anomaCallTuple = \case
   Nothing -> helper Nothing
   where
     helper replaceArgs =
+      -- [9 2 [0 1]]
       opCall
         "anomaCall"
         (closurePath FunCode)

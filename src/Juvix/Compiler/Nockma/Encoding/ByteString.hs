@@ -15,12 +15,18 @@ import Juvix.Prelude.Bytes
 atomToByteString :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r ByteString
 atomToByteString = fmap naturalToByteString . nockNatural
 
+atomToByteString' :: Atom Natural -> ByteString
+atomToByteString' = naturalToByteString . (^. atom)
+
 -- | Encode an atom to little-endian bytes, padded with zeros up to a specified length
 atomToByteStringLen :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Int -> Atom a -> Sem r ByteString
 atomToByteStringLen len = fmap (padByteString len) . atomToByteString
 
 sha256Atom :: (NockNatural a, Member (Error (ErrNockNatural a)) r) => Atom a -> Sem r ByteString
 sha256Atom = fmap sha256Natural . nockNatural
+
+byteStringToAtom' :: ByteString -> Atom Natural
+byteStringToAtom' = mkEmptyAtom . byteStringToNatural
 
 byteStringToAtom :: forall a r. (NockNatural a, Member (Error (ErrNockNatural a)) r) => ByteString -> Sem r (Atom a)
 byteStringToAtom = fmap mkEmptyAtom . fromNatural . byteStringToNatural
@@ -37,13 +43,6 @@ atomConcatenateBytes l r = do
   lBs <- atomToByteString l
   rBs <- atomToByteString r
   byteStringToAtom (lBs <> rBs)
-
-mkEmptyAtom :: a -> Atom a
-mkEmptyAtom x =
-  Atom
-    { _atomInfo = emptyAtomInfo,
-      _atom = x
-    }
 
 vectorBitsToInteger :: Bit.Vector Bit -> Integer
 vectorBitsToInteger = byteStringToIntegerLEChunked . vectorBitsToByteString

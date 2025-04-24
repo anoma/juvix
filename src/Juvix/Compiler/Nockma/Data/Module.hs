@@ -25,3 +25,7 @@ lookupFunInfo m sym = fromJust (lookupFunInfo' m sym)
 getModuleCode :: Module -> Term Natural
 getModuleCode Module {..} =
   fromJust (_moduleInfoTable ^. infoCode)
+
+getModuleJammedCode :: Module -> ByteString
+getModuleJammedCode Module {..} =
+  fromJust (_moduleInfoTable ^. infoJammedCode)

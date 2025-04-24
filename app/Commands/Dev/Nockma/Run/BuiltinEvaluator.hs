@@ -3,6 +3,7 @@ module Commands.Dev.Nockma.Run.BuiltinEvaluator where
 import Commands.Base hiding (Atom)
 import Commands.Dev.Nockma.Run.BuiltinEvaluator.Options
 import Juvix.Compiler.Nockma.Anoma
+import Juvix.Compiler.Nockma.Encoding qualified as Encoding
 import Juvix.Compiler.Nockma.EvalCompiled
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Pretty
@@ -20,8 +21,8 @@ runCommand opts = do
     TermAtom {} -> exitFailMsg "Expected nockma input to be a cell"
     t@(TermCell {}) -> do
       let formula = anomaCallTuple parsedArgs
-          storageTerms = maybe [] unfoldList parsedStorage
-          storage = foldr insertJammedStorage emptyStorage storageTerms
+          storageJammedTerms = map Encoding.atomToByteString' . mapMaybe getAtom $ maybe [] unfoldList parsedStorage
+      storage <- runAppError @SimpleError $ foldrM insertJammedStorage emptyStorage storageJammedTerms
       (counts, res) <-
         runOpCounts
           . runReader defaultEvalOptions
@@ -31,3 +32,8 @@ runCommand opts = do
       when (opts ^. nockmaRunBuiltinProfile) $ do
         let statsFile = replaceExtension' ".profile" afile
         writeFileEnsureLn statsFile (prettyText counts)
+  where
+    getAtom :: Term Natural -> Maybe (Atom Natural)
+    getAtom = \case
+      TermAtom a -> Just a
+      _ -> Nothing

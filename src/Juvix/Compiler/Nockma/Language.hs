@@ -663,3 +663,10 @@ makeList ts = foldTerms (toList ts `prependList` pure (nockNilTagged "makeList")
 -- | The elements of the list will be evaluated to create the list.
 remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
 remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged "remakeList"))
+
+mkEmptyAtom :: a -> Atom a
+mkEmptyAtom x =
+  Atom
+    { _atomInfo = emptyAtomInfo,
+      _atom = x
+    }

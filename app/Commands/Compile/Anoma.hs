@@ -39,9 +39,10 @@ outputAnomaModuleTable debugOutput nockmaFile mid mtab = do
   let md = Nockma.lookupModuleTable mtab mid
   outputAnomaModule debugOutput nockmaFile md
   let storageNockmaFile = replaceExtensions' nockmaStorageFileExts nockmaFile
-      moduleTerms =
-        map Nockma.getModuleCode
+      modulesJammed =
+        map Nockma.getModuleJammedCode
           . HashMap.elems
           $ mtab ^. Nockma.moduleTable
-      modules = Nockma.makeList moduleTerms
+      modulesTerms = map (Nockma.TermAtom . Encoding.byteStringToAtom') modulesJammed
+      modules = Nockma.makeList modulesTerms
   writeFileBS storageNockmaFile (Encoding.jamToByteString modules)
