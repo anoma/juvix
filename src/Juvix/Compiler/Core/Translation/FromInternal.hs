@@ -1456,7 +1456,9 @@ goExpression = \case
     md <- getModule
     return (goLiteral (fromJust $ getInfoLiteralIntToNat md) (fromJust $ getInfoLiteralIntToInt md) l)
   Internal.ExpressionIden i -> goIden i
-  Internal.ExpressionApplication a -> goApplication a
+  Internal.ExpressionApplication a -> do
+    traceM (Internal.ppTrace a)
+    goApplication a
   Internal.ExpressionSimpleLambda l -> goSimpleLambda l
   Internal.ExpressionLambda l -> goLambda l
   Internal.ExpressionCase l -> goCase l
