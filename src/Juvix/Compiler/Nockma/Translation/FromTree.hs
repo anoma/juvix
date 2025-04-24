@@ -966,7 +966,7 @@ compile = \case
       where
         goPrimBinop :: Tree.BinaryOp -> [Term Natural] -> Sem r (Term Natural)
         goPrimBinop op args = case op of
-          Tree.OpIntAdd -> callStdlib StdlibAdd args
+          Tree.OpIntAdd -> goAdd args
           Tree.OpIntSub -> callStdlib StdlibSub args
           Tree.OpIntMul -> callStdlib StdlibMul args
           Tree.OpIntDiv -> callStdlib StdlibDiv args
@@ -979,6 +979,12 @@ compile = \case
           Tree.OpFieldSub -> return crash
           Tree.OpFieldMul -> return crash
           Tree.OpFieldDiv -> return crash
+
+        goAdd :: [Term Natural] -> Sem r (Term Natural)
+        goAdd = \case
+          [arg, TAtom 1] -> return $ OpInc # arg
+          [TAtom 1, arg] -> return $ OpInc # arg
+          args -> callStdlib StdlibAdd args
 
     goAllocClosure :: Tree.NodeAllocClosure -> Sem r (Term Natural)
     goAllocClosure Tree.NodeAllocClosure {..} = do
@@ -1255,16 +1261,19 @@ callClosure ref args = do
   return (opCall "callClosure" (closurePath FunCode) closure')
 
 curryClosure :: Term Natural -> [Term Natural] -> Term Natural -> Sem r (Term Natural)
-curryClosure f args newArity = do
-  let args' = (foldTerms (nonEmpty' $ map (\x -> (OpQuote # OpQuote) # x) args <> [OpQuote # OpAddress # closurePath ArgsTuple]))
-  return . makeClosure $ \case
-    FunCode -> (OpQuote # OpCall) # (OpQuote # closurePath FunCode) # (OpQuote # OpReplace) # ((OpQuote # closurePath ArgsTuple) # args') # (OpQuote # OpQuote) # f
-    ArgsTuple -> OpQuote # nockNilTagged "argsTuple" -- We assume the arguments tuple is never accessed before being replaced by the caller.
-    ClosureRemainingArgsNum -> newArity
-    -- The modules library and the standard library are always taken from the
-    -- closure `f`. The environment of `f` is used when evaluating the call.
-    ModulesLibrary -> OpQuote # modulesLibraryPlaceHolder
-    AnomaLibrary -> OpQuote # anomaLibPlaceholder
+curryClosure f args newArity
+  | null args =
+      return $ opReplace "putArity" (closurePath ClosureRemainingArgsNum) newArity f
+  | otherwise = do
+      let args' = (foldTerms (nonEmpty' $ map (\x -> (OpQuote # OpQuote) # x) args <> [OpQuote # OpAddress # closurePath ArgsTuple]))
+      return . makeClosure $ \case
+        FunCode -> (OpQuote # OpCall) # (OpQuote # closurePath FunCode) # (OpQuote # OpReplace) # ((OpQuote # closurePath ArgsTuple) # args') # (OpQuote # OpQuote) # f
+        ArgsTuple -> OpQuote # nockNilTagged "argsTuple" -- We assume the arguments tuple is never accessed before being replaced by the caller.
+        ClosureRemainingArgsNum -> newArity
+        -- The modules library and the standard library are always taken from the
+        -- closure `f`. The environment of `f` is used when evaluating the call.
+        ModulesLibrary -> OpQuote # modulesLibraryPlaceHolder
+        AnomaLibrary -> OpQuote # anomaLibPlaceholder
 
 replaceArgsWithTerm :: (Member (Reader CompilerCtx) r) => Text -> Term Natural -> Sem r (Term Natural)
 replaceArgsWithTerm tag term = do
