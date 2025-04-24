@@ -142,7 +142,7 @@ checkCoercionCycles = do
       any
         ( \ci ->
             not (ci ^. coercionInfoDecreasing)
-              && HashSet.member (ci ^. coercionInfoTarget . instanceAppHead) cyclic
+              && HashSet.member (ci ^. coercionInfoTarget . instanceAppHead . instanceAppHeadName) cyclic
         )
         cis
       where
@@ -430,7 +430,7 @@ checkInstanceArg metaVars params fp@FunctionParameter {..} = case _paramImplicit
     tab <- ask
     case traitFromExpression metaVars _paramType of
       Just app@InstanceApp {..}
-        | isTrait tab _instanceAppHead ->
+        | isTrait tab (_instanceAppHead ^. instanceAppHeadName) ->
             checkTraitTermination app params
       _ ->
         throw (ErrNotATrait (NotATrait _paramType))
@@ -478,7 +478,8 @@ checkInstanceParam ::
   NormalizedExpression ->
   Sem r ()
 checkInstanceParam tab ty' = case traitFromExpression mempty ty of
-  Just InstanceApp {..} | isTrait tab _instanceAppHead -> return ()
+  Just InstanceApp {..}
+    | isTrait tab (_instanceAppHead ^. instanceAppHeadName) -> return ()
   _ -> throw (ErrNotATrait (NotATrait ty))
   where
     ty = ty' ^. normalizedExpression
@@ -502,7 +503,7 @@ checkCoercionType FunctionDef {..} = do
       tab <- ask
       unless (isTrait tab _coercionInfoInductive) $
         throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
-      unless (isTrait tab (_coercionInfoTarget ^. instanceAppHead)) $
+      unless (isTrait tab (_coercionInfoTarget ^. instanceAppHead . instanceAppHeadName)) $
         throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
       checkInstanceArgs (ci ^. coercionInfoArgs) (ci ^. coercionInfoParams)
       addCoercionInfo (checkCoercionInfo ci)

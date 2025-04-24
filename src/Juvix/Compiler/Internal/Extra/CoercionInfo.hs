@@ -35,7 +35,7 @@ coercionFromTypedIden TypedIden {..}
       InstanceApp {..} <- traitFromExpression metaVars e
       return $
         CoercionInfo
-          { _coercionInfoInductive = _instanceAppHead,
+          { _coercionInfoInductive = _instanceAppHead ^. instanceAppHeadName,
             _coercionInfoParams = _instanceAppArgs,
             _coercionInfoTarget = tgt,
             _coercionInfoResult = _typedIden,
@@ -54,7 +54,7 @@ cyclicCoercions ctab = nodesOnCycles depInfo
     depInfo =
       createDependencyInfo
         ( HashMap.map
-            (HashSet.fromList . map (^. coercionInfoTarget . instanceAppHead))
+            (hashSet . map (^. coercionInfoTarget . instanceAppHead . instanceAppHeadName))
             (ctab ^. coercionTableMap)
         )
         mempty

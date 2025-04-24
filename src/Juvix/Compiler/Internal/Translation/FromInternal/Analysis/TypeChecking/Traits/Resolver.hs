@@ -12,6 +12,7 @@ import Juvix.Compiler.Internal.Data.TypedHole
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Extra.CoercionInfo
 import Juvix.Compiler.Internal.Extra.InstanceInfo
+-- import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.ResultBuilder
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
@@ -223,12 +224,11 @@ lookupInstance' visited ctab tab name params
         runState mempty $
           and <$> sequence (zipWithExact (goMatch True) _coercionInfoParams params)
       failUnless b
-      let name' = _coercionInfoTarget ^. instanceAppHead
+      let name' = _coercionInfoTarget ^. instanceAppHead . instanceAppHeadName
       args' <- mapM (substitutionI si) (_coercionInfoTarget ^. instanceAppArgs)
-      let visited' =
-            if
-                | _coercionInfoDecreasing -> visited
-                | otherwise -> name : visited
+      let visited'
+            | _coercionInfoDecreasing = visited
+            | otherwise = name : visited
       is <- lookupInstance' visited' ctab tab name' args'
       return $ map (first3 ((ci, si) :)) is
 
@@ -282,7 +282,9 @@ lookupInstance ::
   Sem r [(CoercionChain, InstanceInfo, SubsI)]
 lookupInstance ctab tab ty =
   case traitFromExpression mempty ty of
-    Just InstanceApp {..} ->
-      lookupInstance' [] ctab tab _instanceAppHead _instanceAppArgs
-    _ ->
+    Just InstanceApp {..} -> do
+      -- traceM "instanceApp"
+      lookupInstance' [] ctab tab (_instanceAppHead ^. instanceAppHeadName) _instanceAppArgs
+    _ -> do
+      -- traceM ("empty: " <> ppTrace ty)
       return []

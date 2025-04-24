@@ -47,8 +47,8 @@ instance PrettyCode InstanceFun where
     return $ l' <+> kwArrow <+> r'
 
 instance PrettyCode InstanceApp where
-  ppCode InstanceApp {..} = do
-    h' <- ppCode _instanceAppHead
+  ppCode a@InstanceApp {..} = do
+    h' <- ppCode (a ^. instanceAppHead . instanceAppHeadName)
     args' <- mapM ppCode _instanceAppArgs
     return $ h' <+> hsep args'
 

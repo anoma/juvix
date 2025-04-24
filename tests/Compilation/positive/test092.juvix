@@ -1,0 +1,20 @@
+module test092;
+
+import Stdlib.Prelude as Prelude open;
+
+two : Nat := suc (suc zero);
+
+type uint (bytes : Nat) := mk Nat
+with
+  instance
+  Show-uint {bytes : Nat} : Show (uint bytes) :=
+    Show.mk@{
+      show : uint bytes -> String
+        | (uint.mk val) := Show.show bytes ++str ":" ++str Show.show val;
+    };
+end;
+
+main : _ :=
+  let
+    e : uint two := uint.mk 5;
+  in printStringLn (Show.show e);
