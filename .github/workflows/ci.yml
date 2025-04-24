@@ -36,7 +36,7 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.11"
@@ -47,7 +47,7 @@ jobs:
     env:
       STACK_RESOLVER: lts-21.25
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: extractions/setup-just@v2
 
       - name: Install hpack
@@ -117,7 +117,7 @@ jobs:
       - uses: extractions/setup-just@v2
 
       - name: Checkout our repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: main
           submodules: true
@@ -354,7 +354,7 @@ jobs:
       - uses: extractions/setup-just@v2
 
       - name: Checkout our repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: main
           submodules: true
@@ -408,7 +408,7 @@ jobs:
       # runner image as the smoke testing step to make sure that the icu4c
       # versions match.
       - name: Checkout smoke repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: jonaprieto/smoke
           ref: regex-icu
