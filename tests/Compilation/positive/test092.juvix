@@ -2,21 +2,22 @@ module test092;
 
 import Stdlib.Prelude as Prelude open;
 
--- two : Nat := suc (suc zero);
+two : Nat := suc (suc zero);
 
-type uint (bytes : Nat) := mk
+type uint (bytes : Nat) := mk Nat
 with
-  -- instance
-  -- Show-uint {bytes : Nat} : Show (uint bytes) :=
-  --   Show.mk@{
-  --     show : uint bytes -> String
-  --       | (uint.mk val) := Show.show bytes ++str ":" ++str Show.show val;
-  --   };
+  instance
+  Show-uint {bytes : Nat} : Show (uint bytes) :=
+    Show.mk@{
+      show : uint bytes -> String
+        | (uint.mk val) := Show.show bytes ++str ":" ++str Show.show val;
+    };
 end;
 
--- seven : Nat := ;
-e4 : uint 7777 := uint.mk;
-
--- main : _ := false;
-    -- e : uint two := uint.mk 5;
-    -- e3 : uint (suc (suc (suc zero))) := uint.mk 5;
+main : _ :=
+  let
+    e : uint two := uint.mk 5;
+    e3 : uint (suc (suc (suc zero))) := uint.mk 5;
+    e4 : uint 7 := uint.mk 87;
+  in printStringLn (Show.show e) >>>
+  printStringLn (Show.show e3) >>> printStringLn (Show.show e4);
