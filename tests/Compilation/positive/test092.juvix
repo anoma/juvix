@@ -4,7 +4,7 @@ import Stdlib.Prelude as Prelude open;
 
 -- two : Nat := suc (suc zero);
 
-type uint (bytes : Nat) := mk Nat
+type uint (bytes : Nat) := mk
 with
   -- instance
   -- Show-uint {bytes : Nat} : Show (uint bytes) :=
@@ -14,9 +14,9 @@ with
   --   };
 end;
 
-seven : Nat := 7;
-e4 : uint seven := uint.mk 5;
+-- seven : Nat := ;
+e4 : uint 7777 := uint.mk;
 
-main : _ := false;
+-- main : _ := false;
     -- e : uint two := uint.mk 5;
     -- e3 : uint (suc (suc (suc zero))) := uint.mk 5;

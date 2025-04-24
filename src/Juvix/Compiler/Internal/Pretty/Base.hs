@@ -8,7 +8,7 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
-import Juvix.Compiler.Internal.Data.TypedHole
+import Juvix.Compiler.Internal.Data.TypedInstanceHole
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Occurrences
@@ -430,11 +430,11 @@ instance (PrettyCode a, PrettyCode b) => PrettyCode (Either a b) where
 instance PrettyCode LocalVars where
   ppCode LocalVars {..} = ppCode (HashMap.toList _localTypes)
 
-instance PrettyCode TypedHole where
-  ppCode TypedHole {..} = do
-    h <- ppCode _typedHoleHole
-    ty <- ppCode _typedHoleType
-    vars <- ppCode _typedHoleLocalVars
+instance PrettyCode TypedInstanceHole where
+  ppCode TypedInstanceHole {..} = do
+    h <- ppCode _typedInstanceHoleHole
+    ty <- ppCode _typedInstanceHoleType
+    vars <- ppCode _typedInstanceHoleLocalVars
     return (h <+> kwColon <+> ty <> kwAt <> vars)
 
 instance PrettyCode Polarity where
