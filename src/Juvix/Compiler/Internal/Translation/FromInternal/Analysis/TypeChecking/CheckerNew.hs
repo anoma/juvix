@@ -614,7 +614,8 @@ resolveInstanceHoles ::
 resolveInstanceHoles s = do
   (hs :: [TypedInstanceHole], e) <- runOutputList s
   ts <- mapM goResolve hs
-  let subs = hashMap (zipExact (map (^. typedInstanceHoleHole) hs) ts)
+  let subs = hashMap (zipExact (hs ^.. each . typedInstanceHoleHole) ts)
+  inferenceSubsInstanceHoles subs
   subsInstanceHoles subs e
   where
     goResolve :: TypedInstanceHole -> Sem r Expression
