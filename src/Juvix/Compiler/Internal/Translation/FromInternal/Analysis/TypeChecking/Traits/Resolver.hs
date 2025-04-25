@@ -248,7 +248,7 @@ lookupInstance' visited ctab tab name params
             return True
       (InstanceParamApp app1, InstanceParamApp app2)
         | app1 ^. instanceAppHead == app2 ^. instanceAppHead -> do
-            and <$> sequence (zipWithExact (goMatch assignMetas) (app1 ^. instanceAppArgs) (app2 ^. instanceAppArgs))
+            andM (zipWithExact (goMatch assignMetas) (app1 ^. instanceAppArgs) (app2 ^. instanceAppArgs))
       (InstanceParamFun fun1, InstanceParamFun fun2) -> do
         l <- goMatch assignMetas (fun1 ^. instanceFunLeft) (fun2 ^. instanceFunLeft)
         r <- goMatch assignMetas (fun1 ^. instanceFunRight) (fun2 ^. instanceFunRight)
