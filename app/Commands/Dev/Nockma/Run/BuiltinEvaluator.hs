@@ -22,7 +22,7 @@ runCommand opts = do
     t@(TermCell {}) -> do
       let formula = anomaCallTuple parsedArgs
           storageJammedTerms = map Encoding.atomToByteString' . mapMaybe getAtom $ maybe [] unfoldList parsedStorage
-      storage <- runAppError @SimpleError $ foldrM insertJammedStorage emptyStorage storageJammedTerms
+          storage = foldr insertJammedStorage emptyStorage storageJammedTerms
       (counts, res) <-
         runOpCounts
           . runReader defaultEvalOptions

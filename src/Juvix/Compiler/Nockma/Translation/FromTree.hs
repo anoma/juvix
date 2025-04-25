@@ -320,6 +320,9 @@ foldTermsOrQuotedNil = maybe (OpQuote # nockNilTagged "foldTermsOrQuotedNil") fo
 mkScry :: [Term Natural] -> Term Natural
 mkScry key = OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # (foldTermsOrQuotedNil key)
 
+mkScryDecode :: (Member (Reader CompilerCtx) r) => [Term Natural] -> Sem r (Term Natural)
+mkScryDecode key = callStdlib StdlibDecode [mkScry key]
+
 allConstructors :: Tree.Module -> Tree.ConstructorInfo -> NonEmpty Tree.ConstructorInfo
 allConstructors md ci =
   let indInfo = Tree.lookupInductiveInfo md (ci ^. Tree.constructorInductive)
@@ -1002,36 +1005,39 @@ compile = \case
       mid <- asks (^. compilerModuleId)
       batch <- asks (^. compilerBatch)
       args <- mapM compile _nodeAllocClosureArgs
-      let closure =
-            if
-                | batch || mid == finfo ^. functionInfoModuleId ->
-                    opReplace
-                      "putAnomaLib"
-                      (closurePath AnomaLibrary)
-                      (opAddress "anomaLibrary" (base <> closurePath AnomaLibrary))
-                      $ opReplace
-                        "putModulesLib"
-                        (closurePath ModulesLibrary)
-                        (opAddress "modulesLibrary" (base <> closurePath ModulesLibrary))
-                      $ opAddress
-                        "goAllocClosure-getFunction"
-                        (base <> closurePath ModulesLibrary <> [L] <> finfo ^. functionInfoPath)
-                | otherwise ->
-                    OpPush
-                      # mkScry [opAddress "modulesLibrary" (base <> closurePath ModulesLibrary <> minfo ^. moduleInfoPath)]
-                      # ( opReplace
-                            "putAnomaLib"
-                            (closurePath AnomaLibrary)
-                            (opAddress "anomaLibrary" ([R] <> base <> closurePath AnomaLibrary))
-                            $ opReplace
-                              "putModulesLib"
-                              (closurePath ModulesLibrary)
-                              (opAddress "getModulesLibrary" [L])
-                            $ opAddress
-                              "goAllocClosure-getFunction"
-                              ([L, L] <> finfo ^. functionInfoPath)
-                        )
-          newArity = farity - fromIntegral (length args)
+      closure <-
+        if
+            | batch || mid == finfo ^. functionInfoModuleId ->
+                return
+                  $ opReplace
+                    "putAnomaLib"
+                    (closurePath AnomaLibrary)
+                    (opAddress "anomaLibrary" (base <> closurePath AnomaLibrary))
+                  $ opReplace
+                    "putModulesLib"
+                    (closurePath ModulesLibrary)
+                    (opAddress "modulesLibrary" (base <> closurePath ModulesLibrary))
+                  $ opAddress
+                    "goAllocClosure-getFunction"
+                    (base <> closurePath ModulesLibrary <> [L] <> finfo ^. functionInfoPath)
+            | otherwise -> do
+                fetchModule <- mkScryDecode [opAddress "modulesLibrary" (base <> closurePath ModulesLibrary <> minfo ^. moduleInfoPath)]
+                return $
+                  OpPush
+                    # fetchModule
+                    # ( opReplace
+                          "putAnomaLib"
+                          (closurePath AnomaLibrary)
+                          (opAddress "anomaLibrary" ([R] <> base <> closurePath AnomaLibrary))
+                          $ opReplace
+                            "putModulesLib"
+                            (closurePath ModulesLibrary)
+                            (opAddress "getModulesLibrary" [L])
+                          $ opAddress
+                            "goAllocClosure-getFunction"
+                            ([L, L] <> finfo ^. functionInfoPath)
+                      )
+      let newArity = farity - fromIntegral (length args)
       massert (newArity > 0)
       curryClosure closure args (nockNatLiteral newArity)
 
@@ -1252,8 +1258,8 @@ callFunWithArgs fun args = do
           -- The function is in a different module. We need to call the function
           -- with its module's module library.
           base <- getSubjectBasePath
-          let modLib = mkScry [opAddress "callFun-modLib" (base ++ closurePath ModulesLibrary ++ minfo ^. moduleInfoPath)]
-              newSubject' = opReplace "callFun-modLib" (closurePath ModulesLibrary) modLib newSubject
+          modLib <- mkScryDecode [opAddress "callFun-modLib" (base ++ closurePath ModulesLibrary ++ minfo ^. moduleInfoPath)]
+          let newSubject' = opReplace "callFun-modLib" (closurePath ModulesLibrary) modLib newSubject
           return (opCall ("callFun-" <> fname) (fpath ++ closurePath FunCode) newSubject')
 
 callClosure :: (Member (Reader CompilerCtx) r) => TempRef -> [Term Natural] -> Sem r (Term Natural)
