@@ -51,7 +51,9 @@ allDifferent = null . findRepeated
 -- Function to group elements in fixed-size chunks
 groupEvery :: Int -> [a] -> [[a]]
 groupEvery _ [] = []
-groupEvery n xs = take n xs : groupEvery n (drop n xs)
+groupEvery n xs = xs' : groupEvery n rest
+  where
+    (xs', rest) = splitAt n xs
 
 -- Format a number with dots every three digits
 -- For example, 1234567890 becomes "1.234.567.890"
