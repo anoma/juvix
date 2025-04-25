@@ -2,7 +2,12 @@ module test092;
 
 import Stdlib.Prelude as Prelude open;
 
-two : Nat := suc (suc zero);
+n1 : Nat := suc zero;
+n2 : Nat := suc n1;
+n3 : Nat := suc n2;
+n4 : Nat := suc n3;
+n5 : Nat := suc n4;
+n6 : Nat := suc n5;
 
 type uint (bytes : Nat) := mk Nat
 with
@@ -14,10 +19,34 @@ with
     };
 end;
 
+module Le;
+  syntax operator '<= comparison;
+
+  trait
+  type '<= (a b : Nat) := truth
+  with
+    instance
+    le-zero {a : Nat} : zero '<= a := truth;
+
+    instance
+    le-suc {a b : Nat} {{a '<= b}} : suc a '<= suc b := truth;
+  end;
+
+  test (a b : Nat) {{a '<= b}} : Unit := unit;
+
+  example1 : Unit := test n1 n4;
+  example2 : Unit := test n4 n4;
+  example3 : Unit := test 1 3;
+end;
+
 main : _ :=
   let
-    e : uint two := uint.mk 5;
+    z : uint zero := uint.mk 5;
+    e : uint n2 := uint.mk 5;
     e3 : uint (suc (suc (suc zero))) := uint.mk 5;
     e4 : uint 7 := uint.mk 87;
-  in printStringLn (Show.show e) >>>
-  printStringLn (Show.show e3) >>> printStringLn (Show.show e4);
+  in printStringLn (Show.show z)
+    >>> printStringLn (Show.show e)
+    >>> printStringLn (Show.show e3)
+    >>> printStringLn (Show.show e3)
+    >>> printStringLn (Show.show e4);
