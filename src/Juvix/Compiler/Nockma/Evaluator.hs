@@ -259,7 +259,10 @@ evalProfile inistack initerm =
                 TermAtom a -> do
                   r <- Encoding.cueEither a
                   either (throwDecodingFailed args') return r
-                TermCell {} -> throwDecodingFailed args' DecodingErrorExpectedAtom
+                TermCell {} ->
+                  -- In the simulated storage, we allow already decoded cells
+                  -- for efficiency. Decoding these should then be a no-op.
+                  return args'
               StdlibVerifyDetached -> case args' of
                 TCell (TermAtom sig) (TCell (TermAtom message) (TermAtom pubKey)) -> goVerifyDetached sig message pubKey
                 _ -> error "expected a term of the form [signature (atom) message (encoded term) public_key (atom)]"
