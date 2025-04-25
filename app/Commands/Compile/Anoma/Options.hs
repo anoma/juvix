@@ -14,7 +14,8 @@ data AnomaOptions (k :: InputKind) = AnomaOptions
     _anomaModular :: Bool,
     _anomaOutputText :: Bool,
     _anomaOutputHoon :: Bool,
-    _anomaNoStdlib :: Bool
+    _anomaNoStdlib :: Bool,
+    _anomaNoNockImportDecoding :: Bool
   }
 
 deriving stock instance (Typeable k, Data (InputFileType k)) => Data (AnomaOptions k)
@@ -44,6 +45,11 @@ parseAnoma = do
       ( long "no-anomalib"
           <> help "Do not bundle the Anoma standard library"
       )
+  _anomaNoNockImportDecoding <-
+    switch
+      ( long "no-import-cue"
+          <> help "Do not generate code to cue imported modules. Required to run the generated code with the builtin evaluator."
+      )
   pure AnomaOptions {..}
 
 instance EntryPointOptions (AnomaOptions k) where
@@ -51,4 +57,5 @@ instance EntryPointOptions (AnomaOptions k) where
     set entryPointPipeline (Just PipelineExec)
       . set entryPointTarget (Just TargetAnoma)
       . set entryPointNoAnomaStdlib (opts ^. anomaNoStdlib)
+      . set entryPointNoNockImportDecoding (opts ^. anomaNoNockImportDecoding)
       . applyOptions (opts ^. anomaCompileCommonOptions)

@@ -96,13 +96,15 @@ data BuiltinFunctionId
 instance Hashable BuiltinFunctionId
 
 data CompilerOptions = CompilerOptions
-  { _compilerOptionsNoStdlib :: Bool
+  { _compilerOptionsNoStdlib :: Bool,
+    _compilerOptionsNoImportDecoding :: Bool
   }
 
 fromEntryPoint :: EntryPoint -> CompilerOptions
 fromEntryPoint EntryPoint {..} =
   CompilerOptions
-    { _compilerOptionsNoStdlib = _entryPointNoAnomaStdlib
+    { _compilerOptionsNoStdlib = _entryPointNoAnomaStdlib,
+      _compilerOptionsNoImportDecoding = _entryPointNoNockImportDecoding
     }
 
 newtype FunctionCtx = FunctionCtx
@@ -129,6 +131,7 @@ data CompilerCtx = CompilerCtx
     _compilerModuleInfos :: HashMap ModuleId ModuleInfo,
     _compilerModuleId :: ModuleId,
     _compilerBatch :: Bool,
+    _compilerNoImportDecoding :: Bool,
     -- | Maps temporary variables to their stack indices.
     _compilerTempVarMap :: HashMap Int TempRef,
     _compilerTempVarsNum :: Int,
@@ -149,6 +152,7 @@ emptyCompilerCtx =
       _compilerModuleInfos = mempty,
       _compilerModuleId = defaultModuleId,
       _compilerBatch = True,
+      _compilerNoImportDecoding = False,
       _compilerTempVarMap = mempty,
       _compilerTempVarsNum = 0,
       _compilerStackHeight = 0
@@ -321,7 +325,11 @@ mkScry :: [Term Natural] -> Term Natural
 mkScry key = OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # (foldTermsOrQuotedNil key)
 
 mkScryDecode :: (Member (Reader CompilerCtx) r) => [Term Natural] -> Sem r (Term Natural)
-mkScryDecode key = callStdlib StdlibDecode [mkScry key]
+mkScryDecode key = do
+  bNoDecode <- asks (^. compilerNoImportDecoding)
+  if
+      | bNoDecode -> return $ mkScry key
+      | otherwise -> callStdlib StdlibDecode [mkScry key]
 
 allConstructors :: Tree.Module -> Tree.ConstructorInfo -> NonEmpty Tree.ConstructorInfo
 allConstructors md ci =
@@ -468,11 +476,12 @@ compileToSubject bundleAnomaLib ctx importsSHA256 importedModuleIds userFuns msy
 fromTreeModule :: (Member (Reader CompilerOptions) r) => (ModuleId -> Sem r Module) -> InfoTable -> Tree.Module -> Sem r Module
 fromTreeModule fetchModule importsTab md = do
   optNoStdlib <- asks (^. compilerOptionsNoStdlib)
+  optNoImportDecoding <- asks (^. compilerOptionsNoImportDecoding)
   importsSHA256 :: HashMap ModuleId ByteString <-
     HashMap.fromList
       . map (\m -> (m ^. moduleId, fromJust (m ^. moduleInfoTable . infoSHA256)))
       <$> mapM fetchModule importedModuleIds
-  let moduleCode = compileToSubject (not optNoStdlib) compilerCtx importsSHA256 importedModuleIds userFuns (md ^. Tree.moduleInfoTable . Tree.infoMainFunction)
+  let moduleCode = compileToSubject (not optNoStdlib) (compilerCtx optNoImportDecoding) importsSHA256 importedModuleIds userFuns (md ^. Tree.moduleInfoTable . Tree.infoMainFunction)
       jammedCode = jamToByteString moduleCode
       tab =
         InfoTable
@@ -529,8 +538,8 @@ fromTreeModule fetchModule importsTab md = do
                 }
             )
 
-    compilerCtx :: CompilerCtx
-    compilerCtx =
+    compilerCtx :: Bool -> CompilerCtx
+    compilerCtx optNoImportDecoding =
       emptyCompilerCtx
         { _compilerFunctionInfos =
             userFunInfos <> importsTab ^. infoFunctions,
@@ -539,7 +548,8 @@ fromTreeModule fetchModule importsTab md = do
           _compilerModuleInfos =
             HashMap.fromList $ map mkModuleInfo [0 .. length allModuleIds - 1],
           _compilerModuleId = md ^. Tree.moduleId,
-          _compilerBatch = null importedFuns
+          _compilerBatch = null importedFuns,
+          _compilerNoImportDecoding = optNoImportDecoding
         }
       where
         mkModuleInfo :: Int -> (ModuleId, ModuleInfo)
