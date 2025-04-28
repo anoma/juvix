@@ -18,7 +18,7 @@ trivial_true_resource_eph : Resource :=
     nullifierKeyCommitment :=
       NullifierKeyCommitment.toAnomaAtom NullifierKeyCommitment.zero;
     unusedRandSeed := 0;
-    nonce := Nonce.toRaw (Nonce.fromNat 0);
+    nonce := Nonce.fromNat 0;
   };
 
 trivial_true_eph_nullifier_action : Action :=
@@ -48,7 +48,7 @@ trivial_true_resource : Resource :=
     nullifierKeyCommitment :=
       NullifierKeyCommitment.toAnomaAtom NullifierKeyCommitment.zero;
     unusedRandSeed := 0;
-    nonce := Nonce.toRaw (Nonce.fromNat 2);
+    nonce := Nonce.fromNat 2;
   };
 
 trivial_true_commit_action : Action :=

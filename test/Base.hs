@@ -161,10 +161,10 @@ testRunIOEitherTermination entry =
   testRunIOEither entry
     . evalTermination iniTerminationState
 
-assertFailure :: (MonadIO m) => String -> m a
+assertFailure :: (HasCallStack, MonadIO m) => String -> m a
 assertFailure = liftIO . HUnit.assertFailure
 
-runSimpleErrorHUnit :: (Members '[EmbedIO] r) => Sem (Error SimpleError ': r) a -> Sem r a
+runSimpleErrorHUnit :: (HasCallStack, Members '[EmbedIO] r) => Sem (Error SimpleError ': r) a -> Sem r a
 runSimpleErrorHUnit m = do
   res <- runError m
   case res of

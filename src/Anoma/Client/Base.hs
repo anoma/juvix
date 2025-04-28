@@ -78,6 +78,7 @@ anomaClientCreateProcess launchMode = do
 setupAnomaClientProcess :: forall r. (Members '[EmbedIO, Logger, Error SimpleError] r) => Handle -> Sem r AnomaClientInfo
 setupAnomaClientProcess nodeOut = do
   let x :: IO Text = catchIOError (readClientInfo nodeOut) $ \e -> error ("The node client is expected to output two numbers (see include/anoma/start.exs), but there was an IO exception:\n" <> show e)
+  traceM "hi"
   ln <- liftIO x
   let parseError = throw (SimpleError (mkAnsiText ("Failed to parse the client http port when starting the anoma node and client.\nExpected a number but got " <> ln)))
       parseInt :: Text -> Sem r Int
@@ -88,6 +89,7 @@ setupAnomaClientProcess nodeOut = do
   logInfo "Anoma node and client successfully started"
   logInfo (mkAnsiText ("Node ID: " <> annotate AnnImportant (pretty nodeId)))
   logInfo (mkAnsiText ("Listening on port " <> annotate AnnImportant (pretty httpPort)))
+  traceM "Anoma node and client successfully started"
   return
     AnomaClientInfo
       { _anomaClientInfoPort = httpPort,
@@ -104,11 +106,16 @@ setupAnomaClientProcess nodeOut = do
 
 launchAnomaClient :: (Members '[Logger, EmbedIO, Error SimpleError] r) => LaunchMode -> AnomaPath -> Sem r AnomaClientLaunchInfo
 launchAnomaClient launchMode anomapath = runEnvironment . runReader anomapath . runProcess $ do
+  traceM "launchAnomaClient0"
   cproc <- anomaClientCreateProcess launchMode
+  traceM "launchAnomaClient1"
   (_mstdin, mstdout, _mstderr, procHandle) <- createProcess cproc
+  traceM "launchAnomaClient2"
   let stdoutH = fromJust mstdout
   info <- setupAnomaClientProcess stdoutH
+  traceM "launchAnomaClient3"
   hClose stdoutH
+  traceM "launchAnomaClient"
   return
     AnomaClientLaunchInfo
       { _anomaClientLaunchInfoInfo = info,

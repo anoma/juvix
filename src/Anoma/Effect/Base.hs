@@ -70,7 +70,7 @@ httpCliProcess method endpoint = do
   httpPort <- asks (^. anomaClientInfoPort)
   httpUrl <- asks (^. anomaClientInfoUrl)
   let url = httpUrl <> ":" <> show httpPort <> "/" <> show endpoint
-  let args = case method of
+      args = case method of
         HttpGet -> ["-s", "-X", "GET", url, "-H", "accept: application/json"]
         HttpPost -> ["-s", "-X", "POST", url, "-H", "accept: application/json", "-H", "Content-Type: application/json", "-d", "@-"]
   return
@@ -111,12 +111,21 @@ runAnomaEphemeral anomapath body = runEnvironment . runReader anomapath . runPro
     let stdOut = fromJust mstdout
         stdErr = fromJust mstderr
     anomaInfo <- setupAnomaClientProcess stdOut
+    traceM "anoma ephemeral"
     runConcurrent . withLoggerThread stdOut . withLoggerThread stdErr $
       runReader anomaInfo $ do
         (`interpret` inject body) $ \case
-          AnomaPost url i -> anomaRequest' HttpPost url (Just i)
-          AnomaGet url -> anomaRequest' HttpGet url Nothing
-          AnomaCheck -> anomaCheck'
+          AnomaPost url i -> do
+            traceM "anomapost"
+            res <- anomaRequest' HttpPost url (Just i)
+            traceM "anomapostend"
+            return res
+          AnomaGet url -> do
+            traceM "anomaget"
+            anomaRequest' HttpGet url Nothing
+          AnomaCheck -> do
+            traceM "anomacheck"
+            anomaCheck'
 
 runAnomaWithClient :: forall r a. (Members '[EmbedIO, Error SimpleError] r) => AnomaClientInfo -> Sem (Anoma ': r) a -> Sem r a
 runAnomaWithClient anomaInfo body = do

@@ -34,15 +34,6 @@ end;
 builtin anoma-nullifier-key
 type NullifierKey := privateMk ByteArray
 with
-  -- should be mk AnomaAtom
-  type Raw := mk Nat;
-
-  fromRaw : NullifierKey.Raw -> NullifierKey
-    | (Raw.mk n) := privateMk (fromAnomaContents size n);
-
-  toRaw : NullifierKey -> NullifierKey.Raw
-    | (NullifierKey.privateMk bs) := Raw.mk (toAnomaContents bs);
-
   size : Nat := 64;
 
   fromByteArray : ByteArray -> NullifierKey := privateMk;
@@ -175,15 +166,6 @@ end;
 --- NOTE: This should be a number having an at most negligible chance of repeating is sufficient, e.g., a pseudo-random number.
 type Nonce := privateMk ByteArray
 with
-  -- should be mk AnomaAtom
-  type Raw := mk Nat;
-
-  fromRaw : Nonce.Raw -> Nonce
-    | (Raw.mk n) := privateMk (fromAnomaContents size n);
-
-  toRaw : Nonce -> Nonce.Raw
-    | (Nonce.privateMk bs) := Raw.mk (toAnomaContents bs);
-
   size : Nat := 32;
 
   fromNat : Nat -> Nonce := fromAnomaContents size >> privateMk;
@@ -231,7 +213,7 @@ type Resource :=
     value : AnomaAtom;
     quantity : Nat;
     ephemeral : Bool;
-    nonce : Nonce.Raw;
+    nonce : Nonce;
     nullifierKeyCommitment : AnomaAtom;
     unusedRandSeed : Nat;
   }
@@ -400,7 +382,7 @@ end;
 
 type RootedNullifiableResource :=
   mk@{
-    key : NullifierKey.Raw;
+    key : NullifierKey;
     resource : Resource;
     root : CommitmentRoot;
   }
@@ -414,7 +396,7 @@ with
             root := CommitmentRoot.fromNat 0;
           }
         | else :=
-          failwith "mkEphemeral requires an ephemeral resource as an arguments";
+          failwith "mkEphemeral requires an ephemeral resource as an argument";
 
     mk
       (resource : Resource)
@@ -423,14 +405,14 @@ with
       RootedNullifiableResource.mk@{
         resource;
         root;
-        key := NullifierKey.toRaw NullifierKey.Transparent.mk;
+        key := NullifierKey.Transparent.mk;
       };
   end;
 end;
 
 type NullifiableResource :=
   mk@{
-    key : NullifierKey.Raw;
+    key : NullifierKey;
     resource : Resource;
   }
 with
@@ -444,7 +426,7 @@ with
     mk (resource : Resource) : NullifiableResource :=
       NullifiableResource.mk@{
         resource;
-        key := NullifierKey.toRaw NullifierKey.Transparent.mk;
+        key := NullifierKey.Transparent.mk;
       };
   end;
 end;
