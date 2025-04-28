@@ -28,4 +28,4 @@ runCommand opts = do
       . runError @JuvixError
       . runReader entrypoint
       $ treeToAnoma md
-  outputAnomaModule (opts' ^. compileDebug) outFile md'
+  outputAnomaModule opts (opts' ^. compileDebug) outFile md'

@@ -136,7 +136,7 @@ anomaTest n mainFun args _testCheck _evalInterceptAnomaLibCalls =
   let _testName :: Text
         | _evalInterceptAnomaLibCalls = n <> " - intercept stdlib"
         | otherwise = n
-      _testProgramSubject = makeMainFunction (fromIntegral (length args)) mainFun
+      _testProgramSubject = makeMainFunction True (fromIntegral (length args)) mainFun
       _testProgramFormula = anomaCall args
       _testProgramStorage :: Storage Natural = emptyStorage
       _testEvalOptions = EvalOptions {..}

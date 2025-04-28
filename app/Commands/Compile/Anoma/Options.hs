@@ -11,7 +11,10 @@ import CommonOptions
 
 data AnomaOptions (k :: InputKind) = AnomaOptions
   { _anomaCompileCommonOptions :: CompileCommonOptions k,
-    _anomaModular :: Bool
+    _anomaModular :: Bool,
+    _anomaOutputText :: Bool,
+    _anomaOutputHoon :: Bool,
+    _anomaNoStdlib :: Bool
   }
 
 deriving stock instance (Typeable k, Data (InputFileType k)) => Data (AnomaOptions k)
@@ -26,10 +29,26 @@ parseAnoma = do
       ( long "modular"
           <> help "Generate modular code"
       )
+  _anomaOutputText <-
+    switch
+      ( long "text"
+          <> help "Output code in textual format"
+      )
+  _anomaOutputHoon <-
+    switch
+      ( long "hoon"
+          <> help "Output Hoon code which can be run with 'urbit eval'"
+      )
+  _anomaNoStdlib <-
+    switch
+      ( long "no-anomalib"
+          <> help "Do not bundle the Anoma standard library"
+      )
   pure AnomaOptions {..}
 
 instance EntryPointOptions (AnomaOptions k) where
   applyOptions opts =
     set entryPointPipeline (Just PipelineExec)
       . set entryPointTarget (Just TargetAnoma)
+      . set entryPointNoAnomaStdlib (opts ^. anomaNoStdlib)
       . applyOptions (opts ^. anomaCompileCommonOptions)

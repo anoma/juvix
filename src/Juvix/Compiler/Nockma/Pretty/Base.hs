@@ -64,7 +64,12 @@ instance PrettyCode Interval where
   ppCode = return . pretty
 
 instance PrettyCode Natural where
-  ppCode = return . pretty
+  ppCode x = do
+    isNock <- asks (^. optNock)
+    return $
+      if
+          | isNock -> pretty (formatWithDots x)
+          | otherwise -> pretty x
 
 instance PrettyCode Path where
   ppCode = return . ppCodeAnn
