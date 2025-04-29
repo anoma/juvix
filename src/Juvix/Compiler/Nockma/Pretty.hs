@@ -7,6 +7,7 @@ module Juvix.Compiler.Nockma.Pretty
   )
 where
 
+import Data.Text qualified as Text
 import Juvix.Compiler.Nockma.Language
 import Juvix.Compiler.Nockma.Pretty.Base
 import Juvix.Compiler.Nockma.Pretty.Options
@@ -26,6 +27,9 @@ ppTrace =
 
 ppSerialize :: (PrettyCode c) => c -> Text
 ppSerialize = ppPrintOpts serializeOptions
+
+ppNock :: (PrettyCode c) => c -> Text
+ppNock = Text.replace " ]" "]" . Text.replace "[ " "[" . Text.unwords . Text.words . ppPrintOpts nockOptions
 
 ppPrint :: (PrettyCode c) => c -> Text
 ppPrint = toPlainText . ppOut defaultOptions
