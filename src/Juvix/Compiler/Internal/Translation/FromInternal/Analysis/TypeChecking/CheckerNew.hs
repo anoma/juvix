@@ -68,10 +68,30 @@ data AppBuilder = AppBuilder
     _appBuilderArgs :: [AppBuilderArg]
   }
 
+data TypeHint = TypeHint
+  { _typeHint :: Maybe Expression,
+    _typeHintTypeNatural :: Bool
+  }
+
+makeLenses ''TypeHint
 makeLenses ''AppBuilder
 makeLenses ''AppBuilderArg
 makeLenses ''FunctionDefault
 makeLenses ''FunctionDefaultInfo
+
+mkTypeHint :: Maybe Expression -> TypeHint
+mkTypeHint ty =
+  TypeHint
+    { _typeHint = ty,
+      _typeHintTypeNatural = False
+    }
+
+emptyTypeHint :: TypeHint
+emptyTypeHint =
+  TypeHint
+    { _typeHint = Nothing,
+      _typeHintTypeNatural = False
+    }
 
 instance PrettyCode FunctionDefault where
   ppCode _ = return "ppCode(FunctionDefault)"
@@ -332,9 +352,9 @@ checkMutualStatement ::
   Sem r MutualStatement
 checkMutualStatement = \case
   StatementFunction f -> do
-    traceM ("f : " <> ppTrace f)
+    -- traceM ("f : " <> ppTrace f)
     f' <- resolveInstanceHoles (resolveCastHoles (checkFunctionDef f))
-    traceM ("f' : " <> ppTrace f')
+    -- traceM ("f' : " <> ppTrace f')
     return (StatementFunction f')
   StatementInductive f -> StatementInductive <$> resolveInstanceHoles (resolveCastHoles (checkInductiveDef f))
   StatementAxiom ax -> do
@@ -363,7 +383,7 @@ checkFunctionDef ::
 checkFunctionDef FunctionDef {..} = do
   funDef <- do
     _funDefType' <- checkDefType _funDefType
-    traceM ("----------------fundeftype': " <> ppTrace _funDefType')
+    -- traceM ("----------------fundeftype': " <> ppTrace _funDefType')
     registerIdenType _funDefName _funDefType'
     _funDefBody' <- checkFunctionBody _funDefType' _funDefBody
     params <- fst <$> unfoldFunType' _funDefType'
@@ -580,7 +600,11 @@ checkExpression ::
   Expression ->
   Sem r Expression
 checkExpression expectedTy e = do
-  e' <- inferExpression' (Just expectedTy) e
+  let hint = TypeHint {
+        _typeHint = Just expectedTy,
+        _typeHintTypeNatural = False
+                      }
+  e' <- inferExpression' hint e
   let inferredType = e' ^. typedType
   whenJustM (matchTypes expectedTy inferredType) (const (err e'))
   return (e' ^. typedExpression)
@@ -649,7 +673,7 @@ inferExpressionRepl ::
   Maybe Expression ->
   Expression ->
   Sem r TypedExpression
-inferExpressionRepl hint = resolveInstanceHoles . resolveCastHoles . inferExpression' hint
+inferExpressionRepl hint = resolveInstanceHoles . resolveCastHoles . inferExpression' (mkTypeHint hint)
 
 lookupVar ::
   (HasCallStack) =>
@@ -979,7 +1003,7 @@ checkPattern = go
 inferExpression' ::
   forall r.
   (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack, Reader InsertedArgsStack] r) =>
-  Maybe Expression ->
+  TypeHint ->
   Expression ->
   Sem r TypedExpression
 inferExpression' = holesHelper
@@ -988,7 +1012,7 @@ inferExpression' = holesHelper
 inferLeftAppExpression ::
   forall r.
   (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
-  Maybe Expression ->
+  TypeHint ->
   Expression ->
   Sem r TypedExpression
 inferLeftAppExpression mhint e = case e of
@@ -1030,7 +1054,7 @@ inferLeftAppExpression mhint e = case e of
     goHole :: Hole -> Sem r TypedExpression
     goHole h = do
       void (queryMetavar h)
-      ty <- maybe (freshHoleImpl (getLoc h) Implicit) return mhint
+      ty <- maybe (freshHoleImpl (getLoc h) Implicit) return (mhint ^. typeHint)
       return
         TypedExpression
           { _typedExpression = ExpressionHole h,
@@ -1039,7 +1063,7 @@ inferLeftAppExpression mhint e = case e of
 
     goInstanceHole :: InstanceHole -> Sem r TypedExpression
     goInstanceHole h = do
-      let ty = fromMaybe impossible mhint
+      let ty = fromMaybe impossible (mhint ^. typeHint)
       locals <- ask
       output (TypedInstanceHole h ty locals)
       return
@@ -1050,7 +1074,7 @@ inferLeftAppExpression mhint e = case e of
 
     goSimpleLambda :: SimpleLambda -> Sem r TypedExpression
     goSimpleLambda (SimpleLambda (SimpleBinder v ty) b) = do
-      b' <- withLocalType v ty (inferExpression' Nothing b)
+      b' <- withLocalType v ty (inferExpression' emptyTypeHint b)
       let smallUni = smallUniverseE (getLoc ty)
       ty' <- checkExpression smallUni ty
       let fun = Function (unnamedParameter smallUni) (b' ^. typedType)
@@ -1062,10 +1086,10 @@ inferLeftAppExpression mhint e = case e of
 
     goCase :: Case -> Sem r TypedExpression
     goCase c = do
-      ty <- case mhint of
+      ty <- case mhint ^. typeHint of
         Nothing -> freshHoleImpl (getLoc c) Implicit
         Just hi -> return hi
-      typedCaseExpression <- inferExpression' Nothing (c ^. caseExpression)
+      typedCaseExpression <- inferExpression' emptyTypeHint (c ^. caseExpression)
       let _caseExpression = typedCaseExpression ^. typedExpression
           _caseExpressionType = Just (typedCaseExpression ^. typedType)
           _caseExpressionWholeType = Just ty
@@ -1093,7 +1117,7 @@ inferLeftAppExpression mhint e = case e of
 
     goLambda :: Lambda -> Sem r TypedExpression
     goLambda l = do
-      ty <- case mhint of
+      ty <- case mhint ^. typeHint of
         Just hi -> return hi
         Nothing -> freshHoleImpl (getLoc l) Implicit
       _lambdaClauses <- mapM (goClause ty) (l ^. lambdaClauses)
@@ -1169,8 +1193,9 @@ inferLeftAppExpression mhint e = case e of
             typedLit litt blt ty = do
               from <- getBuiltinNameTypeChecker i blt
               ihole <- freshHoleImpl i ImplicitInstance
-              let ty' = maybe ty (adjustLocation i) mhint
-              inferExpression' (Just ty') $
+              let ty' = maybe ty (adjustLocation i) (mhint ^. typeHint)
+              -- inferExpression' (Just ty') $
+              inferExpression' todo $
                 foldApplication
                   (ExpressionIden (IdenFunction from))
                   [ ApplicationArg Implicit ty',
@@ -1218,13 +1243,13 @@ inferLeftAppExpression mhint e = case e of
         kind <- lookupInductiveType v
         return (TypedExpression kind (ExpressionIden i))
 
--- | The hint is used for trailing holes only
-holesHelper :: forall r. (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack] r) => Maybe Expression -> Expression -> Sem r TypedExpression
+-- | The _typeHint is used for trailing holes only
+holesHelper :: forall r. (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack] r) => TypeHint -> Expression -> Sem r TypedExpression
 holesHelper mhint expr = do
   let (f, args) = unfoldExpressionApp expr
       hint
         | null args = mhint
-        | otherwise = Nothing
+        | otherwise = set typeHint Nothing mhint
   arityCheckBuiltins f args
   fTy <- inferLeftAppExpression hint f
   iniBuilderType <- mkInitBuilderType fTy
@@ -1363,7 +1388,7 @@ holesHelper mhint expr = do
       gets (^. appBuilderType) >>= applyCtx >>= modify' . set appBuilderType
 
     goArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Sem r' ()
-    goArgs = peekArg >>= maybe (insertTrailingHolesMay mhint) goNextArg
+    goArgs = peekArg >>= maybe (insertTrailingHolesMay (mhint ^. typeHint)) goNextArg
       where
         insertTrailingHolesMay :: Maybe Expression -> Sem r' ()
         insertTrailingHolesMay = flip whenJust insertTrailingHoles
