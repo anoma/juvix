@@ -660,6 +660,11 @@ massert b = assert b (pure ())
 iterateN :: Int -> (a -> a) -> a -> a
 iterateN n f = (!! n) . iterate f
 
+iterateNat :: Natural -> (a -> a) -> a -> a
+iterateNat n f x
+  | n == 0 = x
+  | otherwise = f (iterateNat (n - 1) f x)
+
 nubHashableNonEmpty :: (Hashable a) => NonEmpty a -> NonEmpty a
 nubHashableNonEmpty = nonEmpty' . HashSet.toList . HashSet.fromList . toList
 
