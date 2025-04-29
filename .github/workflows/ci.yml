@@ -58,7 +58,7 @@ jobs:
 
       - name: Cache ormolu
         id: ormolu-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.local/bin/ormolu
@@ -149,7 +149,7 @@ jobs:
 
       - name: Cache anoma
         id: cache-anoma
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/anoma
           key: "${{ runner.os }}-${{ env.ANOMA_VERSION }}-anoma"
@@ -174,7 +174,7 @@ jobs:
 
       - name: Cache LLVM and Clang
         id: cache-llvm
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             C:/Program Files/LLVM
@@ -277,7 +277,7 @@ jobs:
       # with reason: HIE file is missing. So we need to cache it.
       - name: Cache .hie
         id: cache-hie
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: main/.hie
           key: ${{ runner.os }}-stack-hie
@@ -509,7 +509,7 @@ jobs:
       # with reason: HIE file is missing. So we need to cache it.
       - name: Cache .hie
         id: cache-hie
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: main/.hie
           key: ${{ runner.os }}-${{ runner.arch }}-stack-hie
