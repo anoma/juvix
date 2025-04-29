@@ -517,11 +517,10 @@ checkCoercionType FunctionDef {..} = do
   ty <- strongNormalize _funDefType
   let mi =
         coercionFromTypedIden
-          ( TypedIden
+           TypedIden
               { _typedIdenType = ty ^. normalizedExpression,
                 _typedIden = IdenFunction _funDefName
               }
-          )
   case mi of
     Just ci@CoercionInfo {..} -> do
       tab <- ask
@@ -1192,6 +1191,8 @@ inferLeftAppExpression mhint e = case e of
           suc' <- mkBuiltinConstructor BuiltinNatSuc
           let mkSuc :: Expression -> Expression
               mkSuc num = suc' @@ num
+          traceM "hi"
+          error "hi"
           return
             TypedExpression
               { _typedExpression = iterateNat n mkSuc zero',
@@ -1272,12 +1273,13 @@ inferLeftAppExpression mhint e = case e of
 holesHelper :: forall r. (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack] r) => TypeHint -> Expression -> Sem r TypedExpression
 holesHelper mhint expr = do
   let (f, args) = unfoldExpressionApp expr
-  hint <- execState mhint $ do
-    unless (null args) (modify (set typeHint Nothing))
-    f' <- weakNormalize f
-    case f' of
-      ExpressionIden IdenInductive {} -> modify (set typeHintTypeNatural True)
-      _ -> return ()
+      hint
+        | null args = mhint
+        | otherwise = set typeHint Nothing mhint
+  f' <- weakNormalize f
+  let typeNatHint  = case f' of
+        ExpressionIden IdenInductive {} -> True
+        _ -> False
   arityCheckBuiltins f args
   fTy <- inferLeftAppExpression hint f
 
@@ -1411,13 +1413,13 @@ holesHelper mhint expr = do
         goImplArgs k (ApplicationArg Implicit _ : as) = goImplArgs (k - 1) as
         goImplArgs _ as = return as
 
-    goAllArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Sem r' ()
-    goAllArgs = do
-      goArgs
+    goAllArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Bool -> Sem r' ()
+    goAllArgs tyNat = do
+      goArgs tyNat
       gets (^. appBuilderType) >>= applyCtx >>= modify' . set appBuilderType
 
-    goArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Sem r' ()
-    goArgs = peekArg >>= maybe (insertTrailingHolesMay (mhint ^. typeHint)) goNextArg
+    goArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Bool -> Sem r' ()
+    goArgs tyNat = peekArg >>= maybe (insertTrailingHolesMay (mhint ^. typeHint)) goNextArg
       where
         insertTrailingHolesMay :: Maybe Expression -> Sem r' ()
         insertTrailingHolesMay = flip whenJust insertTrailingHoles
@@ -1528,7 +1530,7 @@ holesHelper mhint expr = do
             insertMiddleHoleOrCheck fun argImpl =
               let funParam = fun ^. functionDefaultLeft
                   funImpl = funParam ^. paramImplicit
-                  checkThisArg = checkMatchingArg arg fun >> goArgs
+                  checkThisArg = checkMatchingArg arg fun >> goArgs tyNat
                in case (argImpl, funImpl) of
                     (Explicit, Explicit) -> checkThisArg
                     (Implicit, Implicit) -> checkThisArg
