@@ -75,16 +75,8 @@ paramFromExpression metaVars e = case e of
           }
   ExpressionHole h -> Just $ InstanceParamHole h
   ExpressionApplication app -> do
-    let (h, args) = unfoldApplication app
-    args' <- mapM (paramFromExpression metaVars) args
-    appHead <- mkInstanceAppHead h
-    return $
-      InstanceParamApp $
-        InstanceApp
-          { _instanceAppHead = appHead,
-            _instanceAppArgs = toList args',
-            _instanceAppExpression = e
-          }
+    builtinApplication app
+      <|> normalApplication app
   ExpressionFunction Function {..}
     | _functionLeft ^. paramImplicit == Explicit -> do
         l <- paramFromExpression metaVars (_functionLeft ^. paramType)
@@ -99,6 +91,25 @@ paramFromExpression metaVars e = case e of
   _ ->
     Nothing
   where
+    builtinApplication :: Application -> Maybe InstanceParam
+    builtinApplication = builtinNatApplication
+
+    builtinNatApplication :: Application -> Maybe InstanceParam
+    builtinNatApplication _app = Nothing
+
+    normalApplication :: Application -> Maybe InstanceParam
+    normalApplication app = do
+      let (h, args) = unfoldApplication app
+      args' <- mapM (paramFromExpression metaVars) args
+      appHead <- mkInstanceAppHead h
+      return $
+        InstanceParamApp $
+          InstanceApp
+            { _instanceAppHead = appHead,
+              _instanceAppArgs = toList args',
+              _instanceAppExpression = e
+            }
+
     mkInstanceAppHeadIden :: Iden -> Maybe InstanceAppHead
     mkInstanceAppHeadIden = \case
       IdenInductive n -> Just (InstanceAppHeadInductive n)
@@ -111,17 +122,17 @@ paramFromExpression metaVars e = case e of
       ExpressionIden i -> mkInstanceAppHeadIden i
       _ -> Nothing
 
-traitFromExpression :: HashSet VarName -> Expression -> Maybe InstanceApp
+traitFromExpression :: (Members '[Fail] r) => HashSet VarName -> Expression -> Sem r InstanceApp
 traitFromExpression metaVars e = case paramFromExpression metaVars e of
-  Just (InstanceParamApp app) -> Just app
+  Just (InstanceParamApp app) -> return app
   Just _ -> do
     -- traceM "Just _"
-    Nothing
+    fail
   Nothing -> do
     -- traceM ("Nothing for " <> ppTrace e)
-    Nothing
+    fail
 
-instanceFromTypedIden :: TypedIden -> Maybe InstanceInfo
+instanceFromTypedIden :: (Members '[Fail] r) => TypedIden -> Sem r InstanceInfo
 instanceFromTypedIden TypedIden {..} = do
   InstanceApp {..} <- traitFromExpression metaVars e
   return $

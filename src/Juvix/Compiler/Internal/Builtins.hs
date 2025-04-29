@@ -34,6 +34,12 @@ getBuiltinNameScoper loc =
   mapError ErrBuiltinNotDefined
     . getBuiltinName loc
 
+peekBuiltinNameTypeChecker :: (IsBuiltin a, Members '[Reader BuiltinsTable] r) => Interval -> a -> Sem r (Maybe Name)
+peekBuiltinNameTypeChecker loc =
+  fmap (either (const Nothing) Just)
+    . runError @BuiltinNotDefined
+    . getBuiltinName loc
+
 getBuiltinNameTypeChecker :: (IsBuiltin a, Members '[Reader BuiltinsTable, Error TypeCheckerError] r) => Interval -> a -> Sem r Name
 getBuiltinNameTypeChecker loc =
   mapError TypeChecker.ErrBuiltinNotDefined

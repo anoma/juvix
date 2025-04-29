@@ -27,7 +27,7 @@ updateCoercionTable tab ci@CoercionInfo {..} =
 lookupCoercionTable :: CoercionTable -> Name -> Maybe [CoercionInfo]
 lookupCoercionTable tab name = HashMap.lookup name (tab ^. coercionTableMap)
 
-coercionFromTypedIden :: TypedIden -> Maybe CoercionInfo
+coercionFromTypedIden :: TypedIden -> Sem r CoercionInfo
 coercionFromTypedIden TypedIden {..}
   | null args = Nothing
   | otherwise = do
