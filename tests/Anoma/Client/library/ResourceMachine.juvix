@@ -94,8 +94,7 @@ type ConsumedItem :=
   mk@{
     nullifier : Nullifier;
     root : CommitmentRoot;
-    logic : Nat;
-  -- TODO change to Encoded Logic
+    logic : Encoded Logic;
   };
 
 type DeltaHash := privateMk Nat;
@@ -103,8 +102,7 @@ type DeltaHash := privateMk Nat;
 type CreatedItem :=
   mk@{
     commitment : Commitment;
-    logic : Nat;
-  -- TODO change to Encoded Logic
+    logic : Encoded Logic;
   };
 
 type Instance :=
@@ -214,7 +212,7 @@ type Resource :=
     quantity : Nat;
     ephemeral : Bool;
     nonce : Nonce;
-    nullifierKeyCommitment : AnomaAtom;
+    nullifierKeyCommitment : NullifierKeyCommitment;
     unusedRandSeed : Nat;
   }
 with

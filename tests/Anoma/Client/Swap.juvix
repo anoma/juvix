@@ -15,8 +15,7 @@ trivial_true_resource_eph : Resource :=
     ephemeral := true;
     quantity := 1;
     value := AnomaAtom.fromNat 0;
-    nullifierKeyCommitment :=
-      NullifierKeyCommitment.toAnomaAtom NullifierKeyCommitment.zero;
+    nullifierKeyCommitment := NullifierKeyCommitment.zero;
     unusedRandSeed := 0;
     nonce := Nonce.fromNat 0;
   };
@@ -45,8 +44,7 @@ trivial_true_resource : Resource :=
     ephemeral := true;
     quantity := 1;
     value := AnomaAtom.fromNat 0;
-    nullifierKeyCommitment :=
-      NullifierKeyCommitment.toAnomaAtom NullifierKeyCommitment.zero;
+    nullifierKeyCommitment := NullifierKeyCommitment.zero;
     unusedRandSeed := 0;
     nonce := Nonce.fromNat 2;
   };

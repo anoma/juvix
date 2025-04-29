@@ -13,11 +13,10 @@ main : _ :=
         label := Label.mk 11;
         logic := Encoded.encode (Logic.mk \{_ := true});
         value := AnomaAtom.fromNat 0;
-        nullifierKeyCommitment :=
-          NullifierKeyCommitment.toAnomaAtom NullifierKeyCommitment.zero;
+        nullifierKeyCommitment := NullifierKeyCommitment.zero;
         ephemeral := true;
         quantity := 55;
-        nonce := Nonce.toAnomaAtom (Nonce.fromNat 0);
+        nonce := Nonce.fromNat 0;
         unusedRandSeed := 0;
       };
 
