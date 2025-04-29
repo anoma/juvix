@@ -68,13 +68,9 @@ clientTests =
         _clientRelRoot = $(mkRelDir "."),
         _clientMainFile = $(mkRelFile "Swap.juvix"),
         _clientAssertion = \program -> do
-          traceM "prove"
           proveTraces <- proveAndSubmit program []
-          traceM "proved"
           step "fetching unrevealed commits"
-          traceM "fetching"
           resList <- pollForOutput 10000 isListUnrevealedCommitsAvailable listUnrevealedCommits
-          traceM "resList"
           case (proveTraces, resList ^. listUnrevealedCommitsResultCommits) of
             ([proveCommitment], [listCommitment]) ->
               liftIO $

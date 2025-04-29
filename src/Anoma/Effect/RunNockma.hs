@@ -56,8 +56,7 @@ runNockma i = do
   logMessageValue "Response Payload" resVal
   res :: Response <- case Aeson.fromJSON resVal of
     Aeson.Success r
-      | r ^. successResult /= "error" ->
-          return $ ResponseSuccess r
+      | r ^. successResult /= "error" -> return $ ResponseSuccess r
     _ -> do
       r <- fromJSONErr resVal
       return $ ResponseError r
@@ -73,13 +72,11 @@ runNockma i = do
     ResponseError err -> do
       traces <- mapM decodeCue64 (err ^. errorTraces)
       throw
-        ( SimpleError
-            ( mkAnsiText @Text "runNockma failed:\n"
-                <> mkAnsiText (err ^. errorError)
-                <> "\n\nTraces:\n"
-                <> mkAnsiText (Text.unlines (map Nockma.ppTrace traces))
-            )
-        )
+        . SimpleError
+        $ mkAnsiText @Text "runNockma failed:\n"
+          <> mkAnsiText (err ^. errorError)
+          <> "\n\nTraces:\n"
+          <> mkAnsiText (Text.unlines (map Nockma.ppTrace traces))
   where
     prepareArgument :: RunNockmaArg -> Text
     prepareArgument =

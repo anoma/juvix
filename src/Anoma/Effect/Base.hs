@@ -111,21 +111,12 @@ runAnomaEphemeral anomapath body = runEnvironment . runReader anomapath . runPro
     let stdOut = fromJust mstdout
         stdErr = fromJust mstderr
     anomaInfo <- setupAnomaClientProcess stdOut
-    traceM "anoma ephemeral"
     runConcurrent . withLoggerThread stdOut . withLoggerThread stdErr $
       runReader anomaInfo $ do
         (`interpret` inject body) $ \case
-          AnomaPost url i -> do
-            traceM "anomapost"
-            res <- anomaRequest' HttpPost url (Just i)
-            traceM "anomapostend"
-            return res
-          AnomaGet url -> do
-            traceM "anomaget"
-            anomaRequest' HttpGet url Nothing
-          AnomaCheck -> do
-            traceM "anomacheck"
-            anomaCheck'
+          AnomaPost url i -> anomaRequest' HttpPost url (Just i)
+          AnomaGet url -> anomaRequest' HttpGet url Nothing
+          AnomaCheck -> anomaCheck'
 
 runAnomaWithClient :: forall r a. (Members '[EmbedIO, Error SimpleError] r) => AnomaClientInfo -> Sem (Anoma ': r) a -> Sem r a
 runAnomaWithClient anomaInfo body = do
@@ -137,10 +128,14 @@ runAnomaWithClient anomaInfo body = do
       AnomaGet url -> anomaRequest' HttpGet url Nothing
       AnomaCheck -> anomaCheck'
 
-fromJSONErr :: (Members '[Error SimpleError] r) => (Aeson.FromJSON a) => Value -> Sem r a
+fromJSONErr :: (HasCallStack, Members '[Error SimpleError] r) => (Aeson.FromJSON a) => Value -> Sem r a
 fromJSONErr v = case Aeson.fromJSON v of
   Aeson.Success r -> return r
-  Aeson.Error err -> throw (SimpleError (mkAnsiText err))
+  Aeson.Error err ->
+    throw . SimpleError $
+      mkAnsiText ghcCallStack
+        <> mkAnsiText ("\nTried to parse: " <> Aeson.jsonEncodeToText v)
+        <> mkAnsiText ("\nError message: " <> err)
 
 logMessageValue :: (Aeson.ToJSON val, Member Logger r) => Text -> val -> Sem r ()
 logMessageValue title val = logVerbose (mkAnsiText (annotate AnnImportant (pretty title <> ":\n") <> pretty (Aeson.jsonEncodeToPrettyText val)))
