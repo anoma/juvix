@@ -600,10 +600,11 @@ checkExpression ::
   Expression ->
   Sem r Expression
 checkExpression expectedTy e = do
-  let hint = TypeHint {
-        _typeHint = Just expectedTy,
-        _typeHintTypeNatural = False
-                      }
+  let hint =
+        TypeHint
+          { _typeHint = Just expectedTy,
+            _typeHintTypeNatural = False
+          }
   e' <- inferExpression' hint e
   let inferredType = e' ^. typedType
   whenJustM (matchTypes expectedTy inferredType) (const (err e'))
@@ -1161,7 +1162,7 @@ inferLeftAppExpression mhint e = case e of
 
     goLiteral :: LiteralLoc -> Sem r TypedExpression
     goLiteral lit@(WithLoc i l) = case l of
-      LitNumeric v -> outHole v >> typedLitNumeric v
+      LitNumeric v -> typedLitNumeric v
       LitInteger {} -> do
         ty <- getIntTy
         return $
@@ -1184,18 +1185,34 @@ inferLeftAppExpression mhint e = case e of
               _typedType = ExpressionIden (IdenAxiom str)
             }
       where
+        unaryNatural :: Natural -> Sem r TypedExpression
+        unaryNatural n = do
+          natTy <- getNatTy
+          zero' <- mkBuiltinConstructor BuiltinNatZero
+          suc' <- mkBuiltinConstructor BuiltinNatSuc
+          let mkSuc :: Expression -> Expression
+              mkSuc num = suc' @@ num
+          return
+            TypedExpression
+              { _typedExpression = iterateNat n mkSuc zero',
+                _typedType = natTy
+              }
+
         typedLitNumeric :: Integer -> Sem r TypedExpression
         typedLitNumeric v
-          | v < 0 = getIntTy >>= typedLit LitInteger BuiltinFromInt
-          | otherwise = getNatTy >>= typedLit LitNatural BuiltinFromNat
+          | mhint ^. typeHintTypeNatural, v >= 0 = unaryNatural (fromInteger v)
+          | otherwise = do
+              castHole v
+              if
+                  | v < 0 -> getIntTy >>= typedLit LitInteger BuiltinFromInt
+                  | otherwise -> getNatTy >>= typedLit LitNatural BuiltinFromNat
           where
             typedLit :: (Integer -> Literal) -> BuiltinFunction -> Expression -> Sem r TypedExpression
             typedLit litt blt ty = do
               from <- getBuiltinNameTypeChecker i blt
               ihole <- freshHoleImpl i ImplicitInstance
               let ty' = maybe ty (adjustLocation i) (mhint ^. typeHint)
-              -- inferExpression' (Just ty') $
-              inferExpression' todo $
+              inferExpression' (mkTypeHint (Just ty')) $
                 foldApplication
                   (ExpressionIden (IdenFunction from))
                   [ ApplicationArg Implicit ty',
@@ -1203,8 +1220,14 @@ inferLeftAppExpression mhint e = case e of
                     ApplicationArg Explicit (ExpressionLiteral (WithLoc i (litt v)))
                   ]
 
+        mkBuiltinIden :: (IsBuiltin a) => (Name -> Iden) -> a -> Sem r Expression
+        mkBuiltinIden mkIden = fmap (ExpressionIden . mkIden) . getBuiltinNameTypeChecker i
+
+        mkBuiltinConstructor :: BuiltinConstructor -> Sem r Expression
+        mkBuiltinConstructor = mkBuiltinIden IdenConstructor
+
         mkBuiltinInductive :: BuiltinInductive -> Sem r Expression
-        mkBuiltinInductive = fmap (ExpressionIden . IdenInductive) . getBuiltinNameTypeChecker i
+        mkBuiltinInductive = mkBuiltinIden IdenInductive
 
         getIntTy :: Sem r Expression
         getIntTy = mkBuiltinInductive BuiltinInt
@@ -1212,18 +1235,20 @@ inferLeftAppExpression mhint e = case e of
         getNatTy :: Sem r Expression
         getNatTy = mkBuiltinInductive BuiltinNat
 
-        outHole :: Integer -> Sem r ()
-        outHole v
-          | v < 0 = case mhint of
-              Just (ExpressionHole h) ->
-                output CastHole {_castHoleHole = h, _castHoleType = CastInt}
-              _ ->
-                return ()
-          | otherwise = case mhint of
-              Just (ExpressionHole h) ->
-                output CastHole {_castHoleHole = h, _castHoleType = CastNat}
-              _ ->
-                return ()
+        castHole :: Integer -> Sem r ()
+        castHole v =
+          case mhint ^. typeHint of
+            Just (ExpressionHole h) ->
+              let outCastHole ty =
+                    output
+                      CastHole
+                        { _castHoleHole = h,
+                          _castHoleType = ty
+                        }
+               in if
+                      | v < 0 -> outCastHole CastInt
+                      | otherwise -> outCastHole CastNat
+            _ -> return ()
 
     goIden :: Iden -> Sem r TypedExpression
     goIden i = case i of
@@ -1247,11 +1272,15 @@ inferLeftAppExpression mhint e = case e of
 holesHelper :: forall r. (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack] r) => TypeHint -> Expression -> Sem r TypedExpression
 holesHelper mhint expr = do
   let (f, args) = unfoldExpressionApp expr
-      hint
-        | null args = mhint
-        | otherwise = set typeHint Nothing mhint
+  hint <- execState mhint $ do
+    unless (null args) (modify (set typeHint Nothing))
+    f' <- weakNormalize f
+    case f' of
+      ExpressionIden IdenInductive {} -> modify (set typeHintTypeNatural True)
+      _ -> return ()
   arityCheckBuiltins f args
   fTy <- inferLeftAppExpression hint f
+
   iniBuilderType <- mkInitBuilderType fTy
   let iniArg :: ApplicationArg -> AppBuilderArg
       iniArg a =
