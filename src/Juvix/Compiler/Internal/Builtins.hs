@@ -25,6 +25,34 @@ data FunInfo = FunInfo
 
 makeLenses ''FunInfo
 
+mkBuiltinIden :: (IsBuiltin a, Members '[Reader BuiltinsTable, Error TypeCheckerError] r) => (Name -> Iden) -> Interval -> a -> Sem r Expression
+mkBuiltinIden mkIden loc = fmap (ExpressionIden . mkIden) . getBuiltinNameTypeChecker loc
+
+mkBuiltinConstructor :: (Members '[Reader BuiltinsTable, Error TypeCheckerError] r) => Interval -> BuiltinConstructor -> Sem r Expression
+mkBuiltinConstructor = mkBuiltinIden IdenConstructor
+
+mkBuiltinInductive :: (Members '[Reader BuiltinsTable, Error TypeCheckerError] r) => Interval -> BuiltinInductive -> Sem r Expression
+mkBuiltinInductive = mkBuiltinIden IdenInductive
+
+getIntTy :: (Members '[Reader BuiltinsTable, Error TypeCheckerError] r) => Interval -> Sem r Expression
+getIntTy loc = mkBuiltinInductive loc BuiltinInt
+
+getNatTy :: (Members '[Reader BuiltinsTable, Error TypeCheckerError] r) => Interval -> Sem r Expression
+getNatTy loc = mkBuiltinInductive loc BuiltinNat
+
+unaryNatural :: (Members '[Reader BuiltinsTable, Error TypeCheckerError] r) => Interval -> Natural -> Sem r TypedExpression
+unaryNatural loc n = do
+  natTy <- getNatTy loc
+  zero' <- mkBuiltinConstructor loc BuiltinNatZero
+  suc' <- mkBuiltinConstructor loc BuiltinNatSuc
+  let mkSuc :: Expression -> Expression
+      mkSuc num = suc' @@ num
+  return
+    TypedExpression
+      { _typedExpression = iterateNat n mkSuc zero',
+        _typedType = natTy
+      }
+
 getBuiltinNameScoper ::
   (IsBuiltin a, Members '[Error ScoperError, Reader BuiltinsTable] r) =>
   Interval ->
@@ -33,6 +61,15 @@ getBuiltinNameScoper ::
 getBuiltinNameScoper loc =
   mapError ErrBuiltinNotDefined
     . getBuiltinName loc
+
+matchBuiltinName ::
+  (IsBuiltin a, Members '[Reader BuiltinsTable, Fail] r) =>
+  a ->
+  Name ->
+  Sem r ()
+matchBuiltinName b m = do
+  n <- peekBuiltinNameTypeChecker impossible b
+  failUnless (Just m == n)
 
 peekBuiltinNameTypeChecker :: (IsBuiltin a, Members '[Reader BuiltinsTable] r) => Interval -> a -> Sem r (Maybe Name)
 peekBuiltinNameTypeChecker loc =

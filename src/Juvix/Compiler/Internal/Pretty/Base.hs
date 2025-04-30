@@ -91,6 +91,9 @@ ppApplicationArg impl expr =
     Implicit -> braces <$> ppCode expr
     ImplicitInstance -> doubleBraces <$> ppCode expr
 
+instance PrettyCode NormalizedExpression where
+  ppCode e = ppCode (e ^. normalizedExpression)
+
 instance PrettyCode Application where
   ppCode a = do
     l' <- ppLeftExpression appFixity (a ^. appLeft)

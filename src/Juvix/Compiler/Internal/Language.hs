@@ -210,7 +210,7 @@ data Literal
   | -- | `LitInteger` represents a literal with trait `Integral`
     LitInteger Integer
   | -- | `LitNatural` represents a literal with trait `FromNatural`
-    LitNatural Integer
+    LitNatural Natural
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable Literal

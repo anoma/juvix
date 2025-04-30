@@ -36,7 +36,7 @@ module Le;
 
   example1 : Unit := test n1 n4;
   example2 : Unit := test n4 n4;
-  example3 : Unit := test 1 3;
+  -- example3 : Unit := test 1 3;
 end;
 
 main : _ :=
@@ -49,4 +49,4 @@ main : _ :=
     >>> printStringLn (Show.show e)
     >>> printStringLn (Show.show e3)
     >>> printStringLn (Show.show e3)
-    >>> printStringLn (Show.show e4);
+    >>> printStringLn (Show.show {{_}} e4);

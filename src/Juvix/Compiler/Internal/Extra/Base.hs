@@ -5,6 +5,7 @@ module Juvix.Compiler.Internal.Extra.Base where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.LocalVars
+import Juvix.Compiler.Internal.Data.TypedInstanceHole
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Prelude
@@ -63,6 +64,9 @@ class HasExpressions a where
 
 directExpressions_ :: forall f a. (HasExpressions a, Applicative f) => (Expression -> f ()) -> a -> f ()
 directExpressions_ f = void . directExpressions (\e -> e <$ f e)
+
+instance HasExpressions TypedInstanceHole where
+  directExpressions = typedInstanceHoleType
 
 instance HasExpressions Expression where
   directExpressions = id

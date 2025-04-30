@@ -1643,7 +1643,7 @@ goLiteral intToNat intToInt l = case l ^. withLocParam of
   Internal.LitString s -> mkLitConst (ConstString s)
   Internal.LitNumeric i -> mkLitConst (ConstInteger i)
   Internal.LitInteger i -> mkApp' (mkIdent' intToInt) (mkLitConst (ConstInteger i))
-  Internal.LitNatural i -> mkApp' (mkIdent' intToNat) (mkLitConst (ConstInteger i))
+  Internal.LitNatural i -> mkApp' (mkIdent' intToNat) (mkLitConst (ConstInteger (fromIntegral i)))
   where
     mkLitConst :: ConstantValue -> Node
     mkLitConst = mkConstant (Info.singleton (LocationInfo (l ^. withLocInt)))

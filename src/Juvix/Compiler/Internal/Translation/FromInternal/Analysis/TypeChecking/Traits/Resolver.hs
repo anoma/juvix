@@ -12,10 +12,11 @@ import Juvix.Compiler.Internal.Data.TypedInstanceHole
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Extra.CoercionInfo
 import Juvix.Compiler.Internal.Extra.InstanceInfo
--- import Juvix.Compiler.Internal.Pretty
+import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.ResultBuilder
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
+import Juvix.Compiler.Store.Scoped.Data.InfoTable (BuiltinsTable)
 import Juvix.Prelude
 
 type SubsI = HashMap VarName InstanceParam
@@ -29,17 +30,19 @@ isTrait :: InfoTable -> Name -> Bool
 isTrait tab name = maybe False (^. inductiveInfoTrait) (HashMap.lookup name (tab ^. infoInductives))
 
 resolveTraitInstance ::
-  (Members '[Error TypeCheckerError, NameIdGen, Inference, ResultBuilder, Reader InfoTable] r) =>
+  (Members '[Error TypeCheckerError, NameIdGen, Inference, ResultBuilder, Reader BuiltinsTable, Reader InfoTable] r) =>
   TypedInstanceHole ->
   Sem r Expression
 resolveTraitInstance TypedInstanceHole {..} = do
-  vars <- overM localTypes (mapM strongNormalize_) _typedInstanceHoleLocalVars
+  vars :: LocalVars <- overM localTypes (mapM strongNormalize_) _typedInstanceHoleLocalVars
   infoTab <- ask
   combtabs <- getCombinedTables
+  vars2instances :: [InstanceInfo] <- varsToInstances infoTab vars
   let tab0 = combtabs ^. typeCheckingTablesInstanceTable
-      tab = foldr (flip updateInstanceTable) tab0 (varsToInstances infoTab vars)
+      tab = foldr (flip updateInstanceTable) tab0 vars2instances
       ctab = combtabs ^. typeCheckingTablesCoercionTable
   ty <- strongNormalize _typedInstanceHoleType
+  traceM ("lookup instance : " <> ppTrace (ty ^. normalizedExpression))
   is <- lookupInstance ctab tab (ty ^. normalizedExpression)
   case is of
     [(cs, ii, subs)] -> do
@@ -108,16 +111,16 @@ substitutionI subs p = case p of
     | otherwise ->
         return p
 
-instanceFromTypedIden' :: InfoTable -> TypedIden -> Maybe InstanceInfo
+instanceFromTypedIden' :: (Members '[Reader BuiltinsTable] r) => InfoTable -> TypedIden -> Sem (Fail ': r) InstanceInfo
 instanceFromTypedIden' tbl e = do
   ii@InstanceInfo {..} <- instanceFromTypedIden e
-  guard (isTrait tbl _instanceInfoInductive)
+  failUnless (isTrait tbl _instanceInfoInductive)
   return ii
 
-varsToInstances :: InfoTable -> LocalVars -> [InstanceInfo]
+varsToInstances :: (Members '[Reader BuiltinsTable] r) => InfoTable -> LocalVars -> Sem r [InstanceInfo]
 varsToInstances tbl LocalVars {..} =
-  mapMaybe
-    (instanceFromTypedIden' tbl . mkTyped)
+  mapMaybeM
+    (runFail . instanceFromTypedIden' tbl . mkTyped)
     (HashMap.toList _localTypes)
   where
     mkTyped :: (VarName, Expression) -> TypedIden
@@ -275,16 +278,17 @@ lookupInstance' visited ctab tab name params
 
 lookupInstance ::
   forall r.
-  (Members '[Error TypeCheckerError, Inference, NameIdGen] r) =>
+  (Members '[Error TypeCheckerError, Inference, NameIdGen, Reader BuiltinsTable] r) =>
   CoercionTable ->
   InstanceTable ->
   Expression ->
   Sem r [(CoercionChain, InstanceInfo, SubsI)]
-lookupInstance ctab tab ty =
-  case traitFromExpression mempty ty of
+lookupInstance ctab tab ty = do
+  m <- runFail (traitFromExpression mempty ty)
+  case m of
     Just InstanceApp {..} -> do
-      -- traceM "instanceApp"
+      traceM "instanceApp"
       lookupInstance' [] ctab tab (_instanceAppHead ^. instanceAppHeadName) _instanceAppArgs
     _ -> do
-      -- traceM ("empty: " <> ppTrace ty)
+      traceM ("empty: " <> ppTrace ty)
       return []
