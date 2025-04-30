@@ -442,7 +442,7 @@ checkInstanceArg metaVars params fp@FunctionParameter {..} = case _paramImplicit
   Explicit -> throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
   ImplicitInstance -> do
     tab <- ask
-    traceM ("checkInstanceArg: " <> ppTrace _paramType)
+    -- traceM ("checkInstanceArg: " <> ppTrace _paramType)
     t <- runFail (traitFromExpression metaVars _paramType)
     case t of
       Just app@InstanceApp {..}
@@ -661,7 +661,7 @@ resolveInstanceHoles s = do
             )
             h0
 
-      traceM ("go Resolve: " <> ppTrace _typedInstanceHoleType)
+      -- traceM ("go Resolve: " <> ppTrace _typedInstanceHoleType)
       -- traceM ("casts: " <> show (length _cs))
       -- traceM ("instances: " <> show (length _is))
       t <- resolveTraitInstance h
@@ -1098,7 +1098,7 @@ inferLeftAppExpression mhint e = case e of
     goInstanceHole :: InstanceHole -> Sem r TypedExpression
     goInstanceHole h = do
       let ty = fromMaybe impossible (mhint ^. typeHint)
-      traceM ("goInstanceHole: " <> ppTrace ty)
+      -- traceM ("goInstanceHole: " <> ppTrace ty)
       locals <- ask
       output (TypedInstanceHole h ty locals)
       return
