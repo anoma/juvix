@@ -610,7 +610,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                   Internal.LitString {} -> Nothing
                   Internal.LitNumeric x -> Just x
                   Internal.LitInteger x -> Just x
-                  Internal.LitNatural x -> Just x
+                  Internal.LitNatural x -> Just (fromIntegral x)
               _ -> Nothing
 
         getList :: Internal.Application -> Maybe [Internal.Expression]
@@ -765,7 +765,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
           Internal.LitString s -> LitString s
           Internal.LitNumeric n -> LitNumeric n
           Internal.LitInteger n -> LitNumeric n
-          Internal.LitNatural n -> LitNumeric n
+          Internal.LitNatural n -> LitNumeric (fromIntegral n)
 
         goHole :: Internal.Hole -> Sem r Expression
         goHole h = return (ExprUndefined (getLoc h))
