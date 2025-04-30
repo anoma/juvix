@@ -10,7 +10,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.Highlight
-import Juvix.Compiler.Internal.Builtins (BuiltinsTable, getBuiltinNameTypeChecker)
+import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Data.Cast
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.TypedInstanceHole
@@ -18,7 +18,7 @@ import Juvix.Compiler.Internal.Extra hiding (freshHole)
 import Juvix.Compiler.Internal.Extra qualified as Extra
 import Juvix.Compiler.Internal.Extra.CoercionInfo
 import Juvix.Compiler.Internal.Extra.InstanceInfo
-import Juvix.Compiler.Internal.Pretty
+import Juvix.Compiler.Internal.Pretty as Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Checker
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker (Termination)
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity
@@ -97,7 +97,7 @@ instance PrettyCode FunctionDefault where
   ppCode _ = return "ppCode(FunctionDefault)"
 
 instance PrettyCode AppBuilderArg where
-  ppCode _ = return "ppCode(AppBuilderArg)"
+  ppCode a = Pretty.ppCode (a ^. appBuilderArg)
 
 instance PrettyCode BuilderType where
   ppCode _ = return "ppCode(BuilderType)"
@@ -337,15 +337,6 @@ resolveCastHoles s = do
           ty <- mkTy (getLoc _castHoleHole)
           void (matchTypes (ExpressionHole _castHoleHole) ty)
 
-    mkBuiltinInductive :: BuiltinInductive -> Interval -> Sem r Expression
-    mkBuiltinInductive b i = fmap (ExpressionIden . IdenInductive) (getBuiltinNameTypeChecker i b)
-
-    getIntTy :: Interval -> Sem r Expression
-    getIntTy = mkBuiltinInductive BuiltinInt
-
-    getNatTy :: Interval -> Sem r Expression
-    getNatTy = mkBuiltinInductive BuiltinNat
-
 checkMutualStatement ::
   (Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, Inference, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
   MutualStatement ->
@@ -383,7 +374,6 @@ checkFunctionDef ::
 checkFunctionDef FunctionDef {..} = do
   funDef <- do
     _funDefType' <- checkDefType _funDefType
-    -- traceM ("----------------fundeftype': " <> ppTrace _funDefType')
     registerIdenType _funDefName _funDefType'
     _funDefBody' <- checkFunctionBody _funDefType' _funDefBody
     params <- fst <$> unfoldFunType' _funDefType'
@@ -442,7 +432,7 @@ checkDefType ty = checkIsType (getLoc ty) ty
 
 checkInstanceArg ::
   forall r.
-  (Members '[Error TypeCheckerError, Reader InfoTable] r) =>
+  (Members '[Error TypeCheckerError, Reader BuiltinsTable, Reader InfoTable] r) =>
   HashSet VarName ->
   [InstanceParam] ->
   FunctionParameter ->
@@ -452,7 +442,9 @@ checkInstanceArg metaVars params fp@FunctionParameter {..} = case _paramImplicit
   Explicit -> throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
   ImplicitInstance -> do
     tab <- ask
-    case traitFromExpression metaVars _paramType of
+    traceM ("checkInstanceArg: " <> ppTrace _paramType)
+    t <- runFail (traitFromExpression metaVars _paramType)
+    case t of
       Just app@InstanceApp {..}
         | isTrait tab (_instanceAppHead ^. instanceAppHeadName) ->
             checkTraitTermination app params
@@ -461,27 +453,28 @@ checkInstanceArg metaVars params fp@FunctionParameter {..} = case _paramImplicit
 
 checkInstanceArgs ::
   forall r.
-  (Members '[Error TypeCheckerError, Reader InfoTable] r) =>
+  (Members '[Reader BuiltinsTable, Error TypeCheckerError, Reader InfoTable] r) =>
   [FunctionParameter] ->
   [InstanceParam] ->
   Sem r ()
 checkInstanceArgs args params = do
-  let metaVars = HashSet.fromList $ mapMaybe (^. paramName) args
+  let metaVars = hashSet (mapMaybe (^. paramName) args)
   mapM_ (checkInstanceArg metaVars params) args
 
 checkInstanceType ::
   forall r.
-  (Members '[Error TypeCheckerError, Reader InfoTable, Inference, NameIdGen, ResultBuilder] r) =>
+  (Members '[Reader BuiltinsTable, Error TypeCheckerError, Reader InfoTable, Inference, NameIdGen, ResultBuilder] r) =>
   FunctionDef ->
   Sem r ()
 checkInstanceType FunctionDef {..} = do
   ty <- strongNormalize _funDefType
-  let mi =
-        instanceFromTypedIden $
-          TypedIden
-            { _typedIdenType = ty ^. normalizedExpression,
-              _typedIden = IdenFunction _funDefName
-            }
+  mi <-
+    runFail
+      . instanceFromTypedIden
+      $ TypedIden
+        { _typedIdenType = ty ^. normalizedExpression,
+          _typedIden = IdenFunction _funDefName
+        }
   case mi of
     Just ii@InstanceInfo {..} -> do
       tab <- ask
@@ -497,30 +490,33 @@ checkInstanceType FunctionDef {..} = do
       throw (ErrInvalidInstanceType (InvalidInstanceType _funDefType))
 
 checkInstanceParam ::
-  (Member (Error TypeCheckerError) r) =>
+  (Members '[Error TypeCheckerError, Reader BuiltinsTable] r) =>
   InfoTable ->
   NormalizedExpression ->
   Sem r ()
-checkInstanceParam tab ty' = case traitFromExpression mempty ty of
-  Just InstanceApp {..}
-    | isTrait tab (_instanceAppHead ^. instanceAppHeadName) -> return ()
-  _ -> throw (ErrNotATrait (NotATrait ty))
+checkInstanceParam tab ty' = do
+  t <- runFail (traitFromExpression mempty ty)
+  case t of
+    Just InstanceApp {..}
+      | isTrait tab (_instanceAppHead ^. instanceAppHeadName) -> return ()
+    _ -> throw (ErrNotATrait (NotATrait ty))
   where
     ty = ty' ^. normalizedExpression
 
 checkCoercionType ::
   forall r.
-  (Members '[Error TypeCheckerError, Reader InfoTable, Inference, ResultBuilder] r) =>
+  (Members '[Reader BuiltinsTable, Error TypeCheckerError, Reader InfoTable, Inference, ResultBuilder] r) =>
   FunctionDef ->
   Sem r ()
 checkCoercionType FunctionDef {..} = do
   ty <- strongNormalize _funDefType
-  let mi =
-        coercionFromTypedIden
-           TypedIden
-              { _typedIdenType = ty ^. normalizedExpression,
-                _typedIden = IdenFunction _funDefName
-              }
+  mi <-
+    runFail $
+      coercionFromTypedIden
+        TypedIden
+          { _typedIdenType = ty ^. normalizedExpression,
+            _typedIden = IdenFunction _funDefName
+          }
   case mi of
     Just ci@CoercionInfo {..} -> do
       tab <- ask
@@ -637,13 +633,37 @@ resolveInstanceHoles ::
   Sem r a
 resolveInstanceHoles s = do
   (hs :: [TypedInstanceHole], e) <- runOutputList s
-  ts <- mapM goResolve hs
-  let subs = hashMap (zipExact (hs ^.. each . typedInstanceHoleHole) ts)
+  subs :: HashMap InstanceHole Expression <-
+    hashMap
+      <$> sequence
+        [ do
+            h' <- goResolve h
+            return (h ^. typedInstanceHoleHole, h')
+          | h <- hs
+        ]
+  -- TODO revise whether inferenceSubsInstanceHoles is needed
   inferenceSubsInstanceHoles subs
   subsInstanceHoles subs e
   where
+    -- Recursively resolve an instance hole
     goResolve :: TypedInstanceHole -> Sem r Expression
-    goResolve h@TypedInstanceHole {..} = do
+    goResolve h0 = do
+      -- this is only to insert instance holes ??
+      h@TypedInstanceHole {..} <-
+        resolveInstanceHoles
+          . resolveCastHoles
+          . runReader (h0 ^. typedInstanceHoleLocalVars)
+          $ typedInstanceHoleType
+            ( \t -> do
+                t0 <- (^. normalizedExpression) <$> strongNormalize t
+                (^. typedExpression) <$> inferExpression' emptyTypeHint t0
+                -- (^. normalizedExpression) <$> strongNormalize t1
+            )
+            h0
+
+      traceM ("go Resolve: " <> ppTrace _typedInstanceHoleType)
+      -- traceM ("casts: " <> show (length _cs))
+      -- traceM ("instances: " <> show (length _is))
       t <- resolveTraitInstance h
       resolveInstanceHoles
         . resolveCastHoles
@@ -1011,7 +1031,21 @@ inferExpression' = holesHelper
 -- | Checks anything but an Application. Does not insert holes
 inferLeftAppExpression ::
   forall r.
-  (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
+  ( Members
+      '[ Reader InfoTable,
+         Reader BuiltinsTable,
+         ResultBuilder,
+         Reader LocalVars,
+         Error TypeCheckerError,
+         NameIdGen,
+         Inference,
+         Output TypedInstanceHole,
+         Termination,
+         Output CastHole,
+         Reader InsertedArgsStack
+       ]
+      r
+  ) =>
   TypeHint ->
   Expression ->
   Sem r TypedExpression
@@ -1064,6 +1098,7 @@ inferLeftAppExpression mhint e = case e of
     goInstanceHole :: InstanceHole -> Sem r TypedExpression
     goInstanceHole h = do
       let ty = fromMaybe impossible (mhint ^. typeHint)
+      traceM ("goInstanceHole: " <> ppTrace ty)
       locals <- ask
       output (TypedInstanceHole h ty locals)
       return
@@ -1163,14 +1198,14 @@ inferLeftAppExpression mhint e = case e of
     goLiteral lit@(WithLoc i l) = case l of
       LitNumeric v -> typedLitNumeric v
       LitInteger {} -> do
-        ty <- getIntTy
+        ty <- getIntTy i
         return $
           TypedExpression
             { _typedType = ty,
               _typedExpression = ExpressionLiteral lit
             }
       LitNatural {} -> do
-        ty <- getNatTy
+        ty <- getNatTy i
         return $
           TypedExpression
             { _typedType = ty,
@@ -1184,29 +1219,14 @@ inferLeftAppExpression mhint e = case e of
               _typedType = ExpressionIden (IdenAxiom str)
             }
       where
-        unaryNatural :: Natural -> Sem r TypedExpression
-        unaryNatural n = do
-          natTy <- getNatTy
-          zero' <- mkBuiltinConstructor BuiltinNatZero
-          suc' <- mkBuiltinConstructor BuiltinNatSuc
-          let mkSuc :: Expression -> Expression
-              mkSuc num = suc' @@ num
-          traceM "hi"
-          error "hi"
-          return
-            TypedExpression
-              { _typedExpression = iterateNat n mkSuc zero',
-                _typedType = natTy
-              }
-
         typedLitNumeric :: Integer -> Sem r TypedExpression
         typedLitNumeric v
-          | mhint ^. typeHintTypeNatural, v >= 0 = unaryNatural (fromInteger v)
+          | mhint ^. typeHintTypeNatural, v >= 0 = unaryNatural i (fromInteger v)
           | otherwise = do
               castHole v
               if
-                  | v < 0 -> getIntTy >>= typedLit LitInteger BuiltinFromInt
-                  | otherwise -> getNatTy >>= typedLit LitNatural BuiltinFromNat
+                  | v < 0 -> getIntTy i >>= typedLit LitInteger BuiltinFromInt
+                  | otherwise -> getNatTy i >>= typedLit (LitNatural . fromInteger) BuiltinFromNat
           where
             typedLit :: (Integer -> Literal) -> BuiltinFunction -> Expression -> Sem r TypedExpression
             typedLit litt blt ty = do
@@ -1220,21 +1240,6 @@ inferLeftAppExpression mhint e = case e of
                     ApplicationArg ImplicitInstance ihole,
                     ApplicationArg Explicit (ExpressionLiteral (WithLoc i (litt v)))
                   ]
-
-        mkBuiltinIden :: (IsBuiltin a) => (Name -> Iden) -> a -> Sem r Expression
-        mkBuiltinIden mkIden = fmap (ExpressionIden . mkIden) . getBuiltinNameTypeChecker i
-
-        mkBuiltinConstructor :: BuiltinConstructor -> Sem r Expression
-        mkBuiltinConstructor = mkBuiltinIden IdenConstructor
-
-        mkBuiltinInductive :: BuiltinInductive -> Sem r Expression
-        mkBuiltinInductive = mkBuiltinIden IdenInductive
-
-        getIntTy :: Sem r Expression
-        getIntTy = mkBuiltinInductive BuiltinInt
-
-        getNatTy :: Sem r Expression
-        getNatTy = mkBuiltinInductive BuiltinNat
 
         castHole :: Integer -> Sem r ()
         castHole v =
@@ -1277,7 +1282,7 @@ holesHelper mhint expr = do
         | null args = mhint
         | otherwise = set typeHint Nothing mhint
   f' <- weakNormalize f
-  let typeNatHint  = case f' of
+  let typeNatHint = case f' of
         ExpressionIden IdenInductive {} -> True
         _ -> False
   arityCheckBuiltins f args
@@ -1297,7 +1302,7 @@ holesHelper mhint expr = do
             _appBuilderTypeCtx = mempty,
             _appBuilderArgs = map iniArg args
           }
-  (insertedArgs, st') <- runOutputList (execState iniBuilder goAllArgs)
+  (insertedArgs, st') <- runOutputList (execState iniBuilder (goAllArgs typeNatHint))
   let ty' = mkFinalBuilderType (st' ^. appBuilderType)
       expr' = mkFinalExpression (st' ^. appBuilderLeft) insertedArgs
   return
@@ -1558,7 +1563,7 @@ holesHelper mhint expr = do
                             _appBuilderArgIsDefault
                           }
                   modify' (over appBuilderArgs (a :))
-                  goArgs
+                  goArgs tyNat
 
         throwExpectedExplicit :: ApplicationArg -> Sem r' a
         throwExpectedExplicit arg = do
