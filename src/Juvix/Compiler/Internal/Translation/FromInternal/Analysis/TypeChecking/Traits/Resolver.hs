@@ -75,6 +75,7 @@ subsumingInstances tab InstanceInfo {..} = do
 substitutionI :: (Member NameIdGen r) => SubsI -> InstanceParam -> Sem r InstanceParam
 substitutionI subs p = case p of
   InstanceParamVar {} -> return p
+  InstanceParamNatural n -> InstanceParamNatural <$> instanceNatArg (substitutionI subs) n
   InstanceParamApp InstanceApp {..} -> do
     args <- mapM (substitutionI subs) _instanceAppArgs
     subs' <- subsIToE subs
@@ -100,13 +101,13 @@ substitutionI subs p = case p of
           }
   InstanceParamHole h
     | Just p' <- HashMap.lookup (varFromHole h) subs ->
-        -- we don't need to clone here because `InstanceParam` doesn't have binders
+        -- we don't need to clone here because `InstanceParamHole` doesn't have binders
         return p'
     | otherwise ->
         return p
   InstanceParamMeta v
     | Just p' <- HashMap.lookup v subs ->
-        -- we don't need to clone here because `InstanceParam` doesn't have binders
+        -- we don't need to clone here because `InstanceParamMeta` doesn't have binders
         return p'
     | otherwise ->
         return p
@@ -216,7 +217,7 @@ lookupInstance' visited ctab tab name params
       failUnless (length params == length _instanceInfoParams)
       (si, b) <-
         runState mempty $
-          and <$> sequence (zipWithExact (goMatch True) _instanceInfoParams params)
+          andM (zipWithExact (goMatch True) _instanceInfoParams params)
       failUnless b
       return ([], ii, si)
 
@@ -238,17 +239,17 @@ lookupInstance' visited ctab tab name params
     goMatch :: Bool -> InstanceParam -> InstanceParam -> Sem (State SubsI ': Fail ': r) Bool
     goMatch assignMetas pat t = case (pat, t) of
       (InstanceParamMeta v, _)
-        | assignMetas ->
-            goMatchMeta v t
-        | otherwise ->
-            return True
-      (_, InstanceParamMeta {}) ->
-        return True
-      (_, InstanceParamHole {}) ->
-        return True
+        | assignMetas -> goMatchMeta v t
+        | otherwise -> return True
+      (_, InstanceParamMeta {}) -> return True
+      (_, InstanceParamHole {}) -> return True
+      (InstanceParamNatural v1, InstanceParamNatural v2) ->
+        andM
+          [ return (v1 ^. instanceNatSuc == v2 ^. instanceNatSuc),
+            goMatch assignMetas (v1 ^. instanceNatArg) (v2 ^. instanceNatArg)
+          ]
       (InstanceParamVar v1, InstanceParamVar v2)
-        | v1 == v2 ->
-            return True
+        | v1 == v2 -> return True
       (InstanceParamApp app1, InstanceParamApp app2)
         | app1 ^. instanceAppHead == app2 ^. instanceAppHead -> do
             andM (zipWithExact (goMatch assignMetas) (app1 ^. instanceAppArgs) (app2 ^. instanceAppArgs))
@@ -256,6 +257,7 @@ lookupInstance' visited ctab tab name params
         l <- goMatch assignMetas (fun1 ^. instanceFunLeft) (fun2 ^. instanceFunLeft)
         r <- goMatch assignMetas (fun1 ^. instanceFunRight) (fun2 ^. instanceFunRight)
         return $ l && r
+      (InstanceParamNatural {}, _) -> return False
       (InstanceParamVar {}, _) -> return False
       (InstanceParamApp {}, _) -> return False
       (InstanceParamFun {}, _) -> return False
@@ -275,6 +277,23 @@ lookupInstance' visited ctab tab name params
         Nothing -> do
           modify (HashMap.insert v t)
           return True
+
+squashInstanceNat :: InstanceNat -> Either InstanceNat InstanceParam
+squashInstanceNat n
+  | n ^. instanceNatSuc == 0 = case n ^. instanceNatArg of
+      InstanceParamNatural n' -> squashInstanceNat n'
+      m -> Right m
+  | otherwise = case n ^. instanceNatArg of
+      InstanceParamNatural n' -> case squashInstanceNat n' of
+        Right s -> Left (set instanceNatArg s n)
+        Left s ->
+          Left
+            InstanceNat
+              { _instanceNatSuc = n ^. instanceNatSuc + s ^. instanceNatSuc,
+                _instanceNatArg = s ^. instanceNatArg,
+                _instanceNatLoc = n ^. instanceNatLoc <> s ^. instanceNatLoc
+              }
+      m -> Right m
 
 lookupInstance ::
   forall r.

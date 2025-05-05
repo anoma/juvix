@@ -22,6 +22,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
@@ -313,7 +314,7 @@ queryMetavar' h = do
     Just (Refined e) -> return (Just e)
 
 runInferenceState ::
-  (Members '[ResultBuilder, Error TypeCheckerError, NameIdGen] r) =>
+  (Members '[ResultBuilder, Reader BuiltinsTable, Error TypeCheckerError, NameIdGen] r) =>
   InferenceState ->
   Sem (Inference ': r) a ->
   Sem r (InferenceState, a)
@@ -336,14 +337,35 @@ runInferenceState inis = reinterpret (runState inis) $ \case
     registerIdenType' i ty = modify (over (inferenceIdens . typesTable) (HashMap.insert (i ^. nameId) ty))
 
     -- Supports alpha equivalence.
-    matchTypes' :: (Members '[State InferenceState, ResultBuilder, Error TypeCheckerError, NameIdGen] r) => Expression -> Expression -> Sem r (Maybe MatchError)
+    matchTypes' ::
+      ( Members
+          '[ State InferenceState,
+             Reader BuiltinsTable,
+             ResultBuilder,
+             Error TypeCheckerError,
+             NameIdGen
+           ]
+          r
+      ) =>
+      Expression ->
+      Expression ->
+      Sem r (Maybe MatchError)
     matchTypes' ty = runReader ini . go ty
       where
         ini :: HashMap VarName VarName
         ini = mempty
         go ::
           forall r.
-          (Members '[State InferenceState, Reader (HashMap VarName VarName), ResultBuilder, Error TypeCheckerError, NameIdGen] r) =>
+          ( Members
+              '[ State InferenceState,
+                 Reader BuiltinsTable,
+                 Reader (HashMap VarName VarName),
+                 ResultBuilder,
+                 Error TypeCheckerError,
+                 NameIdGen
+               ]
+              r
+          ) =>
           Expression ->
           Expression ->
           Sem r (Maybe MatchError)
@@ -364,6 +386,9 @@ runInferenceState inis = reinterpret (runState inis) $ \case
                 (ExpressionHole h, a) -> goHole h a
                 (a, ExpressionHole h) -> goHole h a
                 (_, ExpressionLet r) -> go normA (r ^. letExpression)
+                (ExpressionLiteral l, ExpressionLiteral l') -> check (l == l')
+                (ExpressionLiteral l, ExpressionApplication a) -> goUnaryNatLiteral l a
+                (ExpressionApplication a, ExpressionLiteral l) -> goUnaryNatLiteral l a
                 (ExpressionLet l, _) -> go (l ^. letExpression) normB
                 (ExpressionInstanceHole {}, _) -> err
                 (_, ExpressionInstanceHole {}) -> err
@@ -381,7 +406,6 @@ runInferenceState inis = reinterpret (runState inis) $ \case
                 (_, ExpressionLambda {}) -> err
                 (_, ExpressionCase {}) -> err
                 (ExpressionCase {}, _) -> err
-                (ExpressionLiteral l, ExpressionLiteral l') -> check (l == l')
               where
                 ok :: Sem r (Maybe MatchError)
                 ok = return Nothing
@@ -408,6 +432,20 @@ runInferenceState inis = reinterpret (runState inis) $ \case
 
                 err :: Sem r (Maybe MatchError)
                 err = return (Just (MatchError normalizedA normalizedB))
+
+                goUnaryNatLiteral :: WithLoc Literal -> Application -> Sem r (Maybe MatchError)
+                goUnaryNatLiteral l app = runFailDefaultM err $ do
+                  traceM ("go unary Nat\n" <> ppTrace l <> " ||| " <> ppTrace app)
+                  -- TODO factor out code
+                  LitNatural num1 <- return (l ^. withLocParam)
+                  (ExpressionIden (IdenFunction fromNat_), [argNat, _argNatI, argLit :: ApplicationArg]) <- return (second toList (unfoldApplication' app))
+                  matchBuiltinName BuiltinFromNat fromNat_
+                  ExpressionIden (IdenInductive nat_) <- return (argNat ^. appArg)
+                  matchBuiltinName BuiltinNat nat_
+                  let l2 :: Expression = argLit ^. appArg
+                  ExpressionLiteral (WithLoc _ (LitNatural num2)) <- return l2
+                  failWhen (num1 /= num2)
+                  inject ok
 
                 goHole :: Hole -> Expression -> Sem r (Maybe MatchError)
                 goHole h t = do
@@ -525,7 +563,7 @@ matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
     err = return False
 
 runInferenceDefs ::
-  (Members '[Termination, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
+  (Members '[Termination, Reader BuiltinsTable, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
   Sem (Inference ': r) (NonEmpty funDef) ->
   Sem r (NonEmpty funDef)
 runInferenceDefs a = do
@@ -538,7 +576,7 @@ runInferenceDefs a = do
   mapM (subsHoles subs) expr
 
 runInferenceDef ::
-  (Members '[Termination, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
+  (Members '[Termination, Reader BuiltinsTable, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
   Sem (Inference ': r) funDef ->
   Sem r funDef
 runInferenceDef = fmap head . runInferenceDefs . fmap pure
