@@ -29,8 +29,10 @@ lookupInstanceTable tab name = HashMap.lookup name (tab ^. instanceTableMap)
 
 makeRigidParam :: InstanceParam -> InstanceParam
 makeRigidParam p = case p of
-  InstanceParamVar {} ->
-    p
+  InstanceParamVar {} -> p
+  InstanceParamNatural n ->
+    InstanceParamNatural $
+      over instanceNatArg makeRigidParam n
   InstanceParamApp app@InstanceApp {..} ->
     InstanceParamApp $
       app
@@ -42,23 +44,18 @@ makeRigidParam p = case p of
         { _instanceFunLeft = makeRigidParam _instanceFunLeft,
           _instanceFunRight = makeRigidParam _instanceFunRight
         }
-  InstanceParamHole {} ->
-    p
-  InstanceParamMeta v ->
-    InstanceParamVar v
+  InstanceParamHole {} -> p
+  InstanceParamMeta v -> InstanceParamVar v
 
 paramToExpression :: (Member NameIdGen r) => InstanceParam -> Sem r Expression
 paramToExpression = \case
-  InstanceParamVar v ->
-    return $ ExpressionIden (IdenVar v)
-  InstanceParamApp InstanceApp {..} ->
-    return _instanceAppExpression
-  InstanceParamFun InstanceFun {..} ->
-    return _instanceFunExpression
-  InstanceParamHole h ->
-    return $ ExpressionHole h
-  InstanceParamMeta v ->
-    ExpressionHole . mkHole (getLoc v) <$> freshNameId
+  InstanceParamVar v -> return $ ExpressionIden (IdenVar v)
+  -- TODO use builtin nat in Internal
+  InstanceParamNatural InstanceNat {..} -> return _instanceNatExpression
+  InstanceParamApp InstanceApp {..} -> return _instanceAppExpression
+  InstanceParamFun InstanceFun {..} -> return _instanceFunExpression
+  InstanceParamHole h -> return $ ExpressionHole h
+  InstanceParamMeta v -> ExpressionHole . mkHole (getLoc v) <$> freshNameId
 
 paramFromExpression :: forall r. (Members '[Reader BuiltinsTable] r) => HashSet VarName -> Expression -> Sem (Fail ': r) InstanceParam
 paramFromExpression metaVars e = case e of
@@ -159,6 +156,7 @@ checkNoMeta = \case
   InstanceParamVar {} -> True
   InstanceParamMeta {} -> False
   InstanceParamHole {} -> True
+  InstanceParamNatural InstanceNat {..} -> checkNoMeta _instanceNatArg
   InstanceParamApp InstanceApp {..} -> all checkNoMeta _instanceAppArgs
   InstanceParamFun InstanceFun {..} ->
     checkNoMeta _instanceFunLeft && checkNoMeta _instanceFunRight

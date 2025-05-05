@@ -219,11 +219,25 @@ instance Serialize Literal
 
 instance NFData Literal
 
+data BuiltinNatural = BuiltinNatural
+  { _builtinNaturalSuc :: Natural,
+    _builtinNaturalArg :: Expression,
+    _builtinNaturalLoc :: Interval
+  }
+  deriving stock (Eq, Generic, Data)
+
+instance Hashable BuiltinNatural
+
+instance Serialize BuiltinNatural
+
+instance NFData BuiltinNatural
+
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
   | ExpressionFunction Function
   | ExpressionLiteral LiteralLoc
+  | ExpressionNatural BuiltinNatural
   | ExpressionHole Hole
   | ExpressionInstanceHole InstanceHole
   | ExpressionLet Let
@@ -516,6 +530,7 @@ makePrisms ''Expression
 makePrisms ''Iden
 makePrisms ''MutualStatement
 
+makeLenses ''BuiltinNatural
 makeLenses ''SideIfBranch
 makeLenses ''SideIfs
 makeLenses ''CaseBranchRhs
@@ -582,6 +597,7 @@ instance HasAtomicity Lambda where
 instance HasAtomicity Expression where
   atomicity e = case e of
     ExpressionIden {} -> Atom
+    ExpressionNatural {} -> Atom
     ExpressionApplication a -> atomicity a
     ExpressionLiteral l -> atomicity l
     ExpressionLet l -> atomicity l
@@ -703,9 +719,13 @@ instance HasLoc CaseBranch where
 instance HasLoc Case where
   getLoc c = getLocSpan (c ^. caseBranches)
 
+instance HasLoc BuiltinNatural where
+  getLoc = (^. builtinNaturalLoc)
+
 instance HasLoc Expression where
   getLoc = \case
     ExpressionIden i -> getLoc i
+    ExpressionNatural i -> getLoc i
     ExpressionApplication a -> getLoc a
     ExpressionLiteral l -> getLoc l
     ExpressionHole h -> getLoc h

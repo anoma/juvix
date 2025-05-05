@@ -221,10 +221,14 @@ instance Clonable Lambda where
           _lambdaClauses = clauses'
         }
 
+instance Clonable BuiltinNatural where
+  freshNameIds = traverseOf builtinNaturalArg freshNameIds
+
 instance Clonable Expression where
   freshNameIds :: (Members '[Reader FreshBindersContext, NameIdGen] r) => Expression -> Sem r Expression
   freshNameIds = \case
     ExpressionIden i -> ExpressionIden <$> freshNameIds i
+    ExpressionNatural i -> ExpressionNatural <$> freshNameIds i
     ExpressionApplication a -> ExpressionApplication <$> freshNameIds a
     ExpressionLiteral a -> ExpressionLiteral <$> freshNameIds a
     ExpressionHole a -> ExpressionHole <$> freshNameIds a

@@ -1221,7 +1221,8 @@ inferLeftAppExpression mhint e = case e of
       where
         typedLitNumeric :: Integer -> Sem r TypedExpression
         typedLitNumeric v
-          | mhint ^. typeHintTypeNatural, v >= 0 = unaryNatural i (fromInteger v)
+          --- | mhint ^. typeHintTypeNatural, v >= 0 = unaryXNatural i (fromInteger v)
+          | mhint ^. typeHintTypeNatural, v >= 0 = error "NO"
           | otherwise = do
               castHole v
               if

@@ -52,6 +52,9 @@ instance PrettyCode InstanceApp where
     args' <- mapM ppCode _instanceAppArgs
     return $ h' <+> hsep args'
 
+instance PrettyCode InstanceNat where
+  ppCode _ = return "<InstanceNat>"
+
 instance PrettyCode InstanceParam where
   ppCode = \case
     InstanceParamVar v -> ppCode v
@@ -59,6 +62,7 @@ instance PrettyCode InstanceParam where
     InstanceParamFun f -> ppCode f
     InstanceParamHole h -> ppCode h
     InstanceParamMeta m -> ppCode m
+    InstanceParamNatural m -> ppCode m
 
 instance PrettyCode DerivingTrait where
   ppCode = return . ppCodeAnn
@@ -109,9 +113,13 @@ instance PrettyCode TypedExpression where
 instance PrettyCode SmallUniverse where
   ppCode _ = return kwType
 
+instance PrettyCode BuiltinNatural where
+  ppCode _ = return "<BuiltinNatural>"
+
 instance PrettyCode Expression where
   ppCode = \case
     ExpressionIden i -> ppCode i
+    ExpressionNatural i -> ppCode i
     ExpressionHole h -> ppCode h
     ExpressionInstanceHole h -> ppCode h
     ExpressionApplication a -> ppCode a

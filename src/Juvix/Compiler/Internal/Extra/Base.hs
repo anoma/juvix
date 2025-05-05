@@ -43,6 +43,9 @@ instance HasLoc ApplicationArg where
 class IsExpression a where
   toExpression :: a -> Expression
 
+instance HasExpressions BuiltinNatural where
+  directExpressions = builtinNaturalArg
+
 instance Plated Expression where
   plate :: Traversal' Expression Expression
   plate f e = case e of
@@ -52,6 +55,7 @@ instance Plated Expression where
     ExpressionLambda l -> ExpressionLambda <$> directExpressions f l
     ExpressionLet l -> ExpressionLet <$> directExpressions f l
     ExpressionCase c -> ExpressionCase <$> directExpressions f c
+    ExpressionNatural c -> ExpressionNatural <$> directExpressions f c
     ExpressionIden {} -> pure e
     ExpressionLiteral {} -> pure e
     ExpressionUniverse {} -> pure e
@@ -740,6 +744,9 @@ matchExpressions = go
         (_, _) -> unless (ia == ib) err
       (ExpressionIden (IdenVar va), ExpressionHole h) -> goHole va h
       (ExpressionHole h, ExpressionIden (IdenVar vb)) -> goHole vb h
+      (ExpressionNatural na, ExpressionNatural nb) -> goNatural na nb
+      (ExpressionNatural {}, _) -> err
+      (_, ExpressionNatural {}) -> err
       (ExpressionIden {}, _) -> err
       (_, ExpressionIden {}) -> err
       (ExpressionApplication ia, ExpressionApplication ib) ->
@@ -784,6 +791,14 @@ matchExpressions = go
       let eq = va == vb
       uni <- (== Just vb) <$> gets @(HashMap Name Name) (^. at va)
       return (uni || eq)
+
+    goNatural :: BuiltinNatural -> BuiltinNatural -> Sem r ()
+    goNatural n m
+      | n ^. builtinNaturalSuc == m ^. builtinNaturalSuc =
+          matchExpressions
+            (n ^. builtinNaturalArg)
+            (m ^. builtinNaturalArg)
+      | otherwise = err
 
     goHole :: Name -> Hole -> Sem r ()
     goHole var h = do
