@@ -28,7 +28,7 @@ env:
   RISC0_VM_VERSION: v1.0.1
   # This is the top commit hash in the branch jan/testnet-02-next
   # of the anoma repository.
-  ANOMA_VERSION: 8f07258c5905d27b58ea7188201e2e34c53f122b
+  ANOMA_VERSION: 089b5315baa56e90d8561eef9f6d3b91942cbd95
   JUST_ARGS: runtimeCcArg=$CC runtimeLibtoolArg=$LIBTOOL
   STACK_BUILD_ARGS: --pedantic -j4 --ghc-options=-j
 
