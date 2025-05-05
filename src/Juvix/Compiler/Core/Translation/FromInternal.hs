@@ -305,6 +305,7 @@ goMutualBlock (Internal.MutualBlock m) = preMutual m >>= goMutual
                 Internal.ExpressionUniverse {} -> True
                 Internal.ExpressionFunction (Internal.Function l r) -> exprIsType (l ^. Internal.paramType) && exprIsType r
                 Internal.ExpressionIden {} -> False
+                Internal.ExpressionNatural {} -> False
                 Internal.ExpressionApplication {} -> False
                 Internal.ExpressionLiteral {} -> False
                 Internal.ExpressionHole {} -> False
@@ -1372,6 +1373,12 @@ addPatternVariableNames p lvl vars =
       Internal.PatternConstructorApp {} -> impossible
       Internal.PatternWildcardConstructor {} -> impossible
 
+-- FIXME don't ingore the arg
+goNatural ::
+  Internal.BuiltinNatural ->
+  Sem r Node
+goNatural b = return (mkConstant' (ConstInteger (fromIntegral (b ^. Internal.builtinNaturalSuc))))
+
 goIden ::
   forall r.
   (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, Error BadScope] r) =>
@@ -1447,7 +1454,17 @@ goIden i = do
 
 goExpression ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  ( Members
+      '[ InfoTableBuilder,
+         Reader InternalTyped.TypesTable,
+         Reader InternalTyped.FunctionsTable,
+         Reader Internal.InfoTable,
+         Reader IndexTable,
+         NameIdGen,
+         Error BadScope
+       ]
+      r
+  ) =>
   Internal.Expression ->
   Sem r Node
 goExpression = \case
@@ -1456,6 +1473,7 @@ goExpression = \case
     md <- getModule
     return (goLiteral (fromJust $ getInfoLiteralIntToNat md) (fromJust $ getInfoLiteralIntToInt md) l)
   Internal.ExpressionIden i -> goIden i
+  Internal.ExpressionNatural n -> goNatural n
   Internal.ExpressionApplication a -> goApplication a
   Internal.ExpressionSimpleLambda l -> goSimpleLambda l
   Internal.ExpressionLambda l -> goLambda l

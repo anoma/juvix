@@ -352,6 +352,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       Internal.ExpressionSimpleLambda {} -> unsupportedType ty
       Internal.ExpressionLambda {} -> unsupportedType ty
       Internal.ExpressionCase {} -> unsupportedType ty
+      Internal.ExpressionNatural {} -> unsupportedType ty
       where
         unsupportedType :: Internal.Expression -> a
         unsupportedType e = error ("unsupported type: " <> Internal.ppTrace e)
@@ -476,6 +477,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       Internal.ExpressionSimpleLambda x -> goSimpleLambda x
       Internal.ExpressionLambda x -> goLambda x
       Internal.ExpressionCase x -> goCase x
+      Internal.ExpressionNatural {} -> error "TODO"
       where
         goIden :: Internal.Iden -> Sem r Expression
         goIden iden = case iden of

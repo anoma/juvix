@@ -722,6 +722,23 @@ freshHole l = mkHole l <$> freshNameId
 mkFreshHole :: (Members '[NameIdGen] r) => Interval -> Sem r Expression
 mkFreshHole l = ExpressionHole <$> freshHole l
 
+squashBuiltinNatural :: BuiltinNatural -> Either BuiltinNatural Expression
+squashBuiltinNatural n
+  | n ^. builtinNaturalSuc == 0 = case n ^. builtinNaturalArg of
+      ExpressionNatural n' -> squashBuiltinNatural n'
+      m -> Right m
+  | otherwise = case n ^. builtinNaturalArg of
+      ExpressionNatural n' -> case squashBuiltinNatural n' of
+        Right s -> Left (set builtinNaturalArg s n)
+        Left s ->
+          Left
+            BuiltinNatural
+              { _builtinNaturalSuc = n ^. builtinNaturalSuc + s ^. builtinNaturalSuc,
+                _builtinNaturalArg = s ^. builtinNaturalArg,
+                _builtinNaturalLoc = n ^. builtinNaturalLoc <> s ^. builtinNaturalLoc
+              }
+      m -> Right m
+
 matchExpressions ::
   forall r.
   (Members '[State (HashMap Name Name), Reader (HashSet VarName), Error Text] r) =>

@@ -47,15 +47,25 @@ makeRigidParam p = case p of
   InstanceParamHole {} -> p
   InstanceParamMeta v -> InstanceParamVar v
 
-paramToExpression :: (Member NameIdGen r) => InstanceParam -> Sem r Expression
+paramToExpression :: forall r. (Member NameIdGen r) => InstanceParam -> Sem r Expression
 paramToExpression = \case
   InstanceParamVar v -> return $ ExpressionIden (IdenVar v)
-  -- TODO use builtin nat in Internal
-  InstanceParamNatural InstanceNat {..} -> return _instanceNatExpression
+  InstanceParamNatural n -> goNat n
   InstanceParamApp InstanceApp {..} -> return _instanceAppExpression
   InstanceParamFun InstanceFun {..} -> return _instanceFunExpression
   InstanceParamHole h -> return $ ExpressionHole h
   InstanceParamMeta v -> ExpressionHole . mkHole (getLoc v) <$> freshNameId
+  where
+    goNat :: InstanceNat -> Sem r Expression
+    goNat InstanceNat {..} = do
+      arg <- paramToExpression _instanceNatArg
+      return $
+        ExpressionNatural
+          BuiltinNatural
+            { _builtinNaturalSuc = _instanceNatSuc,
+              _builtinNaturalArg = arg,
+              _builtinNaturalLoc = _instanceNatLoc
+            }
 
 paramFromExpression :: forall r. (Members '[Reader BuiltinsTable] r) => HashSet VarName -> Expression -> Sem (Fail ': r) InstanceParam
 paramFromExpression metaVars e = case e of
