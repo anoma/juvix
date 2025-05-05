@@ -8,6 +8,7 @@ import Juvix.Prelude
 data InstanceParam
   = InstanceParamVar VarName
   | InstanceParamApp InstanceApp
+  | InstanceParamNatural InstanceNat
   | InstanceParamFun InstanceFun
   | InstanceParamHole Hole
   | InstanceParamMeta VarName
@@ -28,6 +29,19 @@ instance Serialize InstanceAppHead
 instance NFData InstanceAppHead
 
 instance Hashable InstanceAppHead
+
+data InstanceNat = InstanceNat
+  { -- | How many times suc is applied
+    _instanceNatSuc :: Natural,
+    _instanceNatArg :: InstanceParam,
+    -- | The original location
+    _instanceNatLoc :: Interval
+  }
+  deriving stock (Eq, Generic)
+
+instance Serialize InstanceNat
+
+instance NFData InstanceNat
 
 data InstanceApp = InstanceApp
   { _instanceAppHead :: InstanceAppHead,
@@ -89,6 +103,7 @@ instance Serialize InstanceTable
 instance NFData InstanceTable
 
 makeLenses ''InstanceApp
+makeLenses ''InstanceNat
 makeLenses ''InstanceFun
 makeLenses ''InstanceInfo
 makeLenses ''InstanceTable
