@@ -84,13 +84,17 @@ instance PrettyCode SimpleLambda where
     v' <- ppCode (l ^. slambdaBinder . sbinderVar)
     return $ kwSimpleLambda <+> braces (v' <+> kwAssign <+> b')
 
+ppApplicationArg :: (Member (Reader Options) r) => IsImplicit -> Expression -> Sem r (Doc Ann)
+ppApplicationArg impl expr =
+  case impl of
+    Explicit -> ppRightExpression appFixity expr
+    Implicit -> braces <$> ppCode expr
+    ImplicitInstance -> doubleBraces <$> ppCode expr
+
 instance PrettyCode Application where
   ppCode a = do
     l' <- ppLeftExpression appFixity (a ^. appLeft)
-    r' <- case a ^. appImplicit of
-      Explicit -> ppRightExpression appFixity (a ^. appRight)
-      Implicit -> braces <$> ppCode (a ^. appRight)
-      ImplicitInstance -> doubleBraces <$> ppCode (a ^. appRight)
+    r' <- ppApplicationArg (a ^. appImplicit) (a ^. appRight)
     return $ l' <+> r'
 
 instance PrettyCode TypedExpression where
