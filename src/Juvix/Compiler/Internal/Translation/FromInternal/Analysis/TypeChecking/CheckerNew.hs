@@ -1053,6 +1053,7 @@ inferLeftAppExpression mhint e = case e of
   ExpressionApplication {} -> impossible
   ExpressionIden i -> goIden i
   ExpressionLiteral l -> goLiteral l
+  ExpressionNatural n -> goNatural n
   ExpressionFunction f -> goFunction f
   ExpressionHole h -> goHole h
   ExpressionInstanceHole h -> goInstanceHole h
@@ -1062,6 +1063,9 @@ inferLeftAppExpression mhint e = case e of
   ExpressionLet l -> goLet l
   ExpressionCase l -> goCase l
   where
+    goNatural :: BuiltinNatural -> Sem r TypedExpression
+    goNatural = error "TODO"
+
     goLet :: Let -> Sem r TypedExpression
     goLet l = do
       _letClauses <- mapM goLetClause (l ^. letClauses)
@@ -1222,7 +1226,7 @@ inferLeftAppExpression mhint e = case e of
         typedLitNumeric :: Integer -> Sem r TypedExpression
         typedLitNumeric v
           --- | mhint ^. typeHintTypeNatural, v >= 0 = unaryXNatural i (fromInteger v)
-          | mhint ^. typeHintTypeNatural, v >= 0 = error "NO"
+          | mhint ^. typeHintTypeNatural, v >= 0 = error "NO?"
           | otherwise = do
               castHole v
               if
@@ -1653,6 +1657,7 @@ typeArity = weakNormalize >=> go
       ExpressionFunction f -> ArityFunction <$> goFun f
       ExpressionHole h -> return (ArityBlocking (BlockingHole h))
       ExpressionInstanceHole {} -> return ArityUnit
+      ExpressionNatural {} -> return ArityUnit
       ExpressionLambda {} -> return ArityError
       ExpressionCase {} -> return ArityNotKnown -- TODO Do better here
       ExpressionUniverse {} -> return ArityUnit
@@ -1716,6 +1721,7 @@ guessArity = \case
   ExpressionHole {} -> return ArityNotKnown
   ExpressionInstanceHole {} -> return ArityUnit
   ExpressionFunction {} -> return ArityUnit
+  ExpressionNatural {} -> return ArityUnit
   ExpressionLiteral {} -> return arityLiteral
   ExpressionApplication a -> appHelper a
   ExpressionIden i -> idenHelper i

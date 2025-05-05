@@ -158,6 +158,7 @@ strongNormalize' original = do
       ExpressionApplication app -> goApp app
       ExpressionLiteral {} -> return e
       ExpressionHole h -> goHole h
+      ExpressionNatural n -> goNatural n
       ExpressionInstanceHole h -> goInstanceHole h
       ExpressionUniverse {} -> return e
       ExpressionFunction f -> ExpressionFunction <$> goFunction f
@@ -168,6 +169,11 @@ strongNormalize' original = do
       ExpressionLet l -> ExpressionLet <$> goLet l
       -- TODO it should normalize like an applied lambda
       ExpressionCase c -> return (ExpressionCase c)
+
+    goNatural :: BuiltinNatural -> Sem r Expression
+    goNatural n = case squashBuiltinNatural n of
+      Left m -> ExpressionNatural <$> traverseOf builtinNaturalArg go m
+      Right e -> go e
 
     goLet :: Let -> Sem r Let
     goLet Let {..} = do
@@ -268,6 +274,7 @@ weakNormalize' = go
       ExpressionIden i -> goIden i
       ExpressionHole h -> goHole h
       ExpressionInstanceHole h -> goInstanceHole h
+      ExpressionNatural h -> goNatural h
       ExpressionApplication a -> goApp a
       ExpressionLiteral {} -> return e
       ExpressionUniverse {} -> return e
@@ -276,6 +283,12 @@ weakNormalize' = go
       ExpressionLambda {} -> return e
       ExpressionLet {} -> return e
       ExpressionCase {} -> return e
+
+    goNatural :: BuiltinNatural -> Sem r Expression
+    goNatural n = return $ case squashBuiltinNatural n of
+      Left m -> ExpressionNatural m
+      Right e -> e
+
     goIden :: Iden -> Sem r Expression
     goIden i = case i of
       IdenFunction f -> do
@@ -286,6 +299,7 @@ weakNormalize' = go
       _ -> return i'
       where
         i' = ExpressionIden i
+
     goApp :: Application -> Sem r Expression
     goApp (Application l r i) = do
       l' <- go l
@@ -294,12 +308,14 @@ weakNormalize' = go
           b' <- substitutionE (HashMap.singleton lamVar r) lamBody
           go b'
         _ -> return (ExpressionApplication (Application l' r i))
+
     goHole :: Hole -> Sem r Expression
     goHole h = do
       s <- getMetavar h
       case s of
         Fresh -> return (ExpressionHole h)
         Refined r -> go r
+
     goInstanceHole :: InstanceHole -> Sem r Expression
     goInstanceHole = return . ExpressionInstanceHole
 
@@ -383,6 +399,7 @@ runInferenceState inis = reinterpret (runState inis) $ \case
                 (ExpressionUniverse u, ExpressionUniverse u') -> check (u == u')
                 (ExpressionSimpleLambda a, ExpressionSimpleLambda b) -> goSimpleLambda a b
                 (ExpressionLambda a, ExpressionLambda b) -> goLambda a b
+                (ExpressionNatural a, ExpressionNatural b) -> goNatural a b
                 (ExpressionHole h, a) -> goHole h a
                 (a, ExpressionHole h) -> goHole h a
                 (_, ExpressionLet r) -> go normA (r ^. letExpression)
@@ -390,6 +407,8 @@ runInferenceState inis = reinterpret (runState inis) $ \case
                 (ExpressionLiteral l, ExpressionApplication a) -> goUnaryNatLiteral l a
                 (ExpressionApplication a, ExpressionLiteral l) -> goUnaryNatLiteral l a
                 (ExpressionLet l, _) -> go (l ^. letExpression) normB
+                (ExpressionNatural {}, _) -> err
+                (_, ExpressionNatural {}) -> err
                 (ExpressionInstanceHole {}, _) -> err
                 (_, ExpressionInstanceHole {}) -> err
                 (ExpressionSimpleLambda {}, _) -> err
@@ -446,6 +465,11 @@ runInferenceState inis = reinterpret (runState inis) $ \case
                   ExpressionLiteral (WithLoc _ (LitNatural num2)) <- return l2
                   failWhen (num1 /= num2)
                   inject ok
+
+                goNatural :: BuiltinNatural -> BuiltinNatural -> Sem r (Maybe MatchError)
+                goNatural a b
+                  | a ^. builtinNaturalSuc == b ^. builtinNaturalSuc = go (a ^. builtinNaturalArg) (b ^. builtinNaturalArg)
+                  | otherwise = err
 
                 goHole :: Hole -> Expression -> Sem r (Maybe MatchError)
                 goHole h t = do

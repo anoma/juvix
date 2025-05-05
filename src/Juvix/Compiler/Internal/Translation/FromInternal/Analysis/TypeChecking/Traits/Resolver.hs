@@ -278,22 +278,23 @@ lookupInstance' visited ctab tab name params
           modify (HashMap.insert v t)
           return True
 
-squashInstanceNat :: InstanceNat -> Either InstanceNat InstanceParam
-squashInstanceNat n
-  | n ^. instanceNatSuc == 0 = case n ^. instanceNatArg of
-      InstanceParamNatural n' -> squashInstanceNat n'
-      m -> Right m
-  | otherwise = case n ^. instanceNatArg of
-      InstanceParamNatural n' -> case squashInstanceNat n' of
-        Right s -> Left (set instanceNatArg s n)
-        Left s ->
-          Left
-            InstanceNat
-              { _instanceNatSuc = n ^. instanceNatSuc + s ^. instanceNatSuc,
-                _instanceNatArg = s ^. instanceNatArg,
-                _instanceNatLoc = n ^. instanceNatLoc <> s ^. instanceNatLoc
-              }
-      m -> Right m
+-- TODO where to use this?
+-- squashInstanceNat :: InstanceNat -> Either InstanceNat InstanceParam
+-- squashInstanceNat n
+--   | n ^. instanceNatSuc == 0 = case n ^. instanceNatArg of
+--       InstanceParamNatural n' -> squashInstanceNat n'
+--       m -> Right m
+--   | otherwise = case n ^. instanceNatArg of
+--       InstanceParamNatural n' -> case squashInstanceNat n' of
+--         Right s -> Left (set instanceNatArg s n)
+--         Left s ->
+--           Left
+--             InstanceNat
+--               { _instanceNatSuc = n ^. instanceNatSuc + s ^. instanceNatSuc,
+--                 _instanceNatArg = s ^. instanceNatArg,
+--                 _instanceNatLoc = n ^. instanceNatLoc <> s ^. instanceNatLoc
+--               }
+--       m -> Right m
 
 lookupInstance ::
   forall r.
