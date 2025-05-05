@@ -4,7 +4,7 @@ module Juvix.Compiler.Backend.Markdown.Data.Types
   )
 where
 
-import Commonmark qualified as MK
+import Commonmark qualified as CM
 import Data.Text qualified as T
 import Juvix.Compiler.Backend.Markdown.Data.MkJuvixBlockOptions
 import Juvix.Data.Loc
@@ -90,13 +90,13 @@ instance Monoid Mk where
 nl :: Text
 nl = "\n"
 
-instance MK.ToPlainText TextBlock where
+instance CM.ToPlainText TextBlock where
   toPlainText r = r ^. textBlock
 
-instance MK.ToPlainText JuvixCodeBlock where
+instance CM.ToPlainText JuvixCodeBlock where
   toPlainText = show
 
-instance MK.ToPlainText Mk where
+instance CM.ToPlainText Mk where
   toPlainText =
     trimText
       . mconcat
@@ -112,7 +112,7 @@ builder = \case
 flatten :: [Mk] -> Mk
 flatten = foldl' (<>) MkNull
 
-instance MK.Rangeable Mk where
+instance CM.Rangeable Mk where
   ranged _ x = x
 
 toTextBlock :: Text -> TextBlock
@@ -145,16 +145,16 @@ paren = wrap' "(" ")"
 brack :: TextBlock -> TextBlock
 brack = wrap' "[" "]"
 
-instance MK.HasAttributes TextBlock where
+instance CM.HasAttributes TextBlock where
   addAttributes _ = id
 
-instance MK.Rangeable TextBlock where
+instance CM.Rangeable TextBlock where
   ranged _ r = r
 
-instance MK.HasAttributes Mk where
+instance CM.HasAttributes Mk where
   addAttributes _ = id
 
-instance MK.IsInline TextBlock where
+instance CM.IsInline TextBlock where
   lineBreak = toTextBlock nl
   softBreak = toTextBlock " "
   str = toTextBlock
@@ -168,7 +168,7 @@ instance MK.IsInline TextBlock where
     toTextBlock "!" <> brack desc <> paren (toTextBlock src)
   code = wrap "`" . toTextBlock
   rawInline f t
-    | f == MK.Format "html" =
+    | f == CM.Format "html" =
         toTextBlock t
     | otherwise = mempty
 
@@ -189,7 +189,7 @@ processCodeBlock info t loc =
       let b = "```" <> info <> t <> "```"
        in MkTextBlock TextBlock {_textBlock = b, _textBlockInterval = loc}
 
-instance MK.IsBlock TextBlock Mk where
+instance CM.IsBlock TextBlock Mk where
   paragraph a = MkTextBlock a
   plain a = MkTextBlock a
   thematicBreak = toMK "---"

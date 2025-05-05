@@ -19,6 +19,7 @@ import Commands.Dev.MigrateJuvixYaml qualified as MigrateJuvixYaml
 import Commands.Dev.Nockma qualified as Nockma
 import Commands.Dev.Options
 import Commands.Dev.Parse qualified as Parse
+import Commands.Dev.PlainMarkdown qualified as PlainMarkdown
 import Commands.Dev.Reg qualified as Reg
 import Commands.Dev.Runtime qualified as Runtime
 import Commands.Dev.Scope qualified as Scope
@@ -47,3 +48,4 @@ runCommand = \case
   MigrateJuvixYaml opts -> runFilesIO $ MigrateJuvixYaml.runCommand opts
   Nockma opts -> Nockma.runCommand opts
   Anoma opts -> Anoma.runCommand opts
+  PlainMarkdown opts -> PlainMarkdown.runCommand opts

@@ -16,6 +16,7 @@ import Juvix.Config qualified as Config
 import Nockma qualified
 import Package qualified
 import Parsing qualified
+import PlainMarkdown qualified
 import Reg qualified
 import Repl qualified
 import Resolver qualified
@@ -67,4 +68,4 @@ fastTests =
 main :: IO ()
 main = do
   tests <- sequence [fastTests, slowTests]
-  defaultMain (testGroup "Juvix tests" tests)
+  defaultMain (testGroup "Juvix tests" [PlainMarkdown.allTests])
