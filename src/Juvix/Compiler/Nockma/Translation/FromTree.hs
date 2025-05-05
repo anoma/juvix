@@ -329,7 +329,10 @@ mkScryDecode key = do
   bNoDecode <- asks (^. compilerNoImportDecoding)
   if
       | bNoDecode -> return $ mkScry key
-      | otherwise -> callStdlib StdlibDecode [mkScry key]
+      | otherwise -> callStdlib StdlibDecode [mkScry [remakeList ((OpQuote # nockNilTagged "scry-id") : (OpQuote # anomaId) : (OpQuote # blobId) : key)]]
+  where
+    anomaId :: Term Natural = TAtom 418447847009
+    blobId :: Term Natural = TAtom 1651469410
 
 allConstructors :: Tree.Module -> Tree.ConstructorInfo -> NonEmpty Tree.ConstructorInfo
 allConstructors md ci =
@@ -361,7 +364,7 @@ supportsNounNockmaRep md ci = fmap NockmaMemRepNoun . run . runFail $ do
   where
     -- Returns True if all elements of some type are representable with an
     -- Atom. There may be false negatives. In that case, a less optimal
-    -- representation might be chosen, but it shouldn't effect correctness.
+    -- representation might be chosen, but it shouldn't affect correctness.
     typeRepresentedAsAtom :: Tree.Type -> Bool
     typeRepresentedAsAtom = \case
       Tree.TyInteger {} -> True

@@ -47,8 +47,8 @@ parseAnoma = do
       )
   _anomaNoNockImportDecoding <-
     switch
-      ( long "no-import-cue"
-          <> help "Do not generate code to cue imported modules. Required to run the generated code with the builtin evaluator."
+      ( long "mock-storage"
+          <> help "Generate import code compatible with simlated storage in the Juvix builtin Nockma evaluator."
       )
   pure AnomaOptions {..}
 
