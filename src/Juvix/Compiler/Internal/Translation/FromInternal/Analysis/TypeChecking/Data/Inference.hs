@@ -37,6 +37,11 @@ data MetavarState
   | -- | Type may contain holes
     Refined Expression
 
+data Normalize
+  = NormalizeWeak
+  | NormalizeStrong
+  deriving stock (Eq, Show)
+
 data MatchError = MatchError
   { _matchErrorLeft :: NormalizedExpression,
     _matchErrorRight :: NormalizedExpression
@@ -145,35 +150,37 @@ strongNormalize_ = fmap (^. normalizedExpression) . strongNormalize
 -- FIXME the returned expression should have the same location as the original
 strongNormalize' :: forall r. (Members '[ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r NormalizedExpression
 strongNormalize' original = do
-  normalized <- go original
+  normalized <- strongNormalizeHelper original
   return
     NormalizedExpression
       { _normalizedExpression = normalized,
         _normalizedExpressionOriginal = original
       }
+
+strongNormalizeHelper :: forall r. (Members '[ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
+strongNormalizeHelper = go
   where
     go :: Expression -> Sem r Expression
-    go e = case e of
-      ExpressionIden i -> goIden i
-      ExpressionApplication app -> goApp app
-      ExpressionLiteral {} -> return e
-      ExpressionHole h -> goHole h
-      ExpressionNatural n -> goNatural n
-      ExpressionInstanceHole h -> goInstanceHole h
-      ExpressionUniverse {} -> return e
-      ExpressionFunction f -> ExpressionFunction <$> goFunction f
-      ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> goSimpleLambda l
-      ExpressionLambda l -> ExpressionLambda <$> goLambda l
-      -- NOTE: we cannot always normalize let expressions because we do not have closures.
-      -- We just recurse inside
-      ExpressionLet l -> ExpressionLet <$> goLet l
-      -- TODO it should normalize like an applied lambda
-      ExpressionCase c -> return (ExpressionCase c)
+    go e =
+      case e of
+        ExpressionIden i -> goIden i
+        ExpressionApplication app -> goApp app
+        ExpressionLiteral {} -> return e
+        ExpressionHole h -> goHole h
+        ExpressionNatural n -> goNatural n
+        ExpressionInstanceHole h -> goInstanceHole h
+        ExpressionUniverse {} -> return e
+        ExpressionFunction f -> ExpressionFunction <$> goFunction f
+        ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> goSimpleLambda l
+        ExpressionLambda l -> ExpressionLambda <$> goLambda l
+        -- NOTE: we cannot always normalize let expressions because we do not have closures.
+        -- We just recurse inside
+        ExpressionLet l -> ExpressionLet <$> goLet l
+        -- TODO it should normalize like an applied lambda
+        ExpressionCase c -> return (ExpressionCase c)
 
     goNatural :: BuiltinNatural -> Sem r Expression
-    goNatural n = case squashBuiltinNatural n of
-      Left m -> ExpressionNatural <$> traverseOf builtinNaturalArg go m
-      Right e -> go e
+    goNatural = normalizeNatural NormalizeStrong
 
     goLet :: Let -> Sem r Let
     goLet Let {..} = do
@@ -235,36 +242,32 @@ strongNormalize' original = do
       return (Function l' r')
 
     goHole :: Hole -> Sem r Expression
-    goHole h = do
-      s <- getMetavar h
-      case s of
-        Fresh -> return (ExpressionHole h)
-        Refined r -> go r
+    goHole = normalizeHole NormalizeStrong
 
     goInstanceHole :: InstanceHole -> Sem r Expression
     goInstanceHole = return . ExpressionInstanceHole
 
     goApp :: Application -> Sem r Expression
-    goApp (Application l r i) = do
-      l' <- go l
-      case l' of
-        ExpressionSimpleLambda (SimpleLambda (SimpleBinder lamVar _) lamBody) -> do
-          b' <- substitutionE (HashMap.singleton lamVar r) lamBody
-          go b'
-        _ -> do
-          r' <- go r
-          return (ExpressionApplication (Application l' r' i))
+    goApp = normalizeApp NormalizeStrong
 
     goIden :: Iden -> Sem r Expression
-    goIden i = case i of
-      IdenFunction f -> do
-        f' <- lookupFunctionDef f
-        case f' of
-          Nothing -> return i'
-          Just x -> go x
-      _ -> return i'
-      where
-        i' = ExpressionIden i
+    goIden = normalizeIden NormalizeStrong
+
+normalizeIden :: (Members '[State InferenceState, ResultBuilder, NameIdGen] r) => Normalize -> Iden -> Sem r Expression
+normalizeIden w i = case i of
+  IdenFunction f -> do
+    f' <- lookupFunctionDef f
+    case f' of
+      Nothing -> return i'
+      Just x -> normalize w x
+  _ -> return i'
+  where
+    i' = ExpressionIden i
+
+normalizeNatural :: (Members '[State InferenceState, ResultBuilder, NameIdGen] r) => Normalize -> BuiltinNatural -> Sem r Expression
+normalizeNatural w n = case squashBuiltinNatural n of
+  Left m -> ExpressionNatural <$> traverseOf builtinNaturalArg (normalizeWhenStrong w) m
+  Right e -> normalize w e
 
 weakNormalize' :: forall r. (Members '[ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
 weakNormalize' = go
@@ -273,9 +276,9 @@ weakNormalize' = go
     go e = case e of
       ExpressionIden i -> goIden i
       ExpressionHole h -> goHole h
-      ExpressionInstanceHole h -> goInstanceHole h
       ExpressionNatural h -> goNatural h
       ExpressionApplication a -> goApp a
+      ExpressionInstanceHole {} -> return e
       ExpressionLiteral {} -> return e
       ExpressionUniverse {} -> return e
       ExpressionFunction {} -> return e
@@ -285,39 +288,54 @@ weakNormalize' = go
       ExpressionCase {} -> return e
 
     goNatural :: BuiltinNatural -> Sem r Expression
-    goNatural n = return $ case squashBuiltinNatural n of
-      Left m -> ExpressionNatural m
-      Right e -> e
+    goNatural = normalizeNatural NormalizeWeak
 
     goIden :: Iden -> Sem r Expression
-    goIden i = case i of
-      IdenFunction f -> do
-        f' <- lookupFunctionDef f
-        case f' of
-          Nothing -> return i'
-          Just x -> go x
-      _ -> return i'
-      where
-        i' = ExpressionIden i
+    goIden = normalizeIden NormalizeWeak
 
     goApp :: Application -> Sem r Expression
-    goApp (Application l r i) = do
-      l' <- go l
+    goApp = normalizeApp NormalizeWeak
+
+    goHole :: Hole -> Sem r Expression
+    goHole = normalizeHole NormalizeWeak
+
+normalize :: (Members '[State InferenceState, ResultBuilder, NameIdGen] r) => Normalize -> Expression -> Sem r Expression
+normalize = \case
+  NormalizeWeak -> weakNormalize'
+  NormalizeStrong -> strongNormalizeHelper
+{-# INLINE normalize #-}
+
+normalizeWhenStrong :: (Members '[State InferenceState, ResultBuilder, NameIdGen] r) => Normalize -> Expression -> Sem r Expression
+normalizeWhenStrong = \case
+  NormalizeWeak -> return
+  NormalizeStrong -> strongNormalizeHelper
+{-# INLINE normalizeWhenStrong #-}
+
+normalizeHole :: (Members '[State InferenceState, ResultBuilder, NameIdGen] r) => Normalize -> Hole -> Sem r Expression
+normalizeHole w h = do
+  s <- getMetavar h
+  case s of
+    Fresh -> return (ExpressionHole h)
+    Refined r -> normalize w r
+
+normalizeApp ::
+  forall r.
+  (Members '[State InferenceState, ResultBuilder, NameIdGen] r) =>
+  Normalize ->
+  Application ->
+  Sem r Expression
+normalizeApp w = normalizeRegularApp
+  where
+    normalizeRegularApp :: Application -> Sem r Expression
+    normalizeRegularApp (Application l r i) = do
+      l' <- normalize w l
       case l' of
         ExpressionSimpleLambda (SimpleLambda (SimpleBinder lamVar _) lamBody) -> do
           b' <- substitutionE (HashMap.singleton lamVar r) lamBody
-          go b'
-        _ -> return (ExpressionApplication (Application l' r i))
-
-    goHole :: Hole -> Sem r Expression
-    goHole h = do
-      s <- getMetavar h
-      case s of
-        Fresh -> return (ExpressionHole h)
-        Refined r -> go r
-
-    goInstanceHole :: InstanceHole -> Sem r Expression
-    goInstanceHole = return . ExpressionInstanceHole
+          normalize w b'
+        _ -> do
+          r' <- normalizeWhenStrong w r
+          return (ExpressionApplication (Application l' r' i))
 
 queryMetavar' :: (Members '[State InferenceState] r) => Hole -> Sem r (Maybe Expression)
 queryMetavar' h = do
