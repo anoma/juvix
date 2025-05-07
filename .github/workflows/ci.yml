@@ -166,11 +166,11 @@ jobs:
         if: steps.cache-anoma.outputs.cache-hit != 'true'
         working-directory: ${{ github.workspace }}/anoma
         run: |
-          mix local.hex --force
+          MIX_ENV=prod mix local.hex --force
           echo "$HOME/.mix/escripts" >> $GITHUB_PATH
-          mix deps.get
-          mix compile
-          mix do --app anoma_client escript.build
+          MIX_ENV=prod mix deps.get
+          MIX_ENV=prod mix compile
+          MIX_ENV=prod mix do --app anoma_client escript.build
 
       - name: Cache LLVM and Clang
         id: cache-llvm

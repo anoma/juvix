@@ -62,6 +62,9 @@ anomaClientCreateProcess launchMode = do
     quietEnv :: (String, String)
     quietEnv = ("MIX_QUIET", "1")
 
+    prodEnv :: (String, String)
+    prodEnv = ("MIX_ENV", "prod")
+
     baseProc :: Sem r CreateProcess
     baseProc = do
       currentEnv <- getEnvironment
@@ -72,7 +75,7 @@ anomaClientCreateProcess launchMode = do
             std_err = CreatePipe,
             std_in = NoStream,
             cwd = Just (toFilePath anomapath),
-            env = Just (quietEnv : currentEnv)
+            env = Just (prodEnv : quietEnv : currentEnv)
           }
 
 setupAnomaClientProcess :: forall r. (Members '[EmbedIO, Logger, Error SimpleError] r) => Handle -> Sem r AnomaClientInfo
