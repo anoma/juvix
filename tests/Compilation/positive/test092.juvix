@@ -2,21 +2,60 @@ module test092;
 
 import Stdlib.Prelude as Prelude open;
 
-n1 : Nat := suc zero;
-n2 : Nat := suc n1;
-n3 : Nat := suc n2;
-n4 : Nat := suc n3;
-n5 : Nat := suc n4;
-n6 : Nat := suc n5;
+module Parity;
+  trait
+  type Even (n : Nat) := proof;
+
+  trait
+  type Odd (n : Nat) := proof;
+
+  instance
+  Even-zero : Even zero := Even.proof;
+
+  instance
+  Even-suc {n : Nat} {{Even n}} : Even (suc (suc n)) := Even.proof;
+
+  instance
+  Odd-suc {n : Nat} {{Even n}} : Odd (suc n) := Odd.proof;
+
+  checkEven (n : Nat) {{Even n}} : Unit := unit;
+
+  checkOdd (n : Nat) {{Odd n}} : Unit := unit;
+
+  test : _ :=
+    let
+      one : Nat := 1;
+      two : Nat := suc one;
+      e1 : uint 20 := uint.mk 87;
+      e2 : uint zero := uint.mk 87;
+      e3 : uint (suc zero) := uint.mk 87;
+      p1 : Unit := checkEven zero;
+      p3 : Unit := checkOdd (suc 0);
+      p2 : Unit := checkEven 2;
+      p4 : Unit := checkEven two;
+      p5 : Unit := checkEven 4;
+      p6 : Unit := checkOdd 3;
+    in unit;
+end;
 
 type uint (bytes : Nat) := mk Nat
 with
   instance
-  Show-uint {bytes : Nat} : Show (uint bytes) :=
+  Show-uint {bytes : Nat} : Show (uint (suc bytes)) :=
     Show.mk@{
-      show : uint bytes -> String
+      show : uint (suc bytes) -> String
         | (uint.mk val) := Show.show bytes ++str ":" ++str Show.show val;
     };
+
+
+main : _ :=
+  let
+    e1 : uint 20 := uint.mk 87;
+    e2 : uint zero := uint.mk 87;
+    e3 : uint (suc zero) := uint.mk 87;
+  in printStringLn (Show.show e1)
+    >>> printStringLn (Show.show e1)
+    >>> printStringLn (Show.show e3);
 end;
 
 module Le;
@@ -32,21 +71,11 @@ module Le;
     le-suc {a b : Nat} {{a '<= b}} : suc a '<= suc b := truth;
   end;
 
-  test (a b : Nat) {{a '<= b}} : Unit := unit;
+  le (a b : Nat) {{a '<= b}} : Unit := unit;
 
-  example1 : Unit := test n1 n4;
-  example2 : Unit := test n4 n4;
-  -- example3 : Unit := test 1 3;
+  example1 : Unit := le 1 5;
+
+  example2 : Unit := le 4 4;
 end;
 
-main : _ :=
-  let
-    z : uint zero := uint.mk 5;
-    e : uint n2 := uint.mk 5;
-    e3 : uint (suc (suc (suc zero))) := uint.mk 5;
-    e4 : uint 7 := uint.mk 87;
-  in printStringLn (Show.show z)
-    >>> printStringLn (Show.show e)
-    >>> printStringLn (Show.show e3)
-    >>> printStringLn (Show.show e3)
-    >>> printStringLn (Show.show {{_}} e4);
+open uint using {main} public;
