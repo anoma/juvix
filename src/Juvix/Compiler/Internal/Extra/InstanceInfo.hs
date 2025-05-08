@@ -11,7 +11,6 @@ import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Data.TypedIden
 import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Language
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Compiler.Store.Internal.Data.InstanceInfo
 import Juvix.Prelude
 
@@ -87,6 +86,15 @@ paramFromExpression metaVars e = case e of
       [ builtinApplication app,
         normalApplication app
       ]
+  ExpressionNatural BuiltinNatural {..} -> do
+    arg <- paramFromExpression metaVars _builtinNaturalArg
+    return $
+      InstanceParamNatural
+        InstanceNat
+          { _instanceNatSuc = _builtinNaturalSuc,
+            _instanceNatLoc = _builtinNaturalLoc,
+            _instanceNatArg = arg
+          }
   ExpressionFunction Function {..}
     | _functionLeft ^. paramImplicit == Explicit -> do
         l <- paramFromExpression metaVars (_functionLeft ^. paramType)
@@ -103,17 +111,11 @@ paramFromExpression metaVars e = case e of
     builtinApplication :: Application -> Sem (Fail ': r) InstanceParam
     builtinApplication = builtinNatApplication
 
+    -- TODO I don't think this is needed
     builtinNatApplication :: Application -> Sem (Fail ': r) InstanceParam
     builtinNatApplication app = do
-      (ExpressionIden (IdenFunction fromNat_), [argNat, _argNatI, argLit :: ApplicationArg]) <- return (second toList (unfoldApplication' app))
-      matchBuiltinName BuiltinFromNat fromNat_
-      ExpressionIden (IdenInductive nat_) <- return (argNat ^. appArg)
-      matchBuiltinName BuiltinNat nat_
-      let l :: Expression = argLit ^. appArg
-      ExpressionLiteral (WithLoc _ (LitNatural num)) <- return l
-      failWhen (num < 0)
-      u <- (^. typedExpression) . fromRight impossible <$> runError @TypeCheckerError (unaryNatural (getLoc app) num)
-      paramFromExpression metaVars u
+      b <- ExpressionNatural <$> builtinNaturalFromApp app
+      paramFromExpression metaVars b
 
     normalApplication :: Application -> Sem (Fail ': r) InstanceParam
     normalApplication app = do

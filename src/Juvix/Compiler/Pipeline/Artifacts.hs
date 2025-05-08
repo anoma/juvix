@@ -71,6 +71,9 @@ runNameIdGenArtifacts = runStateLikeArtifacts runNameIdGen artifactNameIdState
 readerFunctionsTableArtifacts :: (Members '[State Artifacts] r) => Sem (Reader FunctionsTable ': r) a -> Sem r a
 readerFunctionsTableArtifacts = runReaderArtifacts (artifactTypeCheckingTables . typeCheckingTablesFunctionsTable)
 
+readerBuiltinsTableArtifacts :: (Members '[State Artifacts] r) => Sem (Reader BuiltinsTable ': r) a -> Sem r a
+readerBuiltinsTableArtifacts = runReaderArtifacts (artifactScopeTable . infoBuiltins)
+
 readerTypesTableArtifacts :: (Members '[State Artifacts] r) => Sem (Reader TypesTable ': r) a -> Sem r a
 readerTypesTableArtifacts = runReaderArtifacts (artifactTypeCheckingTables . typeCheckingTablesTypesTable)
 
