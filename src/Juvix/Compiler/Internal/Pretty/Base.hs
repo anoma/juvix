@@ -114,7 +114,10 @@ instance PrettyCode SmallUniverse where
   ppCode _ = return kwType
 
 instance PrettyCode BuiltinNatural where
-  ppCode _ = return "<BuiltinNatural>"
+  ppCode BuiltinNatural {..} = do
+    arg <- ppCodeAtom _builtinNaturalArg
+    let sucx = annotate AnnKeyword ("suc[" <> pretty _builtinNaturalSuc <> "]")
+    return (sucx <> arg)
 
 instance PrettyCode Expression where
   ppCode = \case

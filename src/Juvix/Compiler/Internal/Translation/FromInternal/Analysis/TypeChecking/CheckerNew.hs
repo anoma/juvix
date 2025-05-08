@@ -343,9 +343,7 @@ checkMutualStatement ::
   Sem r MutualStatement
 checkMutualStatement = \case
   StatementFunction f -> do
-    -- traceM ("f : " <> ppTrace f)
     f' <- resolveInstanceHoles (resolveCastHoles (checkFunctionDef f))
-    -- traceM ("f' : " <> ppTrace f')
     return (StatementFunction f')
   StatementInductive f -> StatementInductive <$> resolveInstanceHoles (resolveCastHoles (checkInductiveDef f))
   StatementAxiom ax -> do
@@ -657,13 +655,9 @@ resolveInstanceHoles s = do
             ( \t -> do
                 t0 <- (^. normalizedExpression) <$> strongNormalize t
                 (^. typedExpression) <$> inferExpression' emptyTypeHint t0
-                -- (^. normalizedExpression) <$> strongNormalize t1
             )
             h0
 
-      -- traceM ("go Resolve: " <> ppTrace _typedInstanceHoleType)
-      -- traceM ("casts: " <> show (length _cs))
-      -- traceM ("instances: " <> show (length _is))
       t <- resolveTraitInstance h
       resolveInstanceHoles
         . resolveCastHoles
@@ -1064,7 +1058,13 @@ inferLeftAppExpression mhint e = case e of
   ExpressionCase l -> goCase l
   where
     goNatural :: BuiltinNatural -> Sem r TypedExpression
-    goNatural = error "TODO"
+    goNatural n = do
+      natTy <- toExpression <$> getBuiltinNameTypeChecker (getLoc n) BuiltinNat
+      return
+        TypedExpression
+          { _typedType = natTy,
+            _typedExpression = ExpressionNatural n
+          }
 
     goLet :: Let -> Sem r TypedExpression
     goLet l = do

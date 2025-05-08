@@ -243,11 +243,10 @@ lookupInstance' visited ctab tab name params
         | otherwise -> return True
       (_, InstanceParamMeta {}) -> return True
       (_, InstanceParamHole {}) -> return True
-      (InstanceParamNatural v1, InstanceParamNatural v2) ->
-        andM
-          [ return (v1 ^. instanceNatSuc == v2 ^. instanceNatSuc),
-            goMatch assignMetas (v1 ^. instanceNatArg) (v2 ^. instanceNatArg)
-          ]
+      (InstanceParamNatural inst, InstanceParamNatural par) -> do
+        failUnless (inst ^. instanceNatSuc <= par ^. instanceNatSuc)
+        let par' = squashInstanceNat' (over instanceNatSuc (\x -> x - inst ^. instanceNatSuc) par)
+        goMatch assignMetas (inst ^. instanceNatArg) par'
       (InstanceParamVar v1, InstanceParamVar v2)
         | v1 == v2 -> return True
       (InstanceParamApp app1, InstanceParamApp app2)
@@ -278,23 +277,24 @@ lookupInstance' visited ctab tab name params
           modify (HashMap.insert v t)
           return True
 
--- TODO where to use this?
--- squashInstanceNat :: InstanceNat -> Either InstanceNat InstanceParam
--- squashInstanceNat n
---   | n ^. instanceNatSuc == 0 = case n ^. instanceNatArg of
---       InstanceParamNatural n' -> squashInstanceNat n'
---       m -> Right m
---   | otherwise = case n ^. instanceNatArg of
---       InstanceParamNatural n' -> case squashInstanceNat n' of
---         Right s -> Left (set instanceNatArg s n)
---         Left s ->
---           Left
---             InstanceNat
---               { _instanceNatSuc = n ^. instanceNatSuc + s ^. instanceNatSuc,
---                 _instanceNatArg = s ^. instanceNatArg,
---                 _instanceNatLoc = n ^. instanceNatLoc <> s ^. instanceNatLoc
---               }
---       m -> Right m
+squashInstanceNat' :: InstanceNat -> InstanceParam
+squashInstanceNat' = either InstanceParamNatural id . squashInstanceNat
+
+squashInstanceNat :: InstanceNat -> Either InstanceNat InstanceParam
+squashInstanceNat n
+  | n ^. instanceNatSuc == 0 = case n ^. instanceNatArg of
+      InstanceParamNatural n' -> squashInstanceNat n'
+      m -> Right m
+  | otherwise = Left $ case n ^. instanceNatArg of
+      InstanceParamNatural n' -> case squashInstanceNat n' of
+        Right s -> set instanceNatArg s n
+        Left s ->
+          InstanceNat
+            { _instanceNatSuc = n ^. instanceNatSuc + s ^. instanceNatSuc,
+              _instanceNatArg = s ^. instanceNatArg,
+              _instanceNatLoc = n ^. instanceNatLoc <> s ^. instanceNatLoc
+            }
+      _ -> n
 
 lookupInstance ::
   forall r.
@@ -307,8 +307,5 @@ lookupInstance ctab tab ty = do
   m <- runFail (traitFromExpression mempty ty)
   case m of
     Just InstanceApp {..} -> do
-      traceM "instanceApp"
       lookupInstance' [] ctab tab (_instanceAppHead ^. instanceAppHeadName) _instanceAppArgs
-    _ -> do
-      traceM ("empty: " <> ppTrace ty)
-      return []
+    _ -> return []
