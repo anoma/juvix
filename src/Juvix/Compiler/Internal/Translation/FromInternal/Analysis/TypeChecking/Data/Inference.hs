@@ -288,7 +288,7 @@ normalizeNatural ::
   BuiltinNatural ->
   Sem r Expression
 normalizeNatural w n = case squashBuiltinNatural n of
-  Left m -> squashBuiltinNatural' <$> traverseOf builtinNaturalArg (normalizeWhenStrong w) m
+  Left m -> squashBuiltinNatural' <$> traverseOf builtinNaturalArg (normalize w) m
   Right e -> normalize w e
 
 weakNormalize' :: forall r. (Members '[Reader BuiltinsTable, ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
