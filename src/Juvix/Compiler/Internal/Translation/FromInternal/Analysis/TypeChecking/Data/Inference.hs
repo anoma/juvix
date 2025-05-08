@@ -485,8 +485,6 @@ runInferenceState inis = reinterpret (runState inis) $ \case
                 (a, ExpressionHole h) -> goHole h a
                 (_, ExpressionLet r) -> go normA (r ^. letExpression)
                 (ExpressionLiteral l, ExpressionLiteral l') -> check (l == l')
-                (ExpressionLiteral l, ExpressionApplication a) -> goUnaryNatLiteral l a
-                (ExpressionApplication a, ExpressionLiteral l) -> goUnaryNatLiteral l a
                 (ExpressionLet l, _) -> go (l ^. letExpression) normB
                 (ExpressionNatural {}, _) -> err
                 (_, ExpressionNatural {}) -> err
@@ -532,20 +530,6 @@ runInferenceState inis = reinterpret (runState inis) $ \case
 
                 err :: Sem r (Maybe MatchError)
                 err = return (Just (MatchError normalizedA normalizedB))
-
-                goUnaryNatLiteral :: WithLoc Literal -> Application -> Sem r (Maybe MatchError)
-                goUnaryNatLiteral l app = runFailDefaultM err $ do
-                  traceM ("go unary Nat\n" <> ppTrace l <> " ||| " <> ppTrace app)
-                  -- TODO factor out code
-                  LitNatural num1 <- return (l ^. withLocParam)
-                  (ExpressionIden (IdenFunction fromNat_), [argNat, _argNatI, argLit :: ApplicationArg]) <- return (second toList (unfoldApplication' app))
-                  matchBuiltinName BuiltinFromNat fromNat_
-                  ExpressionIden (IdenInductive nat_) <- return (argNat ^. appArg)
-                  matchBuiltinName BuiltinNat nat_
-                  let l2 :: Expression = argLit ^. appArg
-                  ExpressionLiteral (WithLoc _ (LitNatural num2)) <- return l2
-                  failWhen (num1 /= num2)
-                  inject ok
 
                 goNatural :: BuiltinNatural -> BuiltinNatural -> Sem r (Maybe MatchError)
                 goNatural a b
