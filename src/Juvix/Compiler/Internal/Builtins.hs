@@ -40,19 +40,6 @@ getIntTy loc = mkBuiltinInductive loc BuiltinInt
 getNatTy :: (Members '[Reader BuiltinsTable, Error TypeCheckerError] r) => Interval -> Sem r Expression
 getNatTy loc = mkBuiltinInductive loc BuiltinNat
 
-unaryNatural :: (Members '[Reader BuiltinsTable, Error TypeCheckerError] r) => Interval -> Natural -> Sem r TypedExpression
-unaryNatural loc n = do
-  natTy <- getNatTy loc
-  zero' <- mkBuiltinConstructor loc BuiltinNatZero
-  suc' <- mkBuiltinConstructor loc BuiltinNatSuc
-  let mkSuc :: Expression -> Expression
-      mkSuc num = suc' @@ num
-  return
-    TypedExpression
-      { _typedExpression = iterateNat n mkSuc zero',
-        _typedType = natTy
-      }
-
 getBuiltinNameScoper ::
   (IsBuiltin a, Members '[Error ScoperError, Reader BuiltinsTable] r) =>
   Interval ->
@@ -81,6 +68,49 @@ getBuiltinNameTypeChecker :: (IsBuiltin a, Members '[Reader BuiltinsTable, Error
 getBuiltinNameTypeChecker loc =
   mapError TypeChecker.ErrBuiltinNotDefined
     . getBuiltinName loc
+
+builtinNaturalFromApp ::
+  (Members '[Fail, Reader BuiltinsTable] r) =>
+  Application ->
+  Sem r BuiltinNatural
+builtinNaturalFromApp topApp = subsume (failAlts [fromLit, fromSuc])
+  where
+    -- suc (.. (suc arg))
+    fromSuc :: forall r'. (Members '[Reader BuiltinsTable] r') => Sem (Fail ': r') BuiltinNatural
+    fromSuc = goSuc 0 (ExpressionApplication topApp)
+      where
+        goSuc :: Natural -> Expression -> Sem (Fail ': r') BuiltinNatural
+        goSuc succs = \case
+          ExpressionApplication app -> do
+            (ExpressionIden (IdenConstructor suc_), [ApplicationArg Explicit arg_]) <- return (second toList (unfoldApplication' app))
+            matchBuiltinName BuiltinNatSuc suc_
+            goSuc (1 + succs) arg_
+          arg
+            | succs == 0 -> fail
+            | otherwise ->
+                return
+                  BuiltinNatural
+                    { _builtinNaturalSuc = succs,
+                      _builtinNaturalArg = arg,
+                      _builtinNaturalLoc = getLoc topApp
+                    }
+
+    -- fromNatural {Nat} {{FromNatNatI}} <literal>
+    -- NOTE: we do not check that FromNatNatI instance uses the builtin fromNat
+    fromLit :: (Members '[Reader BuiltinsTable] r') => Sem (Fail ': r') BuiltinNatural
+    fromLit = do
+      (ExpressionIden (IdenFunction fromNatural_), [nat_, _fromNatI_, arg_]) <- return (second toList (unfoldApplication' topApp))
+      matchBuiltinName BuiltinFromNat fromNatural_
+      ApplicationArg Implicit (ExpressionIden (IdenInductive natTy)) <- return nat_
+      matchBuiltinName BuiltinNat natTy
+      ApplicationArg Explicit (ExpressionLiteral (WithLoc loc (LitNatural num))) <- return arg_
+      zero <- runErrorWith @TypeCheckerError (const impossible) (getBuiltinNameTypeChecker loc BuiltinNatZero)
+      return $
+        BuiltinNatural
+          { _builtinNaturalSuc = num,
+            _builtinNaturalLoc = loc,
+            _builtinNaturalArg = toExpression zero
+          }
 
 getBuiltinName ::
   (IsBuiltin a, Members '[Error BuiltinNotDefined, Reader BuiltinsTable] r) =>
