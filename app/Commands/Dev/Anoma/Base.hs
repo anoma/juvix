@@ -2,6 +2,7 @@ module Commands.Dev.Anoma.Base where
 
 import Anoma.Effect (Anoma)
 import Anoma.Effect qualified as Anoma
+import Anoma.Http.AddTransaction
 import Commands.Base hiding (Atom)
 import Commands.Dev.Anoma.Prove.Options.ProveArg
 import Data.ByteString qualified as BS
@@ -83,13 +84,15 @@ prepareArg = \case
 addTransaction ::
   forall r.
   (Members '[Error SimpleError, Anoma] r, Members AppEffects r) =>
+  Bool ->
   AppPath File ->
   Sem r ()
-addTransaction programFile = do
+addTransaction isShielded programFile = do
   afile <- fromAppPathFile programFile
   parsedTerm <- runAppError @JuvixError (Nockma.cueJammedFileOrPretty afile)
   cellOrFail parsedTerm $ \t ->
     Anoma.addTransaction
       Anoma.AddTransactionInput
-        { _addTransactionInputCandidate = t
+        { _addTransactionInputCandidate = t,
+          _addTransactionInputType = if isShielded then TransactionCairo else TransactionTransparent
         }

@@ -31,7 +31,7 @@ runCommand g =
         (Prove.runCommand opts)
     AnomaCommandAddTransaction opts ->
       runAnomaWithHostConfig
-        (addTransaction (opts ^. addTransactionFile))
+        (addTransaction (opts ^. addTransactionShielded) (opts ^. addTransactionFile))
     AnomaCommandIndexer opts -> runAnomaWithHostConfig (Indexer.runCommand opts)
   where
     runAnomaWithHostConfig :: (Members (Error SimpleError ': AppEffects) x) => Sem (Anoma ': x) () -> Sem x ()
