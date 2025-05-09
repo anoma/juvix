@@ -70,7 +70,7 @@ httpCliProcess method endpoint = do
   httpPort <- asks (^. anomaClientInfoPort)
   httpUrl <- asks (^. anomaClientInfoUrl)
   let url = httpUrl <> ":" <> show httpPort <> "/" <> show endpoint
-  let args = case method of
+      args = case method of
         HttpGet -> ["-s", "-X", "GET", url, "-H", "accept: application/json"]
         HttpPost -> ["-s", "-X", "POST", url, "-H", "accept: application/json", "-H", "Content-Type: application/json", "-d", "@-"]
   return
@@ -128,10 +128,14 @@ runAnomaWithClient anomaInfo body = do
       AnomaGet url -> anomaRequest' HttpGet url Nothing
       AnomaCheck -> anomaCheck'
 
-fromJSONErr :: (Members '[Error SimpleError] r) => (Aeson.FromJSON a) => Value -> Sem r a
+fromJSONErr :: (HasCallStack, Members '[Error SimpleError] r) => (Aeson.FromJSON a) => Value -> Sem r a
 fromJSONErr v = case Aeson.fromJSON v of
   Aeson.Success r -> return r
-  Aeson.Error err -> throw (SimpleError (mkAnsiText err))
+  Aeson.Error err ->
+    throw . SimpleError $
+      mkAnsiText ghcCallStack
+        <> mkAnsiText ("\nTried to parse: " <> Aeson.jsonEncodeToText v)
+        <> mkAnsiText ("\nError message: " <> err)
 
 logMessageValue :: (Aeson.ToJSON val, Member Logger r) => Text -> val -> Sem r ()
 logMessageValue title val = logVerbose (mkAnsiText (annotate AnnImportant (pretty title <> ":\n") <> pretty (Aeson.jsonEncodeToPrettyText val)))

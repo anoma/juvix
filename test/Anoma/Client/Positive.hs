@@ -25,11 +25,16 @@ fromClientTest :: ClientTest -> TestTree
 fromClientTest t = testCaseSteps (t ^. clientTestTag) assertion
   where
     assertion :: (Text -> IO ()) -> Assertion
-    assertion stepFun = runM . runProcess . runSimpleErrorHUnit . ignoreLogger . runStep stepFun $ do
-      step "Compiling"
-      program :: Term Natural <- liftIO $ withRootCopy (compileAnomaMain False (t ^. clientRelRoot) (t ^. clientMainFile))
-      p <- envAnomaPath
-      runAnomaEphemeral p ((t ^. clientAssertion) program)
+    assertion stepFun = runM
+      . runProcess
+      . runSimpleErrorHUnit
+      . ignoreLogger
+      . runStep stepFun
+      $ do
+        step "Compiling"
+        program :: Term Natural <- liftIO $ withRootCopy (compileAnomaMain False (t ^. clientRelRoot) (t ^. clientMainFile))
+        p <- envAnomaPath
+        runAnomaEphemeral p ((t ^. clientAssertion) program)
 
 -- | Run prove with the given arguments and submit the result to the mempool.
 -- Returns the traces from the prove endpoint
@@ -74,11 +79,9 @@ clientTests =
                   (nockmaEq proveCommitment listCommitment)
             _ ->
               throw
-                ( SimpleError
-                    ( mkAnsiText @Text
-                        "Expected exactly one commitment to be traced by prove and one commitment to be listed by listUnrevealedCommitments"
-                    )
-                )
+                . SimpleError
+                $ mkAnsiText @Text
+                  "Expected exactly one commitment to be traced by prove and one commitment to be listed by listUnrevealedCommitments"
       }
   ]
 

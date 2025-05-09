@@ -257,8 +257,7 @@ allTests =
         (map mkAnomaNodeTest (filter shouldRun anomaTests))
       where
         shouldRun :: AnomaTest -> Bool
-        shouldRun a =
-          classify a == ClassWorking
+        shouldRun a = classify a == ClassWorking
 
     haskellNockmaTests :: TestTree
     haskellNockmaTests =
