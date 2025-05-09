@@ -1238,12 +1238,11 @@ holesHelper mhint expr = do
   (insertedArgs, st') <- runOutputList (execState iniBuilder goAllArgs)
   let ty' = mkFinalBuilderType (st' ^. appBuilderType)
       expr' = mkFinalExpression (st' ^. appBuilderLeft) insertedArgs
-  let ret =
-        TypedExpression
-          { _typedType = ty',
-            _typedExpression = expr'
-          }
-  return ret
+  return
+    TypedExpression
+      { _typedType = ty',
+        _typedExpression = expr'
+      }
   where
     mkArg :: InsertedArg -> ApplicationArg
     mkArg i =
@@ -1474,8 +1473,8 @@ holesHelper mhint expr = do
                     (Explicit, Explicit) -> checkThisArg
                     (Implicit, Implicit) -> checkThisArg
                     (ImplicitInstance, ImplicitInstance) -> checkThisArg
-                    (ImplicitInstance, Explicit) -> throwExpectedExplicit
-                    (Implicit, Explicit) -> throwExpectedExplicit
+                    (ImplicitInstance, Explicit) -> throwExpectedExplicit (arg ^. appBuilderArg)
+                    (Implicit, Explicit) -> throwExpectedExplicit (arg ^. appBuilderArg)
                     (Explicit, Implicit) -> insertMiddleHole Implicit
                     (ImplicitInstance, Implicit) -> insertMiddleHole Implicit
                     (Implicit, ImplicitInstance) -> insertMiddleHole ImplicitInstance
@@ -1499,15 +1498,13 @@ holesHelper mhint expr = do
                   modify' (over appBuilderArgs (a :))
                   goArgs
 
-        throwExpectedExplicit :: Sem r' a
-        throwExpectedExplicit = do
-          l <- gets (^. appBuilderLeft)
+        throwExpectedExplicit :: ApplicationArg -> Sem r' a
+        throwExpectedExplicit arg = do
           throw
             . ErrArityCheckerError
             $ ErrExpectedExplicitArgument
               ExpectedExplicitArgument
-                { _expectedExplicitArgumentApp = (l, error "FIXME"),
-                  _expectedExplicitArgumentIx = error "FIXME"
+                { _expectedExplicitArgument = arg
                 }
 
         peekFunctionType :: IsImplicit -> Sem r' FunctionDefault

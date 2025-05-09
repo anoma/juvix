@@ -96,13 +96,15 @@ data BuiltinFunctionId
 instance Hashable BuiltinFunctionId
 
 data CompilerOptions = CompilerOptions
-  { _compilerOptionsNoStdlib :: Bool
+  { _compilerOptionsNoStdlib :: Bool,
+    _compilerOptionsNoImportDecoding :: Bool
   }
 
 fromEntryPoint :: EntryPoint -> CompilerOptions
 fromEntryPoint EntryPoint {..} =
   CompilerOptions
-    { _compilerOptionsNoStdlib = _entryPointNoAnomaStdlib
+    { _compilerOptionsNoStdlib = _entryPointNoAnomaStdlib,
+      _compilerOptionsNoImportDecoding = _entryPointNoNockImportDecoding
     }
 
 newtype FunctionCtx = FunctionCtx
@@ -129,6 +131,7 @@ data CompilerCtx = CompilerCtx
     _compilerModuleInfos :: HashMap ModuleId ModuleInfo,
     _compilerModuleId :: ModuleId,
     _compilerBatch :: Bool,
+    _compilerNoImportDecoding :: Bool,
     -- | Maps temporary variables to their stack indices.
     _compilerTempVarMap :: HashMap Int TempRef,
     _compilerTempVarsNum :: Int,
@@ -149,6 +152,7 @@ emptyCompilerCtx =
       _compilerModuleInfos = mempty,
       _compilerModuleId = defaultModuleId,
       _compilerBatch = True,
+      _compilerNoImportDecoding = False,
       _compilerTempVarMap = mempty,
       _compilerTempVarsNum = 0,
       _compilerStackHeight = 0
@@ -320,6 +324,16 @@ foldTermsOrQuotedNil = maybe (OpQuote # nockNilTagged "foldTermsOrQuotedNil") fo
 mkScry :: [Term Natural] -> Term Natural
 mkScry key = OpScry # (OpQuote # nockNilTagged "OpScry-typehint") # (foldTermsOrQuotedNil key)
 
+mkScryDecode :: (Member (Reader CompilerCtx) r) => [Term Natural] -> Sem r (Term Natural)
+mkScryDecode key = do
+  bNoDecode <- asks (^. compilerNoImportDecoding)
+  if
+      | bNoDecode -> return $ mkScry key
+      | otherwise -> callStdlib StdlibDecode [mkScry [remakeList ((OpQuote # nockNilTagged "scry-id") : (OpQuote # anomaId) : (OpQuote # blobId) : key)]]
+  where
+    anomaId :: Term Natural = TAtom 418447847009
+    blobId :: Term Natural = TAtom 1651469410
+
 allConstructors :: Tree.Module -> Tree.ConstructorInfo -> NonEmpty Tree.ConstructorInfo
 allConstructors md ci =
   let indInfo = Tree.lookupInductiveInfo md (ci ^. Tree.constructorInductive)
@@ -350,7 +364,7 @@ supportsNounNockmaRep md ci = fmap NockmaMemRepNoun . run . runFail $ do
   where
     -- Returns True if all elements of some type are representable with an
     -- Atom. There may be false negatives. In that case, a less optimal
-    -- representation might be chosen, but it shouldn't effect correctness.
+    -- representation might be chosen, but it shouldn't affect correctness.
     typeRepresentedAsAtom :: Tree.Type -> Bool
     typeRepresentedAsAtom = \case
       Tree.TyInteger {} -> True
@@ -465,11 +479,12 @@ compileToSubject bundleAnomaLib ctx importsSHA256 importedModuleIds userFuns msy
 fromTreeModule :: (Member (Reader CompilerOptions) r) => (ModuleId -> Sem r Module) -> InfoTable -> Tree.Module -> Sem r Module
 fromTreeModule fetchModule importsTab md = do
   optNoStdlib <- asks (^. compilerOptionsNoStdlib)
+  optNoImportDecoding <- asks (^. compilerOptionsNoImportDecoding)
   importsSHA256 :: HashMap ModuleId ByteString <-
     HashMap.fromList
       . map (\m -> (m ^. moduleId, fromJust (m ^. moduleInfoTable . infoSHA256)))
       <$> mapM fetchModule importedModuleIds
-  let moduleCode = compileToSubject (not optNoStdlib) compilerCtx importsSHA256 importedModuleIds userFuns (md ^. Tree.moduleInfoTable . Tree.infoMainFunction)
+  let moduleCode = compileToSubject (not optNoStdlib) (compilerCtx optNoImportDecoding) importsSHA256 importedModuleIds userFuns (md ^. Tree.moduleInfoTable . Tree.infoMainFunction)
       jammedCode = jamToByteString moduleCode
       tab =
         InfoTable
@@ -526,8 +541,8 @@ fromTreeModule fetchModule importsTab md = do
                 }
             )
 
-    compilerCtx :: CompilerCtx
-    compilerCtx =
+    compilerCtx :: Bool -> CompilerCtx
+    compilerCtx optNoImportDecoding =
       emptyCompilerCtx
         { _compilerFunctionInfos =
             userFunInfos <> importsTab ^. infoFunctions,
@@ -536,7 +551,8 @@ fromTreeModule fetchModule importsTab md = do
           _compilerModuleInfos =
             HashMap.fromList $ map mkModuleInfo [0 .. length allModuleIds - 1],
           _compilerModuleId = md ^. Tree.moduleId,
-          _compilerBatch = null importedFuns
+          _compilerBatch = null importedFuns,
+          _compilerNoImportDecoding = optNoImportDecoding
         }
       where
         mkModuleInfo :: Int -> (ModuleId, ModuleInfo)
@@ -1002,36 +1018,39 @@ compile = \case
       mid <- asks (^. compilerModuleId)
       batch <- asks (^. compilerBatch)
       args <- mapM compile _nodeAllocClosureArgs
-      let closure =
-            if
-                | batch || mid == finfo ^. functionInfoModuleId ->
-                    opReplace
-                      "putAnomaLib"
-                      (closurePath AnomaLibrary)
-                      (opAddress "anomaLibrary" (base <> closurePath AnomaLibrary))
-                      $ opReplace
-                        "putModulesLib"
-                        (closurePath ModulesLibrary)
-                        (opAddress "modulesLibrary" (base <> closurePath ModulesLibrary))
-                      $ opAddress
-                        "goAllocClosure-getFunction"
-                        (base <> closurePath ModulesLibrary <> [L] <> finfo ^. functionInfoPath)
-                | otherwise ->
-                    OpPush
-                      # mkScry [opAddress "modulesLibrary" (base <> closurePath ModulesLibrary <> minfo ^. moduleInfoPath)]
-                      # ( opReplace
-                            "putAnomaLib"
-                            (closurePath AnomaLibrary)
-                            (opAddress "anomaLibrary" ([R] <> base <> closurePath AnomaLibrary))
-                            $ opReplace
-                              "putModulesLib"
-                              (closurePath ModulesLibrary)
-                              (opAddress "getModulesLibrary" [L])
-                            $ opAddress
-                              "goAllocClosure-getFunction"
-                              ([L, L] <> finfo ^. functionInfoPath)
-                        )
-          newArity = farity - fromIntegral (length args)
+      closure <-
+        if
+            | batch || mid == finfo ^. functionInfoModuleId ->
+                return
+                  $ opReplace
+                    "putAnomaLib"
+                    (closurePath AnomaLibrary)
+                    (opAddress "anomaLibrary" (base <> closurePath AnomaLibrary))
+                  $ opReplace
+                    "putModulesLib"
+                    (closurePath ModulesLibrary)
+                    (opAddress "modulesLibrary" (base <> closurePath ModulesLibrary))
+                  $ opAddress
+                    "goAllocClosure-getFunction"
+                    (base <> closurePath ModulesLibrary <> [L] <> finfo ^. functionInfoPath)
+            | otherwise -> do
+                fetchModule <- mkScryDecode [opAddress "modulesLibrary" (base <> closurePath ModulesLibrary <> minfo ^. moduleInfoPath)]
+                return $
+                  OpPush
+                    # fetchModule
+                    # ( opReplace
+                          "putAnomaLib"
+                          (closurePath AnomaLibrary)
+                          (opAddress "anomaLibrary" ([R] <> base <> closurePath AnomaLibrary))
+                          $ opReplace
+                            "putModulesLib"
+                            (closurePath ModulesLibrary)
+                            (opAddress "getModulesLibrary" [L])
+                          $ opAddress
+                            "goAllocClosure-getFunction"
+                            ([L, L] <> finfo ^. functionInfoPath)
+                      )
+      let newArity = farity - fromIntegral (length args)
       massert (newArity > 0)
       curryClosure closure args (nockNatLiteral newArity)
 
@@ -1252,8 +1271,8 @@ callFunWithArgs fun args = do
           -- The function is in a different module. We need to call the function
           -- with its module's module library.
           base <- getSubjectBasePath
-          let modLib = mkScry [opAddress "callFun-modLib" (base ++ closurePath ModulesLibrary ++ minfo ^. moduleInfoPath)]
-              newSubject' = opReplace "callFun-modLib" (closurePath ModulesLibrary) modLib newSubject
+          modLib <- mkScryDecode [opAddress "callFun-modLib" (base ++ closurePath ModulesLibrary ++ minfo ^. moduleInfoPath)]
+          let newSubject' = opReplace "callFun-modLib" (closurePath ModulesLibrary) modLib newSubject
           return (opCall ("callFun-" <> fname) (fpath ++ closurePath FunCode) newSubject')
 
 callClosure :: (Member (Reader CompilerCtx) r) => TempRef -> [Term Natural] -> Sem r (Term Natural)

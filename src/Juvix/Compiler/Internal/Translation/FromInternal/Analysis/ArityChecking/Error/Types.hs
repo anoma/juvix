@@ -110,9 +110,8 @@ instance ToGenericError WrongPatternIsImplicit where
               <+> "pattern:"
               <+> ppCode opts' pat
 
-data ExpectedExplicitArgument = ExpectedExplicitArgument
-  { _expectedExplicitArgumentApp :: (Expression, [ApplicationArg]),
-    _expectedExplicitArgumentIx :: Int
+newtype ExpectedExplicitArgument = ExpectedExplicitArgument
+  { _expectedExplicitArgument :: ApplicationArg
   }
 
 makeLenses ''ExpectedExplicitArgument
@@ -129,22 +128,11 @@ instance ToGenericError ExpectedExplicitArgument where
             }
         where
           opts' = fromGenericOptions opts
-          app@(f, args) = e ^. expectedExplicitArgumentApp
-          idx = e ^. expectedExplicitArgumentIx
-          arg :: ApplicationArg
-          arg = (toList args !! idx)
+          arg = e ^. expectedExplicitArgument
           i = getLoc arg
           msg =
-            "Expected an explicit argument as the"
-              <+> ordinal (succ idx)
-              <+> "argument of"
-              <+> ppCode opts' f
-              <+> "but found"
-              <+> ppArg opts' arg
-                <> "."
-                <> softline
-                <> "In the application"
-              <+> ppApp opts' app
+            "Expected an explicit argument but found"
+              <+> ppCode opts' arg
 
 newtype PatternFunction = PatternFunction
   { _patternFunction :: ConstructorApp
