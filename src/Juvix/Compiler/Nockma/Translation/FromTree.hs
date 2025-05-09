@@ -180,14 +180,6 @@ indexStack idx = replicate idx R ++ [L]
 pathFromEnum :: (Enum a) => a -> Path
 pathFromEnum = indexStack . fromIntegral . fromEnum
 
-data ConstructorPathId
-  = ConstructorTag
-  | ConstructorArgs
-  deriving stock (Bounded, Enum)
-
-constructorPath :: ConstructorPathId -> Path
-constructorPath = pathFromEnum
-
 closurePath :: AnomaCallablePathId -> Path
 closurePath = pathFromEnum
 
@@ -301,9 +293,6 @@ termFromParts f = remakeList [f pi | pi <- allElements]
 
 makeClosure :: (AnomaCallablePathId -> Term Natural) -> Term Natural
 makeClosure = termFromParts
-
-makeConstructor :: (ConstructorPathId -> Term Natural) -> Term Natural
-makeConstructor = termFromParts
 
 -- | The result is not quoted and cannot be evaluated.
 rawTermFromParts :: (Bounded p, Enum p) => (p -> Term Natural) -> Term Natural
@@ -640,8 +629,7 @@ compile = \case
                 fr
                   ++ case memrep of
                     NockmaMemRepConstr ->
-                      constructorPath ConstructorArgs
-                        ++ indexStack argIx
+                      constructorArgPath argIx
                     NockmaMemRepTuple ->
                       indexTuple
                         IndexTupleArgs
@@ -1193,9 +1181,7 @@ goConstructor mr t args = assert (all isCell args) $
       Nothing -> crash
     Tree.UserTag tag -> case mr of
       NockmaMemRepConstr ->
-        makeConstructor $ \case
-          ConstructorTag -> OpQuote # (fromIntegral (tag ^. Tree.tagUserWord) :: Natural)
-          ConstructorArgs -> remakeList args
+        makeConstructor (OpQuote # (fromIntegral (tag ^. Tree.tagUserWord) :: Natural)) args
       NockmaMemRepTuple -> foldTerms (nonEmpty' args)
       NockmaMemRepList constr -> case constr of
         NockmaMemRepListConstrNil
@@ -1369,7 +1355,7 @@ caseCmd ref defaultBranch = \case
       let cond :: Term Natural =
             OpEq
               # constructorTagToTerm tag
-              # (getConstructorField ConstructorTag arg)
+              # (getConstructorTag arg)
       case nonEmpty bs of
         Nothing -> case defaultBranch of
           Nothing -> return b
@@ -1479,11 +1465,17 @@ getConstructorInfo tag = asks (^?! compilerConstructorInfos . at tag . _Just)
 getClosureField :: AnomaCallablePathId -> Term Natural -> Term Natural
 getClosureField = getField
 
-getConstructorField :: ConstructorPathId -> Term Natural -> Term Natural
-getConstructorField = getField
-
 getField :: (Enum field) => field -> Term Natural -> Term Natural
 getField field t = t >># opAddress "getField" (pathFromEnum field)
+
+getConstructorTag :: Term Natural -> Term Natural
+getConstructorTag t = t >># opAddress "getConstructorTag" [L]
+
+constructorArgPath :: Natural -> Path
+constructorArgPath idx = R : indexStack idx
+
+makeConstructor :: Term Natural -> [Term Natural] -> Term Natural
+makeConstructor tag args = remakeList (tag : args)
 
 getConstructorMemRep :: (Members '[Reader CompilerCtx] r) => Tree.Tag -> Sem r NockmaMemRep
 getConstructorMemRep tag = (^. constructorInfoMemRep) <$> getConstructorInfo tag
