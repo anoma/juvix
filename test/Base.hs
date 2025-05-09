@@ -291,6 +291,7 @@ compileAnomaModular enableDebug relRoot mainFile rootCopyDir = do
   entryPoint <-
     set entryPointPipeline (Just PipelineExec)
       . set entryPointTarget (Just TargetAnoma)
+      . set entryPointNoNockImportDecoding True
       . set entryPointDebug enableDebug
       <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
   r <- testRunIOModular (Just Core.CheckAnoma) entryPoint modularCoreToAnoma

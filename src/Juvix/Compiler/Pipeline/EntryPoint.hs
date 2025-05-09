@@ -58,6 +58,7 @@ data EntryPoint = EntryPoint
     _entryPointIsabelleOnlyTypes :: Bool,
     _entryPointPipeline :: Maybe Pipeline,
     _entryPointNoAnomaStdlib :: Bool,
+    _entryPointNoNockImportDecoding :: Bool,
     -- | The SHA256 hash of the source file at _entryPointModulePath
     _entryPointSHA256 :: Maybe Text,
     -- | Dump verification statements?
@@ -125,6 +126,7 @@ defaultEntryPointNoFile pkg root =
       _entryPointIsabelleOnlyTypes = False,
       _entryPointPipeline = Nothing,
       _entryPointNoAnomaStdlib = False,
+      _entryPointNoNockImportDecoding = False,
       _entryPointSHA256 = Nothing,
       _entryPointVerify = False
     }
