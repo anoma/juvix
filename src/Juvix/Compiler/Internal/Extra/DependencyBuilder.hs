@@ -324,8 +324,12 @@ goExpression e = case e of
   ExpressionInstanceHole {} -> return ()
   ExpressionLambda l -> goLambda l
   ExpressionLet l -> goLet l
+  ExpressionNatural l -> goNatural l
   ExpressionSimpleLambda l -> goSimpleLambda l
   where
+    goNatural :: BuiltinNatural -> Sem r ()
+    goNatural b = goExpression (b ^. builtinNaturalArg)
+
     goSimpleLambda :: SimpleLambda -> Sem r ()
     goSimpleLambda l = do
       addEdgeMay (l ^. slambdaBinder . sbinderVar)

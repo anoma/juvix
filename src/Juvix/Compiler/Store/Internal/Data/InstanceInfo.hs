@@ -8,6 +8,7 @@ import Juvix.Prelude
 data InstanceParam
   = InstanceParamVar VarName
   | InstanceParamApp InstanceApp
+  | InstanceParamNatural InstanceNat
   | InstanceParamFun InstanceFun
   | InstanceParamHole Hole
   | InstanceParamMeta VarName
@@ -17,8 +18,33 @@ instance Serialize InstanceParam
 
 instance NFData InstanceParam
 
+data InstanceAppHead
+  = InstanceAppHeadInductive Name
+  | InstanceAppHeadAxiom Name
+  | InstanceAppHeadConstructor Name
+  deriving stock (Eq, Ord, Generic)
+
+instance Serialize InstanceAppHead
+
+instance NFData InstanceAppHead
+
+instance Hashable InstanceAppHead
+
+data InstanceNat = InstanceNat
+  { -- | How many times suc is applied
+    _instanceNatSuc :: Natural,
+    _instanceNatArg :: InstanceParam,
+    -- | The original location
+    _instanceNatLoc :: Interval
+  }
+  deriving stock (Eq, Generic)
+
+instance Serialize InstanceNat
+
+instance NFData InstanceNat
+
 data InstanceApp = InstanceApp
-  { _instanceAppHead :: Name,
+  { _instanceAppHead :: InstanceAppHead,
     _instanceAppArgs :: [InstanceParam],
     -- | The original expression from which this InstanceApp was created
     _instanceAppExpression :: Expression
@@ -28,6 +54,12 @@ data InstanceApp = InstanceApp
 instance Serialize InstanceApp
 
 instance NFData InstanceApp
+
+instanceAppHeadName :: Lens' InstanceAppHead Name
+instanceAppHeadName f = \case
+  InstanceAppHeadInductive n -> InstanceAppHeadInductive <$> f n
+  InstanceAppHeadAxiom n -> InstanceAppHeadAxiom <$> f n
+  InstanceAppHeadConstructor n -> InstanceAppHeadConstructor <$> f n
 
 data InstanceFun = InstanceFun
   { _instanceFunLeft :: InstanceParam,
@@ -71,6 +103,7 @@ instance Serialize InstanceTable
 instance NFData InstanceTable
 
 makeLenses ''InstanceApp
+makeLenses ''InstanceNat
 makeLenses ''InstanceFun
 makeLenses ''InstanceInfo
 makeLenses ''InstanceTable

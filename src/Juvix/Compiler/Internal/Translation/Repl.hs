@@ -32,7 +32,7 @@ typeCheckExpressionType exp = do
     . withEmptyInsertedArgsStack
     . mapError (JuvixError @TypeCheckerError)
     . runInferenceDef
-    $ inferExpression Nothing exp
+    $ inferExpressionRepl Nothing exp
       >>= traverseOf typedType strongNormalize_
 
 typeCheckExpression ::

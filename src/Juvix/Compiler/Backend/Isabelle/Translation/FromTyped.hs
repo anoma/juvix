@@ -352,6 +352,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       Internal.ExpressionSimpleLambda {} -> unsupportedType ty
       Internal.ExpressionLambda {} -> unsupportedType ty
       Internal.ExpressionCase {} -> unsupportedType ty
+      Internal.ExpressionNatural {} -> unsupportedType ty
       where
         unsupportedType :: Internal.Expression -> a
         unsupportedType e = error ("unsupported type: " <> Internal.ppTrace e)
@@ -476,6 +477,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       Internal.ExpressionSimpleLambda x -> goSimpleLambda x
       Internal.ExpressionLambda x -> goLambda x
       Internal.ExpressionCase x -> goCase x
+      Internal.ExpressionNatural {} -> error "TODO"
       where
         goIden :: Internal.Iden -> Sem r Expression
         goIden iden = case iden of
@@ -610,7 +612,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                   Internal.LitString {} -> Nothing
                   Internal.LitNumeric x -> Just x
                   Internal.LitInteger x -> Just x
-                  Internal.LitNatural x -> Just x
+                  Internal.LitNatural x -> Just (fromIntegral x)
               _ -> Nothing
 
         getList :: Internal.Application -> Maybe [Internal.Expression]
@@ -765,7 +767,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
           Internal.LitString s -> LitString s
           Internal.LitNumeric n -> LitNumeric n
           Internal.LitInteger n -> LitNumeric n
-          Internal.LitNatural n -> LitNumeric n
+          Internal.LitNatural n -> LitNumeric (fromIntegral n)
 
         goHole :: Internal.Hole -> Sem r Expression
         goHole h = return (ExprUndefined (getLoc h))

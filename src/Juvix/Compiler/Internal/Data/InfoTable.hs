@@ -22,8 +22,6 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
-import Juvix.Compiler.Internal.Extra.CoercionInfo
-import Juvix.Compiler.Internal.Extra.InstanceInfo
 import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Compiler.Store.Internal.Data.FunctionsTable
 import Juvix.Compiler.Store.Internal.Data.TypesTable

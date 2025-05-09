@@ -219,6 +219,7 @@ scanExpression e =
       mapM_ (scanExpression . snd) (c ^. callArgs)
     Nothing -> case e of
       ExpressionApplication a -> directExpressions_ scanExpression a
+      ExpressionNatural a -> directExpressions_ scanExpression a
       ExpressionFunction f -> directExpressions_ scanExpression f
       ExpressionLambda l -> directExpressions_ scanExpression l
       ExpressionLet l -> scanLet l
