@@ -299,6 +299,11 @@ checkTopMutualBlock (MutualBlock ds) =
   MutualBlock
     <$> runInferenceDefs
       ( do
+          tys <- sconcatMapM mutualStatementTypes ds
+          forM_ tys $ \(name :: Name, ty) -> do
+            ty' <- resolveInstanceHoles (resolveCastHoles (checkIsType (getLoc name) ty))
+            registerIdenType name ty'
+            registerNameIdType (name ^. nameId) ty'
           ls <- mapM checkMutualStatement ds
           putConstructorNormalizedType ls
       )
@@ -337,6 +342,25 @@ resolveCastHoles s = do
           ty <- mkTy (getLoc _castHoleHole)
           void (matchTypes (ExpressionHole _castHoleHole) ty)
 
+mutualStatementTypes :: (Members '[Reader InfoTable] r) => MutualStatement -> Sem r (NonEmpty (Name, Expression))
+mutualStatementTypes = \case
+  StatementFunction f -> return (pure (f ^. funDefName, f ^. funDefType))
+  StatementAxiom f -> return (pure (f ^. axiomName, f ^. axiomType))
+  StatementInductive ind -> do
+    let indName = ind ^. inductiveName
+    indty <- fullInductiveType <$> lookupInductive indName
+    ctypes <-
+      sequence
+        [ do
+            let cname = c ^. inductiveConstructorName
+            cty <- constructorType <$> lookupConstructor cname
+            return (cname, cty)
+          | c <- ind ^. inductiveConstructors
+        ]
+    return $
+      (indName, indty)
+        :| ctypes
+
 checkMutualStatement ::
   (Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, Inference, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
   MutualStatement ->
@@ -366,13 +390,14 @@ unfoldFunType' e = do
 
 checkFunctionDef ::
   forall r.
-  (Members '[Reader LocalVars, Reader BuiltinsTable, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Inference, Termination, Output TypedInstanceHole, Output CastHole, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader LocalVars, Reader BuiltinsTable, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Inference, Termination, Output TypedInstanceHole, Output CastHole, Reader InsertedArgsStack] r) =>
   FunctionDef ->
   Sem r FunctionDef
 checkFunctionDef FunctionDef {..} = do
   funDef <- do
     _funDefType' <- checkDefType _funDefType
     registerIdenType _funDefName _funDefType'
+    registerNameIdType (_funDefName ^. nameId) _funDefType'
     _funDefBody' <- checkFunctionBody _funDefType' _funDefBody
     params <- fst <$> unfoldFunType' _funDefType'
     _funDefArgsInfo' <- checkArgsInfo params
@@ -414,7 +439,7 @@ checkFunctionDef FunctionDef {..} = do
             withLocalTypeMaybe (p ^. paramName) (p ^. paramType) (go rest)
 
 checkIsType ::
-  (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Termination, Output TypedInstanceHole, Output CastHole, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Termination, Output TypedInstanceHole, Output CastHole, Reader InsertedArgsStack] r) =>
   Interval ->
   Expression ->
   Sem r Expression
@@ -423,7 +448,7 @@ checkIsType loc e =
 
 checkDefType ::
   forall r.
-  (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Termination, Output TypedInstanceHole, Output CastHole, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Termination, Output TypedInstanceHole, Output CastHole, Reader InsertedArgsStack] r) =>
   Expression ->
   Sem r Expression
 checkDefType ty = checkIsType (getLoc ty) ty
@@ -530,7 +555,7 @@ checkCoercionType FunctionDef {..} = do
 
 checkCaseBranchRhs ::
   forall r.
-  (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
   Expression ->
   CaseBranchRhs ->
   Sem r CaseBranchRhs
@@ -549,6 +574,7 @@ checkSideIfs ::
          Inference,
          Output TypedInstanceHole,
          Termination,
+         HighlightBuilder,
          Reader BuiltinsTable,
          Output CastHole,
          Reader InsertedArgsStack
@@ -569,7 +595,7 @@ checkSideIfs expectedTy SideIfs {..} = do
 
 checkSideIfBranch ::
   forall r.
-  (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
   Expression ->
   SideIfBranch ->
   Sem r SideIfBranch
@@ -588,7 +614,7 @@ getBoolType loc = toExpression <$> getBuiltinNameTypeChecker loc BuiltinBool
 
 checkExpression ::
   forall r.
-  (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
   Expression ->
   Expression ->
   Sem r Expression
@@ -625,7 +651,7 @@ checkExpression expectedTy e = do
 resolveInstanceHoles ::
   forall a r.
   ( HasExpressions a,
-    Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Inference, Termination, Reader InsertedArgsStack] r
+    Members '[HighlightBuilder, Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Inference, Termination, Reader InsertedArgsStack] r
   ) =>
   Sem (Output TypedInstanceHole ': r) a ->
   Sem r a
@@ -665,7 +691,7 @@ resolveInstanceHoles s = do
         $ checkExpression _typedInstanceHoleType t
 
 checkFunctionParameter ::
-  (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Termination, Output TypedInstanceHole, Output CastHole, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Termination, Output TypedInstanceHole, Output CastHole, Reader InsertedArgsStack] r) =>
   FunctionParameter ->
   Sem r FunctionParameter
 checkFunctionParameter FunctionParameter {..} = do
@@ -682,7 +708,7 @@ checkFunctionParameter FunctionParameter {..} = do
       }
 
 inferExpressionRepl ::
-  (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Termination, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Error TypeCheckerError, NameIdGen, Reader LocalVars, Inference, Termination, Reader InsertedArgsStack] r) =>
   -- | type hint
   Maybe Expression ->
   Expression ->
@@ -701,7 +727,7 @@ lookupVar v = do
     err = error $ "internal error: could not find var " <> ppTrace v <> " at " <> ppTrace (getLoc v)
 
 checkFunctionBody ::
-  (Members '[Reader LocalVars, Reader BuiltinsTable, Reader InfoTable, NameIdGen, Error TypeCheckerError, Output TypedInstanceHole, ResultBuilder, Inference, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader LocalVars, Reader BuiltinsTable, Reader InfoTable, NameIdGen, Error TypeCheckerError, Output TypedInstanceHole, ResultBuilder, Inference, Termination, Output CastHole, Reader InsertedArgsStack] r) =>
   Expression ->
   Expression ->
   Sem r Expression
@@ -726,7 +752,7 @@ checkFunctionBody expectedTy body =
 
 checkClauseExpression ::
   forall r.
-  (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Termination, Output TypedInstanceHole, Output CastHole, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Termination, Output TypedInstanceHole, Output CastHole, Reader InsertedArgsStack] r) =>
   Interval ->
   -- | Type
   Expression ->
@@ -744,7 +770,7 @@ checkClauseExpression clauseLoc clauseType clausePats body = do
 -- | helper function for lambda functions and case branches
 checkClause ::
   forall r.
-  (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Termination, Output TypedInstanceHole, Output CastHole, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Termination, Output TypedInstanceHole, Output CastHole, Reader InsertedArgsStack] r) =>
   Interval ->
   -- | Type
   Expression ->
@@ -1016,7 +1042,7 @@ checkPattern = go
 
 inferExpression' ::
   forall r.
-  (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack, Reader InsertedArgsStack] r) =>
+  (Members '[HighlightBuilder, Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack, Reader InsertedArgsStack] r) =>
   TypeHint ->
   Expression ->
   Sem r TypedExpression
@@ -1028,6 +1054,7 @@ inferLeftAppExpression ::
   ( Members
       '[ Reader InfoTable,
          Reader BuiltinsTable,
+         HighlightBuilder,
          ResultBuilder,
          Reader LocalVars,
          Error TypeCheckerError,
@@ -1036,6 +1063,7 @@ inferLeftAppExpression ::
          Output TypedInstanceHole,
          Termination,
          Output CastHole,
+         HighlightBuilder,
          Reader InsertedArgsStack
        ]
       r
@@ -1263,24 +1291,34 @@ inferLeftAppExpression mhint e = case e of
 
     goIden :: Iden -> Sem r TypedExpression
     goIden i = case i of
-      IdenFunction fun -> do
-        info <- lookupFunction fun
-        return (TypedExpression (info ^. functionInfoType) (ExpressionIden i))
-      IdenConstructor c -> do
-        ty <- lookupConstructorType c
-        return (TypedExpression ty (ExpressionIden i))
       IdenVar v -> do
         ty <- lookupVar v
         return (TypedExpression ty (ExpressionIden i))
-      IdenAxiom v -> do
-        info <- lookupAxiom v
-        return (TypedExpression (info ^. axiomInfoDef . axiomType) (ExpressionIden i))
-      IdenInductive v -> do
-        kind <- lookupInductiveType v
-        return (TypedExpression kind (ExpressionIden i))
+      IdenFunction fun ->
+        goDefIden fun `runFailOrM` do
+          info <- lookupFunction fun
+          return (TypedExpression (info ^. functionInfoType) (ExpressionIden i))
+      IdenConstructor c ->
+        goDefIden c `runFailOrM` do
+          ty <- lookupConstructorType c
+          return (TypedExpression ty (ExpressionIden i))
+      IdenAxiom a ->
+        goDefIden a `runFailOrM` do
+          info <- lookupAxiom a
+          return (TypedExpression (info ^. axiomInfoDef . axiomType) (ExpressionIden i))
+      IdenInductive d ->
+        goDefIden d `runFailOrM` do
+          kind <- lookupInductiveType d
+          return (TypedExpression kind (ExpressionIden i))
+      where
+        -- TODO explain
+        goDefIden :: Name -> Sem (Fail ': r) TypedExpression
+        goDefIden name = do
+          ty <- lookupIdenType (name ^. nameId) >>= failMaybe
+          return (TypedExpression ty (ExpressionIden i))
 
 -- | The _typeHint is used for trailing holes only
-holesHelper :: forall r. (Members '[Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack] r) => TypeHint -> Expression -> Sem r TypedExpression
+holesHelper :: forall r. (Members '[HighlightBuilder, Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack] r) => TypeHint -> Expression -> Sem r TypedExpression
 holesHelper mhint expr = do
   let (f, args) = unfoldExpressionApp expr
       hint

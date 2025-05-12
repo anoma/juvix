@@ -49,6 +49,14 @@ runFailDefaultM ::
 runFailDefaultM defaultVal s = fromMaybeM defaultVal (runFail s)
 {-# INLINE runFailDefaultM #-}
 
+-- | `runFailDefaultM` with arguments swappped
+runFailOrM ::
+  Sem (Fail ': r) a ->
+  Sem r a ->
+  Sem r a
+runFailOrM = flip runFailDefaultM
+{-# INLINE runFailOrM #-}
+
 ignoreFail ::
   Sem (Fail ': r) a ->
   Sem r ()
