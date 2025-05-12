@@ -428,6 +428,7 @@ nockHintName = \case
 
 nockHintValue :: NockHint -> Natural
 nockHintValue = \case
+  -- TODO replace 0x73747570 with `byteStringToNatural (encodeUtf8 "puts")`
   NockHintPuts -> 0x73747570
 
 nockHintAtom :: NockHint -> Term Natural
@@ -559,9 +560,6 @@ opQuote txt p = TermCell (txt @ OpQuote #. p)
 
 opTrace :: Term Natural -> Term Natural
 opTrace val = OpHint # (nockHintAtom NockHintPuts # val) # val
-
-opTrace' :: Term Natural -> Term Natural -> Term Natural
-opTrace' msg val = OpHint # (nockNilTagged "opTrace'" # msg) # val
 
 {-# COMPLETE Cell #-}
 
