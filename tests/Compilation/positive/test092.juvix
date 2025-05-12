@@ -29,6 +29,7 @@ module Parity;
       e1 : uint 20 := uint.mk 87;
       e2 : uint zero := uint.mk 87;
       e3 : uint (suc 0) := uint.mk 87;
+      e4 : uint (suc two) := uint.mk 87;
       p1 : Unit := checkEven zero;
       p3 : Unit := checkOdd (suc 0);
       p2 : Unit := checkEven 2;
