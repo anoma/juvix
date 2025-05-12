@@ -54,15 +54,16 @@ with
         | (uint.mk val) := Show.show (suc bytes) ++str ":" ++str Show.show val;
     };
 
-
-main : _ :=
-  let
-    e1 : uint 20 := uint.mk 3;
-    e2 : uint (suc 9) := uint.mk 2;
-    e3 : uint (suc zero) := uint.mk 1;
-  in printStringLn (Show.show e1)
-    >>> printStringLn (Show.show e2)
-    >>> printStringLn (Show.show e3);
+  main : _ :=
+    let
+      one : Nat := suc zero;
+      e1 : uint 20 := uint.mk 3;
+      e2 : uint (suc 9) := uint.mk 2;
+      e3 : uint (suc zero) := uint.mk 1;
+      e4 : uint (suc one) := uint.mk 1;
+    in printStringLn (Show.show e1)
+      >>> printStringLn (Show.show e2)
+      >>> printStringLn (Show.show e3);
 end;
 
 module Le;
@@ -83,6 +84,34 @@ module Le;
   example1 : Unit := le 1 5;
 
   example2 : Unit := le 4 4;
+end;
+
+module EqTy;
+  syntax operator '== comparison;
+
+  trait
+  type '== (a b : Nat) := truth
+  with
+    instance
+    eq-zero : zero '== zero := truth;
+
+    instance
+    eq-suc {a b : Nat} {{a '== b}} : suc a '== suc b := truth;
+  end;
+
+  equal (a b : Nat) {{a '== b}} : Unit := unit;
+
+  example1 : Unit := equal (suc (suc (suc zero))) (suc (suc (suc zero)));
+
+  example2 : Unit := equal (suc (suc (suc zero))) 3;
+
+  example3 : Unit := equal 3 3;
+
+  example4 : Unit := equal (suc 2) 3;
+
+  two : Nat := 2;
+
+  example5 : Unit := equal (suc two) 3;
 end;
 
 open uint using {main} public;
