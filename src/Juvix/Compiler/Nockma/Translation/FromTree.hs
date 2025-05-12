@@ -1177,7 +1177,7 @@ goConstructor mr t args = assert (all isCell args) $
   case t of
     Tree.BuiltinTag b -> case nockmaBuiltinTag b of
       Just (NockmaBuiltinBool v) -> nockBoolLiteral v
-      Just (NockmaBuiltinJson s) -> nockStringLiteral s
+      Just (NockmaBuiltinJson s) -> foldTerms (nockStringLiteral s :| args)
       Nothing -> crash
     Tree.UserTag tag -> case mr of
       NockmaMemRepConstr ->

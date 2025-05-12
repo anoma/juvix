@@ -2,6 +2,7 @@ module Anoma.Client.Positive where
 
 import Anoma.Client.Base
 import Anoma.Effect
+import Anoma.Http.AddTransaction (TransactionType (TransactionTransparent))
 import Base
 import Juvix.Compiler.Nockma.Language hiding (Path)
 import Juvix.Prelude.Pretty
@@ -54,7 +55,8 @@ proveAndSubmit program proveArgs = do
   step "Submitting transaction candidate"
   addTransaction
     AddTransactionInput
-      { _addTransactionInputCandidate = resProve ^. runNockmaResult
+      { _addTransactionInputCandidate = resProve ^. runNockmaResult,
+        _addTransactionInputType = TransactionTransparent
       }
   return (resProve ^. runNockmaTraces)
 

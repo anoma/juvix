@@ -10,8 +10,9 @@ import Juvix.Compiler.Nockma.Language qualified as Nockma
 import Juvix.Prelude
 import Juvix.Prelude.Aeson qualified as Aeson
 
-newtype AddTransactionInput = AddTransactionInput
-  { _addTransactionInputCandidate :: Nockma.Term Natural
+data AddTransactionInput = AddTransactionInput
+  { _addTransactionInputCandidate :: Nockma.Term Natural,
+    _addTransactionInputType :: TransactionType
   }
 
 makeLenses ''AddTransactionInput
