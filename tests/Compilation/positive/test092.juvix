@@ -57,13 +57,16 @@ with
   main : _ :=
     let
       one : Nat := suc zero;
+      e0 : uint zero := uint.mk 3;
       e1 : uint 20 := uint.mk 3;
       e2 : uint (suc 9) := uint.mk 2;
       e3 : uint (suc zero) := uint.mk 1;
       e4 : uint (suc one) := uint.mk 1;
-    in printStringLn (Show.show e1)
+    in printStringLn (Show.show e0)
+      >>> printStringLn (Show.show e1)
       >>> printStringLn (Show.show e2)
-      >>> printStringLn (Show.show e3);
+      >>> printStringLn (Show.show e3)
+      >>> printStringLn (Show.show e4);
 end;
 
 module Lits;
@@ -76,6 +79,7 @@ module Lits;
   t (n : Nat) {{IsThree n}} : Unit := unit;
 
   e1 : Unit := t 3;
+
   e2 : Unit := t (suc (suc 1));
 end;
 

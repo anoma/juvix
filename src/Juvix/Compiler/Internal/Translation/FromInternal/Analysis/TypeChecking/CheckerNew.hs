@@ -68,9 +68,8 @@ data AppBuilder = AppBuilder
     _appBuilderArgs :: [AppBuilderArg]
   }
 
-data TypeHint = TypeHint
-  { _typeHint :: Maybe Expression,
-    _typeHintTypeNatural :: Bool
+newtype TypeHint = TypeHint
+  { _typeHint :: Maybe Expression
   }
 
 makeLenses ''TypeHint
@@ -82,15 +81,13 @@ makeLenses ''FunctionDefaultInfo
 mkTypeHint :: Maybe Expression -> TypeHint
 mkTypeHint ty =
   TypeHint
-    { _typeHint = ty,
-      _typeHintTypeNatural = False
+    { _typeHint = ty
     }
 
 emptyTypeHint :: TypeHint
 emptyTypeHint =
   TypeHint
-    { _typeHint = Nothing,
-      _typeHintTypeNatural = False
+    { _typeHint = Nothing
     }
 
 instance PrettyCode FunctionDefault where
@@ -620,8 +617,7 @@ checkExpression ::
 checkExpression expectedTy e = do
   let hint =
         TypeHint
-          { _typeHint = Just expectedTy,
-            _typeHintTypeNatural = False
+          { _typeHint = Just expectedTy
           }
   e' <- inferExpression' hint e
   let inferredType = e' ^. typedType
@@ -664,14 +660,12 @@ resolveInstanceHoles s = do
             return (h ^. typedInstanceHoleHole, h')
           | h <- hs
         ]
-  -- FIXME remove inferenceSubsInstanceHoles
-  -- inferenceSubsInstanceHoles subs
   subsInstanceHoles subs e
   where
     -- Recursively resolve an instance hole
     goResolve :: TypedInstanceHole -> Sem r Expression
     goResolve h0 = do
-      -- this is only to insert instance holes ??
+      -- is this only to insert instance holes?
       h@TypedInstanceHole {..} <-
         resolveInstanceHoles
           . resolveCastHoles
@@ -1129,7 +1123,6 @@ inferLeftAppExpression mhint e = case e of
     goInstanceHole :: InstanceHole -> Sem r TypedExpression
     goInstanceHole h = do
       let ty = fromMaybe impossible (mhint ^. typeHint)
-      -- traceM ("goInstanceHole: " <> ppTrace ty)
       locals <- ask
       output (TypedInstanceHole h ty locals)
       return
@@ -1251,14 +1244,11 @@ inferLeftAppExpression mhint e = case e of
             }
       where
         typedLitNumeric :: Integer -> Sem r TypedExpression
-        typedLitNumeric v
-          --- | mhint ^. typeHintTypeNatural, v >= 0 = unaryXNatural i (fromInteger v)
-          | mhint ^. typeHintTypeNatural, v >= 0 = error "NO?"
-          | otherwise = do
-              castHole v
-              if
-                  | v < 0 -> getIntTy i >>= typedLit LitInteger BuiltinFromInt
-                  | otherwise -> getNatTy i >>= typedLit (LitNatural . fromInteger) BuiltinFromNat
+        typedLitNumeric v = do
+          castHole v
+          if
+              | v < 0 -> getIntTy i >>= typedLit LitInteger BuiltinFromInt
+              | otherwise -> getNatTy i >>= typedLit (LitNatural . fromInteger) BuiltinFromNat
           where
             typedLit :: (Integer -> Literal) -> BuiltinFunction -> Expression -> Sem r TypedExpression
             typedLit litt blt ty = do
