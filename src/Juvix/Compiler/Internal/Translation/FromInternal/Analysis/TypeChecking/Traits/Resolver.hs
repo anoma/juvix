@@ -42,8 +42,6 @@ resolveTraitInstance TypedInstanceHole {..} = do
       tab = foldr (flip updateInstanceTable) tab0 vars2instances
       ctab = combtabs ^. typeCheckingTablesCoercionTable
   ty <- strongNormalize _typedInstanceHoleType
-  -- traceM ("lookup instance original : " <> ppTrace (ty ^. normalizedExpressionOriginal))
-  -- traceM ("lookup instance normalized : " <> ppTrace (ty ^. normalizedExpression))
   is <- lookupInstance ctab tab (ty ^. normalizedExpression)
   case is of
     [(cs, ii, subs)] -> do
