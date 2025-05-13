@@ -1403,9 +1403,7 @@ goNatural b = do
   plusIden <- Internal.IdenFunction . fromRight err <$> runError @Builtins.BuiltinNotDefined (Builtins.getBuiltinName (getLoc b) BuiltinNatPlus)
   plus <- goIden plusIden
   let num :: Node = mkConstant' (ConstInteger (fromIntegral (b ^. Internal.builtinNaturalSuc)))
-
   arg <- goExpression (b ^. Internal.builtinNaturalArg)
-
   return (mkApps' plus [num, arg])
 
 goIden ::
