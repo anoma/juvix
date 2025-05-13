@@ -533,8 +533,13 @@ runInferenceState inis = reinterpret (runState inis) $ \case
 
                 goNatural :: BuiltinNatural -> BuiltinNatural -> Sem r (Maybe MatchError)
                 goNatural a b
-                  | a ^. builtinNaturalSuc == b ^. builtinNaturalSuc = go (a ^. builtinNaturalArg) (b ^. builtinNaturalArg)
+                  | sa == sb = go (a ^. builtinNaturalArg) (b ^. builtinNaturalArg)
+                  | sa > sb = go (a ^. builtinNaturalArg) (ExpressionNatural (over builtinNaturalSuc (subtract sa) b))
+                  | sa < sb = go (ExpressionNatural (over builtinNaturalSuc (subtract sb) a)) (b ^. builtinNaturalArg)
                   | otherwise = err
+                  where
+                    sa = a ^. builtinNaturalSuc
+                    sb = b ^. builtinNaturalSuc
 
                 goHole :: Hole -> Expression -> Sem r (Maybe MatchError)
                 goHole h t = do
