@@ -462,7 +462,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     goExpression'' :: NameSet -> NameMap -> Internal.Expression -> Expression
     goExpression'' nset nmap e =
-      run $ runReader nset $ runReader nmap $ goExpression e
+      run . runReader nset . runReader nmap $ goExpression e
 
     goExpression :: forall r. (Members '[Reader NameSet, Reader NameMap] r) => Internal.Expression -> Sem r Expression
     goExpression = \case
@@ -477,19 +477,24 @@ goModule onlyTypes infoTable Internal.Module {..} =
       Internal.ExpressionSimpleLambda x -> goSimpleLambda x
       Internal.ExpressionLambda x -> goLambda x
       Internal.ExpressionCase x -> goCase x
-      Internal.ExpressionNatural {} -> error "TODO"
+      Internal.ExpressionNatural n -> goNatural n
       where
+        goNatural :: Internal.BuiltinNatural -> Sem r Expression
+        goNatural = error "not implemented"
+
+        nameIsZero :: Name -> Bool
+        nameIsZero constrName = isJust $ do
+          ctrInfo <- HashMap.lookup constrName (infoTable ^. Internal.infoConstructors)
+          Internal.BuiltinNatZero <- ctrInfo ^. Internal.constructorInfoBuiltin
+          return ()
+
         goIden :: Internal.Iden -> Sem r Expression
         goIden iden = case iden of
           Internal.IdenFunction name -> do
             goFunName <$> lookupName name
-          Internal.IdenConstructor name ->
-            case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
-              Just ctrInfo ->
-                case ctrInfo ^. Internal.constructorInfoBuiltin of
-                  Just Internal.BuiltinNatZero -> return $ ExprLiteral (WithLoc (getLoc name) (LitNumeric 0))
-                  _ -> return $ ExprIden (goConstrName name)
-              Nothing -> return $ ExprIden (goConstrName name)
+          Internal.IdenConstructor name
+            | nameIsZero name -> return $ ExprLiteral (WithLoc (getLoc name) (LitNumeric 0))
+            | otherwise -> return $ ExprIden (goConstrName name)
           Internal.IdenVar name -> do
             lookupName name
           Internal.IdenAxiom name -> return $ ExprIden (overNameText quote name)

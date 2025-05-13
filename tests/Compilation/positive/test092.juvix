@@ -63,7 +63,8 @@ with
       e4 : uint (suc one) := uint.mk 1;
     in printStringLn (Show.show e1)
       >>> printStringLn (Show.show e2)
-      >>> printStringLn (Show.show e3);
+      >>> printStringLn (Show.show e3)
+      >>> printStringLn (Show.show 4);
 end;
 
 module Le;

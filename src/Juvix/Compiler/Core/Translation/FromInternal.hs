@@ -14,6 +14,8 @@ import Juvix.Compiler.Core.Info.PragmaInfo
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Int
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat
 import Juvix.Compiler.Core.Translation.FromInternal.Data
+import Juvix.Compiler.Internal.Builtins (BuiltinsTable)
+import Juvix.Compiler.Internal.Builtins qualified as Builtins
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
@@ -22,7 +24,6 @@ import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qu
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Compiler.Store.Extra qualified as Store
 import Juvix.Compiler.Store.Language qualified as Store
-import Juvix.Compiler.Store.Scoped.Data.InfoTable (BuiltinsTable)
 import Juvix.Data.Loc qualified as Loc
 import Juvix.Extra.Strings qualified as Str
 
@@ -1381,11 +1382,31 @@ addPatternVariableNames p lvl vars =
       Internal.PatternConstructorApp {} -> impossible
       Internal.PatternWildcardConstructor {} -> impossible
 
--- FIXME don't ingore the arg
 goNatural ::
+  ( Members
+      '[ Reader BuiltinsTable,
+         Reader InternalTyped.TypesTable,
+         Reader InternalTyped.FunctionsTable,
+         InfoTableBuilder,
+         Reader InternalTyped.FunctionsTable,
+         Reader Internal.InfoTable,
+         Reader IndexTable,
+         Error BadScope,
+         NameIdGen
+       ]
+      r
+  ) =>
   Internal.BuiltinNatural ->
   Sem r Node
-goNatural b = return (mkConstant' (ConstInteger (fromIntegral (b ^. Internal.builtinNaturalSuc))))
+goNatural b = do
+  let err :: Internal.Name = error ("builtin " <> prettyText BuiltinNatPlus <> " must be defined")
+  plusIden <- Internal.IdenFunction . fromRight err <$> runError @Builtins.BuiltinNotDefined (Builtins.getBuiltinName (getLoc b) BuiltinNatPlus)
+  plus <- goIden plusIden
+  let num :: Node = mkConstant' (ConstInteger (fromIntegral (b ^. Internal.builtinNaturalSuc)))
+
+  arg <- goExpression (b ^. Internal.builtinNaturalArg)
+
+  return (mkApps' plus [num, arg])
 
 goIden ::
   forall r.
