@@ -302,9 +302,6 @@ lookupInstance ::
   InstanceTable ->
   Expression ->
   Sem r [(CoercionChain, InstanceInfo, SubsI)]
-lookupInstance ctab tab ty = do
-  m <- runFail (traitFromExpression mempty ty)
-  case m of
-    Just InstanceApp {..} -> do
-      lookupInstance' [] ctab tab (_instanceAppHead ^. instanceAppHeadName) _instanceAppArgs
-    _ -> return []
+lookupInstance ctab tab ty = runFailDefault [] $ do
+  InstanceApp {..} <- traitFromExpression mempty ty
+  lookupInstance' [] ctab tab (_instanceAppHead ^. instanceAppHeadName) _instanceAppArgs
