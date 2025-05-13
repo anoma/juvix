@@ -465,7 +465,6 @@ checkInstanceArg metaVars params fp@FunctionParameter {..} = case _paramImplicit
   Explicit -> throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
   ImplicitInstance -> do
     tab <- ask
-    -- traceM ("checkInstanceArg: " <> ppTrace _paramType)
     t <- runFail (traitFromExpression metaVars _paramType)
     case t of
       Just app@InstanceApp {..}

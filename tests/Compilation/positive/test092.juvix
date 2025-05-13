@@ -66,6 +66,19 @@ with
       >>> printStringLn (Show.show e3);
 end;
 
+module Lits;
+  trait
+  type IsThree (a : Nat) := truth;
+
+  instance
+  isThreeI : IsThree 3 := IsThree.truth;
+
+  t (n : Nat) {{IsThree n}} : Unit := unit;
+
+  e1 : Unit := t 3;
+  e2 : Unit := t (suc (suc 1));
+end;
+
 module Le;
   syntax operator '<= comparison;
 

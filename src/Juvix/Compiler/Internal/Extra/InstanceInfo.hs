@@ -81,11 +81,7 @@ paramFromExpression metaVars e = case e of
             _instanceAppExpression = e
           }
   ExpressionHole h -> return (InstanceParamHole h)
-  ExpressionApplication app ->
-    failAlts
-      [ builtinApplication app,
-        normalApplication app
-      ]
+  ExpressionApplication app -> normalApplication app
   ExpressionNatural BuiltinNatural {..} -> do
     arg <- paramFromExpression metaVars _builtinNaturalArg
     return $
@@ -108,15 +104,6 @@ paramFromExpression metaVars e = case e of
               }
   _ -> fail
   where
-    builtinApplication :: Application -> Sem (Fail ': r) InstanceParam
-    builtinApplication = builtinNatApplication
-
-    -- TODO I don't think this is needed
-    builtinNatApplication :: Application -> Sem (Fail ': r) InstanceParam
-    builtinNatApplication app = do
-      b <- ExpressionNatural <$> builtinNaturalFromApp app
-      paramFromExpression metaVars b
-
     normalApplication :: Application -> Sem (Fail ': r) InstanceParam
     normalApplication app = do
       let (h, args) = unfoldApplication app
