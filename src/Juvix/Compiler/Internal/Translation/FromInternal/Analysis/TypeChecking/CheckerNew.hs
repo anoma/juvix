@@ -665,7 +665,7 @@ resolveInstanceHoles s = do
     -- Recursively resolve an instance hole
     goResolve :: TypedInstanceHole -> Sem r Expression
     goResolve h0 = do
-      -- is this only to insert instance holes?
+      -- Needed to insert instance holes (e.g. for Natural literals)
       h@TypedInstanceHole {..} <-
         resolveInstanceHoles
           . resolveCastHoles
@@ -1300,7 +1300,8 @@ inferLeftAppExpression mhint e = case e of
           kind <- lookupInductiveType d
           return (TypedExpression kind (ExpressionIden i))
       where
-        -- TODO explain
+        -- We get the type from the ResultBuilder if available, as it may have
+        -- been further refined. If not present, we fallback to the InfoTable
         goDefIden :: Name -> Sem (Fail ': r) TypedExpression
         goDefIden name = do
           ty <- lookupIdenType (name ^. nameId) >>= failMaybe
@@ -1312,7 +1313,7 @@ holesHelper mhint expr = do
   let (f, args) = unfoldExpressionApp expr
       hint
         | null args = mhint
-        | otherwise = set typeHint Nothing mhint
+        | otherwise = emptyTypeHint
   f' <- weakNormalize f
   let typeNatHint = case f' of
         ExpressionIden IdenInductive {} -> True
