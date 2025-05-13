@@ -7,6 +7,8 @@ type FailMsg = String
 
 data NegTest = NegTest
   { _name :: String,
+    -- When False, the test will not be typechecked with the --no-termination flag
+    _terminationCanBeSkipped :: Bool,
     _relDir :: Path Rel Dir,
     _file :: Path Rel File,
     _checkErr :: TerminationError -> Maybe FailMsg
@@ -41,48 +43,56 @@ tests :: [NegTest]
 tests =
   [ NegTest
       "Mutual recursive functions non terminating"
+      True
       $(mkRelDir ".")
       $(mkRelFile "Mutual.juvix")
       $ \case
         ErrNoLexOrder {} -> Nothing,
     NegTest
       "Another mutual block non terminating"
+      True
       $(mkRelDir ".")
       $(mkRelFile "Ord.juvix")
       $ \case
         ErrNoLexOrder {} -> Nothing,
     NegTest
       "Only one function, f, marked terminating in a mutual block"
+      True
       $(mkRelDir ".")
       $(mkRelFile "TerminatingF.juvix")
       $ \case
         ErrNoLexOrder {} -> Nothing,
     NegTest
       "Only one function, g, marked terminating in a mutual block"
+      True
       $(mkRelDir ".")
       $(mkRelFile "TerminatingG.juvix")
       $ \case
         ErrNoLexOrder {} -> Nothing,
     NegTest
       "Tree"
+      True
       $(mkRelDir ".")
       $(mkRelFile "Data/Tree.juvix")
       $ \case
         ErrNoLexOrder {} -> Nothing,
     NegTest
       "Quicksort is not terminating"
+      True
       $(mkRelDir ".")
       $(mkRelFile "Data/QuickSort.juvix")
       $ \case
         ErrNoLexOrder {} -> Nothing,
     NegTest
       "Loop in axiom type"
+      False
       $(mkRelDir ".")
       $(mkRelFile "Axiom.juvix")
       $ \case
         ErrNoLexOrder {} -> Nothing,
     NegTest
       "Loop with default arguments"
+      True
       $(mkRelDir ".")
       $(mkRelFile "DefaultArguments.juvix")
       $ \case
