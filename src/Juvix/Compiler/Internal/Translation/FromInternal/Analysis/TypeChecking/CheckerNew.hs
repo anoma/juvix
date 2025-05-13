@@ -665,8 +665,8 @@ resolveInstanceHoles s = do
             return (h ^. typedInstanceHoleHole, h')
           | h <- hs
         ]
-  -- TODO revise whether inferenceSubsInstanceHoles is needed
-  inferenceSubsInstanceHoles subs
+  -- FIXME remove inferenceSubsInstanceHoles
+  -- inferenceSubsInstanceHoles subs
   subsInstanceHoles subs e
   where
     -- Recursively resolve an instance hole
