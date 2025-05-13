@@ -1314,10 +1314,6 @@ holesHelper mhint expr = do
       hint
         | null args = mhint
         | otherwise = emptyTypeHint
-  f' <- weakNormalize f
-  let typeNatHint = case f' of
-        ExpressionIden IdenInductive {} -> True
-        _ -> False
   arityCheckBuiltins f args
   fTy <- inferLeftAppExpression hint f
 
@@ -1335,7 +1331,7 @@ holesHelper mhint expr = do
             _appBuilderTypeCtx = mempty,
             _appBuilderArgs = map iniArg args
           }
-  (insertedArgs, st') <- runOutputList (execState iniBuilder (goAllArgs typeNatHint))
+  (insertedArgs, st') <- runOutputList (execState iniBuilder goAllArgs)
   let ty' = mkFinalBuilderType (st' ^. appBuilderType)
       expr' = mkFinalExpression (st' ^. appBuilderLeft) insertedArgs
   return
@@ -1451,13 +1447,13 @@ holesHelper mhint expr = do
         goImplArgs k (ApplicationArg Implicit _ : as) = goImplArgs (k - 1) as
         goImplArgs _ as = return as
 
-    goAllArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Bool -> Sem r' ()
-    goAllArgs tyNat = do
-      goArgs tyNat
+    goAllArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Sem r' ()
+    goAllArgs = do
+      goArgs
       gets (^. appBuilderType) >>= applyCtx >>= modify' . set appBuilderType
 
-    goArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Bool -> Sem r' ()
-    goArgs tyNat = peekArg >>= maybe (insertTrailingHolesMay (mhint ^. typeHint)) goNextArg
+    goArgs :: forall r'. (r' ~ State AppBuilder ': Output InsertedArg ': r) => Sem r' ()
+    goArgs = peekArg >>= maybe (insertTrailingHolesMay (mhint ^. typeHint)) goNextArg
       where
         insertTrailingHolesMay :: Maybe Expression -> Sem r' ()
         insertTrailingHolesMay = flip whenJust insertTrailingHoles
@@ -1568,7 +1564,7 @@ holesHelper mhint expr = do
             insertMiddleHoleOrCheck fun argImpl =
               let funParam = fun ^. functionDefaultLeft
                   funImpl = funParam ^. paramImplicit
-                  checkThisArg = checkMatchingArg arg fun >> goArgs tyNat
+                  checkThisArg = checkMatchingArg arg fun >> goArgs
                in case (argImpl, funImpl) of
                     (Explicit, Explicit) -> checkThisArg
                     (Implicit, Implicit) -> checkThisArg
@@ -1596,7 +1592,7 @@ holesHelper mhint expr = do
                             _appBuilderArgIsDefault
                           }
                   modify' (over appBuilderArgs (a :))
-                  goArgs tyNat
+                  goArgs
 
         throwExpectedExplicit :: ApplicationArg -> Sem r' a
         throwExpectedExplicit arg = do
