@@ -214,9 +214,8 @@ lookupFunctionMaybe :: forall r. (Member (Reader InfoTable) r) => Name -> Sem r 
 lookupFunctionMaybe f = HashMap.lookup f <$> asks (^. infoFunctions)
 
 lookupFunction :: forall r. (Member (Reader InfoTable) r) => Name -> Sem r FunctionInfo
-lookupFunction f = do
-  err <- impossibleErr
-  fromMaybe err <$> lookupFunctionMaybe f
+lookupFunction f =
+  fromMaybeM impossibleErr (lookupFunctionMaybe f)
   where
     impossibleErr :: Sem r a
     impossibleErr = do

@@ -1,6 +1,15 @@
 module Mutual;
 
-import Stdlib.Prelude open;
+type Nat :=
+  | zero
+  | suc Nat;
+
+type Bool :=
+  | false
+  | true;
+
+open Nat;
+open Bool;
 
 odd : _
   | zero := false
