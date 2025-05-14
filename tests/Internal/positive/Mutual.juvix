@@ -1,9 +1,11 @@
 module Mutual;
 
+builtin nat
 type Nat :=
   | zero
   | suc Nat;
 
+builtin bool
 type Bool :=
   | false
   | true;

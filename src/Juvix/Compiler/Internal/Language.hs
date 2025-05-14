@@ -770,3 +770,18 @@ idenName f = \case
   IdenVar v -> IdenVar <$> f v
   IdenInductive i -> IdenInductive <$> f i
   IdenAxiom a -> IdenAxiom <$> f a
+
+simpleBinderToFunctionParameter :: SimpleBinder -> FunctionParameter
+simpleBinderToFunctionParameter SimpleBinder {..} =
+  FunctionParameter
+    { _paramImplicit = Explicit,
+      _paramName = Just _sbinderVar,
+      _paramType = _sbinderType
+    }
+
+simpleLambdaToFunction :: SimpleLambda -> Function
+simpleLambdaToFunction SimpleLambda {..} =
+  Function
+    { _functionLeft = simpleBinderToFunctionParameter _slambdaBinder,
+      _functionRight = _slambdaBody
+    }

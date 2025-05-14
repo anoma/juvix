@@ -1685,7 +1685,7 @@ typeArity = weakNormalize >=> go
       ExpressionLambda {} -> return ArityError
       ExpressionCase {} -> return ArityNotKnown -- TODO Do better here
       ExpressionUniverse {} -> return ArityUnit
-      ExpressionSimpleLambda {} -> return simplelambda
+      ExpressionSimpleLambda l -> ArityFunction <$> goSimpleLambda l
       ExpressionLet l -> goLet l
 
     -- It will be a type error since there are no literals that are types at the moment
@@ -1736,6 +1736,9 @@ typeArity = weakNormalize >=> go
             _functionArityRight = r'
           }
 
+    goSimpleLambda :: SimpleLambda -> Sem r FunctionArity
+    goSimpleLambda s = goFun (simpleLambdaToFunction s)
+
 guessArity ::
   forall r.
   (Members '[ResultBuilder, Reader InfoTable, Inference, Reader LocalVars] r) =>
@@ -1744,19 +1747,25 @@ guessArity ::
 guessArity = \case
   ExpressionHole {} -> return ArityNotKnown
   ExpressionInstanceHole {} -> return ArityUnit
-  ExpressionFunction {} -> return ArityUnit
+  ExpressionFunction f -> return (arityFunction f)
   ExpressionNatural {} -> return ArityUnit
   ExpressionLiteral {} -> return arityLiteral
   ExpressionApplication a -> appHelper a
   ExpressionIden i -> idenHelper i
   ExpressionUniverse {} -> return arityUniverse
-  ExpressionSimpleLambda {} -> return simplelambda
+  ExpressionSimpleLambda l -> return (aritySimpleLambda l)
   ExpressionLambda l -> arityLambda l
   ExpressionLet l -> arityLet l
   ExpressionCase l -> arityCase l
   where
     idenHelper :: Iden -> Sem r Arity
     idenHelper = idenArity
+
+    arityFunction :: Function -> Arity
+    arityFunction = const ArityUnit
+
+    aritySimpleLambda :: SimpleLambda -> Arity
+    aritySimpleLambda s = arityFunction (simpleLambdaToFunction s)
 
     appHelper :: Application -> Sem r Arity
     appHelper a = do
@@ -1787,9 +1796,6 @@ arityLiteral = ArityUnit
 
 arityUniverse :: Arity
 arityUniverse = ArityUnit
-
-simplelambda :: Arity
-simplelambda = ArityError
 
 arityLambda :: forall r. (Members '[ResultBuilder, Reader InfoTable, Inference, Reader LocalVars] r) => Lambda -> Sem r Arity
 arityLambda l = do
@@ -1862,26 +1868,40 @@ idenArity i = case i of
   IdenFunction f -> do
     ari <- idenType' >>= typeArity
     defaults <- (^. functionInfoArgsInfo) <$> lookupFunction f
-    return (addArgsInfo defaults ari)
-  IdenConstructor {} -> idenType' >>= typeArity
+    return (addArgsInfo f defaults ari)
+  IdenConstructor {} -> do
+    idenType' >>= typeArity
   IdenAxiom {} -> idenType' >>= typeArity
   where
     idenType' :: Sem r Expression
-    idenType' = (^. typedExpression) <$> idenType i
+    idenType' = (^. typedType) <$> idenType i
 
-addArgsInfo :: [ArgInfo] -> Arity -> Arity
-addArgsInfo = unfoldingArity . helper
+addArgsInfo :: FunctionName -> [ArgInfo] -> Arity -> Arity
+addArgsInfo fun topArgs ari = unfoldingArity helper ari
   where
-    helper :: [ArgInfo] -> UnfoldedArity -> UnfoldedArity
-    helper = over ufoldArityParams . go
-
-    go :: [ArgInfo] -> [ArityParameter] -> [ArityParameter]
-    go infos params = case infos of
-      [] -> params
-      info : infos' -> case params of
-        [] -> []
-        para : params' ->
-          set arityParameterInfo info para : go infos' params'
+    helper :: UnfoldedArity -> UnfoldedArity
+    helper topAris = over ufoldArityParams (go topArgs) topAris
+      where
+        go :: [ArgInfo] -> [ArityParameter] -> [ArityParameter]
+        go infos params = case infos of
+          [] -> params
+          info : infos' -> case params of
+            [] -> err
+            para : params' ->
+              set arityParameterInfo info para : go infos' params'
+          where
+            err :: [ArityParameter]
+            err =
+              impossibleError $
+                "There are more ArgInfo than ArityParameter for function "
+                  <> ppTrace fun
+                  <> "\n"
+                  <> "[ArgInfo] = "
+                  <> ppTrace infos
+                  <> "\n[ArityParameter] = "
+                  <> ppTrace (topAris ^. ufoldArityParams)
+                  <> "\nArity = "
+                  <> ppTrace ari
 
 getLocalArity :: (Members '[Reader LocalVars, Inference] r) => VarName -> Sem r Arity
 getLocalArity v = do
