@@ -1,0 +1,43 @@
+module test092-debug;
+
+import Stdlib.Prelude open hiding {Pair; module Pair};
+
+type Pair := pair Nat Nat;
+
+open Pair;
+
+trait
+type ToPair (A : Type) :=
+  mk@{
+    toPair : A -> Pair;
+  };
+
+open ToPair using {toPair};
+
+type uint (bytes : Nat) := mk Nat
+with
+  instance
+  Show-uint {bytes : Nat} : Show (uint bytes) :=
+    Show.mk@{
+      show : uint bytes -> String
+        | (uint.mk val) := Show.show bytes ++str " " ++str Show.show val;
+    };
+
+  instance
+  Pair-uint {bytes : Nat} : ToPair (uint bytes) :=
+    ToPair.mk@{
+      toPair : uint bytes -> Pair
+        | (uint.mk val) := pair bytes val;
+    };
+
+  main : _ :=
+    let
+      e : uint 1 := uint.mk 99;
+      e1 : uint 1 := uint.mk 99;
+    in printStringLn (Show.show e)
+      >>> printStringLn (Show.show e1)
+      >>> printStringLn (Show.show e1)
+>-> [toPair e; toPair e; toPair e];
+end;
+
+open uint using {main} public;
