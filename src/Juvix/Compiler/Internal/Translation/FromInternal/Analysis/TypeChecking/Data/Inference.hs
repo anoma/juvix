@@ -86,10 +86,9 @@ closeState ::
     ( HashMap Hole Expression,
       TypesTable
     )
-closeState = \case
-  InferenceState {..} -> do
-    holeMap <- execState mempty (f _inferenceMap)
-    return (holeMap, _inferenceIdens)
+closeState InferenceState {..} = do
+  holeMap <- execState mempty (f _inferenceMap)
+  return (holeMap, _inferenceIdens)
   where
     f ::
       forall r'.
@@ -103,6 +102,7 @@ closeState = \case
           where
             err :: a
             err = error ("Impossible: could not find the state for the hole " <> ppTrace h)
+
         goHole :: Hole -> Sem r' Expression
         goHole h =
           let st = getState h
@@ -122,6 +122,7 @@ closeState = \case
                       x <- goExpression t
                       modify (HashMap.insert h x)
                       return x
+
         goExpression :: Expression -> Sem r' Expression
         goExpression = umapM aux
           where
@@ -130,7 +131,7 @@ closeState = \case
               ExpressionHole h -> goHole h
               e -> return (toExpression e)
 
-getMetavar :: (Member (State InferenceState) r) => Hole -> Sem r MetavarState
+getMetavar :: (HasCallStack, Member (State InferenceState) r) => Hole -> Sem r MetavarState
 getMetavar h = do
   void (queryMetavar' h)
   gets (fromJust . (^. inferenceMap . at h))
@@ -289,7 +290,7 @@ normalizeNatural w n = case squashBuiltinNatural n of
   Left m -> squashBuiltinNatural' <$> traverseOf builtinNaturalArg (normalize w) m
   Right e -> normalize w e
 
-weakNormalize' :: forall r. (Members '[Reader BuiltinsTable, ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
+weakNormalize' :: forall r. (HasCallStack, Members '[Reader BuiltinsTable, ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
 weakNormalize' = go
   where
     go :: Expression -> Sem r Expression
@@ -354,7 +355,8 @@ normalizeWhenStrong = \case
 {-# INLINE normalizeWhenStrong #-}
 
 normalizeHole ::
-  ( Members
+  ( HasCallStack,
+    Members
       '[ Reader BuiltinsTable,
          State InferenceState,
          ResultBuilder,
@@ -648,7 +650,7 @@ matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
     err = return False
 
 runInferenceDefs ::
-  (Members '[Termination, Reader BuiltinsTable, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
+  (HasCallStack, Members '[Termination, Reader BuiltinsTable, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
   Sem (Inference ': r) (NonEmpty funDef) ->
   Sem r (NonEmpty funDef)
 runInferenceDefs a = do
