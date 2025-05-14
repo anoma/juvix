@@ -289,7 +289,7 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
 
 checkTopMutualBlock ::
   forall r.
-  (Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
+  (HasCallStack, Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
   MutualBlock ->
   Sem r MutualBlock
 checkTopMutualBlock (MutualBlock ds) =
@@ -1066,7 +1066,7 @@ inferLeftAppExpression ::
   Sem r TypedExpression
 inferLeftAppExpression mhint e = case e of
   ExpressionApplication {} -> impossible
-  ExpressionIden i -> goIden i
+  ExpressionIden i -> idenType i
   ExpressionLiteral l -> goLiteral l
   ExpressionNatural n -> goNatural n
   ExpressionFunction f -> goFunction f
@@ -1278,34 +1278,34 @@ inferLeftAppExpression mhint e = case e of
                       | otherwise -> outCastHole CastNat
             _ -> return ()
 
-    goIden :: Iden -> Sem r TypedExpression
-    goIden i = case i of
-      IdenVar v -> do
-        ty <- lookupVar v
-        return (TypedExpression ty (ExpressionIden i))
-      IdenFunction fun ->
-        goDefIden fun `runFailOrM` do
-          info <- lookupFunction fun
-          return (TypedExpression (info ^. functionInfoType) (ExpressionIden i))
-      IdenConstructor c ->
-        goDefIden c `runFailOrM` do
-          ty <- lookupConstructorType c
-          return (TypedExpression ty (ExpressionIden i))
-      IdenAxiom a ->
-        goDefIden a `runFailOrM` do
-          info <- lookupAxiom a
-          return (TypedExpression (info ^. axiomInfoDef . axiomType) (ExpressionIden i))
-      IdenInductive d ->
-        goDefIden d `runFailOrM` do
-          kind <- lookupInductiveType d
-          return (TypedExpression kind (ExpressionIden i))
-      where
-        -- We get the type from the ResultBuilder if available, as it may have
-        -- been further refined. If not present, we fallback to the InfoTable
-        goDefIden :: Name -> Sem (Fail ': r) TypedExpression
-        goDefIden name = do
-          ty <- lookupIdenType (name ^. nameId) >>= failMaybe
-          return (TypedExpression ty (ExpressionIden i))
+idenType :: forall r. (Members '[Reader LocalVars, Reader InfoTable, ResultBuilder] r) => Iden -> Sem r TypedExpression
+idenType i = case i of
+  IdenVar v -> do
+    ty <- lookupVar v
+    return (TypedExpression ty (ExpressionIden i))
+  IdenFunction fun ->
+    goDefIden fun `runFailOrM` do
+      info <- lookupFunction fun
+      return (TypedExpression (info ^. functionInfoType) (ExpressionIden i))
+  IdenConstructor c ->
+    goDefIden c `runFailOrM` do
+      ty <- lookupConstructorType c
+      return (TypedExpression ty (ExpressionIden i))
+  IdenAxiom a ->
+    goDefIden a `runFailOrM` do
+      info <- lookupAxiom a
+      return (TypedExpression (info ^. axiomInfoDef . axiomType) (ExpressionIden i))
+  IdenInductive d ->
+    goDefIden d `runFailOrM` do
+      kind <- lookupInductiveType d
+      return (TypedExpression kind (ExpressionIden i))
+  where
+    -- We get the type from the ResultBuilder if available, as it may have
+    -- been further refined. If not present, we fallback to the InfoTable
+    goDefIden :: Name -> Sem (Fail ': r) TypedExpression
+    goDefIden name = do
+      ty <- lookupIdenType (name ^. nameId) >>= failMaybe
+      return (TypedExpression ty (ExpressionIden i))
 
 -- | The _typeHint is used for trailing holes only
 holesHelper :: forall r. (Members '[HighlightBuilder, Reader InfoTable, Reader BuiltinsTable, ResultBuilder, Reader LocalVars, Error TypeCheckerError, NameIdGen, Inference, Output TypedInstanceHole, Termination, Output CastHole, Reader InsertedArgsStack] r) => TypeHint -> Expression -> Sem r TypedExpression
@@ -1670,7 +1670,7 @@ viewInductiveApp ty = do
         second (`snoc` r) (viewTypeApp l)
       _ -> (tyapp, [])
 
-typeArity :: forall r. (Members '[Inference, Reader LocalVars] r) => Expression -> Sem r Arity
+typeArity :: forall r. (HasCallStack, Members '[Inference, Reader LocalVars] r) => Expression -> Sem r Arity
 typeArity = weakNormalize >=> go
   where
     go :: Expression -> Sem r Arity
@@ -1685,7 +1685,7 @@ typeArity = weakNormalize >=> go
       ExpressionLambda {} -> return ArityError
       ExpressionCase {} -> return ArityNotKnown -- TODO Do better here
       ExpressionUniverse {} -> return ArityUnit
-      ExpressionSimpleLambda {} -> simplelambda
+      ExpressionSimpleLambda {} -> return simplelambda
       ExpressionLet l -> goLet l
 
     -- It will be a type error since there are no literals that are types at the moment
@@ -1738,7 +1738,7 @@ typeArity = weakNormalize >=> go
 
 guessArity ::
   forall r.
-  (Members '[Reader InfoTable, Inference, Reader LocalVars] r) =>
+  (Members '[ResultBuilder, Reader InfoTable, Inference, Reader LocalVars] r) =>
   Expression ->
   Sem r Arity
 guessArity = \case
@@ -1750,7 +1750,7 @@ guessArity = \case
   ExpressionApplication a -> appHelper a
   ExpressionIden i -> idenHelper i
   ExpressionUniverse {} -> return arityUniverse
-  ExpressionSimpleLambda {} -> simplelambda
+  ExpressionSimpleLambda {} -> return simplelambda
   ExpressionLambda l -> arityLambda l
   ExpressionLet l -> arityLet l
   ExpressionCase l -> arityCase l
@@ -1788,10 +1788,10 @@ arityLiteral = ArityUnit
 arityUniverse :: Arity
 arityUniverse = ArityUnit
 
-simplelambda :: a
-simplelambda = error "simple lambda expressions are not supported by the arity checker"
+simplelambda :: Arity
+simplelambda = ArityError
 
-arityLambda :: forall r. (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => Lambda -> Sem r Arity
+arityLambda :: forall r. (Members '[ResultBuilder, Reader InfoTable, Inference, Reader LocalVars] r) => Lambda -> Sem r Arity
 arityLambda l = do
   aris <- mapM guessClauseArity (l ^. lambdaClauses)
   return $
@@ -1828,7 +1828,7 @@ guessPatternArgArity p =
           }
     }
 
-arityLet :: (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => Let -> Sem r Arity
+arityLet :: (Members '[ResultBuilder, Reader InfoTable, Inference, Reader LocalVars] r) => Let -> Sem r Arity
 arityLet l = guessArity (l ^. letExpression)
 
 -- | If all arities are the same, we return that, otherwise we return
@@ -1839,10 +1839,10 @@ arityBranches l
   | otherwise = ArityNotKnown
 
 -- | All branches should have the same arity.
-arityCase :: (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => Case -> Sem r Arity
+arityCase :: (Members '[ResultBuilder, Reader InfoTable, Inference, Reader LocalVars] r) => Case -> Sem r Arity
 arityCase c = arityBranches <$> mapM (arityCaseRhs . (^. caseBranchRhs)) (c ^. caseBranches)
 
-aritySideIf :: (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => SideIfs -> Sem r Arity
+aritySideIf :: (Members '[ResultBuilder, Reader InfoTable, Inference, Reader LocalVars] r) => SideIfs -> Sem r Arity
 aritySideIf SideIfs {..} = do
   let bodies :: NonEmpty Expression =
         snocNonEmptyMaybe
@@ -1850,22 +1850,24 @@ aritySideIf SideIfs {..} = do
           _sideIfElse
   arityBranches <$> mapM guessArity bodies
 
-arityCaseRhs :: (Members '[Reader InfoTable, Inference, Reader LocalVars] r) => CaseBranchRhs -> Sem r Arity
+arityCaseRhs :: (Members '[ResultBuilder, Reader InfoTable, Inference, Reader LocalVars] r) => CaseBranchRhs -> Sem r Arity
 arityCaseRhs = \case
   CaseBranchRhsExpression e -> guessArity e
   CaseBranchRhsIf s -> aritySideIf s
 
-idenArity :: (Members '[Inference, Reader LocalVars, Reader InfoTable] r) => Iden -> Sem r Arity
-idenArity = \case
+idenArity :: forall r. (Members '[Inference, ResultBuilder, Reader LocalVars, Reader InfoTable] r) => Iden -> Sem r Arity
+idenArity i = case i of
   IdenVar v -> getLocalArity v
-  IdenInductive i -> lookupInductiveType i >>= typeArity
+  IdenInductive {} -> idenType' >>= typeArity
   IdenFunction f -> do
-    fun <- lookupFunction f
-    ari <- typeArity (fun ^. functionInfoType)
-    let defaults = fun ^. functionInfoArgsInfo
+    ari <- idenType' >>= typeArity
+    defaults <- (^. functionInfoArgsInfo) <$> lookupFunction f
     return (addArgsInfo defaults ari)
-  IdenConstructor c -> lookupConstructorType c >>= typeArity
-  IdenAxiom a -> lookupAxiom a >>= typeArity . (^. axiomInfoDef . axiomType)
+  IdenConstructor {} -> idenType' >>= typeArity
+  IdenAxiom {} -> idenType' >>= typeArity
+  where
+    idenType' :: Sem r Expression
+    idenType' = (^. typedExpression) <$> idenType i
 
 addArgsInfo :: [ArgInfo] -> Arity -> Arity
 addArgsInfo = unfoldingArity . helper
@@ -1877,7 +1879,7 @@ addArgsInfo = unfoldingArity . helper
     go infos params = case infos of
       [] -> params
       info : infos' -> case params of
-        [] -> impossible
+        [] -> []
         para : params' ->
           set arityParameterInfo info para : go infos' params'
 
