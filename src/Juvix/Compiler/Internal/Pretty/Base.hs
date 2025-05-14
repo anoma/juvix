@@ -12,6 +12,7 @@ import Juvix.Compiler.Internal.Data.TypedInstanceHole
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Occurrences
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New
 import Juvix.Compiler.Store.Internal.Data.InfoTable
 import Juvix.Compiler.Store.Internal.Data.InstanceInfo
@@ -118,6 +119,9 @@ instance PrettyCode BuiltinNatural where
     arg <- ppCodeAtom _builtinNaturalArg
     let sucx = annotate AnnKeyword ("suc[" <> pretty _builtinNaturalSuc <> "]")
     return (sucx <> arg)
+
+instance PrettyCode Arity where
+  ppCode = return . pretty
 
 instance PrettyCode Expression where
   ppCode = \case
