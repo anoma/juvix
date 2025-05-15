@@ -21,6 +21,18 @@ runFail ::
 runFail = fmap (^? _Right) . reinterpret (runError @()) (\Fail.Fail {} -> throw ())
 {-# INLINE runFail #-}
 
+-- | analogous to <|>
+failAlt :: Sem (Fail ': r) a -> Sem (Fail ': r) a -> Sem (Fail ': r) a
+failAlt a b = do
+  ra <- inject (runFail a)
+  maybe b return ra
+
+-- | analogous to `asum`
+failAlts :: [Sem (Fail ': r) a] -> Sem (Fail ': r) a
+failAlts = \case
+  [] -> fail
+  x : xs -> failAlt x (failAlts xs)
+
 -- | Run a 'Fail' effect purely with a default value.
 runFailDefault ::
   a ->
@@ -36,6 +48,14 @@ runFailDefaultM ::
   Sem r a
 runFailDefaultM defaultVal s = fromMaybeM defaultVal (runFail s)
 {-# INLINE runFailDefaultM #-}
+
+-- | `runFailDefaultM` with arguments swappped
+runFailOrM ::
+  Sem (Fail ': r) a ->
+  Sem r a ->
+  Sem r a
+runFailOrM = flip runFailDefaultM
+{-# INLINE runFailOrM #-}
 
 ignoreFail ::
   Sem (Fail ': r) a ->

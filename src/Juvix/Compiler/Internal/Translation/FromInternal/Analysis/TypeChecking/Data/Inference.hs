@@ -21,6 +21,7 @@ module Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Da
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination.Checker
@@ -35,12 +36,21 @@ data MetavarState
   | -- | Type may contain holes
     Refined Expression
 
+data Normalize
+  = NormalizeWeak
+  | NormalizeStrong
+  deriving stock (Eq, Show)
+
 data MatchError = MatchError
   { _matchErrorLeft :: NormalizedExpression,
     _matchErrorRight :: NormalizedExpression
   }
 
 makeLenses ''MatchError
+makePrisms ''MetavarState
+
+instance HasExpressions MetavarState where
+  directExpressions = _Refined
 
 data Inference :: Effect where
   MatchTypes :: Expression -> Expression -> Inference m (Maybe MatchError)
@@ -76,10 +86,9 @@ closeState ::
     ( HashMap Hole Expression,
       TypesTable
     )
-closeState = \case
-  InferenceState {..} -> do
-    holeMap <- execState mempty (f _inferenceMap)
-    return (holeMap, _inferenceIdens)
+closeState InferenceState {..} = do
+  holeMap <- execState mempty (f _inferenceMap)
+  return (holeMap, _inferenceIdens)
   where
     f ::
       forall r'.
@@ -93,6 +102,7 @@ closeState = \case
           where
             err :: a
             err = error ("Impossible: could not find the state for the hole " <> ppTrace h)
+
         goHole :: Hole -> Sem r' Expression
         goHole h =
           let st = getState h
@@ -112,6 +122,7 @@ closeState = \case
                       x <- goExpression t
                       modify (HashMap.insert h x)
                       return x
+
         goExpression :: Expression -> Sem r' Expression
         goExpression = umapM aux
           where
@@ -120,7 +131,7 @@ closeState = \case
               ExpressionHole h -> goHole h
               e -> return (toExpression e)
 
-getMetavar :: (Member (State InferenceState) r) => Hole -> Sem r MetavarState
+getMetavar :: (HasCallStack, Member (State InferenceState) r) => Hole -> Sem r MetavarState
 getMetavar h = do
   void (queryMetavar' h)
   gets (fromJust . (^. inferenceMap . at h))
@@ -136,31 +147,39 @@ strongNormalize_ :: (Members '[Inference] r) => Expression -> Sem r Expression
 strongNormalize_ = fmap (^. normalizedExpression) . strongNormalize
 
 -- FIXME the returned expression should have the same location as the original
-strongNormalize' :: forall r. (Members '[ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r NormalizedExpression
+strongNormalize' :: forall r. (Members '[Reader BuiltinsTable, ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r NormalizedExpression
 strongNormalize' original = do
-  normalized <- go original
+  normalized <- strongNormalizeHelper original
   return
     NormalizedExpression
       { _normalizedExpression = normalized,
         _normalizedExpressionOriginal = original
       }
+
+strongNormalizeHelper :: forall r. (Members '[Reader BuiltinsTable, ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
+strongNormalizeHelper = go
   where
     go :: Expression -> Sem r Expression
-    go e = case e of
-      ExpressionIden i -> goIden i
-      ExpressionApplication app -> goApp app
-      ExpressionLiteral {} -> return e
-      ExpressionHole h -> goHole h
-      ExpressionInstanceHole h -> goInstanceHole h
-      ExpressionUniverse {} -> return e
-      ExpressionFunction f -> ExpressionFunction <$> goFunction f
-      ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> goSimpleLambda l
-      ExpressionLambda l -> ExpressionLambda <$> goLambda l
-      -- NOTE: we cannot always normalize let expressions because we do not have closures.
-      -- We just recurse inside
-      ExpressionLet l -> ExpressionLet <$> goLet l
-      -- TODO it should normalize like an applied lambda
-      ExpressionCase c -> return (ExpressionCase c)
+    go e =
+      case e of
+        ExpressionIden i -> goIden i
+        ExpressionApplication app -> goApp app
+        ExpressionLiteral {} -> return e
+        ExpressionHole h -> goHole h
+        ExpressionNatural n -> goNatural n
+        ExpressionInstanceHole h -> goInstanceHole h
+        ExpressionUniverse {} -> return e
+        ExpressionFunction f -> ExpressionFunction <$> goFunction f
+        ExpressionSimpleLambda l -> ExpressionSimpleLambda <$> goSimpleLambda l
+        ExpressionLambda l -> ExpressionLambda <$> goLambda l
+        -- NOTE: we cannot always normalize let expressions because we do not have closures.
+        -- We just recurse inside
+        ExpressionLet l -> ExpressionLet <$> goLet l
+        -- TODO it should normalize like an applied lambda
+        ExpressionCase c -> return (ExpressionCase c)
+
+    goNatural :: BuiltinNatural -> Sem r Expression
+    goNatural = normalizeNatural NormalizeStrong
 
     goLet :: Let -> Sem r Let
     goLet Let {..} = do
@@ -222,46 +241,65 @@ strongNormalize' original = do
       return (Function l' r')
 
     goHole :: Hole -> Sem r Expression
-    goHole h = do
-      s <- getMetavar h
-      case s of
-        Fresh -> return (ExpressionHole h)
-        Refined r -> go r
+    goHole = normalizeHole NormalizeStrong
 
     goInstanceHole :: InstanceHole -> Sem r Expression
     goInstanceHole = return . ExpressionInstanceHole
 
     goApp :: Application -> Sem r Expression
-    goApp (Application l r i) = do
-      l' <- go l
-      case l' of
-        ExpressionSimpleLambda (SimpleLambda (SimpleBinder lamVar _) lamBody) -> do
-          b' <- substitutionE (HashMap.singleton lamVar r) lamBody
-          go b'
-        _ -> do
-          r' <- go r
-          return (ExpressionApplication (Application l' r' i))
+    goApp = normalizeApp NormalizeStrong
 
     goIden :: Iden -> Sem r Expression
-    goIden i = case i of
-      IdenFunction f -> do
-        f' <- lookupFunctionDef f
-        case f' of
-          Nothing -> return i'
-          Just x -> go x
-      _ -> return i'
-      where
-        i' = ExpressionIden i
+    goIden = normalizeIden NormalizeStrong
 
-weakNormalize' :: forall r. (Members '[ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
+normalizeIden ::
+  ( Members
+      '[ Reader BuiltinsTable,
+         State InferenceState,
+         ResultBuilder,
+         NameIdGen
+       ]
+      r
+  ) =>
+  Normalize ->
+  Iden ->
+  Sem r Expression
+normalizeIden w i = case i of
+  IdenFunction f -> do
+    f' <- lookupFunctionDef f
+    case f' of
+      Nothing -> return i'
+      Just x -> normalize w x
+  _ -> return i'
+  where
+    i' = ExpressionIden i
+
+normalizeNatural ::
+  ( Members
+      '[ Reader BuiltinsTable,
+         State InferenceState,
+         ResultBuilder,
+         NameIdGen
+       ]
+      r
+  ) =>
+  Normalize ->
+  BuiltinNatural ->
+  Sem r Expression
+normalizeNatural w n = case squashBuiltinNatural n of
+  Left m -> squashBuiltinNatural' <$> traverseOf builtinNaturalArg (normalize w) m
+  Right e -> normalize w e
+
+weakNormalize' :: forall r. (HasCallStack, Members '[Reader BuiltinsTable, ResultBuilder, State InferenceState, NameIdGen] r) => Expression -> Sem r Expression
 weakNormalize' = go
   where
     go :: Expression -> Sem r Expression
     go e = case e of
       ExpressionIden i -> goIden i
       ExpressionHole h -> goHole h
-      ExpressionInstanceHole h -> goInstanceHole h
+      ExpressionNatural h -> goNatural h
       ExpressionApplication a -> goApp a
+      ExpressionInstanceHole {} -> return e
       ExpressionLiteral {} -> return e
       ExpressionUniverse {} -> return e
       ExpressionFunction {} -> return e
@@ -269,32 +307,98 @@ weakNormalize' = go
       ExpressionLambda {} -> return e
       ExpressionLet {} -> return e
       ExpressionCase {} -> return e
+
+    goNatural :: BuiltinNatural -> Sem r Expression
+    goNatural = normalizeNatural NormalizeWeak
+
     goIden :: Iden -> Sem r Expression
-    goIden i = case i of
-      IdenFunction f -> do
-        f' <- lookupFunctionDef f
-        case f' of
-          Nothing -> return i'
-          Just x -> go x
-      _ -> return i'
-      where
-        i' = ExpressionIden i
+    goIden = normalizeIden NormalizeWeak
+
     goApp :: Application -> Sem r Expression
-    goApp (Application l r i) = do
-      l' <- go l
+    goApp = normalizeApp NormalizeWeak
+
+    goHole :: Hole -> Sem r Expression
+    goHole = normalizeHole NormalizeWeak
+
+normalize ::
+  ( Members
+      '[ Reader BuiltinsTable,
+         State InferenceState,
+         ResultBuilder,
+         NameIdGen
+       ]
+      r
+  ) =>
+  Normalize ->
+  Expression ->
+  Sem r Expression
+normalize = \case
+  NormalizeWeak -> weakNormalize'
+  NormalizeStrong -> strongNormalizeHelper
+{-# INLINE normalize #-}
+
+normalizeWhenStrong ::
+  ( Members
+      '[ Reader BuiltinsTable,
+         State InferenceState,
+         ResultBuilder,
+         NameIdGen
+       ]
+      r
+  ) =>
+  Normalize ->
+  Expression ->
+  Sem r Expression
+normalizeWhenStrong = \case
+  NormalizeWeak -> return
+  NormalizeStrong -> strongNormalizeHelper
+{-# INLINE normalizeWhenStrong #-}
+
+normalizeHole ::
+  ( HasCallStack,
+    Members
+      '[ Reader BuiltinsTable,
+         State InferenceState,
+         ResultBuilder,
+         NameIdGen
+       ]
+      r
+  ) =>
+  Normalize ->
+  Hole ->
+  Sem r Expression
+normalizeHole w h = do
+  s <- getMetavar h
+  case s of
+    Fresh -> return (ExpressionHole h)
+    Refined r -> normalize w r
+
+normalizeApp ::
+  forall r.
+  (Members '[Reader BuiltinsTable, State InferenceState, ResultBuilder, NameIdGen] r) =>
+  Normalize ->
+  Application ->
+  Sem r Expression
+normalizeApp w topapp = runFailDefaultM (normalizeRegularApp topapp) (normalizeBuiltinApp topapp)
+  where
+    normalizeBuiltinApp :: Application -> Sem (Fail ': r) Expression
+    normalizeBuiltinApp = builtinNatural
+      where
+        builtinNatural :: Application -> Sem (Fail ': r) Expression
+        builtinNatural a = do
+          nat <- builtinNaturalFromApp a
+          normalizeNatural w nat
+
+    normalizeRegularApp :: Application -> Sem r Expression
+    normalizeRegularApp (Application l r i) = do
+      l' <- normalize w l
       case l' of
         ExpressionSimpleLambda (SimpleLambda (SimpleBinder lamVar _) lamBody) -> do
           b' <- substitutionE (HashMap.singleton lamVar r) lamBody
-          go b'
-        _ -> return (ExpressionApplication (Application l' r i))
-    goHole :: Hole -> Sem r Expression
-    goHole h = do
-      s <- getMetavar h
-      case s of
-        Fresh -> return (ExpressionHole h)
-        Refined r -> go r
-    goInstanceHole :: InstanceHole -> Sem r Expression
-    goInstanceHole = return . ExpressionInstanceHole
+          normalize w b'
+        _ -> do
+          r' <- normalizeWhenStrong w r
+          return (ExpressionApplication (Application l' r' i))
 
 queryMetavar' :: (Members '[State InferenceState] r) => Hole -> Sem r (Maybe Expression)
 queryMetavar' h = do
@@ -307,7 +411,7 @@ queryMetavar' h = do
     Just (Refined e) -> return (Just e)
 
 runInferenceState ::
-  (Members '[ResultBuilder, Error TypeCheckerError, NameIdGen] r) =>
+  (Members '[ResultBuilder, Reader BuiltinsTable, Error TypeCheckerError, NameIdGen] r) =>
   InferenceState ->
   Sem (Inference ': r) a ->
   Sem r (InferenceState, a)
@@ -323,14 +427,35 @@ runInferenceState inis = reinterpret (runState inis) $ \case
     registerIdenType' i ty = modify (over (inferenceIdens . typesTable) (HashMap.insert (i ^. nameId) ty))
 
     -- Supports alpha equivalence.
-    matchTypes' :: (Members '[State InferenceState, ResultBuilder, Error TypeCheckerError, NameIdGen] r) => Expression -> Expression -> Sem r (Maybe MatchError)
+    matchTypes' ::
+      ( Members
+          '[ State InferenceState,
+             Reader BuiltinsTable,
+             ResultBuilder,
+             Error TypeCheckerError,
+             NameIdGen
+           ]
+          r
+      ) =>
+      Expression ->
+      Expression ->
+      Sem r (Maybe MatchError)
     matchTypes' ty = runReader ini . go ty
       where
         ini :: HashMap VarName VarName
         ini = mempty
         go ::
           forall r.
-          (Members '[State InferenceState, Reader (HashMap VarName VarName), ResultBuilder, Error TypeCheckerError, NameIdGen] r) =>
+          ( Members
+              '[ State InferenceState,
+                 Reader BuiltinsTable,
+                 Reader (HashMap VarName VarName),
+                 ResultBuilder,
+                 Error TypeCheckerError,
+                 NameIdGen
+               ]
+              r
+          ) =>
           Expression ->
           Expression ->
           Sem r (Maybe MatchError)
@@ -348,10 +473,14 @@ runInferenceState inis = reinterpret (runState inis) $ \case
                 (ExpressionUniverse u, ExpressionUniverse u') -> check (u == u')
                 (ExpressionSimpleLambda a, ExpressionSimpleLambda b) -> goSimpleLambda a b
                 (ExpressionLambda a, ExpressionLambda b) -> goLambda a b
+                (ExpressionNatural a, ExpressionNatural b) -> goNatural a b
                 (ExpressionHole h, a) -> goHole h a
                 (a, ExpressionHole h) -> goHole h a
                 (_, ExpressionLet r) -> go normA (r ^. letExpression)
+                (ExpressionLiteral l, ExpressionLiteral l') -> check (l == l')
                 (ExpressionLet l, _) -> go (l ^. letExpression) normB
+                (ExpressionNatural {}, _) -> err
+                (_, ExpressionNatural {}) -> err
                 (ExpressionInstanceHole {}, _) -> err
                 (_, ExpressionInstanceHole {}) -> err
                 (ExpressionSimpleLambda {}, _) -> err
@@ -366,9 +495,8 @@ runInferenceState inis = reinterpret (runState inis) $ \case
                 (_, ExpressionUniverse {}) -> err
                 (ExpressionLambda {}, _) -> err
                 (_, ExpressionLambda {}) -> err
-                (_, ExpressionCase {}) -> error "not implemented"
-                (ExpressionCase {}, _) -> error "not implemented"
-                (ExpressionLiteral l, ExpressionLiteral l') -> check (l == l')
+                (_, ExpressionCase {}) -> err
+                (ExpressionCase {}, _) -> err
               where
                 ok :: Sem r (Maybe MatchError)
                 ok = return Nothing
@@ -395,6 +523,16 @@ runInferenceState inis = reinterpret (runState inis) $ \case
 
                 err :: Sem r (Maybe MatchError)
                 err = return (Just (MatchError normalizedA normalizedB))
+
+                goNatural :: BuiltinNatural -> BuiltinNatural -> Sem r (Maybe MatchError)
+                goNatural a b
+                  | sa == sb = go (a ^. builtinNaturalArg) (b ^. builtinNaturalArg)
+                  | sa > sb = go (a ^. builtinNaturalArg) (ExpressionNatural (over builtinNaturalSuc (subtract sa) b))
+                  | sa < sb = go (ExpressionNatural (over builtinNaturalSuc (subtract sb) a)) (b ^. builtinNaturalArg)
+                  | otherwise = err
+                  where
+                    sa = a ^. builtinNaturalSuc
+                    sb = b ^. builtinNaturalSuc
 
                 goHole :: Hole -> Expression -> Sem r (Maybe MatchError)
                 goHole h t = do
@@ -512,7 +650,7 @@ matchPatterns (PatternArg impl1 name1 pat1) (PatternArg impl2 name2 pat2) =
     err = return False
 
 runInferenceDefs ::
-  (Members '[Termination, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
+  (HasCallStack, Members '[Termination, Reader BuiltinsTable, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
   Sem (Inference ': r) (NonEmpty funDef) ->
   Sem r (NonEmpty funDef)
 runInferenceDefs a = do
@@ -525,7 +663,7 @@ runInferenceDefs a = do
   mapM (subsHoles subs) expr
 
 runInferenceDef ::
-  (Members '[Termination, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
+  (Members '[Termination, Reader BuiltinsTable, Error TypeCheckerError, ResultBuilder, NameIdGen] r, HasExpressions funDef) =>
   Sem (Inference ': r) funDef ->
   Sem r funDef
 runInferenceDef = fmap head . runInferenceDefs . fmap pure
@@ -539,14 +677,26 @@ runInferenceDef = fmap head . runInferenceDefs . fmap pure
 --
 -- Throws an error if the return type is Type and it does not satisfy the
 -- above conditions.
-functionDefEval :: forall r'. (Members '[ResultBuilder, Termination, Error TypeCheckerError, NameIdGen] r') => FunctionDef -> Sem r' (Maybe Expression)
+functionDefEval ::
+  forall r'.
+  ( Members
+      '[ Reader BuiltinsTable,
+         ResultBuilder,
+         Termination,
+         Error TypeCheckerError,
+         NameIdGen
+       ]
+      r'
+  ) =>
+  FunctionDef ->
+  Sem r' (Maybe Expression)
 functionDefEval f = do
   (params :: [FunctionParameter], ret :: Expression) <- unfoldFunType <$> strongNorm (f ^. funDefType)
   r <- runFail (goTop params (canBeUniverse ret))
   when (isNothing r && isUniverse ret) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
   return r
   where
-    strongNorm :: (Members '[ResultBuilder, NameIdGen] r) => Expression -> Sem r Expression
+    strongNorm :: (Members '[Reader BuiltinsTable, ResultBuilder, NameIdGen] r) => Expression -> Sem r Expression
     strongNorm = evalState iniState . fmap (^. normalizedExpression) . strongNormalize'
 
     isUniverse :: Expression -> Bool
@@ -605,12 +755,23 @@ functionDefEval f = do
                 | isImplicitOrInstance (p ^. patternArgIsImplicit) -> fail
                 | otherwise -> go ps >>= goPattern (p ^. patternArgPattern, ty)
 
-registerFunctionDef :: (Members '[ResultBuilder, Error TypeCheckerError, NameIdGen, Termination] r) => FunctionDef -> Sem r ()
+registerFunctionDef ::
+  ( Members
+      '[ Reader BuiltinsTable,
+         ResultBuilder,
+         Error TypeCheckerError,
+         NameIdGen,
+         Termination
+       ]
+      r
+  ) =>
+  FunctionDef ->
+  Sem r ()
 registerFunctionDef f = whenJustM (functionDefEval f) $ \e ->
   addFunctionDef (f ^. funDefName) e
 
 strongNormalize'' ::
-  (Members '[Reader FunctionsTable, NameIdGen] r) =>
+  (Members '[Reader BuiltinsTable, Reader FunctionsTable, NameIdGen] r) =>
   Expression ->
   Sem r NormalizedExpression
 strongNormalize'' ty = do

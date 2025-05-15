@@ -352,6 +352,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
       Internal.ExpressionSimpleLambda {} -> unsupportedType ty
       Internal.ExpressionLambda {} -> unsupportedType ty
       Internal.ExpressionCase {} -> unsupportedType ty
+      Internal.ExpressionNatural {} -> unsupportedType ty
       where
         unsupportedType :: Internal.Expression -> a
         unsupportedType e = error ("unsupported type: " <> Internal.ppTrace e)
@@ -461,7 +462,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     goExpression'' :: NameSet -> NameMap -> Internal.Expression -> Expression
     goExpression'' nset nmap e =
-      run $ runReader nset $ runReader nmap $ goExpression e
+      run . runReader nset . runReader nmap $ goExpression e
 
     goExpression :: forall r. (Members '[Reader NameSet, Reader NameMap] r) => Internal.Expression -> Sem r Expression
     goExpression = \case
@@ -476,18 +477,24 @@ goModule onlyTypes infoTable Internal.Module {..} =
       Internal.ExpressionSimpleLambda x -> goSimpleLambda x
       Internal.ExpressionLambda x -> goLambda x
       Internal.ExpressionCase x -> goCase x
+      Internal.ExpressionNatural n -> goNatural n
       where
+        goNatural :: Internal.BuiltinNatural -> Sem r Expression
+        goNatural = error "not implemented"
+
+        nameIsZero :: Name -> Bool
+        nameIsZero constrName = isJust $ do
+          ctrInfo <- HashMap.lookup constrName (infoTable ^. Internal.infoConstructors)
+          Internal.BuiltinNatZero <- ctrInfo ^. Internal.constructorInfoBuiltin
+          return ()
+
         goIden :: Internal.Iden -> Sem r Expression
         goIden iden = case iden of
           Internal.IdenFunction name -> do
             goFunName <$> lookupName name
-          Internal.IdenConstructor name ->
-            case HashMap.lookup name (infoTable ^. Internal.infoConstructors) of
-              Just ctrInfo ->
-                case ctrInfo ^. Internal.constructorInfoBuiltin of
-                  Just Internal.BuiltinNatZero -> return $ ExprLiteral (WithLoc (getLoc name) (LitNumeric 0))
-                  _ -> return $ ExprIden (goConstrName name)
-              Nothing -> return $ ExprIden (goConstrName name)
+          Internal.IdenConstructor name
+            | nameIsZero name -> return $ ExprLiteral (WithLoc (getLoc name) (LitNumeric 0))
+            | otherwise -> return $ ExprIden (goConstrName name)
           Internal.IdenVar name -> do
             lookupName name
           Internal.IdenAxiom name -> return $ ExprIden (overNameText quote name)
@@ -610,7 +617,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
                   Internal.LitString {} -> Nothing
                   Internal.LitNumeric x -> Just x
                   Internal.LitInteger x -> Just x
-                  Internal.LitNatural x -> Just x
+                  Internal.LitNatural x -> Just (fromIntegral x)
               _ -> Nothing
 
         getList :: Internal.Application -> Maybe [Internal.Expression]
@@ -765,7 +772,7 @@ goModule onlyTypes infoTable Internal.Module {..} =
           Internal.LitString s -> LitString s
           Internal.LitNumeric n -> LitNumeric n
           Internal.LitInteger n -> LitNumeric n
-          Internal.LitNatural n -> LitNumeric n
+          Internal.LitNatural n -> LitNumeric (fromIntegral n)
 
         goHole :: Internal.Hole -> Sem r Expression
         goHole h = return (ExprUndefined (getLoc h))

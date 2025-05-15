@@ -1,5 +1,10 @@
 module Axiom;
 
-axiom A : let
-            x (y : Type) : Type := x y;
-          in x;
+type T := t;
+
+open T;
+
+axiom A
+  : let
+      x (y : Type) : T := x y;
+    in Type;
