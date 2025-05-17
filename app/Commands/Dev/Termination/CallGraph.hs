@@ -44,10 +44,10 @@ runCommand CallGraphOptions {..} = do
     newline
     if
         | markedTerminating ->
-            printSuccessExit (n <> " Terminates by assumption")
+            exitSuccessText (n <> " Terminates by assumption")
         | otherwise ->
             case Termination.findOrder r of
               Nothing ->
                 exitFailMsg (n <> " Fails the termination checking")
               Just (Termination.LexOrder k) ->
-                printSuccessExit (n <> " Terminates with order " <> show (toList k))
+                exitSuccessText (n <> " Terminates with order " <> show (toList k))

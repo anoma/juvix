@@ -44,11 +44,11 @@ runCommand g =
       Just p -> fromAppFile p >>= readClientInfo
       Nothing -> (^. clientConfigHost) <$> getClientConfig
 
-    readClientInfo :: (Members '[Files, Error SimpleError] x) => Path Abs File -> Sem x AnomaClientInfo
+    readClientInfo :: (HasCallStack, Members '[Files, Error SimpleError] x) => Path Abs File -> Sem x AnomaClientInfo
     readClientInfo fp = do
       let pathName = pack (toFilePath fp)
       unlessM (fileExists' fp) (throw (SimpleError (mkAnsiText ("Config file: " <> pathName <> " does not exist"))))
       bs <- readFileBS' fp
       case Y.decodeEither bs of
-        Left err -> throw (SimpleError (mkAnsiText (Y.prettyPrintParseException err <> "\n" <> toFilePath fp)))
+        Left err -> throw (SimpleError (mkAnsiText (ghcCallStack <> "\nAeson error while parsing " <> toFilePath fp <> "\n" <> pack (Y.prettyPrintParseException err))))
         Right a -> return a

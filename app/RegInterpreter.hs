@@ -20,7 +20,7 @@ runReg md =
           renderStdOut (Reg.ppOut (Reg.defaultOptions md) val)
           putStrLn ""
     Nothing ->
-      exitMsg (ExitFailure 1) "no 'main' function"
+      exitFailText "no 'main' function"
   where
     doRun ::
       Reg.Module ->

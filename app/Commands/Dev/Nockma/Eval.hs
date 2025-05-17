@@ -21,7 +21,7 @@ runCommand opts = do
       putStrLn (ppPrint res)
       let statsFile = replaceExtension' ".profile" afile
       writeFileEnsureLn statsFile (prettyText counts)
-    TermAtom {} -> exitFailMsg "Expected nockma input to be a cell"
+    TermAtom {} -> exitFailText "Expected nockma input to be a cell"
   where
     file :: AppPath File
     file = opts ^. nockmaEvalFile

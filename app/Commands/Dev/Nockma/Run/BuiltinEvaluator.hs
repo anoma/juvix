@@ -18,7 +18,7 @@ runCommand opts = do
   parsedStorage <- runAppError @JuvixError (mapM Nockma.cueJammedFile storageFile)
   parsedTerm <- runAppError @JuvixError (Nockma.cueJammedFileOrPretty afile)
   case parsedTerm of
-    TermAtom {} -> exitFailMsg "Expected nockma input to be a cell"
+    TermAtom {} -> exitFailText "Expected nockma input to be a cell"
     t@(TermCell {}) -> do
       let formula = anomaCallTuple parsedArgs
           storageJammedTerms = map Encoding.atomToByteString' . mapMaybe getAtom $ maybe [] unfoldList parsedStorage

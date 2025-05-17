@@ -7,7 +7,6 @@ where
 import Anoma.Effect.Base
 import Anoma.Http.RunNock
 import Data.ByteString.Base64 qualified as Base64
-import Data.Text qualified as Text
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Language qualified as Nockma
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
@@ -71,13 +70,35 @@ runNockma i = do
           }
     ResponseError err -> do
       traces <- mapM decodeCue64 (err ^. errorTraces)
+      let atomTraces = mapMaybe ppAtomAsText traces
       throw
         . SimpleError
-        $ mkAnsiText @Text "runNockma failed:\n"
-          <> mkAnsiText (err ^. errorError)
-          <> "\n\nTraces:\n"
-          <> mkAnsiText (Text.unlines (map Nockma.ppTrace traces))
+        . mkAnsiText @(Doc Ann)
+        $ annotate AnnError "runNockma failed"
+          <> annotate AnnKeyword "\nError:\n"
+          <> pretty (err ^. errorError)
+          <> annotate
+            AnnKeyword
+            ( "\n\nTraces ("
+                <> show (length traces)
+                <> "):\n"
+            )
+          <> vsepHard (map (pretty . Nockma.ppTrace) traces)
+          <> annotate
+            AnnKeyword
+            ( "\n\nAtom traces as Text ("
+                <> show (length atomTraces)
+                <> "):\n"
+            )
+          <> vsepHard (mapMaybe ppAtomAsText traces)
   where
+    ppAtomAsText :: Nockma.Term Natural -> Maybe (Doc CodeAnn)
+    ppAtomAsText = \case
+      Nockma.TermCell {} -> Nothing
+      Nockma.TermAtom a ->
+        fmap (annotate AnnLiteralString . pretty) . run . runFail . failFromError @Nockma.NockNaturalNaturalError $
+          atomToText a
+
     prepareArgument :: RunNockmaArg -> Text
     prepareArgument =
       \case

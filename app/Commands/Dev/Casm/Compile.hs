@@ -54,4 +54,4 @@ runCommand opts = do
       AppTargetRiscZeroRust -> err "RISC0 Rust"
       where
         err :: Text -> Sem r a
-        err tgt = exitMsg (ExitFailure 1) ("error: " <> tgt <> " target not supported for CASM")
+        err tgt = exitFailText ("error: " <> tgt <> " target not supported for CASM")

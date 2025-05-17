@@ -27,7 +27,7 @@ runAsm bValidate md =
                   renderStdOut (Asm.ppOut (Asm.defaultOptions md) val)
                   putStrLn ""
             Nothing ->
-              exitMsg (ExitFailure 1) "no 'main' function"
+              exitFailText "no 'main' function"
   where
     doRun ::
       Asm.Module ->

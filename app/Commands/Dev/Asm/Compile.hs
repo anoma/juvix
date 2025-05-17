@@ -86,7 +86,7 @@ runCommand opts = do
       AppTargetAsm -> err "JuvixAsm"
       where
         err :: Text -> Sem r a
-        err tgt = exitMsg (ExitFailure 1) ("error: " <> tgt <> " target not supported for JuvixAsm")
+        err tgt = exitFailText ("error: " <> tgt <> " target not supported for JuvixAsm")
 
 inputCFile :: (Members '[App] r) => Path Abs File -> Sem r (Path Abs File)
 inputCFile inputFileCompile = do

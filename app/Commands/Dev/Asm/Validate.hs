@@ -20,10 +20,10 @@ runCommand opts = do
         Nothing ->
           if
               | opts ^. asmValidateNoPrint ->
-                  exitMsg ExitSuccess "validation succeeded"
+                  exitSuccessText "validation succeeded"
               | otherwise -> do
                   renderStdOut (Asm.ppOutDefault md (Asm.computeCombinedInfoTable md))
-                  exitMsg ExitSuccess ""
+                  exitSuccessText ""
   where
     file :: AppPath File
     file = opts ^. asmValidateInputFile

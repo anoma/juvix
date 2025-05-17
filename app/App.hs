@@ -20,8 +20,7 @@ import Juvix.Parser.Error
 import System.Console.ANSI qualified as Ansi
 
 data App :: Effect where
-  ExitMsg :: ExitCode -> Text -> App m a
-  ExitFailMsg :: Text -> App m a
+  ExitMsg :: (HasAnsiBackend txt, HasTextBackend txt) => ExitCode -> txt -> App m a
   ExitJuvixError :: JuvixError -> App m a
   PrintJuvixError :: JuvixError -> App m ()
   FromAppFile :: AppPath File -> App m (Path Abs File)
@@ -82,9 +81,7 @@ reAppIO args@RunAppIOArgs {..} =
     GetMainFile m -> getMainFile' m
     GetMainFileMaybe m -> getMainFileMaybe' m
     FromAppPathDir p -> liftIO (prepathToAbsDir invDir (p ^. pathPath))
-    RenderStdOut t -> do
-      sup <- liftIO (Ansi.hSupportsANSIColor stdout)
-      renderIO (not (_runAppIOArgsGlobalOptions ^. globalNoColors) && sup) t
+    RenderStdOut t -> hrender' stdout t
     RenderStdOutRaw b -> liftIO (ByteString.putStr b)
     AskGlobalOptions -> return _runAppIOArgsGlobalOptions
     AskPackage -> getPkg
@@ -98,12 +95,20 @@ reAppIO args@RunAppIOArgs {..} =
       printErr e
       exitFailure
     ExitMsg exitCode t -> exitMsg' (exitWith exitCode) t
-    ExitFailMsg t -> exitMsg' exitFailure t
   where
+    hrender' ::
+      (HasAnsiBackend txt, HasTextBackend txt, Members '[EmbedIO] r') =>
+      Handle ->
+      txt ->
+      Sem r' ()
+    hrender' h t = do
+      sup <- liftIO (Ansi.hSupportsANSIColor stdout)
+      hRenderIO (not (_runAppIOArgsGlobalOptions ^. globalNoColors) && sup) h t
+
     getPkg :: (Members '[SCache Package] r') => Sem r' Package
     getPkg = cacheSingletonGet
 
-    exitMsg' :: forall r' x. (Members '[EmbedIO, Logger] r') => IO x -> Text -> Sem r' x
+    exitMsg' :: forall r' x txt. (HasTextBackend txt, HasAnsiBackend txt, Members '[EmbedIO, Logger] r') => IO x -> txt -> Sem r' x
     exitMsg' onExit t = do
       logError (mkAnsiText t)
       liftIO (hFlush stderr >> onExit)
@@ -138,9 +143,10 @@ reAppIO args@RunAppIOArgs {..} =
     missingMainErr =
       exitMsg'
         exitFailure
-        ( "A path to the main file must be given in the CLI or specified in the `main` field of the "
-            <> pack (toFilePath juvixYamlFile)
-            <> " file"
+        ( mkAnsiText $
+            "A path to the main file must be given in the CLI or specified in the `main` field of the "
+              <> pack (toFilePath juvixYamlFile)
+              <> " file"
         )
 
     invDir = _runAppIOArgsRoot ^. rootInvokeDir
@@ -161,6 +167,18 @@ reAppIO args@RunAppIOArgs {..} =
           | g ^. globalVSCode = Error.RenderVSCode
           | g ^. globalNoColors = Error.RenderText
           | otherwise = Error.RenderAnsi
+
+exitSucessMsg :: (HasTextBackend txt, HasAnsiBackend txt, Members '[App] r) => txt -> Sem r a
+exitSucessMsg = exitMsg ExitSuccess
+
+exitSuccessText :: (Members '[App] r) => Text -> Sem r a
+exitSuccessText = exitSucessMsg
+
+exitFailText :: (Members '[App] r) => Text -> Sem r a
+exitFailText = exitFailMsg
+
+exitFailMsg :: (HasTextBackend txt, HasAnsiBackend txt, Members '[App] r) => txt -> Sem r a
+exitFailMsg t = exitMsg (ExitFailure 1) t
 
 getEntryPoint' ::
   (Members '[App, EmbedIO, TaggedLock] r) =>
@@ -354,9 +372,6 @@ renderStdOutLn txt = renderStdOut txt >> newline
 newline :: (Member App r) => Sem r ()
 newline = renderStdOut @Text "\n"
 
-printSuccessExit :: (Member App r) => Text -> Sem r a
-printSuccessExit = exitMsg ExitSuccess
-
 getRight :: forall e a r. (Members '[App] r, AppError e) => Either e a -> Sem r a
 getRight = either appError return
 
@@ -373,13 +388,13 @@ instance AppError MegaparsecError where
   appError = appError . JuvixError
 
 instance AppError Text where
-  appError = exitFailMsg
+  appError = exitFailMsg . mkAnsiText
 
 instance AppError JuvixError where
   appError = exitJuvixError
 
 instance AppError SimpleError where
-  appError = exitFailMsg . toPlainText
+  appError (SimpleError t) = exitFailMsg t
 
 class AppError e where
   appError :: (Members '[App] r) => e -> Sem r a

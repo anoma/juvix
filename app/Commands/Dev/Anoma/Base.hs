@@ -20,7 +20,7 @@ cellOrFail ::
   (Term Natural -> Sem x a) ->
   Sem r a
 cellOrFail term f = case term of
-  TermAtom {} -> exitFailMsg "Expected nockma input to be a cell"
+  TermAtom {} -> exitFailText "Expected nockma input to be a cell"
   t@(TermCell {}) -> inject (f t)
 
 data ParsedArgsMode

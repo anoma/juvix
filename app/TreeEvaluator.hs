@@ -28,7 +28,7 @@ evalTree ev md =
           renderStdOut (Tree.ppOutDefault md val)
           putStrLn ""
     Nothing ->
-      exitMsg (ExitFailure 1) "no 'main' function"
+      exitFailText "no 'main' function"
 
 doEvalDefault ::
   (MonadIO m) =>
