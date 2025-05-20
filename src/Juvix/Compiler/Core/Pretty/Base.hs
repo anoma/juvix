@@ -71,8 +71,6 @@ instance PrettyCode BuiltinOp where
     OpAnomaResourceDelta -> return primResourceDelta
     OpAnomaActionDelta -> return primActionDelta
     OpAnomaActionsDelta -> return primActionsDelta
-    OpAnomaProveAction -> return primProveAction
-    OpAnomaProveDelta -> return primProveDelta
     OpAnomaZeroDelta -> return primZeroDelta
     OpAnomaAddDelta -> return primAddDelta
     OpAnomaSubDelta -> return primSubDelta
@@ -81,8 +79,13 @@ instance PrettyCode BuiltinOp where
     OpAnomaRandomSplit -> return primRandomSplit
     OpAnomaIsCommitment -> return primIsCommitment
     OpAnomaIsNullifier -> return primIsNullifier
+    OpAnomaCreateFromComplianceInputs -> return primAnomaCreateFromComplianceInputs
+    OpAnomaProveDelta -> return primAnomaProveDelta
+    OpAnomaActionCreate -> return primActionCreate
+    OpAnomaTransactionCompose -> return primTransactionCompose
     OpAnomaSetToList -> return primAnomaSetToList
     OpAnomaSetFromList -> return primAnomaSetFromList
+    OpNockmaReify -> return primNockmaReify
     OpPoseidonHash -> return primPoseidonHash
     OpEc -> return primEc
     OpRandomEcPoint -> return primRandomEcPoint
@@ -99,6 +102,11 @@ instance PrettyCode BuiltinDataTag where
     TagBind -> return $ annotate (AnnKind KNameConstructor) (pretty ("bind" :: String))
     TagWrite -> return $ annotate (AnnKind KNameConstructor) (pretty ("write" :: String))
     TagReadLn -> return $ annotate (AnnKind KNameConstructor) (pretty ("readLn" :: String))
+    TagJsonArray -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonArray" :: String))
+    TagJsonBool -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonBool" :: String))
+    TagJsonObject -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonObject" :: String))
+    TagJsonNumber -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonNumber" :: String))
+    TagJsonString -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonString" :: String))
 
 instance PrettyCode Tag where
   ppCode = \case
@@ -655,10 +663,16 @@ instance PrettyCode InfoTable where
           shouldPrintInductive = \case
             Just (BuiltinTypeInductive i) -> case i of
               BuiltinPair -> True
+              BuiltinJson -> True
               BuiltinPoseidonState -> True
               BuiltinEcPoint -> True
               BuiltinAnomaResource -> True
+              BuiltinAnomaNullifierKey -> True
               BuiltinAnomaAction -> True
+              BuiltinAnomaComplianceInputs -> True
+              BuiltinAnomaShieldedTransaction -> True
+              BuiltinNockmaNoun -> True
+              --
               BuiltinList -> False
               BuiltinEq -> False
               BuiltinOrd -> False
@@ -989,12 +1003,6 @@ primActionDelta = primitive Str.anomaActionDelta
 primActionsDelta :: Doc Ann
 primActionsDelta = primitive Str.anomaActionsDelta
 
-primProveDelta :: Doc Ann
-primProveDelta = primitive Str.anomaProveDelta
-
-primProveAction :: Doc Ann
-primProveAction = primitive Str.anomaProveAction
-
 primZeroDelta :: Doc Ann
 primZeroDelta = primitive Str.anomaZeroDelta
 
@@ -1016,14 +1024,29 @@ primRandomSplit = primitive Str.anomaRandomSplit
 primIsCommitment :: Doc Ann
 primIsCommitment = primitive Str.anomaIsCommitment
 
+primTransactionCompose :: Doc Ann
+primTransactionCompose = primitive Str.anomaTransactionCompose
+
+primActionCreate :: Doc Ann
+primActionCreate = primitive Str.anomaActionCreate
+
 primIsNullifier :: Doc Ann
 primIsNullifier = primitive Str.anomaIsNullifier
+
+primAnomaCreateFromComplianceInputs :: Doc Ann
+primAnomaCreateFromComplianceInputs = primitive Str.anomaCreateFromComplianceInputs
+
+primAnomaProveDelta :: Doc Ann
+primAnomaProveDelta = primitive Str.anomaProveDelta
 
 primAnomaSetToList :: Doc Ann
 primAnomaSetToList = primitive Str.anomaSetToList
 
 primAnomaSetFromList :: Doc Ann
 primAnomaSetFromList = primitive Str.anomaSetFromList
+
+primNockmaReify :: Doc Ann
+primNockmaReify = primitive Str.nockmaReify
 
 primPoseidonHash :: Doc Ann
 primPoseidonHash = primitive Str.cairoPoseidon

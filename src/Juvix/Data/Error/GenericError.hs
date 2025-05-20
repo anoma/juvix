@@ -114,6 +114,9 @@ renderText = render RenderText Nothing
 renderTextDefault :: (ToGenericError e) => e -> Text
 renderTextDefault = run . runReader defaultGenericOptions . renderText
 
+renderStringDefault :: (ToGenericError e) => e -> String
+renderStringDefault = unpack . renderTextDefault
+
 -- | Render the error with Ansi formatting (if any).
 renderAnsiText :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> Sem r Text
 renderAnsiText = render RenderAnsi Nothing

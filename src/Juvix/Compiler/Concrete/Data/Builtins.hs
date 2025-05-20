@@ -55,13 +55,18 @@ builtinConstructors = \case
   BuiltinList -> [BuiltinListNil, BuiltinListCons]
   BuiltinMaybe -> [BuiltinMaybeNothing, BuiltinMaybeJust]
   BuiltinPair -> [BuiltinPairConstr]
+  BuiltinJson -> [BuiltinJsonArray, BuiltinJsonBool, BuiltinJsonObject, BuiltinJsonNumber, BuiltinJsonString]
   BuiltinPoseidonState -> [BuiltinMkPoseidonState]
   BuiltinEcPoint -> [BuiltinMkEcPoint]
   BuiltinAnomaResource -> [BuiltinMkAnomaResource]
+  BuiltinAnomaNullifierKey -> [BuiltinMkAnomaNullifierKey]
   BuiltinAnomaAction -> [BuiltinMkAnomaAction]
+  BuiltinAnomaComplianceInputs -> [BuiltinMkAnomaComplianceInputs]
+  BuiltinAnomaShieldedTransaction -> [BuiltinMkAnomaShieldedTransaction]
   BuiltinEq -> [BuiltinMkEq]
   BuiltinOrd -> [BuiltinMkOrd]
   BuiltinOrdering -> [BuiltinOrderingLT, BuiltinOrderingEQ, BuiltinOrderingGT]
+  BuiltinNockmaNoun -> [BuiltinNockmaAtom, BuiltinNockmaCell]
 
 data BuiltinInductive
   = BuiltinNat
@@ -70,13 +75,18 @@ data BuiltinInductive
   | BuiltinList
   | BuiltinMaybe
   | BuiltinPair
+  | BuiltinJson
   | BuiltinEq
   | BuiltinOrd
   | BuiltinOrdering
   | BuiltinPoseidonState
   | BuiltinEcPoint
   | BuiltinAnomaResource
+  | BuiltinAnomaNullifierKey
   | BuiltinAnomaAction
+  | BuiltinAnomaComplianceInputs
+  | BuiltinAnomaShieldedTransaction
+  | BuiltinNockmaNoun
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinInductive
@@ -93,13 +103,18 @@ instance Pretty BuiltinInductive where
     BuiltinList -> Str.list
     BuiltinMaybe -> Str.maybe_
     BuiltinPair -> Str.pair
+    BuiltinJson -> Str.json
     BuiltinEq -> Str.eq
     BuiltinOrd -> Str.ord
     BuiltinOrdering -> Str.ordering
     BuiltinPoseidonState -> Str.cairoPoseidonState
     BuiltinEcPoint -> Str.cairoEcPoint
     BuiltinAnomaResource -> Str.anomaResource
+    BuiltinAnomaNullifierKey -> Str.anomaNullifierKey
     BuiltinAnomaAction -> Str.anomaAction
+    BuiltinAnomaComplianceInputs -> Str.anomaComplianceInputs
+    BuiltinAnomaShieldedTransaction -> Str.anomaShieldedTransaction
+    BuiltinNockmaNoun -> Str.nockmaNoun
 
 instance Pretty BuiltinConstructor where
   pretty = \case
@@ -114,15 +129,25 @@ instance Pretty BuiltinConstructor where
     BuiltinMaybeNothing -> Str.nothing
     BuiltinMaybeJust -> Str.just
     BuiltinPairConstr -> Str.pair
+    BuiltinJsonArray -> Str.jsonArray
+    BuiltinJsonBool -> Str.jsonBool
+    BuiltinJsonObject -> Str.jsonObject
+    BuiltinJsonNumber -> Str.jsonNumber
+    BuiltinJsonString -> Str.jsonString
     BuiltinMkPoseidonState -> Str.cairoMkPoseidonState
     BuiltinMkEcPoint -> Str.cairoMkEcPoint
     BuiltinMkAnomaResource -> Str.anomaMkResource
+    BuiltinMkAnomaNullifierKey -> Str.anomaMkResource
     BuiltinMkAnomaAction -> Str.anomaMkAction
+    BuiltinMkAnomaComplianceInputs -> Str.anomaMkComplianceInputs
+    BuiltinMkAnomaShieldedTransaction -> Str.anomaMkShieldedTransaction
     BuiltinMkEq -> Str.mkEq
     BuiltinMkOrd -> Str.mkOrd
     BuiltinOrderingLT -> Str.lt
     BuiltinOrderingEQ -> Str.eq
     BuiltinOrderingGT -> Str.gt
+    BuiltinNockmaAtom -> Str.nockmaAtom
+    BuiltinNockmaCell -> Str.nockmaCell
 
 data BuiltinConstructor
   = BuiltinNatZero
@@ -141,10 +166,20 @@ data BuiltinConstructor
   | BuiltinMaybeNothing
   | BuiltinMaybeJust
   | BuiltinPairConstr
+  | BuiltinJsonArray
+  | BuiltinJsonBool
+  | BuiltinJsonObject
+  | BuiltinJsonNumber
+  | BuiltinJsonString
   | BuiltinMkPoseidonState
   | BuiltinMkEcPoint
   | BuiltinMkAnomaResource
+  | BuiltinMkAnomaNullifierKey
   | BuiltinMkAnomaAction
+  | BuiltinMkAnomaComplianceInputs
+  | BuiltinMkAnomaShieldedTransaction
+  | BuiltinNockmaAtom
+  | BuiltinNockmaCell
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable BuiltinConstructor
@@ -272,14 +307,16 @@ data BuiltinAxiom
   | BuiltinAnomaZeroDelta
   | BuiltinAnomaAddDelta
   | BuiltinAnomaSubDelta
-  | BuiltinAnomaProveAction
-  | BuiltinAnomaProveDelta
   | BuiltinAnomaRandomGenerator
   | BuiltinAnomaRandomGeneratorInit
   | BuiltinAnomaRandomNextBytes
   | BuiltinAnomaRandomSplit
   | BuiltinAnomaIsCommitment
   | BuiltinAnomaIsNullifier
+  | BuiltinAnomaCreateFromComplianceInputs
+  | BuiltinAnomaProveDelta
+  | BuiltinAnomaActionCreate
+  | BuiltinAnomaTransactionCompose
   | BuiltinAnomaSet
   | BuiltinAnomaSetToList
   | BuiltinAnomaSetFromList
@@ -294,6 +331,7 @@ data BuiltinAxiom
   | BuiltinByteArrayFromListByte
   | BuiltinByteArrayLength
   | BuiltinRangeCheck
+  | BuiltinNockmaReify
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance HasNameKind BuiltinAxiom where
@@ -342,14 +380,16 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaZeroDelta -> KNameFunction
     BuiltinAnomaAddDelta -> KNameFunction
     BuiltinAnomaSubDelta -> KNameFunction
-    BuiltinAnomaProveAction -> KNameFunction
-    BuiltinAnomaProveDelta -> KNameFunction
     BuiltinAnomaRandomGenerator -> KNameInductive
     BuiltinAnomaRandomGeneratorInit -> KNameFunction
     BuiltinAnomaRandomNextBytes -> KNameFunction
     BuiltinAnomaRandomSplit -> KNameFunction
     BuiltinAnomaIsCommitment -> KNameFunction
     BuiltinAnomaIsNullifier -> KNameFunction
+    BuiltinAnomaCreateFromComplianceInputs -> KNameFunction
+    BuiltinAnomaProveDelta -> KNameFunction
+    BuiltinAnomaActionCreate -> KNameFunction
+    BuiltinAnomaTransactionCompose -> KNameFunction
     BuiltinPoseidon -> KNameFunction
     BuiltinEcOp -> KNameFunction
     BuiltinRandomEcPoint -> KNameFunction
@@ -364,6 +404,7 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaSetToList -> KNameFunction
     BuiltinAnomaSetFromList -> KNameFunction
     BuiltinRangeCheck -> KNameFunction
+    BuiltinNockmaReify -> KNameFunction
   getNameKindPretty :: BuiltinAxiom -> NameKind
   getNameKindPretty = getNameKind
 
@@ -419,14 +460,16 @@ instance Pretty BuiltinAxiom where
     BuiltinAnomaZeroDelta -> Str.anomaZeroDelta
     BuiltinAnomaAddDelta -> Str.anomaAddDelta
     BuiltinAnomaSubDelta -> Str.anomaSubDelta
-    BuiltinAnomaProveDelta -> Str.anomaProveDelta
-    BuiltinAnomaProveAction -> Str.anomaProveAction
     BuiltinAnomaRandomGenerator -> Str.anomaRandomGenerator
     BuiltinAnomaRandomGeneratorInit -> Str.anomaRandomGeneratorInit
     BuiltinAnomaRandomNextBytes -> Str.anomaRandomNextBytes
     BuiltinAnomaRandomSplit -> Str.anomaRandomSplit
     BuiltinAnomaIsCommitment -> Str.anomaIsCommitment
     BuiltinAnomaIsNullifier -> Str.anomaIsNullifier
+    BuiltinAnomaCreateFromComplianceInputs -> Str.anomaCreateFromComplianceInputs
+    BuiltinAnomaProveDelta -> Str.anomaProveDelta
+    BuiltinAnomaTransactionCompose -> Str.anomaTransactionCompose
+    BuiltinAnomaActionCreate -> Str.anomaActionCreate
     BuiltinAnomaSet -> Str.anomaSet
     BuiltinAnomaSetToList -> Str.anomaSetToList
     BuiltinAnomaSetFromList -> Str.anomaSetFromList
@@ -441,6 +484,7 @@ instance Pretty BuiltinAxiom where
     BuiltinByteArrayFromListByte -> Str.byteArrayFromListByte
     BuiltinByteArrayLength -> Str.byteArrayLength
     BuiltinRangeCheck -> Str.rangeCheck
+    BuiltinNockmaReify -> Str.nockmaReify
 
 data BuiltinType
   = BuiltinTypeInductive BuiltinInductive

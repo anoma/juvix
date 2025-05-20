@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 module Juvix.Compiler.Core.Translation.FromSource.Lexer
   ( module Juvix.Compiler.Core.Translation.FromSource.Lexer,
     module Juvix.Parser.Lexer,
@@ -7,6 +9,7 @@ where
 
 import Juvix.Compiler.Core.Keywords
 import Juvix.Extra.Strings qualified as Str
+import Juvix.Parser.Error.Base
 import Juvix.Parser.Lexer
 import Juvix.Prelude
 import Text.Megaparsec as P hiding (sepBy1, sepEndBy1, some)
@@ -36,8 +39,8 @@ uint8 = lexemeInterval uint8'
 integer :: ParsecS r (WithLoc Integer)
 integer = lexeme integer'
 
-number :: Int -> Int -> ParsecS r (WithLoc Int)
-number = number' integer
+number :: forall e r. (FromSimpleParserError e, Member (Error e) r) => Int -> Int -> ParsecS r (WithLoc Int)
+number = number' @e integer
 
 string :: ParsecS r (Text, Interval)
 string = lexemeInterval string'

@@ -12,6 +12,8 @@ instance Hashable AnomaFunction
 
 instance NFData AnomaFunction
 
+instance Serialize AnomaFunction
+
 data StdlibFunction
   = StdlibDec
   | StdlibAdd
@@ -45,26 +47,31 @@ instance Hashable StdlibFunction
 
 instance NFData StdlibFunction
 
+instance Serialize StdlibFunction
+
 -- | Anoma Resource Machine client library functions
 data RmFunction
   = RmCommit
   | RmNullify
   | RmKind
-  | RmProveLogic
-  | RmProveAction
   | RmDeltaAdd
   | RmDeltaSub
   | RmResourceDelta
   | RmActionDelta
   | RmMakeDelta
-  | RmProveDelta
   | RmIsCommitment
   | RmIsNullifier
+  | RmCreateFromComplianceInputs
+  | RmCairoProveDelta
+  | RmActionCreate
+  | RmTransactionCompose
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable RmFunction
 
 instance NFData RmFunction
+
+instance Serialize RmFunction
 
 newtype AnomaValue
   = AnomaRmValue RmValue
@@ -73,6 +80,8 @@ newtype AnomaValue
 instance Hashable AnomaValue
 
 instance NFData AnomaValue
+
+instance Serialize AnomaValue
 
 -- | Anoma Resource Machine client library values
 data RmValue
@@ -83,6 +92,8 @@ instance Hashable RmValue
 
 instance NFData RmValue
 
+instance Serialize RmValue
+
 data AnomaLib
   = AnomaLibFunction AnomaFunction
   | AnomaLibValue AnomaValue
@@ -91,6 +102,8 @@ data AnomaLib
 instance Hashable AnomaLib
 
 instance NFData AnomaLib
+
+instance Serialize AnomaLib
 
 instance Pretty StdlibFunction where
   pretty = \case
@@ -126,16 +139,17 @@ instance Pretty RmFunction where
     RmCommit -> "commit"
     RmNullify -> "nullify"
     RmKind -> "kind"
-    RmProveLogic -> "prove-logic"
-    RmProveAction -> "prove-action"
     RmDeltaAdd -> "delta-add"
     RmDeltaSub -> "delta-sub"
     RmResourceDelta -> "resource-delta"
     RmActionDelta -> "action-delta"
     RmMakeDelta -> "make-delta"
-    RmProveDelta -> "prove-delta"
     RmIsCommitment -> "is-commitment"
     RmIsNullifier -> "is-nullifier"
+    RmActionCreate -> "action-create"
+    RmTransactionCompose -> "transaction-compose"
+    RmCreateFromComplianceInputs -> "create-from-compliance-inputs"
+    RmCairoProveDelta -> "prove-delta"
 
 instance Pretty RmValue where
   pretty = \case

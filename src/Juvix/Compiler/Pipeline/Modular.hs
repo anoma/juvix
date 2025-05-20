@@ -6,11 +6,14 @@ import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Data.Module.Base
 import Juvix.Compiler.Core.Data.Stripped.Module qualified as Stripped
 import Juvix.Compiler.Core.Data.TransformationId qualified as Core
+import Juvix.Compiler.Nockma.Data.Module qualified as Anoma
 import Juvix.Compiler.Pipeline qualified as Pipeline
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Modular.Result
 import Juvix.Compiler.Store.Backend.Module qualified as Stored
+import Juvix.Compiler.Tree.Extra.Apply (addApplyBuiltins)
 import Juvix.Compiler.Tree.Pipeline qualified as Tree
+import Juvix.Compiler.Verification.Dumper
 import Juvix.Extra.Serialize qualified as Serialize
 import Juvix.Prelude
 import Juvix.Prelude.Pretty
@@ -20,7 +23,8 @@ type ModularEff r =
   '[ Files,
      TaggedLock,
      Reader EntryPoint,
-     Error JuvixError
+     Error JuvixError,
+     Dumper
    ]
     ++ r
 
@@ -40,7 +44,7 @@ processModuleCacheMiss ::
   ) =>
   Target ->
   ModuleTable' t ->
-  (Module' t -> Sem r (Module' t')) ->
+  ((ModuleId -> Sem r (Module' t')) -> t' -> Module' t -> Sem r (Module' t')) ->
   ModuleId ->
   Sem r (PipelineResult (Module' t'))
 processModuleCacheMiss midTarget mt f mid = do
@@ -56,7 +60,7 @@ processModuleCacheMiss midTarget mt f mid = do
       subdir = Stored.getOptionsSubdir midTarget opts
       absPath = buildDir Path.</> subdir Path.</> relPath
       md0 = lookupModuleTable mt mid
-      sha256 = fromJust (md0 ^. moduleSHA256)
+      sha256 = md0 ^. moduleSHA256
   res <- processImports (md0 ^. moduleImports)
   let changed = res ^. pipelineResultChanged
       imports = res ^. pipelineResult
@@ -81,16 +85,20 @@ processModuleCacheMiss midTarget mt f mid = do
   where
     recompile :: Stored.Options -> Path Abs File -> [Module' t'] -> Module' t -> Sem r (PipelineResult (Module' t'))
     recompile opts absPath imports md0 = do
-      md :: Module' t' <- f md0
+      let importsTab = mconcatMap computeCombinedInfoTable imports
+      md :: Module' t' <- f fetchModule importsTab md0
       massert (md ^. moduleId == mid)
       massert (md ^. moduleSHA256 == md0 ^. moduleSHA256)
-      let md' = md {_moduleImportsTable = mconcatMap computeCombinedInfoTable imports}
-      Serialize.saveToFile absPath (Stored.fromBaseModule opts md')
+      Serialize.saveToFile absPath (Stored.fromBaseModule opts md)
       return
         PipelineResult
-          { _pipelineResult = md',
+          { _pipelineResult = md,
             _pipelineResultChanged = True
           }
+
+    fetchModule :: ModuleId -> Sem r (Module' t')
+    fetchModule =
+      processModule >=> return . (^. pipelineResult)
 
 processImports ::
   (Members '[Files, Error JuvixError, Reader EntryPoint, ModuleCache (Module' t)] r) =>
@@ -104,6 +112,20 @@ processImports mids = do
         _pipelineResultChanged = any (^. pipelineResultChanged) res
       }
 
+processModuleTable' ::
+  forall t t' r.
+  (Serialize t', Monoid t', Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint] r) =>
+  Target ->
+  ((ModuleId -> Sem (ModuleCache (Module' t') ': r) (Module' t')) -> t' -> Module' t -> Sem (ModuleCache (Module' t') ': r) (Module' t')) ->
+  ModuleTable' t ->
+  Sem r (ModuleTable' t')
+processModuleTable' midTarget f mt = do
+  tab <-
+    evalCacheEmpty
+      (processModuleCacheMiss midTarget mt f)
+      $ mapM (fmap (^. pipelineResult) . processModule . (^. moduleId)) (mt ^. moduleTable)
+  return $ ModuleTable tab
+
 processModuleTable ::
   forall t t' r.
   (Serialize t', Monoid t', Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint] r) =>
@@ -111,26 +133,22 @@ processModuleTable ::
   (Module' t -> Sem r (Module' t')) ->
   ModuleTable' t ->
   Sem r (ModuleTable' t')
-processModuleTable midTarget f mt = do
-  tab <-
-    evalCacheEmpty
-      (processModuleCacheMiss midTarget mt (inject . f))
-      $ mapM (fmap (^. pipelineResult) . processModule . (^. moduleId)) (mt ^. moduleTable)
-  return $ ModuleTable tab
+processModuleTable midTarget f mt =
+  processModuleTable' midTarget (const goModule) mt
+  where
+    goModule :: t' -> Module' t -> Sem (ModuleCache (Module' t') ': r) (Module' t')
+    goModule importsTab md = do
+      md' <- inject (f md)
+      massert (md' ^. moduleId == md ^. moduleId)
+      massert (md' ^. moduleSHA256 == md ^. moduleSHA256)
+      return md' {_moduleImportsTable = importsTab}
 
 modularCoreToStripped ::
-  (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint] r) =>
+  (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
   Core.ModuleTable ->
   Sem r Stripped.ModuleTable
 modularCoreToStripped mt =
   processModuleTable TargetStripped (Pipeline.storedCoreToStripped Core.IdentityTrans) mt
-
-modularCoreToTree ::
-  (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint] r) =>
-  Core.ModuleTable ->
-  Sem r Tree.ModuleTable
-modularCoreToTree =
-  modularCoreToStripped >=> modularStrippedToTree
 
 modularStrippedToTree ::
   (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint] r) =>
@@ -138,3 +156,24 @@ modularStrippedToTree ::
   Sem r Tree.ModuleTable
 modularStrippedToTree mt =
   processModuleTable TargetTree Pipeline.strippedCoreToTree mt
+
+modularTreeToAnoma ::
+  (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
+  Tree.ModuleTable ->
+  Sem r Anoma.ModuleTable
+modularTreeToAnoma mt =
+  processModuleTable' TargetAnoma Pipeline.treeToAnoma' (addApplyBuiltins mt)
+
+modularCoreToTree ::
+  (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
+  Core.ModuleTable ->
+  Sem r Tree.ModuleTable
+modularCoreToTree =
+  modularCoreToStripped >=> modularStrippedToTree
+
+modularCoreToAnoma ::
+  (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
+  Core.ModuleTable ->
+  Sem r Anoma.ModuleTable
+modularCoreToAnoma =
+  modularCoreToTree >=> modularTreeToAnoma

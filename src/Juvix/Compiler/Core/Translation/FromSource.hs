@@ -602,8 +602,6 @@ builtinAppExpr varsNum vars = do
       <|> (kw kwAnomaResourceDelta $> OpAnomaResourceDelta)
       <|> (kw kwAnomaActionDelta $> OpAnomaActionDelta)
       <|> (kw kwAnomaActionsDelta $> OpAnomaActionsDelta)
-      <|> (kw kwAnomaProveAction $> OpAnomaProveAction)
-      <|> (kw kwAnomaProveDelta $> OpAnomaProveDelta)
       <|> (kw kwAnomaZeroDelta $> OpAnomaZeroDelta)
       <|> (kw kwAnomaAddDelta $> OpAnomaAddDelta)
       <|> (kw kwAnomaSubDelta $> OpAnomaSubDelta)
@@ -671,10 +669,10 @@ exprConstUInt8 = P.try $ do
   (n, i) <- uint8
   return $ mkConstant (Info.singleton (LocationInfo i)) (ConstUInt8 (fromIntegral n))
 
-exprUniverse :: ParsecS r Type
+exprUniverse :: (Member (Error CoreError) r) => ParsecS r Type
 exprUniverse = do
   kw kwType
-  level <- optional (number 0 128) -- TODO: global Limits.hs file
+  level <- optional (number @CoreError 0 128) -- TODO: global Limits.hs file
   return $ mkUniv' (maybe 0 (^. withLocParam) level)
 
 exprDynamic :: ParsecS r Type

@@ -34,7 +34,7 @@ treeEvalAssertionParam evalParam mainFile expectedFile trans testTrans step = do
   step "Parse"
   s <- readFile mainFile
   case runParser mainFile s of
-    Left err -> assertFailure (prettyString err)
+    Left err -> assertFailure (renderStringDefault err)
     Right md0 -> do
       step "Validate"
       let opts = Tree.defaultOptions
@@ -99,7 +99,7 @@ treeEvalErrorAssertion mainFile step = do
   step "Parse"
   s <- readFile mainFile
   case runParser mainFile s of
-    Left err -> assertFailure (prettyString err)
+    Left err -> assertFailure (renderStringDefault err)
     Right md ->
       case md ^. moduleInfoTable . infoMainFunction of
         Just sym -> do

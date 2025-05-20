@@ -226,8 +226,6 @@ isDebugOp = \case
       OpAnomaResourceDelta -> False
       OpAnomaActionDelta -> False
       OpAnomaActionsDelta -> False
-      OpAnomaProveAction -> False
-      OpAnomaProveDelta -> False
       OpAnomaZeroDelta -> False
       OpAnomaAddDelta -> False
       OpAnomaSubDelta -> False
@@ -236,8 +234,13 @@ isDebugOp = \case
       OpAnomaRandomSplit -> False
       OpAnomaIsCommitment -> False
       OpAnomaIsNullifier -> False
+      OpAnomaCreateFromComplianceInputs -> False
+      OpAnomaProveDelta -> False
+      OpAnomaTransactionCompose -> False
+      OpAnomaActionCreate -> False
       OpAnomaSetToList -> False
       OpAnomaSetFromList -> False
+      OpNockmaReify -> False
       OpEc -> False
       OpFieldAdd -> False
       OpFieldDiv -> False
@@ -527,23 +530,26 @@ builtinOpArgTypes = \case
   OpAnomaByteArrayFromAnomaContents -> [mkTypeInteger', mkTypeInteger']
   OpAnomaSha256 -> [mkTypeInteger']
   OpAnomaResourceCommitment -> [mkDynamic']
-  OpAnomaResourceNullifier -> [mkDynamic']
+  OpAnomaResourceNullifier -> [mkDynamic', mkDynamic']
   OpAnomaResourceKind -> [mkDynamic']
   OpAnomaResourceDelta -> [mkDynamic']
   OpAnomaActionDelta -> [mkDynamic']
   OpAnomaActionsDelta -> [mkDynamic']
-  OpAnomaProveAction -> [mkDynamic']
-  OpAnomaProveDelta -> [mkDynamic']
   OpAnomaZeroDelta -> []
   OpAnomaAddDelta -> [mkDynamic', mkDynamic']
   OpAnomaSubDelta -> [mkDynamic', mkDynamic']
   OpAnomaRandomGeneratorInit -> [mkTypeInteger']
   OpAnomaRandomNextBytes -> [mkTypeInteger', mkTypeRandomGenerator']
   OpAnomaRandomSplit -> [mkTypeRandomGenerator']
+  OpAnomaActionCreate -> [mkDynamic', mkDynamic', mkDynamic']
+  OpAnomaTransactionCompose -> [mkDynamic', mkDynamic']
   OpAnomaIsCommitment -> [mkTypeInteger']
   OpAnomaIsNullifier -> [mkTypeInteger']
+  OpAnomaCreateFromComplianceInputs -> [mkDynamic', mkDynamic', mkDynamic', mkDynamic', mkDynamic']
+  OpAnomaProveDelta -> [mkDynamic']
   OpAnomaSetToList -> [mkDynamic']
   OpAnomaSetFromList -> [mkDynamic']
+  OpNockmaReify -> [mkDynamic']
   OpPoseidonHash -> [mkDynamic']
   OpEc -> [mkDynamic', mkTypeField', mkDynamic']
   OpRandomEcPoint -> []

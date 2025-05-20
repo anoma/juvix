@@ -474,12 +474,13 @@ derivingInstance = do
             _funAllowInstance = True,
             _funIsTop = FunctionTop
           }
-  off <- P.getOffset
   _derivingFunLhs <- functionDefinitionLhs opts Nothing
   unless (isJust (_derivingFunLhs ^. funLhsInstance)) $
-    parseFailure off "Expected `deriving instance`"
+    P.lift . throw . ErrExpectedDerivingInstance . ExpectedDerivingInstanceError $
+      getLoc _derivingFunLhs
   when (has _FunctionDefNamePattern (_derivingFunLhs ^. funLhsName)) $
-    parseFailure off "Patterns not allowed for `deriving instance`"
+    P.lift . throw . ErrDerivingInstancePatterns . DerivingInstancePatternsError $
+      getLoc _derivingFunLhs
   return Deriving {..}
 
 statement :: (Members '[Error ParserError, ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (Statement 'Parsed)
@@ -521,18 +522,17 @@ stashPragmas = do
     parsePragmas :: ParsecS r (WithSource Pragmas)
     parsePragmas = parseYaml Str.pragmasStart Str.pragmasEnd
 
-parseYaml :: (Member ParserResultBuilder r, FromJSON a) => Text -> Text -> ParsecS r (WithSource a)
+parseYaml :: (Members '[ParserResultBuilder, Error ParserError] r, FromJSON a) => Text -> Text -> ParsecS r (WithSource a)
 parseYaml l r = do
   void (P.chunk l)
-  off <- P.getOffset
-  str <- P.manyTill P.anySingle (P.chunk r)
+  (str, loc) <- interval $ P.manyTill P.anySingle (P.chunk r)
   let str'
         | '\n' `elem` str = str
         | otherwise = '{' : str ++ "}"
   space
   let bs = BS.fromString str'
   case decodeEither bs of
-    Left err -> parseFailure off (prettyPrintParseException err)
+    Left err -> P.lift . throw . ErrYamlParseError $ YamlParseError err loc
     Right yaml -> return $ WithSource (fromString str) yaml
 
 stashJudoc :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r ()
@@ -1337,16 +1337,17 @@ functionDefinitionLhs opts _funLhsBuiltin = P.label "<function definition>" $ do
   let allowInstance = opts ^. funAllowInstance
       allowOmitType = opts ^. funAllowOmitType
   _funLhsTerminating <- optional (kw kwTerminating)
-  off <- P.getOffset
   _funLhsCoercion <- optional (kw kwCoercion)
   unless (allowInstance || isNothing _funLhsCoercion) $
-    parseFailure off "coercion not allowed here"
-  off0 <- P.getOffset
-  _funLhsInstance <- optional (kw kwInstance)
+    P.lift . throw . ErrCoercionNotAllowed . CoercionNotAllowedError $
+      getLoc (fromJust _funLhsCoercion)
+  (_funLhsInstance, loc) <- interval $ optional (kw kwInstance)
   unless (allowInstance || isNothing _funLhsInstance) $
-    parseFailure off0 "instance not allowed here"
+    P.lift . throw . ErrInstanceNotAllowed . InstanceNotAllowedError $
+      loc
   when (isJust _funLhsCoercion && isNothing _funLhsInstance) $
-    parseFailure off0 "expected: instance"
+    P.lift . throw . ErrExpectedInstance . ExpectedInstanceError $
+      loc
   mname <- optional . P.try $ do
     n <- symbol
     P.notFollowedBy (kw kwAt)
@@ -1361,7 +1362,8 @@ functionDefinitionLhs opts _funLhsBuiltin = P.label "<function definition>" $ do
           }
   _funLhsTypeSig <- typeSig sigOpts
   when (isNothing (_funLhsName ^? _FunctionDefName) && notNull (_funLhsTypeSig ^. typeSigArgs)) $
-    parseFailure off "expected function name"
+    P.lift . throw . ErrExpectedFunctionName . ExpectedFunctionNameError $
+      getLoc _funLhsName
   return
     FunctionLhs
       { _funLhsInstance,
@@ -1423,9 +1425,7 @@ functionDefinition ::
   Maybe (WithLoc BuiltinFunction) ->
   ParsecS r (FunctionDef 'Parsed)
 functionDefinition opts _functionDefBuiltin = P.label "<function definition>" $ do
-  off0 <- P.getOffset
   lhs <- functionDefinitionLhs opts _functionDefBuiltin
-  off <- P.getOffset
   _functionDefDoc <- getJudoc
   _functionDefPragmas <- getPragmas
   _functionDefBody <- parseBody
@@ -1433,7 +1433,8 @@ functionDefinition opts _functionDefBuiltin = P.label "<function definition>" $ 
     ( isJust (lhs ^. funLhsTypeSig . typeSigColonKw . unIrrelevant)
         || (P.isBodyExpression _functionDefBody && null (lhs ^. funLhsTypeSig . typeSigArgs))
     )
-    $ parseFailure off "expected result type"
+    $ P.lift . throw . ErrExpectedResultType . ExpectedResultTypeError
+    $ getLoc lhs
   let fdef =
         FunctionDef
           { _functionDefLhs = lhs,
@@ -1442,7 +1443,8 @@ functionDefinition opts _functionDefBuiltin = P.label "<function definition>" $ 
             _functionDefBody
           }
   when (isNothing (lhs ^? funLhsName . _FunctionDefName) && P.isFunctionLike fdef) $
-    parseFailure off0 "expected function name"
+    P.lift . throw . ErrExpectedFunctionName . ExpectedFunctionNameError $
+      getLoc lhs
   return fdef
   where
     parseBody :: ParsecS r (FunctionDefBody 'Parsed)
@@ -1758,23 +1760,22 @@ patternAtomRecord _recordPatternConstructor = do
 -- | A pattern that starts with an identifier
 patternAtomNamed :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => Bool -> ParsecS r (PatternAtom 'Parsed)
 patternAtomNamed nested = do
-  off <- P.getOffset
-  n <- name
+  (n, loc) <- interval name
   case n of
     NameQualified {} ->
       PatternAtomRecord <$> patternAtomRecord n
         <|> return (PatternAtomIden n)
     NameUnqualified s -> do
-      checkWrongEq off s
+      checkWrongEq loc s
       PatternAtomRecord <$> patternAtomRecord n
         <|> PatternAtomAt <$> patternAtomAt s
         <|> return (PatternAtomIden n)
   where
-    checkWrongEq :: Int -> WithLoc Text -> ParsecS r ()
-    checkWrongEq off t =
+    checkWrongEq :: Interval -> WithLoc Text -> ParsecS r ()
+    checkWrongEq loc t =
       when
         (not nested && t ^. withLocParam == "=")
-        (parseFailure off "expected \":=\" instead of \"=\"")
+        (P.lift . throw . ErrExpectedColonEquals . ExpectedColonEqualsError $ loc)
 
 patternAtomNested :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (PatternAtom 'Parsed)
 patternAtomNested = patternAtom' True

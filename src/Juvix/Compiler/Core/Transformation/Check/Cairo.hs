@@ -7,7 +7,10 @@ import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Check.Base
 
 checkCairo :: forall r. (Member (Error CoreError) r) => Module -> Sem r Module
-checkCairo md = do
+checkCairo = checkAll checkCairo'
+
+checkCairo' :: forall r. (Member (Error CoreError) r) => Module -> Sem r Module
+checkCairo' md = do
   checkMainExists md
   checkMainType
   checkNoAxioms md

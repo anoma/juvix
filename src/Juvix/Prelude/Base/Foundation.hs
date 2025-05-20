@@ -1,3 +1,4 @@
+{-# LANGUAGE MagicHash #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
@@ -5,6 +6,7 @@ module Juvix.Prelude.Base.Foundation
   ( module Juvix.Prelude.Base.Foundation,
     module Control.Applicative,
     module Control.DeepSeq,
+    module System.IO.Error,
     module Control.Lens,
     module Control.Monad.Catch,
     module Control.Monad.Extra,
@@ -70,6 +72,7 @@ module Juvix.Prelude.Base.Foundation
     module Text.Read,
     module Text.Show,
     module Text.Show.Unicode,
+    module Data.Bits,
     Data,
     Text,
     pack,
@@ -122,7 +125,7 @@ import Control.Lens hiding
     (#),
     (<.>),
   )
-import Control.Monad.Catch (ExitCase (..), MonadMask, MonadThrow, generalBracket, throwM)
+import Control.Monad.Catch (ExitCase (..), MonadMask, MonadThrow, SomeException, generalBracket, throwM)
 import Control.Monad.Extra hiding (fail, forM, mconcatMapM, whileJustM)
 import Control.Monad.Extra qualified as Monad
 import Control.Monad.Fix
@@ -131,6 +134,7 @@ import Control.Monad.Zip
 import Data.Array qualified as Array
 import Data.Bifunctor hiding (first, second)
 import Data.Bitraversable
+import Data.Bits hiding (And, shift)
 import Data.Bool
 import Data.ByteString (ByteString)
 import Data.Char hiding (Format)
@@ -177,6 +181,7 @@ import Data.Map.Strict (Map)
 import Data.Maybe
 import Data.Monoid
 import Data.Ord
+import Data.Primitive.ByteArray qualified as GHCByteArray
 import Data.Semigroup (Semigroup, sconcat, (<>))
 import Data.Serialize (Serialize)
 import Data.Serialize as Serial
@@ -263,6 +268,8 @@ type TextBuilder = LazyText.Builder
 
 type GHCType = GHC.Type
 
+type GHCByteArray = GHCByteArray.ByteArray
+
 type GHCConstraint = GHC.Constraint
 
 type LazyHashMap = LazyHashMap.HashMap
@@ -329,6 +336,9 @@ prime name = case Text.splitOn "'" name of
   [name', ""] -> name' <> "'0"
   [name', num] -> name' <> "'" <> maybe (num <> "'") (show . (+ 1)) (Text.readMaybe (unpack num) :: Maybe Word)
   _ -> name <> "'"
+
+divisibleBy :: (Integral a) => a -> a -> Bool
+divisibleBy a b = a `mod` b == 0
 
 freshName :: HashSet Text -> Text -> Text
 freshName names name | HashSet.member name names = freshName names (prime name)

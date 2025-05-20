@@ -259,7 +259,10 @@ evalProfile inistack initerm =
                 TermAtom a -> do
                   r <- Encoding.cueEither a
                   either (throwDecodingFailed args') return r
-                TermCell {} -> throwDecodingFailed args' DecodingErrorExpectedAtom
+                TermCell {} ->
+                  -- In the simulated storage, we allow already decoded cells
+                  -- for efficiency. Decoding these should then be a no-op.
+                  return args'
               StdlibVerifyDetached -> case args' of
                 TCell (TermAtom sig) (TCell (TermAtom message) (TermAtom pubKey)) -> goVerifyDetached sig message pubKey
                 _ -> error "expected a term of the form [signature (atom) message (encoded term) public_key (atom)]"
@@ -302,7 +305,7 @@ evalProfile inistack initerm =
             goAnomaSetFromList :: Term a -> Term a
             goAnomaSetFromList arg =
               foldr
-                (\t acc -> TermCell (Cell' t acc emptyCellInfo))
+                (\t acc -> TermCell (mkCell t acc))
                 (TermAtom nockNil)
                 (nubHashable (checkTermToList arg))
 
@@ -514,7 +517,7 @@ evalProfile inistack initerm =
               cellTerm <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
               t1' <- evalArg crumbEvalFirst stack (cellTerm ^. cellLeft)
               t2' <- evalArg crumbEvalSecond stack (cellTerm ^. cellRight)
-              evalArg crumbEvalSecond t1' t2'
+              evalArg crumbEvalApply t1' t2'
 
             goOpIf :: Sem r (Term a)
             goOpIf = do

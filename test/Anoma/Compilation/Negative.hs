@@ -1,6 +1,6 @@
 module Anoma.Compilation.Negative where
 
-import Base hiding (compileMain)
+import Base
 import Juvix.Compiler.Backend (Target (TargetAnoma))
 import Juvix.Compiler.Core.Error
 import Juvix.Prelude qualified as Prelude
@@ -39,10 +39,11 @@ checkCoreError :: CheckError
 checkCoreError e =
   unless
     (isJust (fromJuvixError @CoreError e))
-    (assertFailure ("Expected core error got: " <> unpack (renderTextDefault e)))
+    (assertFailure ("Expected core error got: " <> renderStringDefault e))
 
 allTests :: TestTree
 allTests =
-  testGroup
+  sequentialTestGroup
     "Anoma negative tests"
+    AllFinish
     [mkAnomaNegativeTest "Use of Strings" $(mkRelDir ".") $(mkRelFile "String.juvix") checkCoreError]

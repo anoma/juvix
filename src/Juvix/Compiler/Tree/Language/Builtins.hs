@@ -1,6 +1,6 @@
 module Juvix.Compiler.Tree.Language.Builtins where
 
-import Juvix.Prelude
+import Juvix.Compiler.Core.Language.Base
 
 data BoolOp
   = OpIntLt
@@ -76,6 +76,12 @@ data CairoOp
 
 instance Serialize CairoOp
 
+-- | Builtin Nockma operations
+data NockmaOp = NockmaOpReify
+  deriving stock (Eq, Generic)
+
+instance Serialize NockmaOp
+
 -- | Builtin ByteArray operations
 data ByteArrayOp
   = -- | Convert a list of UInt8 to a ByteArray
@@ -127,10 +133,6 @@ data AnomaOp
     OpAnomaActionDelta
   | -- | Compute the delta of a list of Actions
     OpAnomaActionsDelta
-  | -- | Compute the proof of an Action
-    OpAnomaProveAction
-  | -- | Compute the proof of a Delta
-    OpAnomaProveDelta
   | -- | The zero Delta
     OpAnomaZeroDelta
   | -- | Add Deltas
@@ -147,8 +149,12 @@ data AnomaOp
     OpAnomaIsCommitment
   | -- | Returns true if its argument is a nullifier
     OpAnomaIsNullifier
+  | OpAnomaCreateFromComplianceInputs
+  | OpAnomaProveDelta
   | OpAnomaSetToList
   | OpAnomaSetFromList
+  | OpAnomaTransactionCompose
+  | OpAnomaActionCreate
   deriving stock (Eq, Show, Generic)
 
 instance Serialize AnomaOp

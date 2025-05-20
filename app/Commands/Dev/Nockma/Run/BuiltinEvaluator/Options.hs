@@ -5,7 +5,8 @@ import CommonOptions
 data NockmaRunBuiltinEvaluatorOptions = NockmaRunBuiltinEvaluatorOptions
   { _nockmaRunBuiltinFile :: AppPath File,
     _nockmaRunBuiltinProfile :: Bool,
-    _nockmaRunBuiltinArgs :: Maybe (AppPath File)
+    _nockmaRunBuiltinArgs :: Maybe (AppPath File),
+    _nockmaRunBuiltinStorage :: Maybe (AppPath File)
   }
   deriving stock (Data)
 
@@ -20,4 +21,5 @@ parseNockmaRunBuiltinEvaluatorOptions = do
       ( long "profile"
           <> help "Report evaluator profiling statistics"
       )
+  _nockmaRunBuiltinStorage <- optional anomaStorageOpt
   pure NockmaRunBuiltinEvaluatorOptions {..}

@@ -33,6 +33,9 @@ data ApplicationArg = ApplicationArg
 
 makeLenses ''ApplicationArg
 
+instance PrettyCode ApplicationArg where
+  ppCode a = ppApplicationArg (a ^. appArgIsImplicit) (a ^. appArg)
+
 instance HasLoc ApplicationArg where
   getLoc = getLoc . (^. appArg)
 

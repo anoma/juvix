@@ -1,139 +1,141 @@
 -- | This module assumes that the following external dependencies are installed:
 -- 1. mix
---
--- 2. grpcurl
+-- 2. curl
 module Anoma.Effect.Base
   ( Anoma,
-    anomaRpc,
-    anomaListMethods,
-    getNodeInfo,
+    anomaPost,
+    anomaGet,
+    anomaCheck,
     runAnomaEphemeral,
     runAnomaWithClient,
     fromJSONErr,
     logMessageValue,
-    module Anoma.Rpc.Base,
+    withLoggerThread,
+    module Anoma.Http.Base,
     module Anoma.Client.Base,
-    module Juvix.Compiler.Nockma.Translation.FromTree,
   )
 where
 
 import Anoma.Client.Base
-import Anoma.Rpc.Base
+import Anoma.Http.Base
 import Data.ByteString qualified as B
-import Data.Text qualified as T
 import Effectful.Environment
-import Juvix.Compiler.Nockma.Translation.FromTree (AnomaResult)
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 import Juvix.Prelude.Aeson (Value, eitherDecodeStrict, encode)
 import Juvix.Prelude.Aeson qualified as Aeson
 
 data Anoma :: Effect where
-  -- | gRPC call
-  AnomaRpc :: GrpcMethodUrl -> Value -> Anoma m Value
-  -- | List all gRPC methods using server reflection
-  AnomaListMethods :: Anoma m [GrpcMethodUrl]
-  -- | Get information on the node that the client sends messages to
-  GetNodeInfo :: Anoma m NodeInfo
+  -- | HTTP POST call
+  AnomaPost :: EndpointUrl -> Value -> Anoma m Value
+  -- | HTTP GET call
+  AnomaGet :: EndpointUrl -> Anoma m Value
+  -- | Check if the client is running
+  AnomaCheck :: Anoma m Bool
 
 makeSem ''Anoma
 
-anomaRpc' ::
+anomaRequest' ::
   (Members '[Reader AnomaClientInfo, Process, EmbedIO, Error SimpleError] r) =>
-  GrpcMethodUrl ->
-  Value ->
+  HttpMethod ->
+  EndpointUrl ->
+  Maybe Value ->
   Sem r Value
-anomaRpc' method payload = do
-  cproc <- grpcCliProcess method
+anomaRequest' method endpoint mpayload = do
+  cproc <- httpCliProcess method endpoint
   withCreateProcess cproc $ \mstdin mstdout _stderr _procHandle -> do
-    let stdinH = fromJust mstdin
-        stdoutH = fromJust mstdout
-        inputbs = B.toStrict (encode payload)
-    liftIO (B.hPutStr stdinH inputbs)
-    hClose stdinH
+    whenJust mpayload $ \payload -> do
+      let stdinH = fromJust mstdin
+          inputbs = B.toStrict (encode payload)
+      liftIO (B.hPutStr stdinH inputbs)
+      hClose stdinH
+    let stdoutH = fromJust mstdout
     res <- eitherDecodeStrict <$> liftIO (B.hGetContents stdoutH)
     case res of
       Right r -> return r
       Left err -> throw (SimpleError (mkAnsiText err))
 
-anomaListMethods' ::
+anomaCheck' ::
   (Members '[Reader AnomaClientInfo, Process, Error SimpleError] r) =>
-  Sem r [GrpcMethodUrl]
-anomaListMethods' = do
-  cproc <- grpcCliListProcess
-  (exitCode, stdOut, stdErr) <- readCreateProcessWithExitCode cproc ""
+  Sem r Bool
+anomaCheck' = do
+  cproc <- httpCliCheckProcess
+  (exitCode, _, stdErr) <- readCreateProcessWithExitCode cproc ""
   case exitCode of
-    ExitFailure {} -> throw (SimpleError (mkAnsiText ("gRPC list failed: " <> stdErr)))
-    ExitSuccess -> return (mapMaybe parseMethod (lines stdOut))
-      where
-        parseMethod :: String -> Maybe GrpcMethodUrl
-        parseMethod = fmap mkGrpcMethodUrl . nonEmpty . T.split (== '.') . pack
+    ExitFailure {} -> throw (SimpleError (mkAnsiText ("HTTP request failed: " <> stdErr)))
+    ExitSuccess -> return True
 
-grpcCliProcess :: (Members '[Reader AnomaClientInfo] r) => GrpcMethodUrl -> Sem r CreateProcess
-grpcCliProcess method = do
-  grpcPort <- asks (^. anomaClientInfoPort)
-  grpcUrl <- asks (^. anomaClientInfoUrl)
+httpCliProcess :: (Members '[Reader AnomaClientInfo] r) => HttpMethod -> EndpointUrl -> Sem r CreateProcess
+httpCliProcess method endpoint = do
+  httpPort <- asks (^. anomaClientInfoPort)
+  httpUrl <- asks (^. anomaClientInfoUrl)
+  let url = httpUrl <> ":" <> show httpPort <> "/" <> show endpoint
+      args = case method of
+        HttpGet -> ["-s", "-X", "GET", url, "-H", "accept: application/json"]
+        HttpPost -> ["-s", "-X", "POST", url, "-H", "accept: application/json", "-H", "Content-Type: application/json", "-d", "@-"]
   return
-    ( proc
-        "grpcurl"
-        [ "-d",
-          "@",
-          "-plaintext",
-          grpcUrl <> ":" <> show grpcPort,
-          show method
-        ]
-    )
-      { std_in = CreatePipe,
+    (proc "curl" args)
+      { std_in =
+          case method of
+            HttpGet -> NoStream
+            HttpPost -> CreatePipe,
         std_out = CreatePipe
       }
 
-grpcCliListProcess :: (Members '[Reader AnomaClientInfo] r) => Sem r CreateProcess
-grpcCliListProcess = do
-  grpcPort <- asks (^. anomaClientInfoPort)
-  grpcUrl <- asks (^. anomaClientInfoUrl)
+httpCliCheckProcess :: (Members '[Reader AnomaClientInfo] r) => Sem r CreateProcess
+httpCliCheckProcess = do
+  httpPort <- asks (^. anomaClientInfoPort)
+  httpUrl <- asks (^. anomaClientInfoUrl)
   return
     ( proc
-        "grpcurl"
-        [ "-plaintext",
-          grpcUrl <> ":" <> show grpcPort,
-          "list"
+        "curl"
+        [ "-s",
+          "-I",
+          httpUrl <> ":" <> show httpPort
         ]
     )
+
+-- | TODO Consider using Logger effect instead of putStrLn
+withLoggerThread :: forall r a. (Members '[Concurrent, EmbedIO] r) => Handle -> Sem r a -> Sem r a
+withLoggerThread h m = withAsync catLines (const m)
+  where
+    catLines :: Sem r ()
+    catLines = forever $ do
+      t <- hGetLine h
+      putStrLn t
 
 runAnomaEphemeral :: forall r a. (Members '[Logger, EmbedIO, Error SimpleError] r) => AnomaPath -> Sem (Anoma ': r) a -> Sem r a
 runAnomaEphemeral anomapath body = runEnvironment . runReader anomapath . runProcess $ do
   cproc <- anomaClientCreateProcess LaunchModeAttached
-  withCreateProcess cproc $ \_stdin mstdout _stderr _procHandle -> do
-    grpcInfo <- hardcodeNodeId <$> setupAnomaClientProcess (fromJust mstdout)
-    runReader grpcInfo $ do
-      (`interpret` inject body) $ \case
-        AnomaRpc method i -> anomaRpc' method i
-        AnomaListMethods -> anomaListMethods'
-        GetNodeInfo -> return NodeInfo {_nodeInfoId = grpcInfo ^. anomaClientInfoNodeId}
+  withCreateProcess cproc $ \_stdin mstdout mstderr _procHandle -> do
+    let stdOut = fromJust mstdout
+        stdErr = fromJust mstderr
+    anomaInfo <- setupAnomaClientProcess stdOut
+    runConcurrent . withLoggerThread stdOut . withLoggerThread stdErr $
+      runReader anomaInfo $ do
+        (`interpret` inject body) $ \case
+          AnomaPost url i -> anomaRequest' HttpPost url (Just i)
+          AnomaGet url -> anomaRequest' HttpGet url Nothing
+          AnomaCheck -> anomaCheck'
 
 runAnomaWithClient :: forall r a. (Members '[EmbedIO, Error SimpleError] r) => AnomaClientInfo -> Sem (Anoma ': r) a -> Sem r a
-runAnomaWithClient grpcInfo body = do
-  let grpcInfo' = hardcodeNodeId grpcInfo
+runAnomaWithClient anomaInfo body = do
   runProcess
-    . runReader grpcInfo'
+    . runReader anomaInfo
     $ (`interpret` inject body)
     $ \case
-      AnomaRpc method i -> anomaRpc' method i
-      AnomaListMethods -> anomaListMethods'
-      GetNodeInfo -> return NodeInfo {_nodeInfoId = grpcInfo' ^. anomaClientInfoNodeId}
+      AnomaPost url i -> anomaRequest' HttpPost url (Just i)
+      AnomaGet url -> anomaRequest' HttpGet url Nothing
+      AnomaCheck -> anomaCheck'
 
-fromJSONErr :: (Members '[Error SimpleError] r) => (Aeson.FromJSON a) => Value -> Sem r a
+fromJSONErr :: (HasCallStack, Members '[Error SimpleError] r) => (Aeson.FromJSON a) => Value -> Sem r a
 fromJSONErr v = case Aeson.fromJSON v of
   Aeson.Success r -> return r
-  Aeson.Error err -> throw (SimpleError (mkAnsiText err))
+  Aeson.Error err ->
+    throw . SimpleError $
+      mkAnsiText ghcCallStack
+        <> mkAnsiText ("\nTried to parse: " <> Aeson.jsonEncodeToText v)
+        <> mkAnsiText ("\nError message: " <> err)
 
 logMessageValue :: (Aeson.ToJSON val, Member Logger r) => Text -> val -> Sem r ()
 logMessageValue title val = logVerbose (mkAnsiText (annotate AnnImportant (pretty title <> ":\n") <> pretty (Aeson.jsonEncodeToPrettyText val)))
-
--- 2024-11-27: This node id is hardcoded for now because:
--- 1. The gRPC client crashes if the Anoma client node_id is not a valid base64 string
--- 2. The client node_id is frequently not a valid base64 string
--- 2. The node_id is unused in gRPC requests so will likely be removed
---    See: https://github.com/anoma/anoma/issues/1635
-hardcodeNodeId :: AnomaClientInfo -> AnomaClientInfo
-hardcodeNodeId = set anomaClientInfoNodeId "40872587"

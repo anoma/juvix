@@ -3,6 +3,7 @@ module Juvix.Compiler.Builtins.Anoma where
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Pretty
 import Juvix.Prelude
 
 checkAnomaGet :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
@@ -118,6 +119,14 @@ checkAnomaSha256 f = do
     (ftype === (nat_ --> byteArray))
     $ builtinsErrorText l "anomaSha256 must be of type Nat -> ByteArray"
 
+checkNullifierKey :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
+checkNullifierKey d = do
+  let err = builtinsErrorText (getLoc d)
+      name = ppPrint BuiltinAnomaNullifierKey
+  unless (null (d ^. inductiveParameters)) (err (name <> " should have no type parameters"))
+  unless (isSmallUniverse' (d ^. inductiveType)) (err (name <> " should be in the small universe"))
+  unless (length (d ^. inductiveConstructors) == 1) (err (name <> " should have exactly one constructor"))
+
 checkResource :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
 checkResource d = do
   let err = builtinsErrorText (getLoc d)
@@ -125,12 +134,34 @@ checkResource d = do
   unless (isSmallUniverse' (d ^. inductiveType)) (err "AnomaResource should be in the small universe")
   unless (length (d ^. inductiveConstructors) == 1) (err "AnomaResource should have exactly one constructor")
 
+checkNockmaNoun :: (Members '[Error ScoperError] r) => InductiveDef -> Sem r ()
+checkNockmaNoun d = do
+  let err = builtinsErrorText (getLoc d)
+      nounStr :: Text = prettyText BuiltinNockmaNoun
+  unless (null (d ^. inductiveParameters)) (err (nounStr <> " should have no type parameters"))
+  unless (isSmallUniverse' (d ^. inductiveType)) (err (nounStr <> " should be in the small universe"))
+  unless (length (d ^. inductiveConstructors) == 2) (err (nounStr <> " should have exactly two constructors"))
+
 checkAction :: (Members '[Error ScoperError] r) => InductiveDef -> Sem r ()
 checkAction d = do
   let err = builtinsErrorText (getLoc d)
   unless (null (d ^. inductiveParameters)) (err "AnomaAction should have no type parameters")
   unless (isSmallUniverse' (d ^. inductiveType)) (err "AnomaAction should be in the small universe")
   unless (length (d ^. inductiveConstructors) == 1) (err "AnomaAction should have exactly one constructor")
+
+checkComplianceInputs :: (Members '[Error ScoperError] r) => InductiveDef -> Sem r ()
+checkComplianceInputs d = do
+  let err = builtinsErrorText (getLoc d)
+  unless (null (d ^. inductiveParameters)) (err "ComplianceInputs should have no type parameters")
+  unless (isSmallUniverse' (d ^. inductiveType)) (err "ComplianceInputs should be in the small universe")
+  unless (length (d ^. inductiveConstructors) == 1) (err "ComplianceInputs should have exactly one constructor")
+
+checkShieldedTransaction :: (Members '[Error ScoperError] r) => InductiveDef -> Sem r ()
+checkShieldedTransaction d = do
+  let err = builtinsErrorText (getLoc d)
+  unless (null (d ^. inductiveParameters)) (err "ShieldedTransaction should have no type parameters")
+  unless (isSmallUniverse' (d ^. inductiveType)) (err "ShieldedTransaction should be in the small universe")
+  unless (length (d ^. inductiveConstructors) == 1) (err "ShieldedTransaction should have exactly one constructor")
 
 checkDelta :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
 checkDelta d =
@@ -153,10 +184,13 @@ checkResourceCommitment f = do
 checkResourceNullifier :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkResourceNullifier f = do
   let l = getLoc f
+      name = ppPrint BuiltinAnomaResourceNullifier
   resource <- getBuiltinNameScoper l BuiltinAnomaResource
   nat_ <- getBuiltinNameScoper l BuiltinNat
-  unless (f ^. axiomType === (resource --> nat_)) $
-    builtinsErrorText l "resourceNullifier must be of type AnomaResource -> Nat"
+  nk <- getBuiltinNameScoper l BuiltinAnomaNullifierKey
+  let expectedTy = nk --> resource --> nat_
+  unless (f ^. axiomType === expectedTy) $
+    builtinsErrorText l (name <> " must be of type " <> ppPrint expectedTy)
 
 checkResourceKind :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkResourceKind f = do
@@ -173,22 +207,6 @@ checkResourceDelta f = do
   delta <- getBuiltinNameScoper l BuiltinAnomaDelta
   unless (f ^. axiomType === (resource --> delta)) $
     builtinsErrorText l "resourceDelta must be of type AnomaResource -> AnomaDelta"
-
-checkProveAction :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
-checkProveAction f = do
-  let l = getLoc f
-  action <- getBuiltinNameScoper l BuiltinAnomaAction
-  nat_ <- getBuiltinNameScoper l BuiltinNat
-  unless (f ^. axiomType === (action --> nat_)) $
-    builtinsErrorText l "proveAction must be of type AnomaAction -> Nat"
-
-checkProveDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
-checkProveDelta f = do
-  let l = getLoc f
-  delta <- getBuiltinNameScoper l BuiltinAnomaDelta
-  nat_ <- getBuiltinNameScoper l BuiltinNat
-  unless (f ^. axiomType === (delta --> nat_)) $
-    builtinsErrorText l "proveDelta must be of type AnomaDelta -> Nat"
 
 checkActionDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkActionDelta f = do
@@ -234,6 +252,17 @@ checkAnomaRandomGeneratorInit f = do
   unless (f ^. axiomType === (nat_ --> gen)) $
     builtinsErrorText l "initRandomGenerator must be of type Nat -> AnomaRandomGenerator"
 
+checkNockmaReify :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkNockmaReify f = do
+  let ftype = f ^. axiomType
+      u = ExpressionUniverse smallUniverseNoLoc
+      l = getLoc f
+  reifyTy <- freshVar l "reifyT"
+  noun <- getBuiltinNameScoper l BuiltinNockmaNoun
+  let freeVars = hashSet [reifyTy]
+  unless ((ftype ==% (u <>--> reifyTy --> noun)) freeVars) $
+    builtinsErrorText (getLoc f) (prettyText BuiltinNockmaReify <> " must be of type {A : Type} -> A -> " <> ppPrint noun)
+
 checkAnomaRandomNextBytes :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaRandomNextBytes f = do
   let l = getLoc f
@@ -267,6 +296,33 @@ checkAnomaIsNullifier f = do
   bool_ <- getBuiltinNameScoper l BuiltinBool
   unless (f ^. axiomType === (nat_ --> bool_)) $
     builtinsErrorText l "isNullifier must be of type Nat -> Bool"
+
+checkAnomaActionCreate :: AxiomDef -> Sem r ()
+checkAnomaActionCreate _ = return ()
+
+checkAnomaTransactionCompose :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkAnomaTransactionCompose f = do
+  let l = getLoc f
+  shieldedTransaction <- getBuiltinNameScoper l BuiltinAnomaShieldedTransaction
+  unless (f ^. axiomType === (shieldedTransaction --> shieldedTransaction --> shieldedTransaction)) $
+    builtinsErrorText l "transactionCompose must be of type: ShieldedTransaction -> ShieldedTransaction -> ShieldedTransaction"
+
+checkAnomaCreateFromComplianceInputs :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkAnomaCreateFromComplianceInputs f = do
+  let l = getLoc f
+  json_ <- getBuiltinNameScoper l BuiltinJson
+  list_ <- getBuiltinNameScoper l BuiltinList
+  byteArray <- getBuiltinNameScoper l BuiltinByteArray
+  shieldedTransaction <- getBuiltinNameScoper l BuiltinAnomaShieldedTransaction
+  unless (f ^. axiomType === (list_ @@ json_ --> list_ @@ byteArray --> list_ @@ json_ --> list_ @@ byteArray --> list_ @@ json_ --> shieldedTransaction)) $
+    builtinsErrorText l "createFromComplianceInputs must be of type: List Json -> List ByteArray -> List Json -> List ByteArray -> List Json -> ShieldedTransaction"
+
+checkAnomaProveDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
+checkAnomaProveDelta f = do
+  let l = getLoc f
+  shieldedTransaction <- getBuiltinNameScoper l BuiltinAnomaShieldedTransaction
+  unless (f ^. axiomType === (shieldedTransaction --> shieldedTransaction)) $
+    builtinsErrorText l "proveDelta must be of type: ShieldedTransaction -> ShieldedTransaction"
 
 checkAnomaSet :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaSet t = do

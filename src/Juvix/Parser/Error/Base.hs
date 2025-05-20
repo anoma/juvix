@@ -41,3 +41,29 @@ fromMegaParsecError :: Either MegaparsecError a -> a
 fromMegaParsecError = \case
   Left e -> error (prettyText e)
   Right a -> a
+
+data SimpleParserError = SimpleParserError
+  { _simpleParserErrorLoc :: Interval,
+    _simpleParserErrorMessage :: Text
+  }
+  deriving stock (Show)
+
+makeLenses ''SimpleParserError
+
+instance HasLoc SimpleParserError where
+  getLoc SimpleParserError {..} = _simpleParserErrorLoc
+
+instance ToGenericError SimpleParserError where
+  genericError SimpleParserError {..} =
+    return
+      GenericError
+        { _genericErrorLoc = _simpleParserErrorLoc,
+          _genericErrorMessage = mkAnsiText _simpleParserErrorMessage,
+          _genericErrorIntervals = [_simpleParserErrorLoc]
+        }
+
+class FromSimpleParserError a where
+  fromSimpleParserError :: SimpleParserError -> a
+
+instance FromSimpleParserError SimpleParserError where
+  fromSimpleParserError = id

@@ -9,6 +9,7 @@ import Juvix.Compiler.Pipeline.Modular
 import Juvix.Compiler.Pipeline.Run qualified as Pipeline
 import Juvix.Compiler.Store.Extra qualified as Store
 import Juvix.Compiler.Store.Language qualified as Store
+import Juvix.Compiler.Verification.Dumper
 import Juvix.Prelude
 
 runIOEitherPipeline ::
@@ -22,6 +23,8 @@ runIOEitherPipeline entry a =
     . runJuvixError
     . runReader entry
     . runFilesIO
+    -- For now, we dump verification statements only in the Core pipeline part.
+    . ignoreDumper
     $ inject a
 
 runIOEitherModular ::

@@ -53,6 +53,8 @@ instance (Hashable a) => Hashable (Term a)
 
 instance (NFData a) => NFData (Term a)
 
+instance (Serialize a) => Serialize (Term a)
+
 data AnomaLibCall a = AnomaLibCall
   { _anomaLibCallRef :: AnomaLib,
     _anomaLibCallArgs :: Term a
@@ -63,6 +65,8 @@ instance (Hashable a) => Hashable (AnomaLibCall a)
 
 instance (NFData a) => NFData (AnomaLibCall a)
 
+instance (Serialize a) => Serialize (AnomaLibCall a)
+
 newtype Tag = Tag
   { _unTag :: Text
   }
@@ -72,27 +76,37 @@ instance Hashable Tag
 
 instance NFData Tag
 
+instance Serialize Tag
+
 data CellInfo a = CellInfo
   { _cellInfoLoc :: Irrelevant (Maybe Interval),
     _cellInfoTag :: Maybe Tag,
-    _cellInfoCall :: Maybe (AnomaLibCall a)
+    _cellInfoCall :: Maybe (AnomaLibCall a),
+    _cellInfoHash :: Int
   }
   deriving stock (Show, Eq, Lift, Generic)
 
-instance (Hashable a) => Hashable (CellInfo a)
-
 instance (NFData a) => NFData (CellInfo a)
+
+instance (Serialize a) => Serialize (CellInfo a)
 
 data Cell a = Cell'
   { _cellLeft :: Term a,
     _cellRight :: Term a,
     _cellInfo :: CellInfo a
   }
-  deriving stock (Show, Eq, Lift, Generic)
+  deriving stock (Show, Lift, Generic)
 
-instance (Hashable a) => Hashable (Cell a)
+instance (Eq a) => Eq (Cell a) where
+  Cell' l r _ == Cell' l' r' _ = l == l' && r == r'
+
+instance (Hashable a) => Hashable (Cell a) where
+  hashWithSalt salt (Cell' _ _ CellInfo {..}) = hashWithSalt salt _cellInfoHash
+  hash (Cell' _ _ CellInfo {..}) = _cellInfoHash
 
 instance (NFData a) => NFData (Cell a)
+
+instance (Serialize a) => Serialize (Cell a)
 
 data AtomInfo = AtomInfo
   { _atomInfoHint :: Maybe AtomHint,
@@ -105,15 +119,23 @@ instance Hashable AtomInfo
 
 instance NFData AtomInfo
 
+instance Serialize AtomInfo
+
 data Atom a = Atom
   { _atom :: a,
     _atomInfo :: AtomInfo
   }
-  deriving stock (Show, Eq, Lift, Generic)
+  deriving stock (Show, Lift, Generic)
 
-instance (Hashable a) => Hashable (Atom a)
+instance (Eq a) => Eq (Atom a) where
+  Atom a _ == Atom b _ = a == b
+
+instance (Hashable a) => Hashable (Atom a) where
+  hashWithSalt salt (Atom a _) = hashWithSalt salt a
 
 instance (NFData a) => NFData (Atom a)
+
+instance (Serialize a) => Serialize (Atom a)
 
 data AtomHint
   = AtomHintOp
@@ -129,6 +151,8 @@ data AtomHint
 instance Hashable AtomHint
 
 instance NFData AtomHint
+
+instance Serialize AtomHint
 
 data NockOp
   = OpAddress
@@ -147,6 +171,10 @@ data NockOp
   deriving stock (Show, Bounded, Enum, Eq, Generic, Lift)
 
 instance Hashable NockOp
+
+instance NFData NockOp
+
+instance Serialize NockOp
 
 instance Pretty NockOp where
   pretty = \case
@@ -252,8 +280,13 @@ makeLenses ''WithStack
 makeLenses ''AtomInfo
 makeLenses ''CellInfo
 
-singletonProgram :: Term a -> Program a
-singletonProgram t = Program [StatementStandalone t]
+mkCell :: (Hashable a) => Term a -> Term a -> Cell a
+mkCell l r =
+  Cell'
+    { _cellLeft = l,
+      _cellRight = r,
+      _cellInfo = emptyCellInfo {_cellInfoHash = hash (l, r)}
+    }
 
 isCell :: Term a -> Bool
 isCell = \case
@@ -266,8 +299,11 @@ isAtom = not . isCell
 atomHint :: Lens' (Atom a) (Maybe AtomHint)
 atomHint = atomInfo . atomInfoHint
 
+singletonProgram :: Term a -> Program a
+singletonProgram t = Program [StatementStandalone t]
+
 -- | Removes all extra information recursively
-removeInfoRec :: Term a -> Term a
+removeInfoRec :: forall a. (Hashable a) => Term a -> Term a
 removeInfoRec = go
   where
     go :: Term a -> Term a
@@ -529,17 +565,17 @@ opTrace' msg val = OpHint # (nockNilTagged "opTrace'" # msg) # val
 
 {-# COMPLETE Cell #-}
 
-pattern Cell :: Term a -> Term a -> Cell a
+pattern Cell :: (Hashable a) => Term a -> Term a -> Cell a
 pattern Cell {_cellLeft', _cellRight'} <- Cell' _cellLeft' _cellRight' _
   where
-    Cell a b = Cell' a b emptyCellInfo
+    Cell a b = mkCell a b
 
 {-# COMPLETE TCell, TAtom #-}
 
-pattern TCell :: Term a -> Term a -> Term a
+pattern TCell :: (Hashable a) => Term a -> Term a -> Term a
 pattern TCell l r <- TermCell (Cell' l r _)
   where
-    TCell a b = TermCell (Cell a b)
+    TCell a b = TermCell (mkCell a b)
 
 pattern TAtom :: a -> Term a
 pattern TAtom a <- TermAtom (Atom a _)
@@ -551,7 +587,8 @@ emptyCellInfo =
   CellInfo
     { _cellInfoCall = Nothing,
       _cellInfoTag = Nothing,
-      _cellInfoLoc = Irrelevant Nothing
+      _cellInfoLoc = Irrelevant Nothing,
+      _cellInfoHash = 0
     }
 
 emptyAtomInfo :: AtomInfo
@@ -577,14 +614,14 @@ instance (NockmaEq a) => NockmaEq [a] where
 instance (NockmaEq a) => NockmaEq (Atom a) where
   nockmaEq = nockmaEq `on` (^. atom)
 
-instance (NockmaEq a) => NockmaEq (Term a) where
+instance (Hashable a, NockmaEq a) => NockmaEq (Term a) where
   nockmaEq = \cases
     (TermAtom a) (TermAtom b) -> nockmaEq a b
     (TermCell a) (TermCell b) -> nockmaEq a b
     TermCell {} TermAtom {} -> False
     TermAtom {} TermCell {} -> False
 
-instance (NockmaEq a) => NockmaEq (Cell a) where
+instance (Hashable a, NockmaEq a) => NockmaEq (Cell a) where
   nockmaEq (Cell l r) (Cell l' r') = nockmaEq l l' && nockmaEq r r'
 
 crash :: Term Natural
@@ -615,3 +652,21 @@ unfoldTuple1 = nonEmpty' . run . execOutputList . go
       case t of
         TermAtom {} -> output t
         TermCell (Cell l r) -> output l >> go r
+
+foldTerms :: NonEmpty (Term Natural) -> Term Natural
+foldTerms = foldr1 (#)
+
+-- | The elements will not be evaluated.
+makeList :: (Foldable f) => f (Term Natural) -> Term Natural
+makeList ts = foldTerms (toList ts `prependList` pure (nockNilTagged "makeList"))
+
+-- | The elements of the list will be evaluated to create the list.
+remakeList :: (Foldable l) => l (Term Natural) -> Term Natural
+remakeList ts = foldTerms (toList ts `prependList` pure (OpQuote # nockNilTagged "remakeList"))
+
+mkEmptyAtom :: a -> Atom a
+mkEmptyAtom x =
+  Atom
+    { _atomInfo = emptyAtomInfo,
+      _atom = x
+    }

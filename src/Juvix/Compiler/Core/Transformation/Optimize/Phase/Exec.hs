@@ -6,13 +6,12 @@ import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
 import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Main qualified as Main
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
+import Juvix.Compiler.Verification.Dumper (Dumper)
 
-optimize :: (Member (Reader CoreOptions) r) => Module -> Sem r Module
+optimize :: (Members '[Reader CoreOptions, Dumper] r) => Module -> Sem r Module
 optimize tab = do
-  opts <- ask
-  withOptimizationLevel' tab 1 $
-    return
-      . topEtaExpand
+  withOptimizationLevel' tab 1 $ \md ->
+    topEtaExpand
       . letFolding
       . lambdaLetRecLifting
-      . Main.optimize' opts
+      <$> Main.optimize md

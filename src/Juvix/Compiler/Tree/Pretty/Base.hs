@@ -271,8 +271,15 @@ instance PrettyCode ByteArrayOp where
       OpByteArrayFromListUInt8 -> Str.instrByteArrayFromListUInt8
       OpByteArrayLength -> Str.instrByteArrayLength
 
+instance PrettyCode Symbol where
+  ppCode sym = return (pretty sym)
+
+instance PrettyCode NockmaOp where
+  ppCode op = return $ case op of
+    NockmaOpReify -> primitive Str.nockmaReify
+
 instance PrettyCode CairoOp where
-  ppCode op = return $ primitive $ case op of
+  ppCode op = return . primitive $ case op of
     OpCairoPoseidon -> Str.instrPoseidon
     OpCairoEc -> Str.instrEcOp
     OpCairoRangeCheck -> Str.cairoRangeCheck
@@ -296,8 +303,6 @@ instance PrettyCode AnomaOp where
     OpAnomaResourceDelta -> Str.anomaResourceDelta
     OpAnomaActionDelta -> Str.anomaActionDelta
     OpAnomaActionsDelta -> Str.anomaActionsDelta
-    OpAnomaProveAction -> Str.anomaProveAction
-    OpAnomaProveDelta -> Str.anomaProveDelta
     OpAnomaZeroDelta -> Str.anomaZeroDelta
     OpAnomaAddDelta -> Str.anomaAddDelta
     OpAnomaSubDelta -> Str.anomaSubDelta
@@ -306,8 +311,12 @@ instance PrettyCode AnomaOp where
     OpAnomaRandomSplit -> Str.anomaRandomSplit
     OpAnomaIsCommitment -> Str.anomaIsCommitment
     OpAnomaIsNullifier -> Str.anomaIsNullifier
+    OpAnomaCreateFromComplianceInputs -> Str.anomaCreateFromComplianceInputs
+    OpAnomaProveDelta -> Str.anomaProveDelta
     OpAnomaSetToList -> Str.anomaSetToList
     OpAnomaSetFromList -> Str.anomaSetFromList
+    OpAnomaTransactionCompose -> Str.anomaTransactionCompose
+    OpAnomaActionCreate -> Str.anomaActionCreate
 
 instance PrettyCode UnaryOpcode where
   ppCode = \case
@@ -321,6 +330,12 @@ instance PrettyCode NodeUnop where
     op <- ppCode _nodeUnopOpcode
     arg <- ppCode _nodeUnopArg
     return $ op <> parens arg
+
+instance PrettyCode NodeNockma where
+  ppCode NodeNockma {..} = do
+    op <- ppCode _nodeNockmaOpcode
+    args <- ppCodeArgs _nodeNockmaArgs
+    return $ op <> parens args
 
 instance PrettyCode NodeCairo where
   ppCode NodeCairo {..} = do
@@ -438,6 +453,7 @@ instance PrettyCode Node where
     ByteArray x -> ppCode x
     Anoma x -> ppCode x
     Cairo x -> ppCode x
+    Nockma x -> ppCode x
     Constant x -> ppCode x
     MemRef x -> ppCode x
     AllocConstr x -> ppCode x

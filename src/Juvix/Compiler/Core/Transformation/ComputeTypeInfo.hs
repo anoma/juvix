@@ -80,6 +80,7 @@ computeNodeTypeInfo md = umapL go
             [arg] -> Info.getNodeType arg
             _ -> error "incorrect trace builtin application"
           OpFail -> Info.getNodeType node
+          OpNockmaReify -> Info.getNodeType node
           OpAnomaGet -> Info.getNodeType node
           OpAnomaEncode -> Info.getNodeType node
           OpAnomaDecode -> Info.getNodeType node
@@ -96,8 +97,6 @@ computeNodeTypeInfo md = umapL go
           OpAnomaResourceDelta -> mkDynamic'
           OpAnomaActionDelta -> mkDynamic'
           OpAnomaActionsDelta -> mkDynamic'
-          OpAnomaProveAction -> mkTypeInteger'
-          OpAnomaProveDelta -> mkTypeInteger'
           OpAnomaZeroDelta -> mkDynamic'
           OpAnomaAddDelta -> mkDynamic'
           OpAnomaSubDelta -> mkDynamic'
@@ -106,6 +105,10 @@ computeNodeTypeInfo md = umapL go
           OpAnomaRandomSplit -> mkDynamic'
           OpAnomaIsCommitment -> mkTypeBool'
           OpAnomaIsNullifier -> mkTypeBool'
+          OpAnomaCreateFromComplianceInputs -> mkDynamic'
+          OpAnomaProveDelta -> mkDynamic'
+          OpAnomaActionCreate -> mkDynamic'
+          OpAnomaTransactionCompose -> mkDynamic'
           OpAnomaSetToList -> mkDynamic'
           OpAnomaSetFromList -> mkDynamic'
           OpPoseidonHash -> case _builtinAppArgs of

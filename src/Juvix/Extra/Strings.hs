@@ -380,6 +380,9 @@ anomaVerifyDetached = "anoma-verify-detached"
 anomaSign :: (IsString s) => s
 anomaSign = "anoma-sign"
 
+nockmaReify :: (IsString s) => s
+nockmaReify = "nockma-reify"
+
 builtinMonadBind :: (IsString s) => s
 builtinMonadBind = "monad-bind"
 
@@ -431,12 +434,6 @@ anomaAddDelta = "anoma-add-delta"
 anomaSubDelta :: (IsString s) => s
 anomaSubDelta = "anoma-sub-delta"
 
-anomaProveDelta :: (IsString s) => s
-anomaProveDelta = "anoma-prove-delta"
-
-anomaProveAction :: (IsString s) => s
-anomaProveAction = "anoma-prove-action"
-
 anomaRandomGenerator :: (IsString s) => s
 anomaRandomGenerator = "anoma-random-generator"
 
@@ -455,11 +452,23 @@ anomaIsCommitment = "anoma-is-commitment"
 anomaIsNullifier :: (IsString s) => s
 anomaIsNullifier = "anoma-is-nullifier"
 
+anomaCreateFromComplianceInputs :: (IsString s) => s
+anomaCreateFromComplianceInputs = "anoma-create-from-compliance-inputs"
+
+anomaProveDelta :: (IsString s) => s
+anomaProveDelta = "anoma-prove-delta"
+
 anomaSet :: (IsString s) => s
 anomaSet = "anoma-set"
 
 anomaSetToList :: (IsString s) => s
 anomaSetToList = "anoma-set-to-list"
+
+anomaTransactionCompose :: (IsString s) => s
+anomaTransactionCompose = "anoma-transaction-compose"
+
+anomaActionCreate :: (IsString s) => s
+anomaActionCreate = "anoma-action-create"
 
 anomaSetFromList :: (IsString s) => s
 anomaSetFromList = "anoma-set-from-list"
@@ -1058,6 +1067,24 @@ monad = "monad"
 pair :: (IsString s) => s
 pair = "pair"
 
+json :: (IsString s) => s
+json = "json"
+
+jsonArray :: (IsString s) => s
+jsonArray = "jsonArray"
+
+jsonObject :: (IsString s) => s
+jsonObject = "jsonObject"
+
+jsonString :: (IsString s) => s
+jsonString = "jsonString"
+
+jsonNumber :: (IsString s) => s
+jsonNumber = "jsonNumber"
+
+jsonBool :: (IsString s) => s
+jsonBool = "jsonBool"
+
 unary :: (IsString s) => s
 unary = "unary"
 
@@ -1133,17 +1160,44 @@ cairoEcPoint = "ec_point"
 cairoMkEcPoint :: (IsString s) => s
 cairoMkEcPoint = "mkEcPoint"
 
+nockmaNoun :: (IsString s) => s
+nockmaNoun = "nockma-noun"
+
+nockmaAtom :: (IsString s) => s
+nockmaAtom = "nockma-atom"
+
+nockmaCell :: (IsString s) => s
+nockmaCell = "nockma-cell"
+
 anomaResource :: (IsString s) => s
 anomaResource = "anoma-resource"
+
+anomaNullifierKey :: (IsString s) => s
+anomaNullifierKey = "anoma-nullifier-key"
 
 anomaAction :: (IsString s) => s
 anomaAction = "anoma-action"
 
+anomaComplianceInputs :: (IsString s) => s
+anomaComplianceInputs = "anoma-compliance-inputs"
+
+anomaShieldedTransaction :: (IsString s) => s
+anomaShieldedTransaction = "anoma-transaction"
+
 anomaMkResource :: (IsString s) => s
 anomaMkResource = "mkResource"
 
+anomaMkNullifierKey :: (IsString s) => s
+anomaMkNullifierKey = "mkNullifierKey"
+
 anomaMkAction :: (IsString s) => s
 anomaMkAction = "mkAction"
+
+anomaMkComplianceInputs :: (IsString s) => s
+anomaMkComplianceInputs = "mkComplianceInputs"
+
+anomaMkShieldedTransaction :: (IsString s) => s
+anomaMkShieldedTransaction = "mkShieldedTransaction"
 
 mkEq :: (IsString s) => s
 mkEq = "mkEq"

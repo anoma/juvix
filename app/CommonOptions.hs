@@ -106,6 +106,18 @@ anomaArgsOpt = do
       )
   pure AppPath {_pathIsInput = True, ..}
 
+anomaStorageOpt :: Parser (AppPath File)
+anomaStorageOpt = do
+  _pathPath <-
+    option
+      somePreFileOpt
+      ( long "storage"
+          <> metavar "STORAGE_FILE"
+          <> help "Path to a file containing objects in storage. The storage file should contain a list of nouns to put in storage."
+          <> action "file"
+      )
+  pure AppPath {_pathIsInput = True, ..}
+
 anomaClientConfigOpt :: Parser (AppPath File)
 anomaClientConfigOpt = do
   _pathPath <-

@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 -- | This module contains lexing functions common to all parsers in the pipeline
 -- (Juvix, JuvixCore, JuvixAsm).
 module Juvix.Parser.Lexer
@@ -13,12 +15,19 @@ import GHC.Unicode
 import Juvix.Compiler.Concrete.Data.Literal
 import Juvix.Data.Keyword
 import Juvix.Extra.Strings qualified as Str
+import Juvix.Parser.Error.Base
 import Juvix.Prelude
 import Juvix.Prelude.Parsing as P hiding (hspace, space, space1)
 import Text.Megaparsec.Char.Lexer qualified as L
 
 parseFailure :: Int -> String -> ParsecT Void Text m a
 parseFailure off str = P.parseError $ P.FancyError off (Set.singleton (P.ErrorFail str))
+
+parsingError :: forall e r a. (FromSimpleParserError e, Member (Error e) r) => Interval -> String -> ParsecS r a
+parsingError loc str = P.lift . throw @e . fromSimpleParserError $ SimpleParserError loc (Text.pack str)
+
+parsingError' :: forall r a. (Member (Error SimpleParserError) r) => Interval -> String -> ParsecS r a
+parsingError' loc str = P.lift . throw $ SimpleParserError loc (Text.pack str)
 
 whiteSpace1 :: (MonadParsec e s m, Token s ~ Char) => m ()
 whiteSpace1 = void (takeWhile1P (Just spaceMsg) isWhiteSpace)
@@ -27,19 +36,19 @@ whiteSpace :: (MonadParsec e s m, Token s ~ Char) => m ()
 whiteSpace = void (takeWhileP (Just spaceMsg) isWhiteSpace)
 
 isWhiteSpace :: Char -> Bool
-isWhiteSpace = (`elem` [' ', '\n'])
+isWhiteSpace = (`elem` [' ', '\t', '\r', '\n'])
 
 hspace :: (MonadParsec e s m, Token s ~ Char) => m (Tokens s)
 hspace = takeWhileP (Just spaceMsg) isHWhiteSpace
   where
     isHWhiteSpace :: Char -> Bool
-    isHWhiteSpace = (== ' ')
+    isHWhiteSpace = (`elem` [' ', '\t', '\r'])
 
 hspace_ :: (MonadParsec e s m, Token s ~ Char) => m ()
 hspace_ = void hspace
 
 spaceMsg :: String
-spaceMsg = "white space (only spaces and newlines allowed)"
+spaceMsg = "white space"
 
 -- | `special` is set when judoc comments or pragmas are supported
 space' :: forall e m. (MonadParsec e Text m) => Bool -> m (Maybe SpaceSpan)
@@ -149,14 +158,13 @@ integerBase' =
     baseprefix :: IntegerBase -> ParsecT Void Text m IntegerBase
     baseprefix x = P.chunk (integerBasePrefix x) $> x
 
-number' :: ParsecS r (WithLoc Integer) -> Int -> Int -> ParsecS r (WithLoc Int)
+number' :: forall e r. (FromSimpleParserError e, Member (Error e) r) => ParsecS r (WithLoc Integer) -> Int -> Int -> ParsecS r (WithLoc Int)
 number' int mn mx = do
-  off <- getOffset
-  num <- int
+  (num, loc) <- interval int
   let n = num ^. withLocParam
   when
     (n < fromIntegral mn || n > fromIntegral mx)
-    (parseFailure off ("number out of bounds: " ++ show n))
+    (parsingError @e loc ("number out of bounds: " ++ show n))
   return (fromInteger <$> num)
 
 string' :: ParsecS r Text

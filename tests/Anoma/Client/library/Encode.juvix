@@ -1,0 +1,39 @@
+module Encode;
+
+import Stdlib.Prelude open;
+
+--- Encodes a value into a natural number.
+builtin anoma-encode
+axiom builtinAnomaEncode
+  : {Value : Type}
+    -- | The value to encode.
+    -> Value
+    -- | The encoded natural number.
+    -> Nat;
+
+--- Decodes a value from a natural number.
+builtin anoma-decode
+axiom builtinAnomaDecode
+  : {Value : Type}
+    -- | The natural number to decode.
+    -> Nat
+    -- | The decoded value.
+    -> Value;
+
+type Encoded A := internalMk Nat
+with
+  coerceFromNat {A} : Nat -> Encoded A := internalMk;
+
+  decode {A} : (encoded : Encoded A) -> A
+    | (internalMk n) := builtinAnomaDecode n;
+
+  encode {A} (obj : A) : Encoded A := internalMk (builtinAnomaEncode obj);
+
+  deriving instance
+  Encoded-Ord {A} : Ord (Encoded A);
+
+  deriving instance
+  Encoded-Eq {A} : Eq (Encoded A);
+end;
+
+open Encoded using {decode; encode} public;

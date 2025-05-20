@@ -16,10 +16,10 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Nockma.Encoding qualified as Encoding
-import Juvix.Compiler.Nockma.Encoding.ByteString (byteStringToIntegerLE, naturalToByteStringLELen)
 import Juvix.Compiler.Nockma.Encoding.Ed25519 qualified as E
 import Juvix.Compiler.Store.Core.Extra qualified as Store
 import Juvix.Data.Field
+import Juvix.Prelude.Bytes
 import Text.Read qualified as T
 
 data EvalOptions = EvalOptions
@@ -229,14 +229,13 @@ geval opts herr tab env0 = eval' env0
       OpAnomaByteArrayToAnomaContents -> anomaByteArrayToAnomaContents
       OpAnomaByteArrayFromAnomaContents -> anomaByteArrayFromAnomaContents
       OpAnomaSha256 -> anomaSha256
+      OpNockmaReify -> normalizeOrUnsupported opcode
       OpAnomaResourceCommitment -> normalizeOrUnsupported opcode
       OpAnomaResourceNullifier -> normalizeOrUnsupported opcode
       OpAnomaResourceKind -> normalizeOrUnsupported opcode
       OpAnomaResourceDelta -> normalizeOrUnsupported opcode
       OpAnomaActionDelta -> normalizeOrUnsupported opcode
       OpAnomaActionsDelta -> normalizeOrUnsupported opcode
-      OpAnomaProveAction -> normalizeOrUnsupported opcode
-      OpAnomaProveDelta -> normalizeOrUnsupported opcode
       OpAnomaZeroDelta -> normalizeOrUnsupported opcode
       OpAnomaAddDelta -> normalizeOrUnsupported opcode
       OpAnomaSubDelta -> normalizeOrUnsupported opcode
@@ -245,6 +244,10 @@ geval opts herr tab env0 = eval' env0
       OpAnomaRandomSplit -> normalizeOrUnsupported opcode
       OpAnomaIsCommitment -> normalizeOrUnsupported opcode
       OpAnomaIsNullifier -> normalizeOrUnsupported opcode
+      OpAnomaCreateFromComplianceInputs -> normalizeOrUnsupported opcode
+      OpAnomaProveDelta -> normalizeOrUnsupported opcode
+      OpAnomaActionCreate -> normalizeOrUnsupported opcode
+      OpAnomaTransactionCompose -> normalizeOrUnsupported opcode
       OpAnomaSetToList -> normalizeOrUnsupported opcode
       OpAnomaSetFromList -> normalizeOrUnsupported opcode
       OpPoseidonHash -> poseidonHashOp

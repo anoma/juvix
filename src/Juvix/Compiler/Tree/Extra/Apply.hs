@@ -63,4 +63,6 @@ getApplyBuiltins = (blts, bs' ^. stateModule)
           _ -> impossible
 
 addApplyBuiltins :: ModuleTable -> ModuleTable
-addApplyBuiltins = over moduleTable (HashMap.insert applyBuiltinsModuleId applyBuiltinsModule)
+addApplyBuiltins =
+  over moduleTable (HashMap.insert applyBuiltinsModuleId applyBuiltinsModule)
+    . over moduleTable (fmap (over moduleImports (applyBuiltinsModuleId :)))

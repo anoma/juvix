@@ -9,6 +9,7 @@ import Control.Monad.Trans.Class (lift)
 import Juvix.Compiler.Tree.Data.InfoTableBuilder.Base
 import Juvix.Compiler.Tree.Language.Base
 import Juvix.Compiler.Tree.Translation.FromSource.Lexer.Base
+import Juvix.Parser.Error.Base
 
 type LocalNameMap d = HashMap Text d
 
@@ -26,7 +27,7 @@ emptyLocalParams =
 
 data ParserSig t e d = ParserSig
   { _parserSigBareIdentifier :: forall r. ParsecS r Text,
-    _parserSigParseCode :: forall r. (Members '[Reader (ParserSig t e d), InfoTableBuilder' t e, State (LocalParams' d)] r) => ParsecS r t,
+    _parserSigParseCode :: forall r. (Members '[Error SimpleParserError, Reader (ParserSig t e d), InfoTableBuilder' t e, State (LocalParams' d)] r) => ParsecS r t,
     _parserSigArgRef :: Index -> Maybe Text -> d,
     _parserSigEmptyCode :: t,
     _parserSigEmptyExtra :: e
@@ -45,7 +46,7 @@ identifierL = do
   sig <- lift $ ask @(ParserSig t e d)
   lexemeInterval (sig ^. parserSigBareIdentifier)
 
-parseCode :: forall t e d r. (Members '[Reader (ParserSig t e d), InfoTableBuilder' t e, State (LocalParams' d)] r) => ParsecS r t
+parseCode :: forall t e d r. (Members '[Error SimpleParserError, Reader (ParserSig t e d), InfoTableBuilder' t e, State (LocalParams' d)] r) => ParsecS r t
 parseCode = do
   sig <- lift $ ask @(ParserSig t e d)
   sig ^. parserSigParseCode

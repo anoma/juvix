@@ -53,6 +53,15 @@ juvixFileExt = ".juvix"
 nockmaDebugFileExts :: (IsString a) => NonEmpty a
 nockmaDebugFileExts = ".debug" :| [".nockma"]
 
+nockmaTextFileExts :: (IsString a) => NonEmpty a
+nockmaTextFileExts = ".text" :| [".nockma"]
+
+nockmaStorageFileExts :: (IsString a) => NonEmpty a
+nockmaStorageFileExts = ".modules" :| [".nockma"]
+
+hoonFileExt :: (IsString a) => a
+hoonFileExt = ".hoon"
+
 juvixMarkdownFileExt :: (IsString a) => a
 juvixMarkdownFileExt = ".juvix.md"
 

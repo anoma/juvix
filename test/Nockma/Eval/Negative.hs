@@ -1,7 +1,6 @@
 module Nockma.Eval.Negative where
 
 import Base hiding (Path, testName)
-import Juvix.Compiler.Core.Language.Base (defaultSymbol)
 import Juvix.Compiler.Nockma.Anoma
 import Juvix.Compiler.Nockma.Evaluator
 import Juvix.Compiler.Nockma.Language
@@ -15,21 +14,11 @@ negAnomaTest ::
   (NockEvalError Natural -> Bool) ->
   Pos.Test
 negAnomaTest name mainFun args checkErr =
-  let f =
-        CompilerFunction
-          { _compilerFunctionId = UserFunction (defaultSymbol 0),
-            _compilerFunctionArity = fromIntegral (length args),
-            _compilerFunction = return (Pos.compileTerm mainFun),
-            _compilerFunctionName = "main"
-          }
-      _testName :: Text
+  let _testName :: Text
         | _evalInterceptAnomaLibCalls = name <> " - intercept stdlib"
         | otherwise = name
-
-      opts = CompilerOptions
       _evalInterceptAnomaLibCalls = True
-      res :: AnomaResult = runCompilerWith opts mempty [] f
-      _testProgramSubject = res ^. anomaClosure
+      _testProgramSubject = makeMainFunction True (fromIntegral (length args)) (Pos.compileTerm mainFun)
       _testProgramFormula = anomaCall args
       _testProgramStorage :: Storage Natural = emptyStorage
       _testEvalOptions = EvalOptions {..}

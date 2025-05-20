@@ -2,9 +2,9 @@ module Anoma.Client.Positive where
 
 import Anoma.Client.Base
 import Anoma.Effect
+import Anoma.Http.AddTransaction (TransactionType (TransactionTransparent))
 import Base
 import Juvix.Compiler.Nockma.Language hiding (Path)
-import Juvix.Compiler.Nockma.Translation.FromTree (anomaClosure)
 import Juvix.Prelude.Pretty
 
 root :: Path Abs Dir
@@ -26,14 +26,18 @@ fromClientTest :: ClientTest -> TestTree
 fromClientTest t = testCaseSteps (t ^. clientTestTag) assertion
   where
     assertion :: (Text -> IO ()) -> Assertion
-    assertion stepFun = runM . runProcess . runSimpleErrorHUnit . ignoreLogger . runStep stepFun $ do
-      step "Compiling"
-      res :: AnomaResult <- liftIO $ withRootCopy (compileMain False (t ^. clientRelRoot) (t ^. clientMainFile))
-      let program :: Term Natural = (res ^. anomaClosure)
-      p <- envAnomaPath
-      runAnomaEphemeral p ((t ^. clientAssertion) program)
+    assertion stepFun = runM
+      . runProcess
+      . runSimpleErrorHUnit
+      . ignoreLogger
+      . runStep stepFun
+      $ do
+        step "Compiling"
+        program :: Term Natural <- liftIO $ withRootCopy (compileAnomaMain False (t ^. clientRelRoot) (t ^. clientMainFile))
+        p <- envAnomaPath
+        runAnomaEphemeral p ((t ^. clientAssertion) program)
 
--- | Run prove with the given arguements and submit the result to the mempool.
+-- | Run prove with the given arguments and submit the result to the mempool.
 -- Returns the traces from the prove endpoint
 proveAndSubmit ::
   (Members '[Logger, Error SimpleError, Anoma, EmbedIO, TestStep] r) =>
@@ -51,7 +55,8 @@ proveAndSubmit program proveArgs = do
   step "Submitting transaction candidate"
   addTransaction
     AddTransactionInput
-      { _addTransactionInputCandidate = resProve ^. runNockmaResult
+      { _addTransactionInputCandidate = resProve ^. runNockmaResult,
+        _addTransactionInputType = TransactionTransparent
       }
   return (resProve ^. runNockmaTraces)
 
@@ -76,11 +81,9 @@ clientTests =
                   (nockmaEq proveCommitment listCommitment)
             _ ->
               throw
-                ( SimpleError
-                    ( mkAnsiText @Text
-                        "Expected exactly one commitment to be traced by prove and one commitment to be listed by listUnrevealedCommitments"
-                    )
-                )
+                . SimpleError
+                $ mkAnsiText @Text
+                  "Expected exactly one commitment to be traced by prove and one commitment to be listed by listUnrevealedCommitments"
       }
   ]
 

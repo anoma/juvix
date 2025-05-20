@@ -59,6 +59,7 @@ toTreeOp = \case
   Core.OpUInt8ToInt -> TreeUnaryOpcode (PrimUnop OpUInt8ToInt)
   Core.OpAssert -> TreeUnaryOpcode OpAssert
   -- TreeAnomaOp
+  Core.OpNockmaReify -> TreeNockmaOp NockmaOpReify
   Core.OpAnomaGet -> TreeAnomaOp OpAnomaGet
   Core.OpAnomaEncode -> TreeAnomaOp OpAnomaEncode
   Core.OpAnomaDecode -> TreeAnomaOp OpAnomaDecode
@@ -75,8 +76,6 @@ toTreeOp = \case
   Core.OpAnomaResourceDelta -> TreeAnomaOp OpAnomaResourceDelta
   Core.OpAnomaActionDelta -> TreeAnomaOp OpAnomaActionDelta
   Core.OpAnomaActionsDelta -> TreeAnomaOp OpAnomaActionsDelta
-  Core.OpAnomaProveAction -> TreeAnomaOp OpAnomaProveAction
-  Core.OpAnomaProveDelta -> TreeAnomaOp OpAnomaProveDelta
   Core.OpAnomaZeroDelta -> TreeAnomaOp OpAnomaZeroDelta
   Core.OpAnomaAddDelta -> TreeAnomaOp OpAnomaAddDelta
   Core.OpAnomaSubDelta -> TreeAnomaOp OpAnomaSubDelta
@@ -85,6 +84,10 @@ toTreeOp = \case
   Core.OpAnomaRandomSplit -> TreeAnomaOp OpAnomaRandomSplit
   Core.OpAnomaIsCommitment -> TreeAnomaOp OpAnomaIsCommitment
   Core.OpAnomaIsNullifier -> TreeAnomaOp OpAnomaIsNullifier
+  Core.OpAnomaCreateFromComplianceInputs -> TreeAnomaOp OpAnomaCreateFromComplianceInputs
+  Core.OpAnomaProveDelta -> TreeAnomaOp OpAnomaProveDelta
+  Core.OpAnomaActionCreate -> TreeAnomaOp OpAnomaActionCreate
+  Core.OpAnomaTransactionCompose -> TreeAnomaOp OpAnomaTransactionCompose
   Core.OpAnomaSetToList -> TreeAnomaOp OpAnomaSetToList
   Core.OpAnomaSetFromList -> TreeAnomaOp OpAnomaSetFromList
   -- TreeCairoOp
@@ -237,6 +240,13 @@ genCode md fi =
             { _nodeAnomaInfo = mempty,
               _nodeAnomaOpcode = op,
               _nodeAnomaArgs = args
+            }
+      TreeNockmaOp op ->
+        Nockma $
+          NodeNockma
+            { _nodeNockmaInfo = mempty,
+              _nodeNockmaOpcode = op,
+              _nodeNockmaArgs = args
             }
       TreeBinaryOpcode op -> case args of
         [arg1, arg2] ->

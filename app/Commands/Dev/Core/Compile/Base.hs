@@ -13,24 +13,26 @@ import Juvix.Compiler.Casm.Data.Result qualified as Casm
 import Juvix.Compiler.Casm.Pretty qualified as Casm
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Data.TransformationId qualified as Core
+import Juvix.Compiler.Nockma.Data.Module qualified as Nockma
 import Juvix.Compiler.Nockma.Pretty qualified as Nockma
-import Juvix.Compiler.Nockma.Translation.FromTree qualified as Nockma
 import Juvix.Compiler.Reg.Data.Module qualified as Reg
 import Juvix.Compiler.Reg.Pretty qualified as Reg
 import Juvix.Compiler.Tree.Data.Module qualified as Tree
 import Juvix.Compiler.Tree.Pretty qualified as Tree
+import Juvix.Compiler.Verification.Dumper
 
 data PipelineArg = PipelineArg
   { _pipelineArgOptions :: CompileOptions,
     _pipelineArgModule :: Core.Module
   }
 
-outputAnomaResult :: (Members '[EmbedIO, App] r) => Path Abs File -> Nockma.AnomaResult -> Sem r ()
-outputAnomaResult nockmaFile Nockma.AnomaResult {..} = do
-  let code = Nockma.ppSerialize _anomaClosure
+outputAnomaResult :: (Members '[EmbedIO, App] r) => Path Abs File -> Nockma.Module -> Sem r ()
+outputAnomaResult nockmaFile Nockma.Module {..} = do
+  let code = fromJust (_moduleInfoTable ^. Nockma.infoCode)
+      code' = Nockma.ppSerialize code
       prettyNockmaFile = replaceExtensions' [".pretty", ".nockma"] nockmaFile
-  writeFileEnsureLn nockmaFile code
-  writeFileEnsureLn prettyNockmaFile (Nockma.ppPrint _anomaClosure)
+  writeFileEnsureLn nockmaFile code'
+  writeFileEnsureLn prettyNockmaFile (Nockma.ppPrint code)
 
 getEntry :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r EntryPoint
 getEntry PipelineArg {..} = do
@@ -74,6 +76,7 @@ runCPipeline pa@PipelineArg {..} = do
       . run
       . runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       $ coreToMiniC _pipelineArgModule
   inputfile <- getMainFile (Just (_pipelineArgOptions ^. compileInputFile))
   cFile <- inputCFile inputfile
@@ -98,6 +101,7 @@ runAsmPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToAsm
       $ _pipelineArgModule
   md' <- getRight r
@@ -111,6 +115,7 @@ runRegPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToReg
       $ _pipelineArgModule
   md' <- getRight r
@@ -124,6 +129,7 @@ runTreePipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToTree Core.IdentityTrans
       $ _pipelineArgModule
   md' <- getRight r
@@ -137,6 +143,7 @@ runAnomaPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToAnoma
       $ _pipelineArgModule
   res <- getRight r
@@ -149,6 +156,7 @@ runCasmPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToCasm
       $ _pipelineArgModule
   Casm.Result {..} <- getRight r
@@ -161,6 +169,7 @@ runCairoPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToCairo
       $ _pipelineArgModule
   res <- getRight r
@@ -173,6 +182,7 @@ runRiscZeroRustPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToRiscZeroRust
       $ _pipelineArgModule
   Rust.Result {..} <- getRight r

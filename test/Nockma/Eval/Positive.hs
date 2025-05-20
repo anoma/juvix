@@ -2,7 +2,6 @@ module Nockma.Eval.Positive where
 
 import Base hiding (Path, testName)
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Core.Language.Base (defaultSymbol)
 import Juvix.Compiler.Nockma.Anoma
 import Juvix.Compiler.Nockma.AnomaLib (anomaLib)
 import Juvix.Compiler.Nockma.Evaluator
@@ -134,22 +133,10 @@ withAssertErrKeyNotInStorage Test {..} =
 
 anomaTest :: Text -> Term Natural -> [Term Natural] -> Check () -> Bool -> Test
 anomaTest n mainFun args _testCheck _evalInterceptAnomaLibCalls =
-  let f =
-        CompilerFunction
-          { _compilerFunctionId = UserFunction (defaultSymbol 0),
-            _compilerFunctionArity = fromIntegral (length args),
-            _compilerFunction = return mainFun,
-            _compilerFunctionName = "main"
-          }
-      _testName :: Text
+  let _testName :: Text
         | _evalInterceptAnomaLibCalls = n <> " - intercept stdlib"
         | otherwise = n
-
-      opts = CompilerOptions
-
-      res :: AnomaResult = runCompilerWith opts mempty [] f
-      _testProgramSubject = res ^. anomaClosure
-
+      _testProgramSubject = makeMainFunction True (fromIntegral (length args)) mainFun
       _testProgramFormula = anomaCall args
       _testProgramStorage :: Storage Natural = emptyStorage
       _testEvalOptions = EvalOptions {..}
@@ -403,7 +390,7 @@ juvixCallingConventionTests =
            compilerTestM "length-bytes 255 == 1" (callStdlib StdlibLengthBytes [nockNatLiteral 255]) (eqNock [nock| 1 |]),
            compilerTestM "length-bytes 1 == 1" (callStdlib StdlibLengthBytes [nockNatLiteral 1]) (eqNock [nock| 1 |]),
            compilerTestM "length-bytes 0 == 0" (callStdlib StdlibLengthBytes [nockNatLiteral 0]) (eqNock [nock| 0 |]),
-           compilerTestM "zero-delta == 0" (rmValue RmZeroDelta) (eqNock [nock| 0 |])
+           compilerTestM "zero-delta == 2" (rmValue RmZeroDelta) (eqNock [nock| 2 |])
          ]
 
 -- These tests can only be run with stdlib interception as running the raw nock code is too slow

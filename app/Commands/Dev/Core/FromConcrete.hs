@@ -20,7 +20,7 @@ runCommand coreOpts = do
         run
           . runReader (project @GlobalOptions @Core.CoreOptions gopts)
           . runError @JuvixError
-          $ Core.applyTransformations (Core.CombineInfoTables : project coreOpts ^. coreFromConcreteTransformations) md
+          $ Core.applyTransformations' (Core.CombineInfoTables : project coreOpts ^. coreFromConcreteTransformations) md
   tab0 :: InfoTable <- Core.computeCombinedInfoTable <$> getRight r
   let tab' :: InfoTable = if coreOpts ^. coreFromConcreteNoDisambiguate then tab0 else disambiguateNames' tab0
       inInputModule :: IdentifierInfo -> Bool

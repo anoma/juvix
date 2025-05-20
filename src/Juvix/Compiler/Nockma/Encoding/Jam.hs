@@ -1,7 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
 -- |
--- An implmentation of the [Hoon jam](https://developers.urbit.org/reference/hoon/stdlib/2p#jam) function.
+-- An implementation of the [Hoon jam](https://developers.urbit.org/reference/hoon/stdlib/2p#jam) function.
 --
 -- This is based on Urbit's [Rust implementation](https://github.com/urbit/noun/blob/4b22042623d7f3112b40c0f69138dc798e9bc56e/src/noun.rs#L175).
 module Juvix.Compiler.Nockma.Encoding.Jam where

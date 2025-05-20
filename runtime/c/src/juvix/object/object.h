@@ -154,12 +154,14 @@ STATIC_ASSERT(BUILTIN_UIDS_NUM > UID_READLN);
 
 #define FIRST_USER_UID BUILTIN_UIDS_NUM
 
-#define BUILTIN_UIDS_INFO                                   \
-    {"false", 0, APP_FIXITY}, {"true", 0, APP_FIXITY},      \
-        {"unit", 0, APP_FIXITY}, {"void", 0, APP_FIXITY},   \
-        {"return", 0, APP_FIXITY}, {"bind", 0, APP_FIXITY}, \
-        {"write", 0, APP_FIXITY}, {                         \
-        "readln", 0, APP_FIXITY                             \
+#define BUILTIN_UIDS_INFO                                                 \
+    {"false", 0, APP_FIXITY}, {"true", 0, APP_FIXITY},                    \
+        {"unit", 0, APP_FIXITY}, {"void", 0, APP_FIXITY},                 \
+        {"return", 0, APP_FIXITY}, {"bind", 0, APP_FIXITY},               \
+        {"write", 0, APP_FIXITY}, {"readln", 0, APP_FIXITY},              \
+        {"Json.array", 0, APP_FIXITY}, {"Json.bool", 0, APP_FIXITY},      \
+        {"Json.object", 0, APP_FIXITY}, {"Json.number", 0, APP_FIXITY}, { \
+        "Json.string", 0, APP_FIXITY                                      \
     }
 
 /*************************************************/

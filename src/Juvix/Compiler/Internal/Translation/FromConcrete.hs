@@ -13,6 +13,7 @@ import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Builtins.Assert
+import Juvix.Compiler.Builtins.Json
 import Juvix.Compiler.Builtins.Pair
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
@@ -923,7 +924,7 @@ goDefType FunctionLhs {..} = do
         Nothing -> return (Internal.smallUniverseE (getLoc a))
         Just ty -> goExpression ty
 
-      let _paramImpligoExpressioncit = _sigArgImplicit
+      let _paramImplicit = _sigArgImplicit
           noName = Internal.FunctionParameter {_paramName = Nothing, ..}
           mk :: Concrete.Argument 'Scoped -> Internal.FunctionParameter
           mk ma =
@@ -975,10 +976,15 @@ checkBuiltinInductive d b = localBuiltins $ case b of
   BuiltinList -> checkListDef d
   BuiltinMaybe -> checkMaybeDef d
   BuiltinPair -> checkPairDef d
+  BuiltinJson -> checkJsonDef d
   BuiltinPoseidonState -> checkPoseidonStateDef d
   BuiltinEcPoint -> checkEcPointDef d
   BuiltinAnomaResource -> checkResource d
+  BuiltinAnomaNullifierKey -> checkNullifierKey d
   BuiltinAnomaAction -> checkAction d
+  BuiltinAnomaComplianceInputs -> checkComplianceInputs d
+  BuiltinAnomaShieldedTransaction -> checkShieldedTransaction d
+  BuiltinNockmaNoun -> checkNockmaNoun d
 
 localBuiltins :: (Members '[Reader S.InfoTable] r) => Sem (Reader BuiltinsTable ': r) a -> Sem r a
 localBuiltins m = do
@@ -1073,14 +1079,16 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinAnomaZeroDelta -> checkZeroDelta d
   BuiltinAnomaAddDelta -> checkDeltaBinaryOp d
   BuiltinAnomaSubDelta -> checkDeltaBinaryOp d
-  BuiltinAnomaProveDelta -> checkProveDelta d
-  BuiltinAnomaProveAction -> checkProveAction d
   BuiltinAnomaRandomGenerator -> checkAnomaRandomGenerator d
   BuiltinAnomaRandomGeneratorInit -> checkAnomaRandomGeneratorInit d
   BuiltinAnomaRandomNextBytes -> checkAnomaRandomNextBytes d
   BuiltinAnomaRandomSplit -> checkAnomaRandomSplit d
   BuiltinAnomaIsCommitment -> checkAnomaIsCommitment d
   BuiltinAnomaIsNullifier -> checkAnomaIsNullifier d
+  BuiltinAnomaActionCreate -> checkAnomaActionCreate d
+  BuiltinAnomaTransactionCompose -> checkAnomaTransactionCompose d
+  BuiltinAnomaCreateFromComplianceInputs -> checkAnomaCreateFromComplianceInputs d
+  BuiltinAnomaProveDelta -> checkAnomaProveDelta d
   BuiltinAnomaSet -> checkAnomaSet d
   BuiltinAnomaSetToList -> checkAnomaSetToList d
   BuiltinAnomaSetFromList -> checkAnomaSetFromList d
@@ -1095,6 +1103,7 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinByteArrayFromListByte -> checkByteArrayFromListByte d
   BuiltinByteArrayLength -> checkByteArrayLength d
   BuiltinRangeCheck -> checkRangeCheck d
+  BuiltinNockmaReify -> checkNockmaReify d
 
 goInductive ::
   ( Members

@@ -17,7 +17,7 @@ treeAsmAssertion root' mainFile expectedFile step = do
   step "Parse"
   s <- readFile mainFile
   case runParser mainFile s of
-    Left err -> assertFailure (prettyString err)
+    Left err -> assertFailure (renderStringDefault err)
     Right tabIni -> do
       step "Translate"
       entryPoint <- testDefaultEntryPointIO root' mainFile
