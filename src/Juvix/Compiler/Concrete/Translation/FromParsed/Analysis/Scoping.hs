@@ -681,7 +681,7 @@ reserveImportPublic i@Import {..} = do
         Module
           { _moduleDoc = Nothing,
             _modulePragmas = Nothing,
-            _moduleOrigin = LocalModuleType,
+            _moduleOrigin = LocalModuleType 0,
             _moduleMarkdownInfo = Nothing,
             _modulePath = modName,
             ..
@@ -794,7 +794,7 @@ checkImportPublic i@Import {..} = do
         Module
           { _moduleDoc = Nothing,
             _modulePragmas = Nothing,
-            _moduleOrigin = LocalModuleType,
+            _moduleOrigin = LocalModuleType 0,
             _moduleMarkdownInfo = Nothing,
             _modulePath = modName,
             ..
@@ -1568,9 +1568,10 @@ checkInductiveDef reserved = do
           ]
     return (inductiveParameters', inductiveType', inductiveTypeApplied', inductiveDoc', inductiveConstructors')
   let withModule' = case _inductiveWithModule of
-        Just w -> Just (set (withModuleBody) [] w)
+        Just w -> Just (set withModuleBody [] w)
         Nothing -> Nothing
-  let indDef =
+
+      indDef =
         InductiveDef
           { _inductiveName = inductiveName',
             _inductiveDoc = inductiveDoc',
@@ -1995,8 +1996,7 @@ checkReservedInductive r = do
   modDef :: Module 'Scoped 'ModuleLocal <- checkLocalModule (r ^. reservedInductiveDefModule)
   Migration migr <- ask
   isMainPkg <- inMainPackage
-  let withDefs :: [Statement 'Scoped] =
-        getDefs (modDef ^. moduleBody)
+  let withDefs :: [Statement 'Scoped] = getDefs modDef
       tyDef = set (inductiveWithModule . _Just . withModuleBody) withDefs tyDef0
       openTypeModule :: Maybe (OpenModule 'Parsed 'OpenFull) = do
         guard (migr == Just MigrateExportConstructors)
@@ -2034,8 +2034,10 @@ checkReservedInductive r = do
             _openModulePublic = Public kwPub
           }
 
-    getDefs :: [Statement 'Scoped] -> [Statement 'Scoped]
-    getDefs = dropWhile (has _StatementProjectionDef)
+    getDefs :: Module 'Scoped 'ModuleLocal -> [Statement 'Scoped]
+    getDefs m = case m ^. moduleOrigin of
+      LocalModuleType n -> drop n (m ^. moduleBody)
+      _ -> impossible
 
 defineInductiveModule :: forall r. (Members '[Reader PackageId] r) => InductiveDef 'Parsed -> Sem r (Module 'Parsed 'ModuleLocal)
 defineInductiveModule i =
@@ -2047,46 +2049,46 @@ defineInductiveModule i =
       _moduleKwEnd <- G.kw G.kwEnd
       let _modulePath = i ^. inductiveName
           _moduleId = ()
-      _moduleBody <- genBody
+      (gen, withStmts) <- genBody
+      let _moduleBody = gen ++ withStmts
       return
         Module
           { _moduleDoc = Nothing,
             _modulePragmas = Nothing,
-            _moduleOrigin = LocalModuleType,
+            _moduleOrigin = LocalModuleType (length gen),
             _moduleMarkdownInfo = Nothing,
             ..
           }
       where
-        genBody :: Sem s' [Statement 'Parsed]
+        genBody :: Sem s' ([Statement 'Parsed], [Statement 'Parsed])
         genBody = do
-          return (projections ++ i ^.. inductiveWithModule . _Just . withModuleBody . each)
+          return (projections, i ^.. inductiveWithModule . _Just . withModuleBody . each)
           where
-            constructorAndFields :: Maybe (Symbol, [RecordStatement 'Parsed])
-            constructorAndFields = case i ^. inductiveConstructors of
-              c :| []
-                | ConstructorRhsRecord r <- c ^. constructorRhs -> Just (c ^. constructorName, r ^. rhsRecordStatements)
-              _ -> Nothing
+            constructorAndFields :: forall r'. (Members '[Fail] r') => Sem r' (Symbol, [RecordStatement 'Parsed])
+            constructorAndFields = do
+              c :| [] <- return (i ^. inductiveConstructors)
+              ConstructorRhsRecord r <- return (c ^. constructorRhs)
+              return (c ^. constructorName, r ^. rhsRecordStatements)
 
             projections :: [Statement 'Parsed]
-            projections = case constructorAndFields of
+            projections = case run (runFail constructorAndFields) of
               Nothing -> []
               Just (constr, fields) -> run . evalState 0 $ mapM goRecordStatement fields
                 where
                   goRecordStatement :: RecordStatement 'Parsed -> Sem '[State Int] (Statement 'Parsed)
                   goRecordStatement = \case
-                    RecordStatementSyntax f -> StatementSyntax <$> goSyntax f
-                    RecordStatementField f -> goField f
+                    RecordStatementSyntax f -> return (StatementSyntax (goSyntax f))
+                    RecordStatementField f -> StatementProjectionDef <$> goField f
                     where
-                      goSyntax :: RecordSyntaxDef 'Parsed -> Sem s (SyntaxDef 'Parsed)
+                      goSyntax :: RecordSyntaxDef 'Parsed -> (SyntaxDef 'Parsed)
                       goSyntax = \case
-                        RecordSyntaxOperator d -> return (SyntaxOperator d)
-                        RecordSyntaxIterator d -> return (SyntaxIterator d)
+                        RecordSyntaxOperator d -> SyntaxOperator d
+                        RecordSyntaxIterator d -> SyntaxIterator d
 
-                      goField :: RecordField 'Parsed -> Sem '[State Int] (Statement 'Parsed)
+                      goField :: RecordField 'Parsed -> Sem '[State Int] (ProjectionDef 'Parsed)
                       goField f = do
                         idx <- popFieldIx
-                        let s = mkProjection (Indexed idx f)
-                        return (StatementProjectionDef s)
+                        return (mkProjection (Indexed idx f))
                         where
                           popFieldIx :: Sem '[State Int] Int
                           popFieldIx = get <* modify' @Int succ
