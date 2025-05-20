@@ -444,7 +444,7 @@ mkFunBody ty f =
     (WithLoc (getLoc f) (Internal.ppPrint f))
     ty
     (f ^. Internal.funDefName . nameLoc)
-    (pure (Internal.unfoldLambda (f ^. Internal.funDefBody)))
+    (Internal.unfoldLambda (f ^. Internal.funDefBody) :| [])
 
 mkBody ::
   forall r.
@@ -507,7 +507,7 @@ mkBody ppLam ty loc clauses
     --
     --    A -> A$0 -> List A$1 -> A$2 -> A$3 -> A$4 -> List A$5
     --
-    -- Is translated to the following match (omitting the translation of the body):
+    -- It is translated to the following match (omitting the translation of the body):
     --
     --    λ(? : Type)
     --      λ(? : A$0)
@@ -534,7 +534,8 @@ mkBody ppLam ty loc clauses
             <> (ppLam ^. withLocParam)
 
     goClause :: Level -> [Internal.PatternArg] -> Internal.Expression -> Sem r MatchBranch
-    goClause lvl pats body = goPatternArgs lvl (Internal.CaseBranchRhsExpression body) pats ptys
+    goClause lvl pats body = do
+      goPatternArgs lvl (Internal.CaseBranchRhsExpression body) pats ptys
       where
         ptys :: [Type]
         ptys = take (length pats) (typeArgs ty)
@@ -1282,12 +1283,11 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
           Just (pan, _) -> modify (over indexTableVars (HashMap.insert (pan ^. nameId) varsNum))
           _ -> return ()
         (indParams, _) <- InternalTyped.lookupConstructorArgTypes ctrName
-        let nParams = length indParams
         -- + 1 for the as-pattern
-        modify (over indexTableVarsNum (+ (nParams + 1)))
+        modify (over indexTableVarsNum (+ 1))
+        indArgs <- mapM fromInductiveParam indParams
         patternArgs <- mapM fromPatternArg params
-        let indArgs = replicate nParams (wildcard mkSmallUniv)
-            args = indArgs ++ patternArgs
+        let args = indArgs ++ patternArgs
         m <- getIdent identIndex
         case m of
           Just (IdentConstr tag) ->
@@ -1320,8 +1320,15 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
           txt :: Text
           txt = c ^. Internal.constrAppConstructor . Internal.nameText
 
-          wildcard :: Type -> Pattern
-          wildcard ty = PatWildcard (PatternWildcard Info.empty (Binder "_" Nothing ty))
+    fromInductiveParam :: Internal.InductiveParameter -> Sem r Pattern
+    fromInductiveParam param = do
+      idt :: IndexTable <- get
+      ty <- runReader idt (goType (param ^. Internal.inductiveParamType))
+      modify (over indexTableVarsNum (+ 1))
+      return $ wildcard ty
+      where
+        wildcard :: Type -> Pattern
+        wildcard ty = PatWildcard (PatternWildcard Info.empty (Binder "_" Nothing ty))
 
 goPatternArgs ::
   forall r.
@@ -1343,7 +1350,7 @@ goPatternArgs lvl0 body pats0 = go lvl0 [] pats0
         local
           (const itb')
           (go (lvl + 1) (pat : pats) ps' ptys')
-      (p : ps', _ : ptys') ->
+      (p : ps', _ : ptys') -> do
         -- The pattern does not have an inductive type, so is excluded from the match
         case p ^. Internal.patternArgPattern of
           Internal.PatternVariable {} -> do
