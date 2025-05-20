@@ -61,27 +61,21 @@ convertNode md = convert mempty
       NCase Case {..} ->
         End (mkCase _caseInfo _caseInductive (convert vars _caseValue) (map convertBranch _caseBranches) (fmap (convert vars) _caseDefault))
         where
-          nParams :: Int
-          nParams = maybe 0 (length . (^. inductiveParams)) (lookupInductiveInfo' md _caseInductive)
           convertBranch :: CaseBranch -> CaseBranch
           convertBranch br@CaseBranch {..} =
-            let paramBinders = map (set binderType mkSmallUniv) (take nParams _caseBranchBinders)
-                argBinders = drop nParams _caseBranchBinders
-                tyargs = drop nParams (typeArgs (lookupConstructorInfo md _caseBranchTag ^. constructorType))
-                argBinders' = zipWith (\b ty -> if isDynamic (b ^. binderType) && isTypeConstr md ty then set binderType ty b else b) argBinders (tyargs ++ repeat mkDynamic')
-                binders' =
-                  filterBinders
-                    (BL.prependRev paramBinders vars)
-                    argBinders'
+            let tyargs = typeArgs (lookupConstructorInfo md _caseBranchTag ^. constructorType)
+                binders = zipWith (\b ty -> if isDynamic (b ^. binderType) && isTypeConstr md ty then set binderType ty b else b) _caseBranchBinders (tyargs ++ repeat mkDynamic')
+                binders' = filterBinders vars binders
                 body' =
                   convert
-                    (BL.prependRev argBinders' (BL.prependRev paramBinders vars))
+                    (BL.prependRev binders vars)
                     _caseBranchBody
              in br
                   { _caseBranchBinders = binders',
                     _caseBranchBindersNum = length binders',
                     _caseBranchBody = body'
                   }
+
           filterBinders :: BinderList Binder -> [Binder] -> [Binder]
           filterBinders vars' = \case
             [] -> []
