@@ -681,7 +681,7 @@ reserveImportPublic i@Import {..} = do
         Module
           { _moduleDoc = Nothing,
             _modulePragmas = Nothing,
-            _moduleOrigin = LocalModuleType 0,
+            _moduleOrigin = LocalModuleType,
             _moduleMarkdownInfo = Nothing,
             _modulePath = modName,
             ..
@@ -794,7 +794,7 @@ checkImportPublic i@Import {..} = do
         Module
           { _moduleDoc = Nothing,
             _modulePragmas = Nothing,
-            _moduleOrigin = LocalModuleType 0,
+            _moduleOrigin = LocalModuleType,
             _moduleMarkdownInfo = Nothing,
             _modulePath = modName,
             ..
@@ -2036,14 +2036,14 @@ checkReservedInductive r = do
 
     getDefs :: Module 'Scoped 'ModuleLocal -> [Statement 'Scoped]
     getDefs m = case m ^. moduleOrigin of
-      LocalModuleType n -> drop n (m ^. moduleBody)
+      LocalModuleType -> drop (r ^. reservedInductiveGenStatements) (m ^. moduleBody)
       _ -> impossible
 
-defineInductiveModule :: forall r. (Members '[Reader PackageId] r) => InductiveDef 'Parsed -> Sem r (Module 'Parsed 'ModuleLocal)
+defineInductiveModule :: forall r. (Members '[Reader PackageId] r) => InductiveDef 'Parsed -> Sem r (Int, Module 'Parsed 'ModuleLocal)
 defineInductiveModule i =
   runReader (getLoc (i ^. inductiveName)) genModule
   where
-    genModule :: forall s'. (Members '[Reader Interval, Reader PackageId] s') => Sem s' (Module 'Parsed 'ModuleLocal)
+    genModule :: forall s'. (Members '[Reader Interval, Reader PackageId] s') => Sem s' (Int, Module 'Parsed 'ModuleLocal)
     genModule = do
       _moduleKw <- G.kw G.kwModule
       _moduleKwEnd <- G.kw G.kwEnd
@@ -2052,13 +2052,15 @@ defineInductiveModule i =
       (gen, withStmts) <- genBody
       let _moduleBody = gen ++ withStmts
       return
-        Module
-          { _moduleDoc = Nothing,
-            _modulePragmas = Nothing,
-            _moduleOrigin = LocalModuleType (length gen),
-            _moduleMarkdownInfo = Nothing,
-            ..
-          }
+        ( length gen,
+          Module
+            { _moduleDoc = Nothing,
+              _modulePragmas = Nothing,
+              _moduleOrigin = LocalModuleType,
+              _moduleMarkdownInfo = Nothing,
+              ..
+            }
+        )
       where
         genBody :: Sem s' ([Statement 'Parsed], [Statement 'Parsed])
         genBody = do
@@ -2157,12 +2159,13 @@ reserveInductive d = do
         constrs <- mapM (uncurry reserveConstructor) (mzip builtinConstrs (d ^. inductiveConstructors))
         ignoreFail (registerRecordType (head constrs) i)
         return constrs
-  m <- defineInductiveModule d
+  (numGen, m) <- defineInductiveModule d
   constrs <- reserveTypeLocalModule registerConstrs m
   let r =
         ReservedInductiveDef
           { _reservedInductiveDef = d,
             _reservedInductiveConstructors = constrs,
+            _reservedInductiveGenStatements = numGen,
             _reservedInductiveDefModule = m
           }
   return r

@@ -296,6 +296,10 @@ deriving stock instance Ord (Statement 'Scoped)
 data ReservedInductiveDef = ReservedInductiveDef
   { _reservedInductiveDef :: InductiveDef 'Parsed,
     _reservedInductiveConstructors :: NonEmpty S.Symbol,
+    -- | Used in the scoper to indicate that the first
+    -- _reservedInductiveGenStatements of _reservedInductiveDefModule have been
+    -- automatically generated
+    _reservedInductiveGenStatements :: Int,
     _reservedInductiveDefModule :: Module 'Parsed 'ModuleLocal
   }
   deriving stock (Show, Eq, Ord)
