@@ -53,6 +53,11 @@ convertNode md = convert mempty
                     End (convert vars h)
                 | otherwise ->
                     End (mkApps (convert vars h) (map (second (convert vars)) args'))
+      NTyp TypeConstr {..} ->
+        let ty = lookupInductiveInfo md _typeConstrSymbol ^. inductiveKind
+            args' = filterArgs id ty _typeConstrArgs
+         in End $
+              mkTypeConstr _typeConstrInfo _typeConstrSymbol (map (convert vars) args')
       NCtr Constr {..} ->
         let ci = lookupConstructorInfo md _constrTag
             ty = ci ^. constructorType
