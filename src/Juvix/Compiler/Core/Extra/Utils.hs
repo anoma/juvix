@@ -265,6 +265,10 @@ isDebugOp = \case
       OpIntSub -> False
       OpFieldToInt -> False
       OpShow -> False
+      OpAnomaKeccack256 -> False
+      OpAnomaSecp256k1Sign -> False
+      OpAnomaSecp256k1Verify -> False
+      OpAnomaSecp256k1PubKey -> False
   _ -> False
 
 -- | Check if the node contains `trace`, `fail` or `seq` (`>->`).
@@ -557,6 +561,10 @@ builtinOpArgTypes = \case
   OpUInt8FromInt -> [mkTypeInteger']
   OpByteArrayFromListByte -> [mkDynamic']
   OpByteArrayLength -> [mkTypeByteArray']
+  OpAnomaKeccack256 -> [mkTypeInteger']
+  OpAnomaSecp256k1PubKey -> [mkTypeInteger']
+  OpAnomaSecp256k1Sign -> [mkDynamic', mkDynamic']
+  OpAnomaSecp256k1Verify -> [mkDynamic', mkDynamic', mkDynamic']
 
 translateCase :: (Node -> Node -> Node -> a) -> a -> Case -> a
 translateCase translateIfFun dflt Case {..} = case _caseBranches of

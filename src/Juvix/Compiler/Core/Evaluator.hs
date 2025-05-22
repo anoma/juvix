@@ -257,6 +257,10 @@ geval opts herr tab env0 = eval' env0
       OpUInt8FromInt -> uint8FromIntOp
       OpByteArrayFromListByte -> byteArrayFromListByteOp
       OpByteArrayLength -> byteArrayLengthOp
+      OpAnomaKeccack256 -> normalizeOrUnsupported opcode
+      OpAnomaSecp256k1Sign -> normalizeOrUnsupported opcode
+      OpAnomaSecp256k1Verify -> normalizeOrUnsupported opcode
+      OpAnomaSecp256k1PubKey -> normalizeOrUnsupported opcode
       where
         err :: Text -> a
         err msg = evalError msg n

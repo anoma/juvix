@@ -191,6 +191,18 @@ byteFromNat = "byte-from-nat"
 byteArray :: (IsString s) => s
 byteArray = "bytearray"
 
+keccack256 :: (IsString s) => s
+keccack256 = "keccack256"
+
+secp256k1Sign :: (IsString s) => s
+secp256k1Sign = "secp256k1-sign"
+
+secp256k1Verify :: (IsString s) => s
+secp256k1Verify = "secp256k1-verify"
+
+secp256k1PubKey :: (IsString s) => s
+secp256k1PubKey = "secp256k1-pubKey"
+
 byteArrayFromListByte :: (IsString s) => s
 byteArrayFromListByte = "bytearray-from-list-byte"
 

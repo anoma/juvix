@@ -155,6 +155,10 @@ data AnomaOp
   | OpAnomaSetFromList
   | OpAnomaTransactionCompose
   | OpAnomaActionCreate
+  | OpAnomaKeccack256
+  | OpAnomaSecp256k1Sign
+  | OpAnomaSecp256k1Verify
+  | OpAnomaSecp256k1PubKey
   deriving stock (Eq, Show, Generic)
 
 instance Serialize AnomaOp
