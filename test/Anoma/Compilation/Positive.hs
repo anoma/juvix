@@ -239,6 +239,7 @@ classify AnomaTest {..} = case _anomaTestNum of
   86 -> ClassExpectedFail
   87 -> ClassWorking
   88 -> ClassWorking
+  89 -> ClassWorking
   _ -> error "non-exhaustive test classification"
 
 allTests :: TestTree
