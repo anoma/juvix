@@ -266,7 +266,7 @@ isDebugOp = \case
       OpFieldToInt -> False
       OpShow -> False
       OpAnomaKeccack256 -> False
-      OpAnomaSecp256k1Sign -> False
+      OpAnomaSecp256k1SignCompact -> False
       OpAnomaSecp256k1Verify -> False
       OpAnomaSecp256k1PubKey -> False
   _ -> False
@@ -563,7 +563,7 @@ builtinOpArgTypes = \case
   OpByteArrayLength -> [mkTypeByteArray']
   OpAnomaKeccack256 -> [mkTypeInteger']
   OpAnomaSecp256k1PubKey -> [mkTypeInteger']
-  OpAnomaSecp256k1Sign -> [mkDynamic', mkDynamic']
+  OpAnomaSecp256k1SignCompact -> [mkDynamic', mkDynamic']
   OpAnomaSecp256k1Verify -> [mkDynamic', mkDynamic', mkDynamic']
 
 translateCase :: (Node -> Node -> Node -> a) -> a -> Case -> a

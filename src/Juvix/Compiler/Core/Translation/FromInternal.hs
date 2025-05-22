@@ -729,6 +729,10 @@ builtinInductive a =
         Internal.BuiltinByteArrayLength -> Nothing
         Internal.BuiltinRangeCheck -> Nothing
         Internal.BuiltinNockmaReify -> Nothing
+        Internal.BuiltinAnomaKeccack256 -> Nothing
+        Internal.BuiltinAnomaSecp256k1SignCompact -> Nothing
+        Internal.BuiltinAnomaSecp256k1Verify -> Nothing
+        Internal.BuiltinAnomaSecp256k1PubKey -> Nothing
   where
     registerInductiveAxiom :: forall r. (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader InternalTyped.InfoTable, NameIdGen, Error BadScope] r) => Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
     registerInductiveAxiom ax ctrs = do
@@ -951,6 +955,19 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               natType
               (mkBuiltinApp' OpAnomaSha256 [mkVar' 0])
           )
+      Internal.BuiltinAnomaSecp256k1PubKey -> do
+        registerAxiomDef
+          (mkBuiltinExpanded' OpAnomaSecp256k1PubKey [mkDynamic'])
+      Internal.BuiltinAnomaSecp256k1Verify -> do
+        registerAxiomDef
+          (mkBuiltinExpanded' OpAnomaSecp256k1Verify [mkSmallUniv, mkDynamic', mkVar' 1, mkDynamic'])
+      Internal.BuiltinAnomaSecp256k1SignCompact -> do
+        natType <- getNatType
+        registerAxiomDef
+          (mkBuiltinExpanded' OpAnomaSecp256k1SignCompact [mkSmallUniv, mkVar' 0, natType])
+      Internal.BuiltinAnomaKeccack256 -> do
+        natType <- getNatType
+        registerAxiomDef (mkBuiltinExpanded' OpAnomaKeccack256 [natType])
       Internal.BuiltinAnomaDelta -> return ()
       Internal.BuiltinAnomaKind -> return ()
       Internal.BuiltinAnomaResourceCommitment -> do
@@ -1585,6 +1602,10 @@ goApplication a = do
           Internal.BuiltinByteArray -> app
           Internal.BuiltinByteArrayFromListByte -> app
           Internal.BuiltinByteArrayLength -> app
+          Internal.BuiltinAnomaKeccack256 -> app
+          Internal.BuiltinAnomaSecp256k1PubKey -> app
+          Internal.BuiltinAnomaSecp256k1SignCompact -> app
+          Internal.BuiltinAnomaSecp256k1Verify -> app
     Internal.ExpressionIden (Internal.IdenFunction n) -> do
       funInfoBuiltin <- Internal.getFunctionBuiltinInfo n
       case funInfoBuiltin of

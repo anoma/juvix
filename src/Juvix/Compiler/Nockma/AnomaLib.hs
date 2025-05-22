@@ -45,7 +45,7 @@ anomaLibPath = \case
     StdlibVerify -> [nock| [9 4 0 255] |]
     StdlibLengthList -> [nock| [9 1.406 0 4095] |]
     StdlibCurry -> [nock| [9 4 0 4095] |]
-    StdlibSecp256k1Sign -> [nock| [9 23 0 3] |]
+    StdlibSecp256k1SignCompact -> [nock| [9 23 0 3] |]
     StdlibSecp256k1Verify -> [nock| [9 10 0 3] |]
     StdlibSecp256k1PubKey -> [nock| [9 4 0 3] |]
     StdlibKeccack256 -> [nock| [9 22 0 3] |]

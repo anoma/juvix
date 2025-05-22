@@ -258,7 +258,7 @@ geval opts herr tab env0 = eval' env0
       OpByteArrayFromListByte -> byteArrayFromListByteOp
       OpByteArrayLength -> byteArrayLengthOp
       OpAnomaKeccack256 -> normalizeOrUnsupported opcode
-      OpAnomaSecp256k1Sign -> normalizeOrUnsupported opcode
+      OpAnomaSecp256k1SignCompact -> normalizeOrUnsupported opcode
       OpAnomaSecp256k1Verify -> normalizeOrUnsupported opcode
       OpAnomaSecp256k1PubKey -> normalizeOrUnsupported opcode
       where

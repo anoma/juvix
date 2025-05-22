@@ -302,7 +302,7 @@ evalProfile inistack initerm =
               StdlibAnomaSetFromList -> return (goAnomaSetFromList args')
               StdlibAnomaSetToList -> return args'
               StdlibSecp256k1PubKey -> unsupported f
-              StdlibSecp256k1Sign -> unsupported f
+              StdlibSecp256k1SignCompact -> unsupported f
               StdlibSecp256k1Verify -> unsupported f
               StdlibKeccack256 -> unsupported f
           where

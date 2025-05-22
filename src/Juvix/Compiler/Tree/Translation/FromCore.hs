@@ -91,7 +91,7 @@ toTreeOp = \case
   Core.OpAnomaSetToList -> TreeAnomaOp OpAnomaSetToList
   Core.OpAnomaSetFromList -> TreeAnomaOp OpAnomaSetFromList
   Core.OpAnomaKeccack256 -> TreeAnomaOp OpAnomaKeccack256
-  Core.OpAnomaSecp256k1Sign -> TreeAnomaOp OpAnomaSecp256k1Sign
+  Core.OpAnomaSecp256k1SignCompact -> TreeAnomaOp OpAnomaSecp256k1SignCompact
   Core.OpAnomaSecp256k1Verify -> TreeAnomaOp OpAnomaSecp256k1Verify
   Core.OpAnomaSecp256k1PubKey -> TreeAnomaOp OpAnomaSecp256k1PubKey
   -- TreeCairoOp

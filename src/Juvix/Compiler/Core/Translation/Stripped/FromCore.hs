@@ -176,6 +176,10 @@ fromCore' tab =
         BuiltinByteArrayFromListByte -> False
         BuiltinByteArrayLength -> False
         BuiltinRangeCheck -> False
+        BuiltinAnomaKeccack256 -> False
+        BuiltinAnomaSecp256k1PubKey -> False
+        BuiltinAnomaSecp256k1Verify -> False
+        BuiltinAnomaSecp256k1SignCompact -> False
       BuiltinTypeInductive i -> case i of
         BuiltinNat -> False
         BuiltinInt -> False

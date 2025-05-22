@@ -125,7 +125,7 @@ computeNodeTypeInfo md = umapL go
           OpByteArrayFromListByte -> mkDynamic'
           OpByteArrayLength -> mkTypeInteger'
           OpAnomaKeccack256 -> mkTypeByteArray'
-          OpAnomaSecp256k1Sign -> Info.getNodeType node
+          OpAnomaSecp256k1SignCompact -> Info.getNodeType node
           OpAnomaSecp256k1Verify -> Info.getNodeType node
           OpAnomaSecp256k1PubKey -> Info.getNodeType node
       NCtr Constr {..} ->

@@ -156,7 +156,8 @@ data AnomaOp
   | OpAnomaTransactionCompose
   | OpAnomaActionCreate
   | OpAnomaKeccack256
-  | OpAnomaSecp256k1Sign
+  | -- | See https://hexdocs.pm/ex_secp256k1/ExSecp256k1.html#sign_compact/2
+    OpAnomaSecp256k1SignCompact
   | OpAnomaSecp256k1Verify
   | OpAnomaSecp256k1PubKey
   deriving stock (Eq, Show, Generic)
