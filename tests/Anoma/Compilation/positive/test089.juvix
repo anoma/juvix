@@ -1,0 +1,19 @@
+-- Keccack256
+module test089;
+
+import Juvix.Builtin.V1.Fixity open;
+import Juvix.Builtin.V1.Nat open;
+import Juvix.Builtin.V1.Bool open;
+import Juvix.Builtin.V1.List open;
+
+builtin bytearray
+axiom ByteArray : Type;
+
+builtin keccack256
+axiom keccack : Nat -> ByteArray;
+
+main : _ :=
+  -- byteStringToNatural (encodeUtf8 "hello") = 478560413032
+  let
+    hello : Nat := 478560413032;
+  in keccack hello;
