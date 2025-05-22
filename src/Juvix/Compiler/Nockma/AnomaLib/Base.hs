@@ -45,7 +45,7 @@ data StdlibFunction
   | StdlibSecp256k1SignCompact
   | StdlibSecp256k1Verify
   | StdlibSecp256k1PubKey
-  | StdlibKeccack256
+  | StdlibKeccak256
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable StdlibFunction
@@ -141,7 +141,7 @@ instance Pretty StdlibFunction where
     StdlibSecp256k1SignCompact -> Str.secp256k1Sign
     StdlibSecp256k1Verify -> Str.secp256k1Verify
     StdlibSecp256k1PubKey -> Str.secp256k1PubKey
-    StdlibKeccack256 -> Str.keccack256
+    StdlibKeccak256 -> Str.keccak256
 
 instance Pretty RmFunction where
   pretty = \case

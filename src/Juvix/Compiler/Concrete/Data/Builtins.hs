@@ -332,7 +332,7 @@ data BuiltinAxiom
   | BuiltinByteArrayLength
   | BuiltinRangeCheck
   | BuiltinNockmaReify
-  | BuiltinAnomaKeccack256
+  | BuiltinAnomaKeccak256
   | BuiltinAnomaSecp256k1SignCompact
   | BuiltinAnomaSecp256k1Verify
   | BuiltinAnomaSecp256k1PubKey
@@ -409,7 +409,7 @@ instance HasNameKind BuiltinAxiom where
     BuiltinAnomaSetFromList -> KNameFunction
     BuiltinRangeCheck -> KNameFunction
     BuiltinNockmaReify -> KNameFunction
-    BuiltinAnomaKeccack256 -> KNameFunction
+    BuiltinAnomaKeccak256 -> KNameFunction
     BuiltinAnomaSecp256k1SignCompact -> KNameFunction
     BuiltinAnomaSecp256k1Verify -> KNameFunction
     BuiltinAnomaSecp256k1PubKey -> KNameFunction
@@ -494,7 +494,7 @@ instance Pretty BuiltinAxiom where
     BuiltinByteArrayLength -> Str.byteArrayLength
     BuiltinRangeCheck -> Str.rangeCheck
     BuiltinNockmaReify -> Str.nockmaReify
-    BuiltinAnomaKeccack256 -> Str.keccack256
+    BuiltinAnomaKeccak256 -> Str.keccak256
     BuiltinAnomaSecp256k1SignCompact -> Str.secp256k1Sign
     BuiltinAnomaSecp256k1Verify -> Str.secp256k1Verify
     BuiltinAnomaSecp256k1PubKey -> Str.secp256k1PubKey

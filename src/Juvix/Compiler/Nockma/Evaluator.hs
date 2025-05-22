@@ -304,7 +304,7 @@ evalProfile inistack initerm =
               StdlibSecp256k1PubKey -> unsupported f
               StdlibSecp256k1SignCompact -> unsupported f
               StdlibSecp256k1Verify -> unsupported f
-              StdlibKeccack256 -> unsupported f
+              StdlibKeccak256 -> unsupported f
           where
             unsupported :: StdlibFunction -> Sem r (Term a)
             unsupported thing = error ("Unsupported operation: " <> prettyText thing)

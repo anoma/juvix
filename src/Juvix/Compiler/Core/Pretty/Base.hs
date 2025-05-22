@@ -93,7 +93,7 @@ instance PrettyCode BuiltinOp where
     OpUInt8FromInt -> primFieldFromInt
     OpByteArrayFromListByte -> primByteArrayFromListByte
     OpByteArrayLength -> primByteArrayLength
-    OpAnomaKeccack256 -> Str.keccack256
+    OpAnomaKeccak256 -> Str.keccak256
     OpAnomaSecp256k1SignCompact -> primitive Str.secp256k1Sign
     OpAnomaSecp256k1Verify -> primitive Str.secp256k1Verify
     OpAnomaSecp256k1PubKey -> primitive Str.secp256k1PubKey

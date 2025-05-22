@@ -1070,7 +1070,7 @@ allTests =
         mkAnomaTest
           89
           AnomaTestModeNodeOnly
-          "Keccack256"
+          "Keccak256"
           $(mkRelDir ".")
           $(mkRelFile "test089.juvix")
           []

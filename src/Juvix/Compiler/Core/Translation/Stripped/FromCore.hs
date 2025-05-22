@@ -176,7 +176,7 @@ fromCore' tab =
         BuiltinByteArrayFromListByte -> False
         BuiltinByteArrayLength -> False
         BuiltinRangeCheck -> False
-        BuiltinAnomaKeccack256 -> False
+        BuiltinAnomaKeccak256 -> False
         BuiltinAnomaSecp256k1PubKey -> False
         BuiltinAnomaSecp256k1Verify -> False
         BuiltinAnomaSecp256k1SignCompact -> False

@@ -48,7 +48,7 @@ anomaLibPath = \case
     StdlibSecp256k1SignCompact -> [nock| [9 23 0 3] |]
     StdlibSecp256k1Verify -> [nock| [9 10 0 3] |]
     StdlibSecp256k1PubKey -> [nock| [9 4 0 3] |]
-    StdlibKeccack256 -> [nock| [9 22 0 3] |]
+    StdlibKeccak256 -> [nock| [9 22 0 3] |]
     -- sha256 is called shax in hoon
     StdlibSha256 -> [nock| [9 22 0 127] |]
     -- Obtained from the urbit dojo using:

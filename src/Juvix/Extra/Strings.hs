@@ -191,8 +191,8 @@ byteFromNat = "byte-from-nat"
 byteArray :: (IsString s) => s
 byteArray = "bytearray"
 
-keccack256 :: (IsString s) => s
-keccack256 = "keccack256"
+keccak256 :: (IsString s) => s
+keccak256 = "keccak256"
 
 secp256k1Sign :: (IsString s) => s
 secp256k1Sign = "secp256k1-sign"

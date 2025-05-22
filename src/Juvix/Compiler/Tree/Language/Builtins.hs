@@ -155,7 +155,7 @@ data AnomaOp
   | OpAnomaSetFromList
   | OpAnomaTransactionCompose
   | OpAnomaActionCreate
-  | OpAnomaKeccack256
+  | OpAnomaKeccak256
   | -- | See https://hexdocs.pm/ex_secp256k1/ExSecp256k1.html#sign_compact/2
     OpAnomaSecp256k1SignCompact
   | OpAnomaSecp256k1Verify

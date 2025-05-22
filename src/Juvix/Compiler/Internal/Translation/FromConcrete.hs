@@ -1105,7 +1105,7 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinRangeCheck -> checkRangeCheck d
   BuiltinNockmaReify -> checkNockmaReify d
   -- FIXME include checks
-  BuiltinAnomaKeccack256 -> return ()
+  BuiltinAnomaKeccak256 -> return ()
   BuiltinAnomaSecp256k1SignCompact -> return ()
   BuiltinAnomaSecp256k1Verify -> return ()
   BuiltinAnomaSecp256k1PubKey -> return ()

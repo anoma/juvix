@@ -729,7 +729,7 @@ builtinInductive a =
         Internal.BuiltinByteArrayLength -> Nothing
         Internal.BuiltinRangeCheck -> Nothing
         Internal.BuiltinNockmaReify -> Nothing
-        Internal.BuiltinAnomaKeccack256 -> Nothing
+        Internal.BuiltinAnomaKeccak256 -> Nothing
         Internal.BuiltinAnomaSecp256k1SignCompact -> Nothing
         Internal.BuiltinAnomaSecp256k1Verify -> Nothing
         Internal.BuiltinAnomaSecp256k1PubKey -> Nothing
@@ -965,9 +965,9 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
         natType <- getNatType
         registerAxiomDef
           (mkBuiltinExpanded' OpAnomaSecp256k1SignCompact [mkSmallUniv, mkVar' 0, natType])
-      Internal.BuiltinAnomaKeccack256 -> do
+      Internal.BuiltinAnomaKeccak256 -> do
         natType <- getNatType
-        registerAxiomDef (mkBuiltinExpanded' OpAnomaKeccack256 [natType])
+        registerAxiomDef (mkBuiltinExpanded' OpAnomaKeccak256 [natType])
       Internal.BuiltinAnomaDelta -> return ()
       Internal.BuiltinAnomaKind -> return ()
       Internal.BuiltinAnomaResourceCommitment -> do
@@ -1602,7 +1602,7 @@ goApplication a = do
           Internal.BuiltinByteArray -> app
           Internal.BuiltinByteArrayFromListByte -> app
           Internal.BuiltinByteArrayLength -> app
-          Internal.BuiltinAnomaKeccack256 -> app
+          Internal.BuiltinAnomaKeccak256 -> app
           Internal.BuiltinAnomaSecp256k1PubKey -> app
           Internal.BuiltinAnomaSecp256k1SignCompact -> app
           Internal.BuiltinAnomaSecp256k1Verify -> app

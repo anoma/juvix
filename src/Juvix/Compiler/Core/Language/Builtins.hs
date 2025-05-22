@@ -77,7 +77,7 @@ builtinCategory = \case
   OpUInt8FromInt -> BuiltinCategoryUInt8
   OpByteArrayFromListByte -> BuiltinCategoryByteArray
   OpByteArrayLength -> BuiltinCategoryByteArray
-  OpAnomaKeccack256 -> BuiltinCategoryAnoma
+  OpAnomaKeccak256 -> BuiltinCategoryAnoma
   OpAnomaSecp256k1SignCompact -> BuiltinCategoryAnoma
   OpAnomaSecp256k1Verify -> BuiltinCategoryAnoma
   OpAnomaSecp256k1PubKey -> BuiltinCategoryAnoma
@@ -137,7 +137,7 @@ data BuiltinOp
   | OpAnomaActionCreate
   | OpAnomaSetToList
   | OpAnomaSetFromList
-  | OpAnomaKeccack256
+  | OpAnomaKeccak256
   | OpAnomaSecp256k1SignCompact
   | OpAnomaSecp256k1Verify
   | OpAnomaSecp256k1PubKey
@@ -247,7 +247,7 @@ builtinOpArgsNum = \case
   OpAnomaProveDelta -> 1
   OpAnomaSetToList -> 1
   OpAnomaSetFromList -> 1
-  OpAnomaKeccack256 -> 1
+  OpAnomaKeccak256 -> 1
   OpAnomaSecp256k1PubKey -> 1
   OpAnomaSecp256k1SignCompact -> 2
   OpAnomaSecp256k1Verify -> 3
@@ -337,7 +337,7 @@ builtinIsFoldable = \case
   OpUInt8FromInt -> True
   OpByteArrayFromListByte -> False
   OpByteArrayLength -> False
-  OpAnomaKeccack256 -> False
+  OpAnomaKeccak256 -> False
   OpAnomaSecp256k1SignCompact -> False
   OpAnomaSecp256k1Verify -> False
   OpAnomaSecp256k1PubKey -> False

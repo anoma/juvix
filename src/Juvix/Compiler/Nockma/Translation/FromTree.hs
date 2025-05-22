@@ -751,7 +751,7 @@ compile = \case
         Tree.OpAnomaTransactionCompose -> callRm RmTransactionCompose args
         Tree.OpAnomaSetToList -> goAnomaSetToList args
         Tree.OpAnomaSetFromList -> goAnomaSetFromList args
-        Tree.OpAnomaKeccack256 -> goAnomaKeccack256 args
+        Tree.OpAnomaKeccak256 -> goAnomaKeccak256 args
         _ -> error "FIXME"
 
     goByteArrayOp :: Tree.NodeByteArray -> Sem r (Term Natural)
@@ -876,13 +876,13 @@ compile = \case
     goAnomaSetFromList :: [Term Natural] -> Sem r (Term Natural)
     goAnomaSetFromList arg = callStdlib StdlibAnomaSetFromList arg
 
-    goAnomaKeccack256 :: [Term Natural] -> Sem r (Term Natural)
-    goAnomaKeccack256 arg = do
-      stdcall <- callStdlib StdlibKeccack256 arg
-      return $ mkByteArray (nockNatLiteral keccack256HashLength) stdcall
+    goAnomaKeccak256 :: [Term Natural] -> Sem r (Term Natural)
+    goAnomaKeccak256 arg = do
+      stdcall <- callStdlib StdlibKeccak256 arg
+      return $ mkByteArray (nockNatLiteral keccak256HashLength) stdcall
       where
-        keccack256HashLength :: Natural
-        keccack256HashLength = 32
+        keccak256HashLength :: Natural
+        keccak256HashLength = 32
 
     goAnomaSha256 :: [Term Natural] -> Sem r (Term Natural)
     goAnomaSha256 arg = do

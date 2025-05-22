@@ -265,7 +265,7 @@ isDebugOp = \case
       OpIntSub -> False
       OpFieldToInt -> False
       OpShow -> False
-      OpAnomaKeccack256 -> False
+      OpAnomaKeccak256 -> False
       OpAnomaSecp256k1SignCompact -> False
       OpAnomaSecp256k1Verify -> False
       OpAnomaSecp256k1PubKey -> False
@@ -561,7 +561,7 @@ builtinOpArgTypes = \case
   OpUInt8FromInt -> [mkTypeInteger']
   OpByteArrayFromListByte -> [mkDynamic']
   OpByteArrayLength -> [mkTypeByteArray']
-  OpAnomaKeccack256 -> [mkTypeInteger']
+  OpAnomaKeccak256 -> [mkTypeInteger']
   OpAnomaSecp256k1PubKey -> [mkTypeInteger']
   OpAnomaSecp256k1SignCompact -> [mkDynamic', mkDynamic']
   OpAnomaSecp256k1Verify -> [mkDynamic', mkDynamic', mkDynamic']
