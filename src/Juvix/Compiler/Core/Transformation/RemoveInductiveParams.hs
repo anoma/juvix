@@ -8,7 +8,7 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Transformation.Base
 
 convertNode :: Module -> Node -> Node
-convertNode md = rmap go
+convertNode md node0 = rmap go node0
   where
     go :: ([BinderChange] -> Node -> Node) -> Node -> Node
     go recur node = case node of
@@ -45,6 +45,14 @@ convertNode md = rmap go
                 (bs', bcs') = filterBinders (bcs ++ [BCKeep b]) bs
       _ -> recur [] node
 
+convertIdent :: Module -> IdentifierInfo -> IdentifierInfo
+convertIdent md ii =
+  ii
+    { _identifierType = ty'
+    }
+  where
+    ty' = convertNode md (ii ^. identifierType)
+
 convertConstructor :: Module -> ConstructorInfo -> ConstructorInfo
 convertConstructor md ci =
   ci
@@ -72,4 +80,5 @@ removeInductiveParams :: Module -> Module
 removeInductiveParams md =
   mapInductives (convertInductive md)
     . mapConstructors (convertConstructor md)
+    . mapIdents (convertIdent md)
     $ mapT (const (convertNode md)) md
