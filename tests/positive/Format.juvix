@@ -580,6 +580,17 @@ module TypeModule;
   open S using {mS} public;
 end;
 
+module issue3394;
+  trait
+  type Semigroup A :=
+    mk@{
+      syntax operator ++ additive;
+      ++ : A -> A -> A;
+    }
+  with
+  end;
+end;
+
 {-hi
 
 -}
