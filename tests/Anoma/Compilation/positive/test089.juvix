@@ -10,7 +10,7 @@ builtin bytearray
 axiom ByteArray : Type;
 
 builtin keccak256
-axiom keccak : Nat -> ByteArray;
+axiom keccak : Nat -> Nat;
 
 main : _ :=
   -- byteStringToNatural (encodeUtf8 "hello") = 478560413032
