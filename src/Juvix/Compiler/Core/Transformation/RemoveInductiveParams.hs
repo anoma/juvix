@@ -66,7 +66,8 @@ convertInductive md ii =
   where
     ty' = convertNode md (typeTarget (ii ^. inductiveKind))
 
--- | Removes parameters of inductive types from constructors.
+-- | Removes parameters of inductive types from constructors and
+-- case-expressions.
 removeInductiveParams :: Module -> Module
 removeInductiveParams md =
   mapInductives (convertInductive md)

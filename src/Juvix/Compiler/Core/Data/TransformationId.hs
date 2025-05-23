@@ -9,6 +9,7 @@ data TransformationId
   | LetRecLifting
   | TopEtaExpand
   | RemoveTypeArgs
+  | RemoveInductiveParams
   | MoveApps
   | NatToPrimInt
   | IntToPrimInt
@@ -82,7 +83,7 @@ toNormalizeTransformations =
 
 toStrippedTransformations :: TransformationId -> [TransformationId]
 toStrippedTransformations checkId =
-  [FilterUnreachable, checkId, RemoveTypeArgs, DisambiguateNames]
+  [FilterUnreachable, checkId, RemoveTypeArgs, RemoveInductiveParams, DisambiguateNames]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
@@ -96,6 +97,7 @@ instance TransformationId' TransformationId where
     EtaExpandApps -> strEtaExpandApps
     IdentityTrans -> strIdentity
     RemoveTypeArgs -> strRemoveTypeArgs
+    RemoveInductiveParams -> strRemoveInductiveParams
     MoveApps -> strMoveApps
     NatToPrimInt -> strNatToPrimInt
     IntToPrimInt -> strIntToPrimInt

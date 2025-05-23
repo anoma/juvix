@@ -46,6 +46,7 @@ import Juvix.Compiler.Core.Transformation.Optimize.Phase.PreLifting qualified as
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyComparisons (simplifyComparisons)
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyIfs
 import Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs
+import Juvix.Compiler.Core.Transformation.RemoveInductiveParams
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
@@ -74,6 +75,7 @@ applyTransformations ts = flip (foldM (flip appTrans)) ts
       IdentityTrans -> return . identity
       TopEtaExpand -> return . topEtaExpand
       RemoveTypeArgs -> return . removeTypeArgs
+      RemoveInductiveParams -> return . removeInductiveParams
       MoveApps -> return . moveApps
       NatToPrimInt -> return . natToPrimInt
       IntToPrimInt -> return . intToPrimInt

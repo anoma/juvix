@@ -50,6 +50,9 @@ strIdentity = "identity"
 strRemoveTypeArgs :: Text
 strRemoveTypeArgs = "remove-type-args"
 
+strRemoveInductiveParams :: Text
+strRemoveInductiveParams = "remove-inductive-params"
+
 strMoveApps :: Text
 strMoveApps = "move-apps"
 
