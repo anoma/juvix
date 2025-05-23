@@ -63,9 +63,10 @@ mkLambda i bi b = NLam (Lambda i bi b)
 mkBuiltinExpanded' :: BuiltinOp -> [Type] -> Node
 mkBuiltinExpanded' b argTys =
   let numArgs = length argTys
-      app = mkBuiltinApp' b [mkVar' argIx | argIx <- reverse [0 .. numArgs - 1]]
+      prefixTypes = length (takeWhile isUniverse argTys)
+      app = mkBuiltinApp' b [mkVar' argIx | argIx <- reverse [0 .. numArgs - 1 - prefixTypes]]
    in if
-          | builtinOpArgsNum b == numArgs -> mkLambdas' argTys app
+          | builtinOpArgsNum b == numArgs - prefixTypes -> mkLambdas' argTys app
           | otherwise ->
               impossibleError
                 ( "unexpected number of args to builtin "

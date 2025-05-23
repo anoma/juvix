@@ -956,15 +956,17 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               (mkBuiltinApp' OpAnomaSha256 [mkVar' 0])
           )
       Internal.BuiltinAnomaSecp256k1PubKey -> do
+        natType <- getNatType
         registerAxiomDef
-          (mkBuiltinExpanded' OpAnomaSecp256k1PubKey [mkDynamic'])
+          (mkBuiltinExpanded' OpAnomaSecp256k1PubKey [natType])
       Internal.BuiltinAnomaSecp256k1Verify -> do
+        natType <- getNatType
         registerAxiomDef
-          (mkBuiltinExpanded' OpAnomaSecp256k1Verify [mkSmallUniv, mkDynamic', mkVar' 1, mkDynamic'])
+          (mkBuiltinExpanded' OpAnomaSecp256k1Verify [natType, natType, natType])
       Internal.BuiltinAnomaSecp256k1SignCompact -> do
         natType <- getNatType
         registerAxiomDef
-          (mkBuiltinExpanded' OpAnomaSecp256k1SignCompact [mkSmallUniv, mkVar' 0, natType])
+          (mkBuiltinExpanded' OpAnomaSecp256k1SignCompact [natType, natType])
       Internal.BuiltinAnomaKeccak256 -> do
         natType <- getNatType
         registerAxiomDef (mkBuiltinExpanded' OpAnomaKeccak256 [natType])

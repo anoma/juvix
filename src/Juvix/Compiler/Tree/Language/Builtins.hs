@@ -158,8 +158,10 @@ data AnomaOp
   | OpAnomaKeccak256
   | -- | See https://hexdocs.pm/ex_secp256k1/ExSecp256k1.html#sign_compact/2
     OpAnomaSecp256k1SignCompact
-  | OpAnomaSecp256k1Verify
-  | OpAnomaSecp256k1PubKey
+  | -- | See https://hexdocs.pm/ex_secp256k1/ExSecp256k1.html#verify/3
+    OpAnomaSecp256k1Verify
+  | -- | See https://hexdocs.pm/ex_secp256k1/ExSecp256k1.html#create_public_key/1
+    OpAnomaSecp256k1PubKey
   deriving stock (Eq, Show, Generic)
 
 instance Serialize AnomaOp

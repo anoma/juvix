@@ -201,7 +201,7 @@ secp256k1Verify :: (IsString s) => s
 secp256k1Verify = "secp256k1-verify"
 
 secp256k1PubKey :: (IsString s) => s
-secp256k1PubKey = "secp256k1-pubKey"
+secp256k1PubKey = "secp256k1-public-key"
 
 byteArrayFromListByte :: (IsString s) => s
 byteArrayFromListByte = "bytearray-from-list-byte"
