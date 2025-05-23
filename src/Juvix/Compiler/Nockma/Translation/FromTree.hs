@@ -879,12 +879,7 @@ compile = \case
     goAnomaSetFromList arg = callStdlib StdlibAnomaSetFromList arg
 
     goAnomaKeccak256 :: [Term Natural] -> Sem r (Term Natural)
-    goAnomaKeccak256 arg = do
-      stdcall <- callStdlib StdlibKeccak256 arg
-      return $ mkByteArray (nockNatLiteral keccak256HashLength) stdcall
-      where
-        keccak256HashLength :: Natural
-        keccak256HashLength = 32
+    goAnomaKeccak256 arg = callStdlib StdlibKeccak256 arg
 
     goAnomaSecpPubKey :: [Term Natural] -> Sem r (Term Natural)
     goAnomaSecpPubKey arg = callStdlib StdlibSecp256k1PubKey arg
