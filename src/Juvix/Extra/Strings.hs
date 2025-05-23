@@ -194,8 +194,8 @@ byteArray = "bytearray"
 keccak256 :: (IsString s) => s
 keccak256 = "keccak256"
 
-secp256k1Sign :: (IsString s) => s
-secp256k1Sign = "secp256k1-sign"
+secp256k1SignCompact :: (IsString s) => s
+secp256k1SignCompact = "secp256k1-sign-compact"
 
 secp256k1Verify :: (IsString s) => s
 secp256k1Verify = "secp256k1-verify"

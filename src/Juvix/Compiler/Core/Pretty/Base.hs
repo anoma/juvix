@@ -94,7 +94,7 @@ instance PrettyCode BuiltinOp where
     OpByteArrayFromListByte -> primByteArrayFromListByte
     OpByteArrayLength -> primByteArrayLength
     OpAnomaKeccak256 -> Str.keccak256
-    OpAnomaSecp256k1SignCompact -> primitive Str.secp256k1Sign
+    OpAnomaSecp256k1SignCompact -> primitive Str.secp256k1SignCompact
     OpAnomaSecp256k1Verify -> primitive Str.secp256k1Verify
     OpAnomaSecp256k1PubKey -> primitive Str.secp256k1PubKey
 

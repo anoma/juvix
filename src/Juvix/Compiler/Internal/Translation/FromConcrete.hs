@@ -1104,11 +1104,10 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinByteArrayLength -> checkByteArrayLength d
   BuiltinRangeCheck -> checkRangeCheck d
   BuiltinNockmaReify -> checkNockmaReify d
-  -- FIXME include checks
-  BuiltinAnomaKeccak256 -> return ()
-  BuiltinAnomaSecp256k1SignCompact -> return ()
-  BuiltinAnomaSecp256k1Verify -> return ()
-  BuiltinAnomaSecp256k1PubKey -> return ()
+  BuiltinAnomaKeccak256 -> checkKeccak256 d
+  BuiltinAnomaSecp256k1SignCompact -> checkSecp256k1SignCompact d
+  BuiltinAnomaSecp256k1Verify -> checkSecp256k1Verify d
+  BuiltinAnomaSecp256k1PubKey -> checkSecp256k1PubKey d
 
 goInductive ::
   ( Members

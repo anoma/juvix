@@ -138,7 +138,7 @@ instance Pretty StdlibFunction where
     StdlibRandomSplit -> "random-split"
     StdlibAnomaSetToList -> "set-to-list"
     StdlibAnomaSetFromList -> "set-from-list"
-    StdlibSecp256k1SignCompact -> Str.secp256k1Sign
+    StdlibSecp256k1SignCompact -> Str.secp256k1SignCompact
     StdlibSecp256k1Verify -> Str.secp256k1Verify
     StdlibSecp256k1PubKey -> Str.secp256k1PubKey
     StdlibKeccak256 -> Str.keccak256

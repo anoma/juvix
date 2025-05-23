@@ -495,7 +495,7 @@ instance Pretty BuiltinAxiom where
     BuiltinRangeCheck -> Str.rangeCheck
     BuiltinNockmaReify -> Str.nockmaReify
     BuiltinAnomaKeccak256 -> Str.keccak256
-    BuiltinAnomaSecp256k1SignCompact -> Str.secp256k1Sign
+    BuiltinAnomaSecp256k1SignCompact -> Str.secp256k1SignCompact
     BuiltinAnomaSecp256k1Verify -> Str.secp256k1Verify
     BuiltinAnomaSecp256k1PubKey -> Str.secp256k1PubKey
 

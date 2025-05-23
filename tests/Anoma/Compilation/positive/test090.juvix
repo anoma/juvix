@@ -50,7 +50,7 @@ type PrimitiveSignature :=
     recoveryId : Nat;
   };
 
-builtin secp256k1-sign
+builtin secp256k1-sign-compact
 axiom sign (msg privKey : Nat) : PrimitiveSignature;
 
 builtin secp256k1-verify

@@ -611,6 +611,16 @@ infix 4 ===
 (===) :: (IsExpression a, IsExpression b) => a -> b -> Bool
 a === b = (toExpression a ==% toExpression b) mempty
 
+(===*) :: (IsExpression a, IsExpression b) => [a] -> [b] -> Bool
+a ===* b =
+  length a == length b && and (zipWith (\x y -> (x ==% y) mempty) (map toExpression a) (map toExpression b))
+
+-- E.g. ty `hasArguments` [nat, bool]
+hasArguments :: (IsExpression a, IsExpression b) => a -> [b] -> Bool
+hasArguments ty expectedArgsTy =
+  let tyArgs = map (^. paramType) (fst (unfoldFunType (toExpression ty)))
+   in tyArgs ===* expectedArgsTy
+
 leftEq :: (IsExpression a, IsExpression b) => a -> b -> HashSet Name -> Bool
 leftEq a b free =
   isRight

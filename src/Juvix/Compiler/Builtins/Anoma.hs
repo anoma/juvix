@@ -109,6 +109,54 @@ checkAnomaByteArrayFromAnomaContents f = do
     (ftype === (nat_ --> nat_ --> byteArray))
     $ builtinsErrorText l "fromAnomaContents must be of type Nat -> Nat -> ByteArray"
 
+checkSecp256k1SignCompact ::
+  (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) =>
+  AxiomDef ->
+  Sem r ()
+checkSecp256k1SignCompact f = do
+  let ftype = f ^. axiomType
+      l = getLoc f
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  unless
+    (ftype `hasArguments` [nat_, nat_])
+    $ builtinsErrorText l (prettyText BuiltinAnomaSecp256k1SignCompact <> " must be of type Nat -> Nat -> _")
+
+checkSecp256k1PubKey ::
+  (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) =>
+  AxiomDef ->
+  Sem r ()
+checkSecp256k1PubKey f = do
+  let ftype = f ^. axiomType
+      l = getLoc f
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  unless
+    (ftype === (nat_ --> nat_))
+    $ builtinsErrorText l (prettyText BuiltinAnomaSecp256k1PubKey <> " must be of type Nat -> Nat")
+
+checkSecp256k1Verify ::
+  (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) =>
+  AxiomDef ->
+  Sem r ()
+checkSecp256k1Verify f = do
+  let ftype = f ^. axiomType
+      l = getLoc f
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  unless
+    (ftype === (nat_ --> nat_ --> nat_ --> nat_))
+    $ builtinsErrorText l (prettyText BuiltinAnomaSecp256k1Verify <> " must be of type (msg signature pubKey : Nat) -> Nat")
+
+checkKeccak256 ::
+  (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) =>
+  AxiomDef ->
+  Sem r ()
+checkKeccak256 f = do
+  let ftype = f ^. axiomType
+      l = getLoc f
+  nat_ <- getBuiltinNameScoper l BuiltinNat
+  unless
+    (ftype === (nat_ --> nat_))
+    $ builtinsErrorText l (prettyText BuiltinAnomaKeccak256 <> " must be of type Nat -> Nat")
+
 checkAnomaSha256 :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkAnomaSha256 f = do
   let ftype = f ^. axiomType
