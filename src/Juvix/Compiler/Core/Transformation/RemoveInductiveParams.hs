@@ -6,7 +6,6 @@ where
 
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
 import Juvix.Compiler.Core.Extra
-import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 
 convertNode :: Module -> Node -> Node
@@ -27,8 +26,8 @@ convertNode md = convert mempty
       NCase Case {..} ->
         End $ mkCase _caseInfo _caseInductive (convert vars _caseValue) (map convertBranch _caseBranches) (fmap (convert vars) _caseDefault)
         where
-          ii = lookupInductiveInfo md _caseInductive
-          nParams = length (ii ^. inductiveParams)
+          -- ii = lookupInductiveInfo md _caseInductive
+          -- nParams = length (ii ^. inductiveParams)
 
           convertBranch :: CaseBranch -> CaseBranch
           convertBranch br@CaseBranch {..} =
