@@ -563,8 +563,8 @@ builtinOpArgTypes = \case
   OpByteArrayLength -> [mkTypeByteArray']
   OpAnomaKeccak256 -> [mkTypeInteger']
   OpAnomaSecp256k1PubKey -> [mkTypeInteger']
-  OpAnomaSecp256k1SignCompact -> [mkDynamic', mkDynamic']
-  OpAnomaSecp256k1Verify -> [mkDynamic', mkDynamic', mkDynamic']
+  OpAnomaSecp256k1SignCompact -> [mkTypeInteger', mkTypeInteger']
+  OpAnomaSecp256k1Verify -> [mkTypeInteger', mkTypeInteger', mkTypeInteger']
 
 translateCase :: (Node -> Node -> Node -> a) -> a -> Case -> a
 translateCase translateIfFun dflt Case {..} = case _caseBranches of
