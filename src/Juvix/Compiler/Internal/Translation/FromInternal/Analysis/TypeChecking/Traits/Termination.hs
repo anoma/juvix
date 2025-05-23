@@ -56,11 +56,22 @@ checkMultisetOrdering ms1 ms2
     mdiff :: [InstanceParam] -> [InstanceParam] -> [InstanceParam]
     mdiff xs = foldr delete xs
 
+-- | Checks if p1 is a strict subterm of p2
 checkStrictSubterm :: InstanceParam -> InstanceParam -> Bool
-checkStrictSubterm p1 p2 = case p2 of
-  InstanceParamApp InstanceApp {..} ->
+checkStrictSubterm p1 p2 = case (p1, p2) of
+  (InstanceParamNatural n1, InstanceParamNatural n2) ->
+    let suc1 = n1 ^. instanceNatSuc
+        suc2 = n2 ^. instanceNatSuc
+     in if
+            | suc1 < suc2 -> checkSubterm (n1 ^. instanceNatArg) (n2 ^. instanceNatArg)
+            | suc1 == suc2 -> checkStrictSubterm (n1 ^. instanceNatArg) (n2 ^. instanceNatArg)
+            | otherwise -> False
+  (_, InstanceParamNatural n2)
+    | n2 ^. instanceNatSuc == 0 -> checkStrictSubterm p1 (n2 ^. instanceNatArg)
+    | otherwise -> checkSubterm p1 (n2 ^. instanceNatArg)
+  (_, InstanceParamApp InstanceApp {..}) ->
     any (checkSubterm p1) _instanceAppArgs
-  InstanceParamFun InstanceFun {..} ->
+  (_, InstanceParamFun InstanceFun {..}) ->
     checkSubterm p1 _instanceFunLeft
       || checkSubterm p1 _instanceFunRight
   _ ->

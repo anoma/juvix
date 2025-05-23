@@ -9,6 +9,7 @@ data TransformationId
   | LetRecLifting
   | TopEtaExpand
   | RemoveTypeArgs
+  | RemoveInductiveParams
   | MoveApps
   | NatToPrimInt
   | IntToPrimInt
@@ -96,6 +97,7 @@ instance TransformationId' TransformationId where
     EtaExpandApps -> strEtaExpandApps
     IdentityTrans -> strIdentity
     RemoveTypeArgs -> strRemoveTypeArgs
+    RemoveInductiveParams -> strRemoveInductiveParams
     MoveApps -> strMoveApps
     NatToPrimInt -> strNatToPrimInt
     IntToPrimInt -> strIntToPrimInt

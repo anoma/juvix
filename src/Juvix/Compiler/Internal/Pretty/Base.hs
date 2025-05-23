@@ -8,10 +8,11 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Data.LocalVars
 import Juvix.Compiler.Internal.Data.NameDependencyInfo
-import Juvix.Compiler.Internal.Data.TypedHole
+import Juvix.Compiler.Internal.Data.TypedInstanceHole
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty.Options
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Occurrences
+import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.CheckerNew.Arity qualified as New
 import Juvix.Compiler.Store.Internal.Data.InfoTable
 import Juvix.Compiler.Store.Internal.Data.InstanceInfo
@@ -47,10 +48,13 @@ instance PrettyCode InstanceFun where
     return $ l' <+> kwArrow <+> r'
 
 instance PrettyCode InstanceApp where
-  ppCode InstanceApp {..} = do
-    h' <- ppCode _instanceAppHead
+  ppCode a@InstanceApp {..} = do
+    h' <- ppCode (a ^. instanceAppHead . instanceAppHeadName)
     args' <- mapM ppCode _instanceAppArgs
     return $ h' <+> hsep args'
+
+instance PrettyCode InstanceNat where
+  ppCode _ = return "<InstanceNat>"
 
 instance PrettyCode InstanceParam where
   ppCode = \case
@@ -59,6 +63,7 @@ instance PrettyCode InstanceParam where
     InstanceParamFun f -> ppCode f
     InstanceParamHole h -> ppCode h
     InstanceParamMeta m -> ppCode m
+    InstanceParamNatural m -> ppCode m
 
 instance PrettyCode DerivingTrait where
   ppCode = return . ppCodeAnn
@@ -91,6 +96,9 @@ ppApplicationArg impl expr =
     Implicit -> braces <$> ppCode expr
     ImplicitInstance -> doubleBraces <$> ppCode expr
 
+instance PrettyCode NormalizedExpression where
+  ppCode e = ppCode (e ^. normalizedExpression)
+
 instance PrettyCode Application where
   ppCode a = do
     l' <- ppLeftExpression appFixity (a ^. appLeft)
@@ -106,9 +114,19 @@ instance PrettyCode TypedExpression where
 instance PrettyCode SmallUniverse where
   ppCode _ = return kwType
 
+instance PrettyCode BuiltinNatural where
+  ppCode BuiltinNatural {..} = do
+    arg <- ppCodeAtom _builtinNaturalArg
+    let sucx = annotate AnnKeyword ("suc[" <> pretty _builtinNaturalSuc <> "]")
+    return (sucx <> arg)
+
+instance PrettyCode Arity where
+  ppCode = return . pretty
+
 instance PrettyCode Expression where
   ppCode = \case
     ExpressionIden i -> ppCode i
+    ExpressionNatural i -> ppCode i
     ExpressionHole h -> ppCode h
     ExpressionInstanceHole h -> ppCode h
     ExpressionApplication a -> ppCode a
@@ -430,11 +448,11 @@ instance (PrettyCode a, PrettyCode b) => PrettyCode (Either a b) where
 instance PrettyCode LocalVars where
   ppCode LocalVars {..} = ppCode (HashMap.toList _localTypes)
 
-instance PrettyCode TypedHole where
-  ppCode TypedHole {..} = do
-    h <- ppCode _typedHoleHole
-    ty <- ppCode _typedHoleType
-    vars <- ppCode _typedHoleLocalVars
+instance PrettyCode TypedInstanceHole where
+  ppCode TypedInstanceHole {..} = do
+    h <- ppCode _typedInstanceHoleHole
+    ty <- ppCode _typedInstanceHoleType
+    vars <- ppCode _typedInstanceHoleLocalVars
     return (h <+> kwColon <+> ty <> kwAt <> vars)
 
 instance PrettyCode Polarity where

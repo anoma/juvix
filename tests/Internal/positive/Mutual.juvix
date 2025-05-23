@@ -1,14 +1,23 @@
 module Mutual;
 
-import Stdlib.Prelude open;
+builtin nat
+type Nat :=
+  | zero
+  | suc Nat;
+
+builtin bool
+type Bool :=
+  | false
+  | true;
+
+open Nat;
+open Bool;
 
 odd : _
-
   | zero := false
   | (suc n) := even n;
 
 even : _
-
   | zero := true
   | (suc n) := odd n;
 

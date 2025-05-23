@@ -68,16 +68,6 @@ runResultBuilder' inis = reinterpret (runState inis) $ \case
           _resultBuilderStateCombinedTables = f (res ^. resultBuilderStateCombinedTables)
         }
 
-lookupInstanceInfo :: (Members '[ResultBuilder] r) => Name -> Sem r (Maybe [InstanceInfo])
-lookupInstanceInfo name = do
-  tab <- (^. typeCheckingTablesInstanceTable) <$> getCombinedTables
-  return $ lookupInstanceTable tab name
-
-lookupCoercionInfo :: (Members '[ResultBuilder] r) => Name -> Sem r (Maybe [CoercionInfo])
-lookupCoercionInfo name = do
-  tab <- (^. typeCheckingTablesCoercionTable) <$> getCombinedTables
-  return $ lookupCoercionTable tab name
-
 runResultBuilder :: ImportContext -> Sem (ResultBuilder ': r) a -> Sem r (ResultBuilderState, a)
 runResultBuilder ctx a =
   runResultBuilder' (initResultBuilderState ctx) a
