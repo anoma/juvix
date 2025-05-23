@@ -77,6 +77,10 @@ builtinCategory = \case
   OpUInt8FromInt -> BuiltinCategoryUInt8
   OpByteArrayFromListByte -> BuiltinCategoryByteArray
   OpByteArrayLength -> BuiltinCategoryByteArray
+  OpAnomaKeccak256 -> BuiltinCategoryAnoma
+  OpAnomaSecp256k1SignCompact -> BuiltinCategoryAnoma
+  OpAnomaSecp256k1Verify -> BuiltinCategoryAnoma
+  OpAnomaSecp256k1PubKey -> BuiltinCategoryAnoma
 
 -- | Builtin operations which the evaluator and the code generator treat
 -- specially and non-uniformly.
@@ -133,6 +137,10 @@ data BuiltinOp
   | OpAnomaActionCreate
   | OpAnomaSetToList
   | OpAnomaSetFromList
+  | OpAnomaKeccak256
+  | OpAnomaSecp256k1SignCompact
+  | OpAnomaSecp256k1Verify
+  | OpAnomaSecp256k1PubKey
   | OpNockmaReify
   | OpPoseidonHash
   | OpEc
@@ -239,6 +247,10 @@ builtinOpArgsNum = \case
   OpAnomaProveDelta -> 1
   OpAnomaSetToList -> 1
   OpAnomaSetFromList -> 1
+  OpAnomaKeccak256 -> 1
+  OpAnomaSecp256k1PubKey -> 1
+  OpAnomaSecp256k1SignCompact -> 2
+  OpAnomaSecp256k1Verify -> 3
   OpPoseidonHash -> 1
   OpEc -> 3
   OpRandomEcPoint -> 0
@@ -325,6 +337,10 @@ builtinIsFoldable = \case
   OpUInt8FromInt -> True
   OpByteArrayFromListByte -> False
   OpByteArrayLength -> False
+  OpAnomaKeccak256 -> False
+  OpAnomaSecp256k1SignCompact -> False
+  OpAnomaSecp256k1Verify -> False
+  OpAnomaSecp256k1PubKey -> False
 
 builtinsInCategory :: BuiltinCategory -> [BuiltinOp]
 builtinsInCategory c = filter ((== c) . builtinCategory) allElements

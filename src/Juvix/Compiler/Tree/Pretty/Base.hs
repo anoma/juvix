@@ -317,6 +317,10 @@ instance PrettyCode AnomaOp where
     OpAnomaSetFromList -> Str.anomaSetFromList
     OpAnomaTransactionCompose -> Str.anomaTransactionCompose
     OpAnomaActionCreate -> Str.anomaActionCreate
+    OpAnomaKeccak256 -> Str.keccak256
+    OpAnomaSecp256k1SignCompact -> Str.secp256k1SignCompact
+    OpAnomaSecp256k1Verify -> Str.secp256k1Verify
+    OpAnomaSecp256k1PubKey -> Str.secp256k1PubKey
 
 instance PrettyCode UnaryOpcode where
   ppCode = \case

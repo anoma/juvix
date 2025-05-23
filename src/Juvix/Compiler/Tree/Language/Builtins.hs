@@ -155,6 +155,13 @@ data AnomaOp
   | OpAnomaSetFromList
   | OpAnomaTransactionCompose
   | OpAnomaActionCreate
+  | OpAnomaKeccak256
+  | -- | See https://hexdocs.pm/ex_secp256k1/ExSecp256k1.html#sign_compact/2
+    OpAnomaSecp256k1SignCompact
+  | -- | See https://hexdocs.pm/ex_secp256k1/ExSecp256k1.html#verify/3
+    OpAnomaSecp256k1Verify
+  | -- | See https://hexdocs.pm/ex_secp256k1/ExSecp256k1.html#create_public_key/1
+    OpAnomaSecp256k1PubKey
   deriving stock (Eq, Show, Generic)
 
 instance Serialize AnomaOp
