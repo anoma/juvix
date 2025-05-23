@@ -83,7 +83,7 @@ toNormalizeTransformations =
 
 toStrippedTransformations :: TransformationId -> [TransformationId]
 toStrippedTransformations checkId =
-  [FilterUnreachable, checkId, RemoveTypeArgs, RemoveInductiveParams, DisambiguateNames]
+  [FilterUnreachable, checkId, RemoveTypeArgs, DisambiguateNames]
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text

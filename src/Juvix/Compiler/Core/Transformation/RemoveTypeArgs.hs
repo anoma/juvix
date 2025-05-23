@@ -95,7 +95,7 @@ convertNode md = convert mempty
         | isTypeConstr md (_letItem ^. letItemBinder . binderType) ->
             End (convert (BL.cons (_letItem ^. letItemBinder) vars) _letBody)
       NPi Pi {..}
-        | isTypeConstr md (_piBinder ^. binderType) && not (isTypeConstr md _piBody) ->
+        | isTypeConstr md (_piBinder ^. binderType) ->
             End (convert (BL.cons _piBinder vars) _piBody)
       _ -> Recur node
       where
