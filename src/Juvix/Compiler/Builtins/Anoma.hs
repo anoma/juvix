@@ -141,9 +141,10 @@ checkSecp256k1Verify f = do
   let ftype = f ^. axiomType
       l = getLoc f
   nat_ <- getBuiltinNameScoper l BuiltinNat
+  bool_ <- getBuiltinNameScoper l BuiltinBool
   unless
-    (ftype === (nat_ --> nat_ --> nat_ --> nat_))
-    $ builtinsErrorText l (prettyText BuiltinAnomaSecp256k1Verify <> " must be of type (msg signature pubKey : Nat) -> Nat")
+    (ftype === (nat_ --> nat_ --> nat_ --> bool_))
+    $ builtinsErrorText l (prettyText BuiltinAnomaSecp256k1Verify <> " must be of type (msg signature pubKey : Nat) -> Bool")
 
 checkKeccak256 ::
   (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) =>

@@ -54,7 +54,7 @@ builtin secp256k1-sign-compact
 axiom sign (msg privKey : Nat) : PrimitiveSignature;
 
 builtin secp256k1-verify
-axiom verify (msg signature pubKey : Nat) : Nat;
+axiom verify (msg signature pubKey : Nat) : Bool;
 
 universal : ByteArray :=
   mkByteArray
