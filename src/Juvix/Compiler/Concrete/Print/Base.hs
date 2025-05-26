@@ -922,6 +922,11 @@ ppIdentifierList items = do
   hsepSemicolon (map ppIdentifierType items)
   ppCode Kw.delimBracketR
 
+instance PrettyPrint PrecNum where
+  ppCode = \case
+    PrecNumWildcard w -> ppCode w
+    PrecNumExplicit e -> morphemeWithLoc (pretty <$> e)
+
 instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
   ppCode ParsedFixityInfo {..} = do
     let rhs = do
@@ -938,7 +943,10 @@ instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
               belowItem = do
                 a <- _fixityFieldsPrecBelow
                 return (ppCode Kw.kwBelow <+> ppCode Kw.kwAssign <+> ppIdentifierList a)
-              items = ppBlockOrList' (catMaybes [assocItem, sameItem, aboveItem, belowItem])
+              precNumItem = do
+                a <- _fixityFieldsPrecNum
+                return (ppCode Kw.kwPrecedence <+> ppCode Kw.kwAssign <+> ppCode a)
+              items = ppBlockOrList' (catMaybes [precNumItem, assocItem, sameItem, aboveItem, belowItem])
               (l, r) = _fixityFieldsBraces ^. unIrrelevant
           return (grouped (ppCode l <> items <> ppCode r))
     ppCode _fixityParsedArity <+?> rhs
