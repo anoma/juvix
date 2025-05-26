@@ -9,6 +9,7 @@ import Juvix.Prelude
 
 type DocTable = HashMap NameId (Judoc 'Scoped)
 
+-- | Fixity precedence
 type PrecedenceGraph = HashMap S.NameId (HashSet S.NameId)
 
 type BuiltinsTable = HashMap BuiltinPrim S.Symbol

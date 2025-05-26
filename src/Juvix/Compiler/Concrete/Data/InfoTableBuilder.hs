@@ -19,6 +19,7 @@ data InfoTableBuilder :: Effect where
   RegisterScopedIden :: Bool -> ScopedIden -> InfoTableBuilder m ()
   RegisterModuleDoc :: S.NameId -> Maybe (Judoc 'Scoped) -> InfoTableBuilder m ()
   RegisterFixityDef :: FixityDef -> InfoTableBuilder m ()
+  -- registerPrecedence a b means a has higher precedence than b
   RegisterPrecedence :: S.NameId -> S.NameId -> InfoTableBuilder m ()
   RegisterHighlightDoc :: S.NameId -> Maybe (Judoc 'Scoped) -> InfoTableBuilder m ()
   RegisterNameSig :: S.NameId -> NameSignature 'Scoped -> InfoTableBuilder m ()

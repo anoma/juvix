@@ -156,8 +156,11 @@ mkInterval :: Loc -> Loc -> Interval
 mkInterval start end =
   Interval (start ^. locFile) (start ^. locFileLoc) (end ^. locFileLoc)
 
+filterByLoc' :: (p -> Interval) -> Path Abs File -> [p] -> [p]
+filterByLoc' getloc p = filter ((== p) . (^. intervalFile) . getloc)
+
 filterByLoc :: (HasLoc p) => Path Abs File -> [p] -> [p]
-filterByLoc p = filter ((== p) . (^. intervalFile) . getLoc)
+filterByLoc = filterByLoc' getLoc
 
 instance Pretty Pos where
   pretty :: Pos -> Doc a
