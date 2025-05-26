@@ -32,67 +32,71 @@ class PrettyCode c where
   ppCode :: (Member (Reader Options) r) => c -> Sem r (Doc Ann)
 
 instance PrettyCode BuiltinOp where
-  ppCode = \case
-    OpIntAdd -> return primPlus
-    OpIntSub -> return primMinus
-    OpIntMul -> return primMul
-    OpIntDiv -> return primDiv
-    OpIntMod -> return primMod
-    OpIntLt -> return primLess
-    OpIntLe -> return primLessEquals
-    OpFieldAdd -> return primFieldAdd
-    OpFieldSub -> return primFieldSub
-    OpFieldMul -> return primFieldMul
-    OpFieldDiv -> return primFieldDiv
-    OpFieldFromInt -> return primFieldFromInt
-    OpFieldToInt -> return primFieldToInt
-    OpEq -> return primEquals
-    OpShow -> return primShow
-    OpStrConcat -> return primStrConcat
-    OpStrToInt -> return primStrToInt
-    OpAssert -> return primAssert
-    OpRangeCheck -> return primRangeCheck
-    OpSeq -> return primSeq
-    OpTrace -> return primTrace
-    OpFail -> return primFail
-    OpAnomaGet -> return primAnomaGet
-    OpAnomaEncode -> return primAnomaEncode
-    OpAnomaDecode -> return primAnomaDecode
-    OpAnomaVerifyDetached -> return primAnomaVerifyDetached
-    OpAnomaSign -> return primAnomaSign
-    OpAnomaSignDetached -> return primAnomaSignDetached
-    OpAnomaVerifyWithMessage -> return primAnomaVerifyWithMessage
-    OpAnomaByteArrayToAnomaContents -> return primAnomaByteArrayToAnomaContents
-    OpAnomaByteArrayFromAnomaContents -> return primAnomaByteArrayFromAnomaContents
-    OpAnomaSha256 -> return primAnomaSha256
-    OpAnomaResourceCommitment -> return primResourceCommitment
-    OpAnomaResourceNullifier -> return primResourceNullifier
-    OpAnomaResourceKind -> return primResourceKind
-    OpAnomaResourceDelta -> return primResourceDelta
-    OpAnomaActionDelta -> return primActionDelta
-    OpAnomaActionsDelta -> return primActionsDelta
-    OpAnomaZeroDelta -> return primZeroDelta
-    OpAnomaAddDelta -> return primAddDelta
-    OpAnomaSubDelta -> return primSubDelta
-    OpAnomaRandomGeneratorInit -> return primRandomGeneratorInit
-    OpAnomaRandomNextBytes -> return primRandomNextBytes
-    OpAnomaRandomSplit -> return primRandomSplit
-    OpAnomaIsCommitment -> return primIsCommitment
-    OpAnomaIsNullifier -> return primIsNullifier
-    OpAnomaCreateFromComplianceInputs -> return primAnomaCreateFromComplianceInputs
-    OpAnomaProveDelta -> return primAnomaProveDelta
-    OpAnomaActionCreate -> return primActionCreate
-    OpAnomaTransactionCompose -> return primTransactionCompose
-    OpAnomaSetToList -> return primAnomaSetToList
-    OpAnomaSetFromList -> return primAnomaSetFromList
-    OpNockmaReify -> return primNockmaReify
-    OpPoseidonHash -> return primPoseidonHash
-    OpEc -> return primEc
-    OpRandomEcPoint -> return primRandomEcPoint
-    OpUInt8ToInt -> return primUInt8ToInt
-    OpUInt8FromInt -> return primFieldFromInt
-    OpByteArrayFromListByte -> return primByteArrayFromListByte
-    OpByteArrayLength -> return primByteArrayLength
+  ppCode p = return $ case p of
+    OpIntAdd -> primPlus
+    OpIntSub -> primMinus
+    OpIntMul -> primMul
+    OpIntDiv -> primDiv
+    OpIntMod -> primMod
+    OpIntLt -> primLess
+    OpIntLe -> primLessEquals
+    OpFieldAdd -> primFieldAdd
+    OpFieldSub -> primFieldSub
+    OpFieldMul -> primFieldMul
+    OpFieldDiv -> primFieldDiv
+    OpFieldFromInt -> primFieldFromInt
+    OpFieldToInt -> primFieldToInt
+    OpEq -> primEquals
+    OpShow -> primShow
+    OpStrConcat -> primStrConcat
+    OpStrToInt -> primStrToInt
+    OpAssert -> primAssert
+    OpRangeCheck -> primRangeCheck
+    OpSeq -> primSeq
+    OpTrace -> primTrace
+    OpFail -> primFail
+    OpAnomaGet -> primAnomaGet
+    OpAnomaEncode -> primAnomaEncode
+    OpAnomaDecode -> primAnomaDecode
+    OpAnomaVerifyDetached -> primAnomaVerifyDetached
+    OpAnomaSign -> primAnomaSign
+    OpAnomaSignDetached -> primAnomaSignDetached
+    OpAnomaVerifyWithMessage -> primAnomaVerifyWithMessage
+    OpAnomaByteArrayToAnomaContents -> primAnomaByteArrayToAnomaContents
+    OpAnomaByteArrayFromAnomaContents -> primAnomaByteArrayFromAnomaContents
+    OpAnomaSha256 -> primAnomaSha256
+    OpAnomaResourceCommitment -> primResourceCommitment
+    OpAnomaResourceNullifier -> primResourceNullifier
+    OpAnomaResourceKind -> primResourceKind
+    OpAnomaResourceDelta -> primResourceDelta
+    OpAnomaActionDelta -> primActionDelta
+    OpAnomaActionsDelta -> primActionsDelta
+    OpAnomaZeroDelta -> primZeroDelta
+    OpAnomaAddDelta -> primAddDelta
+    OpAnomaSubDelta -> primSubDelta
+    OpAnomaRandomGeneratorInit -> primRandomGeneratorInit
+    OpAnomaRandomNextBytes -> primRandomNextBytes
+    OpAnomaRandomSplit -> primRandomSplit
+    OpAnomaIsCommitment -> primIsCommitment
+    OpAnomaIsNullifier -> primIsNullifier
+    OpAnomaCreateFromComplianceInputs -> primAnomaCreateFromComplianceInputs
+    OpAnomaProveDelta -> primAnomaProveDelta
+    OpAnomaActionCreate -> primActionCreate
+    OpAnomaTransactionCompose -> primTransactionCompose
+    OpAnomaSetToList -> primAnomaSetToList
+    OpAnomaSetFromList -> primAnomaSetFromList
+    OpNockmaReify -> primNockmaReify
+    OpPoseidonHash -> primPoseidonHash
+    OpEc -> primEc
+    OpRandomEcPoint -> primRandomEcPoint
+    OpUInt8ToInt -> primUInt8ToInt
+    OpUInt8FromInt -> primFieldFromInt
+    OpByteArrayFromListByte -> primByteArrayFromListByte
+    OpByteArrayLength -> primByteArrayLength
+    OpAnomaKeccak256 -> Str.keccak256
+    OpAnomaSecp256k1SignCompact -> primitive Str.secp256k1SignCompact
+    OpAnomaSecp256k1Verify -> primitive Str.secp256k1Verify
+    OpAnomaSecp256k1PubKey -> primitive Str.secp256k1PubKey
 
 instance PrettyCode BuiltinDataTag where
   ppCode = \case

@@ -1,0 +1,108 @@
+-- Secp256k1
+module test090;
+
+import Juvix.Builtin.V1.Fixity open;
+import Juvix.Builtin.V1.Nat open;
+import Juvix.Builtin.V1.Bool open;
+import Juvix.Builtin.V1.List open;
+import Juvix.Builtin.V1.Trait.FromNatural open;
+
+builtin string
+axiom String : Type;
+
+instance
+FromNaturalByte : FromNatural Byte := mkFromNatural byteFromNat;
+
+builtin bytearray
+axiom ByteArray : Type;
+
+builtin trace
+axiom trace : {A : Type} -> A -> A;
+
+builtin byte
+axiom Byte : Type;
+
+builtin byte-from-nat
+axiom byteFromNat : Nat -> Byte;
+
+builtin bytearray-from-list-byte
+axiom mkByteArray : List Byte -> ByteArray;
+
+syntax operator >-> seq;
+
+builtin seq
+>-> : {A B : Type} -> A -> B -> B
+  | x y := y;
+
+builtin anoma-bytearray-from-anoma-contents
+axiom fromAnomaContents (size bytesPayload : Nat) : ByteArray;
+
+builtin anoma-bytearray-to-anoma-contents
+axiom toAnomaContents : ByteArray -> Nat;
+
+builtin secp256k1-public-key
+axiom mkPubKey (privKey : Nat) : Nat;
+
+type PrimitiveSignature :=
+  mk@{
+    bin : Nat;
+    --- currently never used
+    recoveryId : Nat;
+  };
+
+builtin secp256k1-sign-compact
+axiom sign (msg privKey : Nat) : PrimitiveSignature;
+
+builtin secp256k1-verify
+axiom verify (msg signature pubKey : Nat) : Bool;
+
+universal : ByteArray :=
+  mkByteArray
+    [
+      0x3b;
+      0x6a;
+      0x27;
+      0xbc;
+      0xce;
+      0xb6;
+      0xa4;
+      0x2d;
+      0x62;
+      0xa3;
+      0xa8;
+      0xd0;
+      0x2a;
+      0x6f;
+      0xd;
+      0x73;
+      0x65;
+      0x32;
+      0x15;
+      0x77;
+      0x1d;
+      0xe2;
+      0x43;
+      0xa6;
+      0x3a;
+      0xc0;
+      0x48;
+      0xa1;
+      0x8b;
+      0x59;
+      0xda;
+      0x29;
+    ];
+
+main : _ :=
+  let
+    hello : Nat := 478560413032;
+    priv : ByteArray := universal;
+    pub : Nat := mkPubKey (toAnomaContents priv);
+    signature : Nat :=
+      PrimitiveSignature.bin (sign hello (toAnomaContents priv));
+    fakeSignature := 1 + signature;
+    verified : Bool := false;
+  in trace pub
+    >-> trace signature
+    >-> trace (verify hello signature pub)
+    >-> verify hello fakeSignature pub;

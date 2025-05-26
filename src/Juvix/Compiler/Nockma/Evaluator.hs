@@ -301,7 +301,14 @@ evalProfile inistack initerm =
               StdlibRandomSplit -> goRandomSplit args'
               StdlibAnomaSetFromList -> return (goAnomaSetFromList args')
               StdlibAnomaSetToList -> return args'
+              StdlibSecp256k1PubKey -> unsupported f
+              StdlibSecp256k1SignCompact -> unsupported f
+              StdlibSecp256k1Verify -> unsupported f
+              StdlibKeccak256 -> unsupported f
           where
+            unsupported :: StdlibFunction -> Sem r (Term a)
+            unsupported thing = error ("Unsupported operation: " <> prettyText thing)
+
             goAnomaSetFromList :: Term a -> Term a
             goAnomaSetFromList arg =
               foldr
@@ -372,10 +379,9 @@ evalProfile inistack initerm =
 
             checkTermToList :: Term a -> [Term a]
             checkTermToList = \case
-              TermAtom x ->
-                if
-                    | x `nockmaEq` nockNil -> []
-                    | otherwise -> error "expected a list to be terminated by nil"
+              TermAtom x
+                | x `nockmaEq` nockNil -> []
+                | otherwise -> error "expected a list to be terminated by nil"
               TermCell c -> c ^. cellLeft : checkTermToList (c ^. cellRight)
 
             checkTermToListAtom :: Term a -> [Atom a]

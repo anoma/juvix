@@ -56,14 +56,17 @@ mkConstr' = mkConstr Info.empty
 mkLambda :: Info -> Binder -> Node -> Node
 mkLambda i bi b = NLam (Lambda i bi b)
 
+-- TODO use this in Core/Translation/FromInternal.hs
+
 -- | If b is a builtin with arguments ty1 ty2
 -- it returns: `\lambda (x1 : ty1) (x2 : ty2) := b x1 x2`
-mkBuiltinExpanded' :: [Type] -> BuiltinOp -> Node
-mkBuiltinExpanded' argTys b =
+mkBuiltinExpanded' :: BuiltinOp -> [Type] -> Node
+mkBuiltinExpanded' b argTys =
   let numArgs = length argTys
-      app = mkBuiltinApp' b [mkVar' argIx | argIx <- reverse [0 .. numArgs - 1]]
+      prefixTypes = length (takeWhile isUniverse argTys)
+      app = mkBuiltinApp' b [mkVar' argIx | argIx <- reverse [0 .. numArgs - 1 - prefixTypes]]
    in if
-          | builtinOpArgsNum b == numArgs -> mkLambdas' argTys app
+          | builtinOpArgsNum b == numArgs - prefixTypes -> mkLambdas' argTys app
           | otherwise ->
               impossibleError
                 ( "unexpected number of args to builtin "

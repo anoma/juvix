@@ -239,6 +239,8 @@ classify AnomaTest {..} = case _anomaTestNum of
   86 -> ClassExpectedFail
   87 -> ClassWorking
   88 -> ClassWorking
+  89 -> ClassWorking
+  90 -> ClassWorking
   _ -> error "non-exhaustive test classification"
 
 allTests :: TestTree
@@ -1066,5 +1068,31 @@ allTests =
           $(mkRelDir ".")
           $(mkRelFile "test088.juvix")
           []
-          $ checkTracesAndOutput [[nock| [30 40 80] |], [nock| [30 40 80] |], [nock| 80 |], [nock| [0 0] |]]
+          $ checkTracesAndOutput [[nock| [30 40 80] |], [nock| [30 40 80] |], [nock| 80 |], [nock| [0 0] |]],
+        mkAnomaTest
+          89
+          AnomaTestModeNodeOnly
+          "Keccak256"
+          $(mkRelDir ".")
+          $(mkRelFile "test089.juvix")
+          []
+          $ checkTracesAndOutput
+            [ [nock|
+                   90876768632225629395702952947791536168367734137399490612004543592448844073500
+                   |]
+            ],
+        mkAnomaTest
+          90
+          AnomaTestModeNodeOnly
+          "Secp256k1"
+          $(mkRelDir ".")
+          $(mkRelFile "test090.juvix")
+          []
+          $ checkTracesAndOutput
+            [ [nock| 494314595042081500440857251381770292616938994877034494695646244172503432267828341988295847615050091656182697698441111518765263317712889741906029933485191684
+                   |],
+              [nock| 3316525881893338865696018347376662962495038816228703675702261387957487613897606456822132758411937277787249216059783357696048576285364671454495986153933844 |],
+              [nock| 0 |],
+              [nock| 1 |]
+            ]
       ]

@@ -120,7 +120,7 @@ data ConstructorInfo = ConstructorInfo
     _constructorInfoMemRep :: NockmaMemRep
   }
 
-data ModuleInfo = ModuleInfo
+newtype ModuleInfo = ModuleInfo
   { -- | Module path within the modules library
     _moduleInfoPath :: Path
   }
@@ -751,6 +751,10 @@ compile = \case
         Tree.OpAnomaTransactionCompose -> callRm RmTransactionCompose args
         Tree.OpAnomaSetToList -> goAnomaSetToList args
         Tree.OpAnomaSetFromList -> goAnomaSetFromList args
+        Tree.OpAnomaKeccak256 -> goAnomaKeccak256 args
+        Tree.OpAnomaSecp256k1PubKey -> goAnomaSecpPubKey args
+        Tree.OpAnomaSecp256k1SignCompact -> callStdlib StdlibSecp256k1SignCompact args
+        Tree.OpAnomaSecp256k1Verify -> callStdlib StdlibSecp256k1Verify args
 
     goByteArrayOp :: Tree.NodeByteArray -> Sem r (Term Natural)
     goByteArrayOp Tree.NodeByteArray {..} = do
@@ -874,12 +878,18 @@ compile = \case
     goAnomaSetFromList :: [Term Natural] -> Sem r (Term Natural)
     goAnomaSetFromList arg = callStdlib StdlibAnomaSetFromList arg
 
+    goAnomaKeccak256 :: [Term Natural] -> Sem r (Term Natural)
+    goAnomaKeccak256 arg = callStdlib StdlibKeccak256 arg
+
+    goAnomaSecpPubKey :: [Term Natural] -> Sem r (Term Natural)
+    goAnomaSecpPubKey arg = callStdlib StdlibSecp256k1PubKey arg
+
     goAnomaSha256 :: [Term Natural] -> Sem r (Term Natural)
     goAnomaSha256 arg = do
       stdcall <- callStdlib StdlibSha256 arg
-      return $ mkByteArray (nockNatLiteral (integerToNatural sha256HashLength)) stdcall
+      return $ mkByteArray (nockNatLiteral sha256HashLength) stdcall
       where
-        sha256HashLength :: Integer
+        sha256HashLength :: Natural
         sha256HashLength = 32
 
     goAnomaRandomNextBytes :: [Term Natural] -> Sem r (Term Natural)
