@@ -535,5 +535,10 @@ tests =
         "Test092: Type level naturals"
         $(mkRelDir ".")
         $(mkRelFile "test092.juvix")
-        $(mkRelFile "out/test092.out")
+        $(mkRelFile "out/test092.out"),
+      posTest
+        "Test093: Pattern matching with indexed types"
+        $(mkRelDir ".")
+        $(mkRelFile "test093.juvix")
+        $(mkRelFile "out/test093.out")
     ]

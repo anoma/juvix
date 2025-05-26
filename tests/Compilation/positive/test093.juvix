@@ -30,3 +30,5 @@ end;
 f (bytes : Nat) (u : uint Nat bytes Nat) : Nat :=
   case u of
     | (uint.mk val) := val;
+
+main : Nat := f 6 (uint.mk 3);
