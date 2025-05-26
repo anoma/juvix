@@ -81,9 +81,17 @@ toNormalizeTransformations :: [TransformationId]
 toNormalizeTransformations =
   toEvalTransformations ++ [CombineInfoTables, LetRecLifting, LetFolding, UnrollRecursion]
 
+toStrippedTransformations0 :: TransformationId -> [TransformationId]
+toStrippedTransformations0 checkId =
+  [FilterUnreachable, checkId, RemoveTypeArgs, DisambiguateNames]
+
+toStrippedTransformations1 :: [TransformationId]
+toStrippedTransformations1 =
+  [RemoveInductiveParams, DisambiguateNames]
+
 toStrippedTransformations :: TransformationId -> [TransformationId]
 toStrippedTransformations checkId =
-  [FilterUnreachable, checkId, RemoveTypeArgs, DisambiguateNames]
+  toStrippedTransformations0 checkId ++ toStrippedTransformations1
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text

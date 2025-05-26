@@ -685,7 +685,7 @@ instance PrettyCode InfoTable where
               BuiltinNat -> False
               BuiltinInt -> False
               BuiltinBool -> False
-            Just _ -> False
+            Just (BuiltinTypeAxiom _) -> False
             Nothing -> True
 
 instance PrettyCode Stripped.ArgumentInfo where

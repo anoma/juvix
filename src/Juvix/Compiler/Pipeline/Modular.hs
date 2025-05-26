@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Juvix.Compiler.Pipeline.Modular where
 
 import Data.List.Singletons (type (++))
@@ -6,11 +8,13 @@ import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Data.Module.Base
 import Juvix.Compiler.Core.Data.Stripped.Module qualified as Stripped
 import Juvix.Compiler.Core.Data.TransformationId qualified as Core
+import Juvix.Compiler.Core.Language qualified as Core
 import Juvix.Compiler.Nockma.Data.Module qualified as Anoma
 import Juvix.Compiler.Pipeline qualified as Pipeline
 import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Modular.Result
 import Juvix.Compiler.Store.Backend.Module qualified as Stored
+import Juvix.Compiler.Store.Core.Extra qualified as Stored.Core
 import Juvix.Compiler.Tree.Extra.Apply (addApplyBuiltins)
 import Juvix.Compiler.Tree.Pipeline qualified as Tree
 import Juvix.Compiler.Verification.Dumper
@@ -29,6 +33,10 @@ type ModularEff r =
     ++ r
 
 type ModuleCache m = Cache ModuleId (PipelineResult m)
+
+instance Serialize Core.Node where
+  put = Serialize.put . Stored.Core.fromCoreNode
+  get = Stored.Core.toCoreNode <$> Serialize.get
 
 processModule ::
   (Members '[Files, Error JuvixError, Reader EntryPoint, ModuleCache (Module' t)] r) =>
@@ -143,12 +151,26 @@ processModuleTable midTarget f mt =
       massert (md' ^. moduleSHA256 == md ^. moduleSHA256)
       return md' {_moduleImportsTable = importsTab}
 
+modularCoreToPreStripped ::
+  (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
+  Core.ModuleTable ->
+  Sem r Core.ModuleTable
+modularCoreToPreStripped mt =
+  processModuleTable TargetPreStripped (Pipeline.storedCoreToPreStripped Core.IdentityTrans) mt
+
+modularPreStrippedToStripped ::
+  (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
+  Core.ModuleTable ->
+  Sem r Stripped.ModuleTable
+modularPreStrippedToStripped mt =
+  processModuleTable TargetStripped Pipeline.preStrippedToStripped mt
+
 modularCoreToStripped ::
   (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
   Core.ModuleTable ->
   Sem r Stripped.ModuleTable
-modularCoreToStripped mt =
-  processModuleTable TargetStripped (Pipeline.storedCoreToStripped Core.IdentityTrans) mt
+modularCoreToStripped =
+  modularCoreToPreStripped >=> modularPreStrippedToStripped
 
 modularStrippedToTree ::
   (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint] r) =>

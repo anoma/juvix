@@ -146,11 +146,12 @@ convertInductive :: Module -> InductiveInfo -> InductiveInfo
 convertInductive md ii =
   ii
     { _inductiveKind = ty',
-      _inductiveParams = map (over paramKind (convertNode md) . fst) $ filter (not . isTypeConstr md . snd) (zipExact (ii ^. inductiveParams) tyargs)
+      _inductiveParams = params'
     }
   where
     tyargs = typeArgs (ii ^. inductiveKind)
     ty' = convertNode md (ii ^. inductiveKind)
+    params' = map (over paramKind (convertNode md) . fst) $ filter (not . isTypeConstr md . snd) (zipExact (ii ^. inductiveParams) tyargs)
 
 -- | Removes type arguments and type abstractions.
 --

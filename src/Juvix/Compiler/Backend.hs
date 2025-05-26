@@ -8,6 +8,7 @@ data Target
   = TargetCWasm32Wasi
   | TargetCNative64
   | TargetCore
+  | TargetPreStripped
   | TargetStripped
   | TargetTree
   | TargetAsm
@@ -74,6 +75,8 @@ getLimits tgt debug = case tgt of
         _limitsSpecialisedApply = 3
       }
   TargetCore ->
+    defaultLimits
+  TargetPreStripped ->
     defaultLimits
   TargetStripped ->
     defaultLimits
@@ -156,6 +159,7 @@ getTargetSubdir midTarget finalTarget = case midTarget of
       TargetCWasm32Wasi -> $(mkRelDir "wasm32-wasi")
       TargetCNative64 -> $(mkRelDir "native64")
       TargetCore -> $(mkRelDir "default")
+      TargetPreStripped -> $(mkRelDir "default")
       TargetStripped -> $(mkRelDir "default")
       TargetTree -> $(mkRelDir "default")
       TargetAsm -> $(mkRelDir "default")
@@ -169,6 +173,7 @@ getTargetExtension = \case
   TargetCWasm32Wasi -> ".c.wasm.bin"
   TargetCNative64 -> ".c.native.bin"
   TargetCore -> ".core.bin"
+  TargetPreStripped -> ".pre.stripped.bin"
   TargetStripped -> ".stripped.bin"
   TargetTree -> ".tree.bin"
   TargetAsm -> ".asm.bin"
