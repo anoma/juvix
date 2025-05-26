@@ -1,3 +1,4 @@
+-- Type level naturals
 module test092;
 
 import Stdlib.Prelude as Prelude open;
