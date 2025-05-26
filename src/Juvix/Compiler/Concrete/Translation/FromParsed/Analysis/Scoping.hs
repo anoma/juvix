@@ -1270,10 +1270,6 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
       below = fromMaybe [] (fi' ^. fixityPrecBelow)
       above = fromMaybe [] (fi' ^. fixityPrecAbove)
   fid <- maybe freshNameId getFixityId same
-  below' <- mapM getFixityId below
-  above' <- mapM getFixityId above
-  forM_ above' (`registerPrecedence` fid)
-  forM_ below' (registerPrecedence fid)
   belowPrecs <- mapM getPrec below
   abovePrecs <- mapM getPrec above
   let belowPrec :: Integer
@@ -3781,48 +3777,6 @@ reserveSyntaxDef = \case
   SyntaxAlias {} -> return ()
 
 -------------------------------------------------------------------------------
--- Check precedences are comparable
--------------------------------------------------------------------------------
-
-checkPrecedences ::
-  forall r.
-  (Members '[Error ScoperError, InfoTableBuilder, Reader InfoTable] r) =>
-  [S.Name] ->
-  Sem r ()
-checkPrecedences opers = do
-  graph <- getPrecedenceGraph
-  let fids = mapMaybe (^. fixityId) $ mapMaybe (^. S.nameFixity) opers
-      deps = createDependencyInfo graph mempty
-  mapM_ (uncurry (checkPath deps)) $
-    [(fid1, fid2) | fid1 <- fids, fid2 <- fids, fid1 /= fid2]
-  where
-    checkPath :: DependencyInfo S.NameId -> S.NameId -> S.NameId -> Sem r ()
-    checkPath deps fid1 fid2 =
-      unless (isPath deps fid1 fid2 || isPath deps fid2 fid1) $
-        throw (ErrIncomparablePrecedences (IncomaprablePrecedences (findOper fid1) (findOper fid2)))
-
-    findOper :: S.NameId -> S.Name
-    findOper fid =
-      fromJust $
-        find
-          (maybe False (\fx -> Just fid == (fx ^. fixityId)) . (^. S.nameFixity))
-          opers
-
-checkExpressionPrecedences :: (Members '[Error ScoperError, InfoTableBuilder, Reader InfoTable] r) => ExpressionAtoms 'Scoped -> Sem r ()
-checkExpressionPrecedences (ExpressionAtoms atoms _) =
-  checkPrecedences opers
-  where
-    opers :: [S.Name]
-    opers = mapMaybe P.getExpressionAtomIden (toList atoms)
-
-checkPatternPrecedences :: (Members '[Error ScoperError, InfoTableBuilder, Reader InfoTable] r) => PatternAtoms 'Scoped -> Sem r ()
-checkPatternPrecedences (PatternAtoms atoms _) =
-  checkPrecedences opers
-  where
-    opers :: [S.Name]
-    opers = mapMaybe P.getPatternAtomIden (toList atoms)
-
--------------------------------------------------------------------------------
 -- Infix Expression
 -------------------------------------------------------------------------------
 
@@ -3938,7 +3892,6 @@ parseExpressionAtoms ::
   ExpressionAtoms 'Scoped ->
   Sem r Expression
 parseExpressionAtoms a@(ExpressionAtoms atoms _) = do
-  checkExpressionPrecedences a
   case res of
     Left {} ->
       throw
@@ -4343,7 +4296,6 @@ parsePatternAtoms ::
   PatternAtoms 'Scoped ->
   Sem r PatternArg
 parsePatternAtoms atoms = do
-  checkPatternPrecedences atoms
   case run (runError res) of
     Left e -> throw e -- Scoper effect error
     Right Left {} -> throw (ErrInfixPattern (InfixErrorP atoms)) -- Megaparsec error

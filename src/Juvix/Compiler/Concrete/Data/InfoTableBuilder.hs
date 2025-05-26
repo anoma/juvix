@@ -1,7 +1,6 @@
 module Juvix.Compiler.Concrete.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
-import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.Highlight.Builder
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName
@@ -19,8 +18,6 @@ data InfoTableBuilder :: Effect where
   RegisterScopedIden :: Bool -> ScopedIden -> InfoTableBuilder m ()
   RegisterModuleDoc :: S.NameId -> Maybe (Judoc 'Scoped) -> InfoTableBuilder m ()
   RegisterFixityDef :: FixityDef -> InfoTableBuilder m ()
-  -- registerPrecedence a b means a has higher precedence than b
-  RegisterPrecedence :: S.NameId -> S.NameId -> InfoTableBuilder m ()
   RegisterHighlightDoc :: S.NameId -> Maybe (Judoc 'Scoped) -> InfoTableBuilder m ()
   RegisterNameSig :: S.NameId -> NameSignature 'Scoped -> InfoTableBuilder m ()
   RegisterConstructorSig :: S.NameId -> RecordNameSignature 'Scoped -> InfoTableBuilder m ()
@@ -72,11 +69,6 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
   RegisterFixityDef f -> do
     let sid = f ^. fixityDefSymbol . S.nameId
     modify (set (infoFixities . at sid) (Just f))
-    case f ^. fixityDefFixity . fixityId of
-      Just fid -> modify (over infoPrecedenceGraph (HashMap.alter (Just . fromMaybe mempty) fid))
-      Nothing -> return ()
-  RegisterPrecedence l h ->
-    modify (over infoPrecedenceGraph (HashMap.alter (Just . HashSet.insert h . fromMaybe mempty) l))
   RegisterHighlightDoc fid doc ->
     highlightDoc fid doc
   RegisterNameSig uid sig ->
@@ -166,9 +158,3 @@ lookupInfo' f = do
 
 lookupFixity :: (Members '[InfoTableBuilder, Reader InfoTable] r) => S.NameId -> Sem r FixityDef
 lookupFixity uid = lookupInfo (^. infoFixities . at uid)
-
-getPrecedenceGraph :: (Members '[InfoTableBuilder, Reader InfoTable] r) => Sem r PrecedenceGraph
-getPrecedenceGraph = do
-  tab <- ask
-  tab' <- getBuilderInfoTable
-  return $ combinePrecedenceGraphs (tab ^. infoPrecedenceGraph) (tab' ^. infoPrecedenceGraph)
