@@ -2,23 +2,23 @@ module Juvix.Builtin.V1.Fixity;
 
 syntax fixity none := none;
 
-syntax fixity rapp := binary {assoc := right};
-syntax fixity lapp := binary {assoc := left; same := rapp};
-syntax fixity seq := binary {assoc := left; above := [lapp]};
+syntax fixity rapp := binary {precedence := 10; assoc := right};
+syntax fixity lapp := binary {precedence := 10; assoc := left; same := rapp};
+syntax fixity seq := binary {precedence := 15; assoc := left; above := [lapp]};
 
-syntax fixity functor := binary {assoc := right};
+syntax fixity functor := binary {precedence := 20; assoc := right};
 
-syntax fixity logical := binary {assoc := right; above := [seq]};
-syntax fixity comparison := binary {assoc := none; above := [logical]};
+syntax fixity logical := binary {precedence := 30; assoc := right; above := [seq]};
+syntax fixity comparison := binary {precedence := 40; assoc := none; above := [logical]};
 
-syntax fixity pair := binary {assoc := right};
-syntax fixity cons := binary {assoc := right; above := [pair]};
+syntax fixity pair := binary {precedence := 15; assoc := right};
+syntax fixity cons := binary {precedence := 55; assoc := right; above := [pair]};
 
-syntax fixity step := binary {assoc := right};
-syntax fixity range := binary {assoc := right; above := [step]};
+syntax fixity step := binary {precedence := 60; assoc := right};
+syntax fixity range := binary {precedence := 65; assoc := right; above := [step]};
 
-syntax fixity additive := binary {assoc := left; above := [comparison; range; cons]};
-syntax fixity multiplicative := binary {assoc := left; above := [additive]};
+syntax fixity additive := binary {precedence := 70; assoc := left; above := [comparison; range; cons]};
+syntax fixity multiplicative := binary {precedence := 80; assoc := left; above := [additive]};
 
-syntax fixity composition := binary {assoc := right; above := [multiplicative]};
-syntax fixity lcomposition := binary {assoc := left; above := [multiplicative]};
+syntax fixity composition := binary {precedence := 90; assoc := right; above := [multiplicative]};
+syntax fixity lcomposition := binary {precedence := 90; assoc := left; above := [multiplicative]};
