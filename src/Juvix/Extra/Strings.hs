@@ -1172,8 +1172,8 @@ cairoEcPoint = "ec_point"
 cairoMkEcPoint :: (IsString s) => s
 cairoMkEcPoint = "mkEcPoint"
 
-anoma :: (IsString s) => s
-anoma = "anoma"
+anomaFFI :: (IsString s) => s
+anomaFFI = "anoma-ffi"
 
 nockmaNoun :: (IsString s) => s
 nockmaNoun = "nockma-noun"
@@ -1220,8 +1220,8 @@ mkEq = "mkEq"
 mkOrd :: (IsString s) => s
 mkOrd = "mkOrd"
 
-mkAnoma :: (IsString s) => s
-mkAnoma = "mkAnoma"
+mkAnomaFFI :: (IsString s) => s
+mkAnomaFFI = "mkAnomaFFI"
 
 rustFn :: (IsString s) => s
 rustFn = "fn"

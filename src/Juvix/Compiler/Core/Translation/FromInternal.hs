@@ -258,7 +258,7 @@ goConstructor sym ctor = do
         Internal.BuiltinMkAnomaComplianceInputs -> freshTag
         Internal.BuiltinMkAnomaShieldedTransaction -> freshTag
         Internal.BuiltinMkOrd -> freshTag
-        Internal.BuiltinMkAnoma -> freshTag
+        Internal.BuiltinMkAnomaFFI -> freshTag
         Internal.BuiltinOrderingLT -> freshTag
         Internal.BuiltinOrderingGT -> freshTag
         Internal.BuiltinOrderingEQ -> freshTag

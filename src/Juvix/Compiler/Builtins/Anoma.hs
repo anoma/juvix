@@ -6,21 +6,21 @@ import Juvix.Compiler.Internal.Extra
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Prelude
 
-checkAnoma :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
-checkAnoma d = do
+checkAnomaFFI :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError] r) => InductiveDef -> Sem r ()
+checkAnomaFFI d = do
   let err :: forall a. Text -> Sem r a
       err = builtinsErrorText (getLoc d)
-  let eqTxt = prettyText BuiltinAnoma
+  let eqTxt = prettyText BuiltinAnomaFFI
   unless (isSmallUniverse' (d ^. inductiveType)) (err (eqTxt <> " should be in the small universe"))
   case d ^. inductiveParameters of
     [_] -> return ()
     _ -> err (eqTxt <> " should have exactly one type parameter")
   case d ^. inductiveConstructors of
-    [c1] -> checkMkAnoma c1
+    [c1] -> checkMkAnomaFFI c1
     _ -> err (eqTxt <> " should have exactly one constructor")
 
-checkMkAnoma :: ConstructorDef -> Sem r ()
-checkMkAnoma _ = return ()
+checkMkAnomaFFI :: ConstructorDef -> Sem r ()
+checkMkAnomaFFI _ = return ()
 
 checkAnomaGet :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkAnomaGet f = do
