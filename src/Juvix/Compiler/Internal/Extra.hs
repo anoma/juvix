@@ -38,26 +38,23 @@ constructorReturnType info =
 
 fullInductiveType :: InductiveInfo -> Expression
 fullInductiveType info =
-  let ps = info ^. inductiveInfoParameters
-   in foldr
-        (\p k -> p ^. inductiveParamType --> k)
-        (info ^. inductiveInfoType)
-        ps
+  let ps :: [FunctionParameter] = map (inductiveToFunctionParam Explicit) (info ^. inductiveInfoParameters)
+   in foldFunType ps (info ^. inductiveInfoType)
 
 constructorType :: ConstructorInfo -> Expression
 constructorType info =
   let (inductiveParams, constrArgs) = constructorArgTypes info
       args =
-        map inductiveToFunctionParam inductiveParams
+        map (inductiveToFunctionParam Implicit) inductiveParams
           ++ constrArgs
       saturatedTy = constructorReturnType info
    in foldFunType args saturatedTy
 
-inductiveToFunctionParam :: InductiveParameter -> FunctionParameter
-inductiveToFunctionParam InductiveParameter {..} =
+inductiveToFunctionParam :: IsImplicit -> InductiveParameter -> FunctionParameter
+inductiveToFunctionParam impl InductiveParameter {..} =
   FunctionParameter
     { _paramName = Just _inductiveParamName,
-      _paramImplicit = Implicit,
+      _paramImplicit = impl,
       _paramType = _inductiveParamType
     }
 
@@ -370,7 +367,7 @@ substituteIndParams = substitutionE . HashMap.fromList . map (first (^. inductiv
 
 getInductiveKind :: InductiveDef -> Expression
 getInductiveKind InductiveDef {..} =
-  foldFunType (map inductiveToFunctionParam _inductiveParameters) _inductiveType
+  foldFunType (map (inductiveToFunctionParam Explicit) _inductiveParameters) _inductiveType
 
 buildMutualBlocks ::
   (Members '[Reader NameDependencyInfo] r) =>
