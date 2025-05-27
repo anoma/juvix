@@ -17,22 +17,44 @@ initIndexTable = IndexTable 0 mempty
 localAddName :: (Member (Reader IndexTable) r) => Name -> Sem r a -> Sem r a
 localAddName n = localAddNames [n]
 
-localAddNames :: forall r a. (Member (Reader IndexTable) r) => [Name] -> Sem r a -> Sem r a
-localAddNames names s = do
-  updateFn <- update
-  local updateFn s
+localAddNamesHelper :: [Name] -> IndexTable -> IndexTable
+localAddNamesHelper names tbl =
+  let idx = tbl ^. indexTableVarsNum
+      newElems = zip (map (^. nameId) names) [idx ..]
+   in ( over indexTableVars (insertMany newElems)
+          . over indexTableVarsNum (+ len)
+      )
+        tbl
   where
     len :: Int = length names
+
     insertMany :: [(NameId, Index)] -> HashMap NameId Index -> HashMap NameId Index
     insertMany l t = foldl' (\m (k, v) -> HashMap.insert k v m) t l
-    update :: Sem r (IndexTable -> IndexTable)
-    update = do
-      idx <- asks (^. indexTableVarsNum)
-      let newElems = zip (map (^. nameId) names) [idx ..]
-      return
-        ( over indexTableVars (insertMany newElems)
-            . over indexTableVarsNum (+ len)
-        )
+
+localAddNameSt ::
+  forall r.
+  (Member (State IndexTable) r) =>
+  Name ->
+  Sem r ()
+localAddNameSt = localAddNamesSt . pure
+
+localAddNamesSt ::
+  forall r.
+  (Member (State IndexTable) r) =>
+  [Name] ->
+  Sem r ()
+localAddNamesSt names = modify (localAddNamesHelper names)
+
+localAddNames ::
+  forall r a.
+  (Member (Reader IndexTable) r) =>
+  [Name] ->
+  Sem r a ->
+  Sem r a
+localAddNames names s = local (localAddNamesHelper names) s
+
+underBinder :: (Members '[Reader IndexTable] r) => Sem r a -> Sem r a
+underBinder = underBinders 1
 
 underBinders :: (Members '[Reader IndexTable] r) => Int -> Sem r a -> Sem r a
 underBinders nBinders = local (over indexTableVarsNum (+ nBinders))

@@ -154,15 +154,7 @@ preInductiveDef ::
 preInductiveDef i = do
   sym <- freshSymbol
   let _inductiveName = i ^. Internal.inductiveName . nameText
-  params' <- fromTopIndex $ forM (i ^. Internal.inductiveParameters) $ \p -> do
-    ty' <- goExpression (p ^. Internal.inductiveParamType)
-    return
-      ParameterInfo
-        { _paramName = p ^. Internal.inductiveParamName . nameText,
-          _paramLocation = Just $ getLoc p,
-          _paramIsImplicit = False,
-          _paramKind = ty'
-        }
+  params' :: [ParameterInfo] <- goParams (i ^. Internal.inductiveParameters)
   kind <- fromTopIndex $ goExpression (Internal.getInductiveKind i)
   let info =
         InductiveInfo
@@ -185,6 +177,24 @@ preInductiveDef i = do
       { _preInductiveInfo = info,
         _preInductiveInternal = i
       }
+  where
+    goParams :: [Internal.InductiveParameter] -> Sem r [ParameterInfo]
+    goParams = fromTopIndex . execOutputList . go
+      where
+        go :: [Internal.InductiveParameter] -> Sem (Output ParameterInfo ': Reader IndexTable ': r) ()
+        go = \case
+          [] -> return ()
+          p : ps -> do
+            ty' <- goExpression (p ^. Internal.inductiveParamType)
+            let pname = p ^. Internal.inductiveParamName
+            output
+              ParameterInfo
+                { _paramName = pname ^. nameText,
+                  _paramLocation = Just $ getLoc p,
+                  _paramIsImplicit = False,
+                  _paramKind = ty'
+                }
+            localAddName pname (go ps)
 
 goInductiveDef ::
   forall r.
@@ -405,7 +415,7 @@ preFunctionDef f = do
 
 goFunctionDef ::
   forall r.
-  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, NameIdGen, Error BadScope] r) =>
+  (HasCallStack, Members '[Reader BuiltinsTable, InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, NameIdGen, Error BadScope] r) =>
   PreFunctionDef ->
   Sem r ()
 goFunctionDef PreFunctionDef {..} = do
@@ -426,7 +436,7 @@ goFunctionDef PreFunctionDef {..} = do
 
 goType ::
   forall r.
-  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, NameIdGen, Reader IndexTable, Error BadScope] r) =>
+  (HasCallStack, Members '[Reader BuiltinsTable, InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, NameIdGen, Reader IndexTable, Error BadScope] r) =>
   Internal.Expression ->
   Sem r Type
 goType ty = do
@@ -435,7 +445,7 @@ goType ty = do
 
 mkFunBody ::
   forall r.
-  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  (HasCallStack, Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Type -> -- converted type of the function
   Internal.FunctionDef ->
   Sem r Node
@@ -448,7 +458,7 @@ mkFunBody ty f =
 
 mkBody ::
   forall r.
-  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  (HasCallStack, Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   WithLoc Text -> -- The printed lambda for error message
   Type -> -- type of the function
   Location ->
@@ -568,7 +578,7 @@ goCase c = do
               rhs <-
                 local
                   (set indexTableVars vars')
-                  (underBinders 1 (goCaseBranchRhs _caseBranchRhs))
+                  (underBinder (goCaseBranchRhs _caseBranchRhs))
               case rhs of
                 MatchBranchRhsExpression body ->
                   return $ mkLet i (Binder (name ^. nameText) (Just $ name ^. nameLoc) ty) expr body
@@ -625,7 +635,7 @@ goLambda l = do
 
 goLet ::
   forall r.
-  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  (HasCallStack, Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.Let ->
   Sem r Node
 goLet l = goClauses (toList (l ^. Internal.letClauses))
@@ -1242,7 +1252,7 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
 
 fromPatternArg ::
   forall r.
-  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, State IndexTable, NameIdGen, Error BadScope] r) =>
+  (HasCallStack, Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, State IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.PatternArg ->
   Sem r Pattern
 fromPatternArg pa = case pa ^. Internal.patternArgName of
@@ -1285,7 +1295,7 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
         (indParams, _) <- InternalTyped.lookupConstructorArgTypes ctrName
         -- + 1 for the as-pattern
         modify (over indexTableVarsNum (+ 1))
-        indArgs <- mapM fromInductiveParam indParams
+        indArgs <- Internal.clones indParams >>= mapM fromInductiveParam
         patternArgs <- mapM fromPatternArg params
         let args = indArgs ++ patternArgs
         m <- getIdent identIndex
@@ -1320,19 +1330,23 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
           txt :: Text
           txt = c ^. Internal.constrAppConstructor . Internal.nameText
 
-    fromInductiveParam :: Internal.InductiveParameter -> Sem r Pattern
+    fromInductiveParam :: (HasCallStack) => Internal.InductiveParameter -> Sem r Pattern
     fromInductiveParam param = do
+      let pname = param ^. Internal.inductiveParamName
       idt :: IndexTable <- get
       ty <- runReader idt (goType (param ^. Internal.inductiveParamType))
-      modify (over indexTableVarsNum (+ 1))
-      return $ wildcard ty
-      where
-        wildcard :: Type -> Pattern
-        wildcard ty = PatWildcard (PatternWildcard Info.empty (Binder "_" Nothing ty))
+      localAddNameSt pname
+      let bi =
+            Binder
+              { _binderName = pname ^. Internal.nameText,
+                _binderLocation = Nothing,
+                _binderType = ty
+              }
+      return $ PatWildcard (PatternWildcard Info.empty bi)
 
 goPatternArgs ::
   forall r.
-  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  (HasCallStack, Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Level -> -- the level of the first binder for the matched value
   Internal.CaseBranchRhs ->
   [Internal.PatternArg] ->
@@ -1415,7 +1429,7 @@ goNatural b = do
 
 goIden ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, Error BadScope] r) =>
+  (HasCallStack, Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, Error BadScope] r) =>
   Internal.Iden ->
   Sem r Node
 goIden i = do
@@ -1430,7 +1444,7 @@ goIden i = do
   case i of
     Internal.IdenVar n -> do
       let err = throw (BadScope n)
-      k <- fromMaybeM err (HashMap.lookup id_ <$> asks (^. indexTableVars))
+      k <- fromMaybeM err (asks (^. indexTableVars . at id_))
       varsNum <- asks (^. indexTableVarsNum)
       return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
     Internal.IdenFunction n -> do
@@ -1442,8 +1456,8 @@ goIden i = do
         Just Internal.BuiltinSeq -> error "internal to core: seq must be called with 2 arguments"
         _ -> return ()
       -- if the function was defined by a let, then in Core it is stored in a variable
-      vars <- asks (^. indexTableVars)
-      case HashMap.lookup id_ vars of
+      mvarIx <- asks (^. indexTableVars . at id_)
+      case mvarIx of
         Nothing -> do
           m <- getIdent identIndex
           return $ case m of
@@ -1488,7 +1502,8 @@ goIden i = do
 
 goExpression ::
   forall r.
-  ( Members
+  ( HasCallStack,
+    Members
       '[ Reader BuiltinsTable,
          InfoTableBuilder,
          Reader InternalTyped.TypesTable,
@@ -1536,7 +1551,7 @@ goFunction (params, returnTypeExpr) = go params
                   _binderType = paramTy
                 }
         case param ^. Internal.paramName of
-          Nothing -> mkPi mempty paramBinder <$> underBinders 1 (go params')
+          Nothing -> mkPi mempty paramBinder <$> underBinder (go params')
           Just vn -> mkPi mempty paramBinder <$> localAddName vn (go params')
       [] ->
         goType returnTypeExpr
