@@ -17,7 +17,7 @@ jobs:
   build-linux:
     name: Build static Linux x86_64 binary
     runs-on: ubuntu-latest
-    container: quay.io/benz0li/ghc-musl:9.8.2
+    container: quay.io/benz0li/ghc-musl:9.12.2
     outputs:
       tag: ${{ steps.tag.outputs.value }}
     steps:
