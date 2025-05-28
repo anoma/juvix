@@ -114,7 +114,7 @@ modify' :: (Member (State s) r) => (s -> s) -> Sem r ()
 modify' = State.modify
 
 mapError :: forall a b r x. (Member (Error b) r) => (a -> b) -> Sem (Error a ': r) x -> Sem r x
-mapError f = runErrorWith (throwError . f)
+mapError f = runErrorWith (throwError_ . f)
 
 runM :: (MonadIO m) => Sem '[EmbedIO] a -> m a
 runM = liftIO . E.runEff
@@ -123,7 +123,7 @@ run :: Sem ('[] :: [Effect]) a -> a
 run = E.runPureEff
 
 throw :: (Member (Error err) r) => err -> Sem r a
-throw = throwError
+throw = throwError_
 
 runError :: Sem (Error err ': r) x -> Sem r (Either err x)
 runError = runErrorNoCallStack
