@@ -125,7 +125,7 @@ module Integers;
   neghexadecimal : Int := -0x9076191aaff;
 end;
 
-syntax fixity l1 := binary {precedence := 7; assoc := left; below := [pair]};
+syntax fixity l1 := binary {precedence := _; assoc := left; below := [pair]};
 syntax fixity r3 := binary {precedence := _; assoc := right; above := [pair]};
 syntax fixity l6 := binary {assoc := left; above := [r3]};
 syntax fixity r6 := binary {assoc := right; same := l6};
@@ -149,8 +149,8 @@ axiom +r6 : String → String → String;
 -- nesting of chains
 t : String :=
   "Hellooooooooo"
-      +l1 "Hellooooooooo"
-      +l1 "Hellooooooooo"
+    +l1 "Hellooooooooo"
+    +l1 "Hellooooooooo"
         +l6 "Hellooooooooo"
         +l6 ("Hellooooooooo" +r6 "Hellooooooooo" +r6 "Hellooooooooo")
         +l6 "Hellooooooooo"
@@ -158,8 +158,8 @@ t : String :=
           +l7 "Hellooooooooo"
           +l7 "Hellooooooooo"
           +l7 "Hellooooooooo"
-    , "hi"
-    , "hi";
+      , "hi"
+      , "hi";
 
 -- function with single wildcard parameter
 g : (_ : Type) -> Nat
@@ -622,6 +622,7 @@ end;
 
 --- Judoc comment 0
 syntax fixity aaa := binary {};
+syntax fixity bbb := binary {precedence := -1};
 
 --- Judoc comment 1
 syntax alias Value := Nat;
