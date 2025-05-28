@@ -3,18 +3,10 @@ module test093;
 
 import Stdlib.Prelude open;
 
-type uint' (A : Type) (bytes : A) (B : Type) := mk B
-with
-  instance
-  Show-uint {bytes : Nat} : Show (uint' Nat bytes Nat) :=
-    Show.mk@{
-      show : uint' Nat bytes Nat -> String
-        | (uint'.mk val) := Show.show bytes ++str ":" ++str Show.show val;
-    };
-end;
+type uint' (A : Type) (bytes : A) (B : Type) := mk B;
 
 f (bytes : Nat) (u : uint' Nat bytes Nat) : Nat :=
   case u of
-    | (uint'.mk val) := val;
+    | (uint'.mk val) := bytes + val;
 
 main : Nat := f 6 (uint'.mk 3);
