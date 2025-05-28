@@ -1,6 +1,6 @@
 ghc-options:
   "$locals": -optP-Wno-nonportable-include-path
-resolver: nightly-2024-05-31
+resolver: nightly-2025-05-05
 extra-deps:
   - git: https://github.com/haskell-effectful/effectful.git
     commit: 2037be9a4f4e8f8fd280d9359b1bc7feff9b29b9
