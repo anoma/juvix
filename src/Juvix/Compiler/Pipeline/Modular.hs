@@ -50,54 +50,62 @@ processModuleCacheMiss ::
     Serialize t',
     Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, ModuleCache (Module' t')] r
   ) =>
-  Target ->
+  -- | If the target is 'Nothing', then the result is not saved on disk.
+  Maybe Target ->
   ModuleTable' t ->
   ((ModuleId -> Sem r (Module' t')) -> t' -> Module' t -> Sem r (Module' t')) ->
   ModuleId ->
   Sem r (PipelineResult (Module' t'))
 processModuleCacheMiss midTarget mt f mid = do
   entry <- ask
-  let root = entry ^. entryPointRoot
-      opts = Stored.fromEntryPoint entry
-      buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
-      relPath =
-        relFile
-          ( sanitizeFilename (unpack $ prettyText mid)
-              <> getTargetExtension midTarget
-          )
-      subdir = Stored.getOptionsSubdir midTarget opts
-      absPath = buildDir Path.</> subdir Path.</> relPath
+  let opts = Stored.fromEntryPoint entry
       md0 = lookupModuleTable mt mid
       sha256 = md0 ^. moduleSHA256
   res <- processImports (md0 ^. moduleImports)
   let changed = res ^. pipelineResultChanged
       imports = res ^. pipelineResult
-  if
-      | changed ->
-          recompile opts absPath imports md0
-      | otherwise -> do
-          mmd :: Maybe (Stored.Module' t') <- Serialize.loadFromFile absPath
-          case mmd of
-            Just md
-              | md ^. Stored.moduleSHA256 == sha256
-                  && md ^. Stored.moduleOptions == opts
-                  && md ^. Stored.moduleId == mid -> do
-                  return
-                    PipelineResult
-                      { _pipelineResult = Stored.toBaseModule imports md,
-                        _pipelineResultChanged = False
-                      }
-              | otherwise -> recompile opts absPath imports md0
-            _ ->
-              recompile opts absPath imports md0
+  case midTarget of
+    Nothing ->
+      -- If the target is Nothing, we do not save the module on disk.
+      -- This is useful for intermediate steps in the pipeline.
+      recompile opts Nothing imports md0
+    Just midTarget' ->
+      let root = entry ^. entryPointRoot
+          buildDir = resolveAbsBuildDir root (entry ^. entryPointBuildDir)
+          relPath =
+            relFile
+              ( sanitizeFilename (unpack $ prettyText mid)
+                  <> getTargetExtension midTarget'
+              )
+          subdir = Stored.getOptionsSubdir midTarget' opts
+          absPath = buildDir Path.</> subdir Path.</> relPath
+       in if
+              | changed ->
+                  recompile opts (Just absPath) imports md0
+              | otherwise -> do
+                  mmd :: Maybe (Stored.Module' t') <- Serialize.loadFromFile absPath
+                  case mmd of
+                    Just md
+                      | md ^. Stored.moduleSHA256 == sha256
+                          && md ^. Stored.moduleOptions == opts
+                          && md ^. Stored.moduleId == mid -> do
+                          return
+                            PipelineResult
+                              { _pipelineResult = Stored.toBaseModule imports md,
+                                _pipelineResultChanged = False
+                              }
+                      | otherwise -> recompile opts (Just absPath) imports md0
+                    _ ->
+                      recompile opts (Just absPath) imports md0
   where
-    recompile :: Stored.Options -> Path Abs File -> [Module' t'] -> Module' t -> Sem r (PipelineResult (Module' t'))
+    recompile :: Stored.Options -> Maybe (Path Abs File) -> [Module' t'] -> Module' t -> Sem r (PipelineResult (Module' t'))
     recompile opts absPath imports md0 = do
       let importsTab = mconcatMap computeCombinedInfoTable imports
       md :: Module' t' <- f fetchModule importsTab md0
       massert (md ^. moduleId == mid)
       massert (md ^. moduleSHA256 == md0 ^. moduleSHA256)
-      Serialize.saveToFile absPath (Stored.fromBaseModule opts md)
+      whenJust absPath $ \absPath' ->
+        Serialize.saveToFile absPath' (Stored.fromBaseModule opts md)
       return
         PipelineResult
           { _pipelineResult = md,
@@ -123,7 +131,7 @@ processImports mids = do
 processModuleTable' ::
   forall t t' r.
   (Serialize t', Monoid t', Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint] r) =>
-  Target ->
+  Maybe Target ->
   ((ModuleId -> Sem (ModuleCache (Module' t') ': r) (Module' t')) -> t' -> Module' t -> Sem (ModuleCache (Module' t') ': r) (Module' t')) ->
   ModuleTable' t ->
   Sem r (ModuleTable' t')
@@ -137,7 +145,7 @@ processModuleTable' midTarget f mt = do
 processModuleTable ::
   forall t t' r.
   (Serialize t', Monoid t', Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint] r) =>
-  Target ->
+  Maybe Target ->
   (Module' t -> Sem r (Module' t')) ->
   ModuleTable' t ->
   Sem r (ModuleTable' t')
@@ -156,14 +164,14 @@ modularCoreToPreStripped ::
   Core.ModuleTable ->
   Sem r Core.ModuleTable
 modularCoreToPreStripped mt =
-  processModuleTable TargetPreStripped (Pipeline.storedCoreToPreStripped Core.IdentityTrans) mt
+  processModuleTable Nothing (Pipeline.storedCoreToPreStripped Core.IdentityTrans) mt
 
 modularPreStrippedToStripped ::
   (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
   Core.ModuleTable ->
   Sem r Stripped.ModuleTable
 modularPreStrippedToStripped mt =
-  processModuleTable TargetStripped Pipeline.preStrippedToStripped mt
+  processModuleTable (Just TargetStripped) Pipeline.preStrippedToStripped mt
 
 modularCoreToStripped ::
   (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
@@ -177,14 +185,14 @@ modularStrippedToTree ::
   Stripped.ModuleTable ->
   Sem r Tree.ModuleTable
 modularStrippedToTree mt =
-  processModuleTable TargetTree Pipeline.strippedCoreToTree mt
+  processModuleTable (Just TargetTree) Pipeline.strippedCoreToTree mt
 
 modularTreeToAnoma ::
   (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
   Tree.ModuleTable ->
   Sem r Anoma.ModuleTable
 modularTreeToAnoma mt =
-  processModuleTable' TargetAnoma Pipeline.treeToAnoma' (addApplyBuiltins mt)
+  processModuleTable' (Just TargetAnoma) Pipeline.treeToAnoma' (addApplyBuiltins mt)
 
 modularCoreToTree ::
   (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
