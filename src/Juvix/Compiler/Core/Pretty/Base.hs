@@ -740,6 +740,9 @@ instance (PrettyCode a) => PrettyCode [a] where
     cs <- mapM ppCode x
     return $ encloseSep "(" ")" ", " cs
 
+instance (PrettyCode a) => PrettyCode (Maybe a) where
+  ppCode = maybe (return "Nothing") (fmap ("Just " <>) . ppCode)
+
 --------------------------------------------------------------------------------
 -- printing values
 --------------------------------------------------------------------------------

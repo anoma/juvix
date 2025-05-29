@@ -80,19 +80,11 @@ lookupMay idx bl
   | otherwise = Nothing
 
 -- | lookup de Bruijn index
-lookup :: Index -> BinderList a -> a
+lookup :: (HasCallStack) => Index -> BinderList a -> a
 lookup idx bl = fromMaybe err (lookupMay idx bl)
   where
     err :: a
-    err =
-      error
-        ( "Invalid binder lookup. Got index "
-            <> show idx
-            <> " and the length is "
-            <> show (bl ^. blLength)
-            <> ". Actual length is "
-            <> show (length (bl ^. blMap))
-        )
+    err = error ("Invalid binder lookup with index " <> show idx <> ".")
 
 -- | lookup de Bruijn level
 lookupLevel :: Level -> BinderList a -> a
