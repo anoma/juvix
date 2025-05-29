@@ -171,7 +171,7 @@ modularPreStrippedToStripped ::
   Core.ModuleTable ->
   Sem r Stripped.ModuleTable
 modularPreStrippedToStripped mt =
-  processModuleTable (Just TargetStripped) Pipeline.preStrippedToStripped mt
+  processModuleTable Nothing Pipeline.preStrippedToStripped mt
 
 modularCoreToStripped ::
   (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
@@ -185,7 +185,7 @@ modularStrippedToTree ::
   Stripped.ModuleTable ->
   Sem r Tree.ModuleTable
 modularStrippedToTree mt =
-  processModuleTable (Just TargetTree) Pipeline.strippedCoreToTree mt
+  processModuleTable Nothing Pipeline.strippedCoreToTree mt
 
 modularTreeToAnoma ::
   (Members '[Files, TaggedLock, Error JuvixError, Reader EntryPoint, Dumper] r) =>
