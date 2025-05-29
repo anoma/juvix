@@ -47,7 +47,6 @@ type Member (e :: Effect) (r :: [Effect]) = e E.:> r
 -- | First order effect handler
 type EffectHandlerFO (e :: Effect) (r :: [Effect]) =
   forall a localEs.
-  (HasCallStack, Member e localEs) =>
   e (Sem localEs) a ->
   Sem r a
 
