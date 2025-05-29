@@ -80,6 +80,9 @@ getInfoMain Module {..} =
   _moduleInfoTable ^. infoMain
     <|> _moduleImportsTable ^. infoMain
 
+lookupParamsNum :: Module -> Symbol -> Int
+lookupParamsNum m sym = length (lookupInductiveInfo m sym ^. inductiveParams)
+
 identName :: Module -> Symbol -> Text
 identName md sym = lookupIdentifierInfo md sym ^. identifierName
 

@@ -15,14 +15,15 @@ unfoldPolyApplication a =
    in case f of
         ExpressionLiteral {} -> return (f, toList args)
         ExpressionIden iden -> do
-          args' <- filterCompileTimeArgsOrPatterns (getName iden) (toList args)
+          args' <- removeCompileTimeArgsOrPatterns (getName iden) (toList args)
           return (f, args')
         ExpressionSimpleLambda {} -> return (f, toList args)
         ExpressionLambda {} -> return (f, toList args)
         _ -> impossible
 
-filterCompileTimeArgsOrPatterns :: (Member (Reader TypesTable) r) => Name -> [a] -> Sem r [a]
-filterCompileTimeArgsOrPatterns idenname lst = do
+-- | Removes arguments or patterns whose types are universes.
+removeCompileTimeArgsOrPatterns :: (Member (Reader TypesTable) r) => Name -> [a] -> Sem r [a]
+removeCompileTimeArgsOrPatterns idenname lst = do
   tab <- asks (^. typesTable)
   let funParams = fst (unfoldFunType (ty tab))
       typedArgs =

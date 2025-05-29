@@ -15,14 +15,12 @@ convertNode md node0 = rmap go node0
       NTyp typeConstr -> NTyp $ set typeConstrArgs [] typeConstr
       NCtr Constr {..} ->
         let ci = lookupConstructorInfo md _constrTag
-            ii = lookupInductiveInfo md (ci ^. constructorInductive)
-            nParams = length (ii ^. inductiveParams)
+            nParams = lookupParamsNum md (ci ^. constructorInductive)
          in mkConstr _constrInfo _constrTag (map (go recur) (drop nParams _constrArgs))
       NCase Case {..} ->
         mkCase _caseInfo _caseInductive (go recur _caseValue) (map convertBranch _caseBranches) (fmap (go recur) _caseDefault)
         where
-          ii = lookupInductiveInfo md _caseInductive
-          nParams = length (ii ^. inductiveParams)
+          nParams = lookupParamsNum md _caseInductive
 
           convertBranch :: CaseBranch -> CaseBranch
           convertBranch br@CaseBranch {..} =
@@ -60,8 +58,7 @@ convertConstructor md ci =
       _constructorArgsNum = length (typeArgs ty')
     }
   where
-    ii = lookupInductiveInfo md (ci ^. constructorInductive)
-    nParams = length (ii ^. inductiveParams)
+    nParams = lookupParamsNum md (ci ^. constructorInductive)
     tyargs' = drop nParams (typeArgs (ci ^. constructorType))
     ty' = convertNode md (mkPis' tyargs' (typeTarget (ci ^. constructorType)))
 
