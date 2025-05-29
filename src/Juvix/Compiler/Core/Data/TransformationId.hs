@@ -44,6 +44,7 @@ data TransformationId
   | OptPhaseExec
   | OptPhaseMain
   | OptPhasePreLifting
+  | Trace
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -135,6 +136,7 @@ instance TransformationId' TransformationId where
     OptPhaseExec -> strOptPhaseExec
     OptPhaseMain -> strOptPhaseMain
     OptPhasePreLifting -> strOptPhasePreLifting
+    Trace -> strTrace
 
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text

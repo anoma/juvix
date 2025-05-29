@@ -146,5 +146,5 @@ strOptPhaseMain = "opt-phase-main"
 strOptPhasePreLifting :: Text
 strOptPhasePreLifting = "opt-phase-pre-lifting"
 
-strDump :: Text
-strDump = "dump"
+strTrace :: Text
+strTrace = "trace"
