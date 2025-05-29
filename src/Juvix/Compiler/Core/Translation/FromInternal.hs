@@ -19,7 +19,7 @@ import Juvix.Compiler.Internal.Builtins qualified as Builtins
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Internal.Extra qualified as Internal
 import Juvix.Compiler.Internal.Pretty qualified as Internal
-import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
+import Juvix.Compiler.Internal.Translation qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Compiler.Store.Extra qualified as Store
