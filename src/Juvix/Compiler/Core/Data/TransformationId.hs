@@ -84,8 +84,15 @@ toNormalizeTransformations =
 
 toStrippedTransformations0 :: TransformationId -> [TransformationId]
 toStrippedTransformations0 checkId =
-  [FilterUnreachable, checkId, RemoveTypeArgs, DisambiguateNames]
+  [FilterUnreachable, checkId, RemoveTypeArgs]
 
+-- | The `toStrippedTransformations` need to be broken into two parts for the
+-- modular pipeline. The probelm is that `RemoveTypeArgs` modifies the types of
+-- inductives, changing their arity. The `RemoveInductiveParams` would query old
+-- inductive arities if they are from a different module. Breaking the stripped
+-- transformation pipeline after `RemoveTypeArgs` ensures that all modules are
+-- processed up to that point and `RemoveInductiveParams` uses new inductive
+-- arities.
 toStrippedTransformations1 :: [TransformationId]
 toStrippedTransformations1 =
   [RemoveInductiveParams, DisambiguateNames]
