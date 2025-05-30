@@ -676,8 +676,8 @@ instance PrettyCode InfoTable where
               BuiltinAnomaComplianceInputs -> True
               BuiltinAnomaShieldedTransaction -> True
               BuiltinNockmaNoun -> True
-              BuiltinList -> True
               --
+              BuiltinList -> False
               BuiltinEq -> False
               BuiltinOrd -> False
               BuiltinOrdering -> False
