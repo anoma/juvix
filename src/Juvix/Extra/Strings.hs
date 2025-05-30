@@ -701,6 +701,9 @@ dot = "."
 colon :: (IsString s) => s
 colon = ":"
 
+extern :: (IsString s) => s
+extern = "extern"
+
 terminating :: (IsString s) => s
 terminating = "terminating"
 

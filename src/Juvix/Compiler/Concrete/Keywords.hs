@@ -40,6 +40,7 @@ import Juvix.Data.Keyword.All
     kwElse,
     kwEnd,
     kwEq,
+    kwExtern,
     kwFixity,
     kwHiding,
     kwHole,
