@@ -22,8 +22,6 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Internal.Extra
-import Juvix.Compiler.Internal.Extra.CoercionInfo
-import Juvix.Compiler.Internal.Extra.InstanceInfo
 import Juvix.Compiler.Internal.Pretty (ppTrace)
 import Juvix.Compiler.Store.Internal.Data.FunctionsTable
 import Juvix.Compiler.Store.Internal.Data.TypesTable
@@ -216,9 +214,8 @@ lookupFunctionMaybe :: forall r. (Member (Reader InfoTable) r) => Name -> Sem r 
 lookupFunctionMaybe f = HashMap.lookup f <$> asks (^. infoFunctions)
 
 lookupFunction :: forall r. (Member (Reader InfoTable) r) => Name -> Sem r FunctionInfo
-lookupFunction f = do
-  err <- impossibleErr
-  fromMaybe err <$> lookupFunctionMaybe f
+lookupFunction f =
+  fromMaybeM impossibleErr (lookupFunctionMaybe f)
   where
     impossibleErr :: Sem r a
     impossibleErr = do

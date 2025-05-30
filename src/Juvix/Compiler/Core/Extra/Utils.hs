@@ -50,12 +50,6 @@ isTypeConstr md ty = case typeTarget ty of
     isTypeConstr md (lookupIdentifierNode md _identSymbol)
   _ -> False
 
-getTypeParams :: Module -> Type -> [Type]
-getTypeParams md ty = filter (isTypeConstr md) (typeArgs ty)
-
-getTypeParamsNum :: Module -> Type -> Int
-getTypeParamsNum md ty = length $ getTypeParams md ty
-
 filterOutTypeSynonyms :: Module -> Module
 filterOutTypeSynonyms md = pruneInfoTable md'
   where
@@ -139,7 +133,7 @@ isImmediate md = \case
   NCst {} -> True
   NCtr Constr {..}
     | Just ci <- lookupConstructorInfo' md _constrTag ->
-        let paramsNum = length (takeWhile (isTypeConstr md) (typeArgs (ci ^. constructorType)))
+        let paramsNum = lookupParamsNum md (ci ^. constructorInductive)
          in length _constrArgs <= paramsNum
     | otherwise -> all (isType md mempty) _constrArgs
   node@(NApp {}) ->
@@ -147,8 +141,8 @@ isImmediate md = \case
      in case h of
           NIdt Ident {..}
             | Just ii <- lookupIdentifierInfo' md _identSymbol ->
-                let paramsNum = length (takeWhile (isTypeConstr md) (typeArgs (ii ^. identifierType)))
-                 in length args <= paramsNum
+                let typeParamsNum = length (takeWhile (isTypeConstr md) (typeArgs (ii ^. identifierType)))
+                 in length args <= typeParamsNum
           _ -> all (isType md mempty) args
   node -> isType md mempty node
 

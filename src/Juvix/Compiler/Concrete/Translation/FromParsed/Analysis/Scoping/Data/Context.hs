@@ -20,6 +20,9 @@ makeLenses ''ScoperResult
 mainModule :: Lens' ScoperResult (Module 'Scoped 'ModuleTop)
 mainModule = resultModule
 
+scoperResultBuiltinsTable :: Lens' ScoperResult BuiltinsTable
+scoperResultBuiltinsTable = resultScopedModule . scopedModuleInfoTable . infoBuiltins
+
 getScoperResultIsMainFile :: ScoperResult -> Bool
 getScoperResultIsMainFile = (^. resultParserResult . Parsed.resultIsMainFile)
 

@@ -97,6 +97,9 @@ lookupTabBuiltinFunction tab b = (HashMap.!) (tab ^. infoIdentifiers) . funSym <
       IdentFun s -> s
       _ -> error "core infotable: expected function identifier"
 
+lookupTabParamsNum :: InfoTable -> Symbol -> Int
+lookupTabParamsNum m sym = length (lookupTabInductiveInfo m sym ^. inductiveParams)
+
 identName' :: InfoTable -> Symbol -> Text
 identName' tab sym = lookupTabIdentifierInfo tab sym ^. identifierName
 
@@ -125,8 +128,7 @@ pruneInfoTable' tab =
       infoConstructors
       ( HashMap.filter
           ( \ConstructorInfo {..} ->
-              isBuiltinTag _constructorTag
-                || HashMap.member _constructorInductive (tab ^. infoInductives)
+              HashMap.member _constructorInductive (tab ^. infoInductives)
           )
       )
     $ over

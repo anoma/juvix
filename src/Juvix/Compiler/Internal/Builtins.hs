@@ -25,6 +25,21 @@ data FunInfo = FunInfo
 
 makeLenses ''FunInfo
 
+mkBuiltinIden :: (IsBuiltin a, Members '[Reader BuiltinsTable, Error TypeCheckerError] r) => (Name -> Iden) -> Interval -> a -> Sem r Expression
+mkBuiltinIden mkIden loc = fmap (ExpressionIden . mkIden) . getBuiltinNameTypeChecker loc
+
+mkBuiltinConstructor :: (Members '[Reader BuiltinsTable, Error TypeCheckerError] r) => Interval -> BuiltinConstructor -> Sem r Expression
+mkBuiltinConstructor = mkBuiltinIden IdenConstructor
+
+mkBuiltinInductive :: (Members '[Reader BuiltinsTable, Error TypeCheckerError] r) => Interval -> BuiltinInductive -> Sem r Expression
+mkBuiltinInductive = mkBuiltinIden IdenInductive
+
+getIntTy :: (Members '[Reader BuiltinsTable, Error TypeCheckerError] r) => Interval -> Sem r Expression
+getIntTy loc = mkBuiltinInductive loc BuiltinInt
+
+getNatTy :: (Members '[Reader BuiltinsTable, Error TypeCheckerError] r) => Interval -> Sem r Expression
+getNatTy loc = mkBuiltinInductive loc BuiltinNat
+
 getBuiltinNameScoper ::
   (IsBuiltin a, Members '[Error ScoperError, Reader BuiltinsTable] r) =>
   Interval ->
@@ -34,10 +49,68 @@ getBuiltinNameScoper loc =
   mapError ErrBuiltinNotDefined
     . getBuiltinName loc
 
+matchBuiltinName ::
+  (IsBuiltin a, Members '[Reader BuiltinsTable, Fail] r) =>
+  a ->
+  Name ->
+  Sem r ()
+matchBuiltinName b m = do
+  n <- peekBuiltinNameTypeChecker impossible b
+  failUnless (Just m == n)
+
+peekBuiltinNameTypeChecker :: (IsBuiltin a, Members '[Reader BuiltinsTable] r) => Interval -> a -> Sem r (Maybe Name)
+peekBuiltinNameTypeChecker loc =
+  fmap (either (const Nothing) Just)
+    . runError @BuiltinNotDefined
+    . getBuiltinName loc
+
 getBuiltinNameTypeChecker :: (IsBuiltin a, Members '[Reader BuiltinsTable, Error TypeCheckerError] r) => Interval -> a -> Sem r Name
 getBuiltinNameTypeChecker loc =
   mapError TypeChecker.ErrBuiltinNotDefined
     . getBuiltinName loc
+
+builtinNaturalFromApp ::
+  (Members '[Fail, Reader BuiltinsTable] r) =>
+  Application ->
+  Sem r BuiltinNatural
+builtinNaturalFromApp topApp = subsume (failAlts [fromLit, fromSuc])
+  where
+    -- suc (.. (suc arg))
+    fromSuc :: forall r'. (Members '[Reader BuiltinsTable] r') => Sem (Fail ': r') BuiltinNatural
+    fromSuc = goSuc 0 (ExpressionApplication topApp)
+      where
+        goSuc :: Natural -> Expression -> Sem (Fail ': r') BuiltinNatural
+        goSuc succs = \case
+          ExpressionApplication app -> do
+            (ExpressionIden (IdenConstructor suc_), [ApplicationArg Explicit arg_]) <- return (second toList (unfoldApplication' app))
+            matchBuiltinName BuiltinNatSuc suc_
+            goSuc (1 + succs) arg_
+          arg
+            | succs == 0 -> fail
+            | otherwise ->
+                return
+                  BuiltinNatural
+                    { _builtinNaturalSuc = succs,
+                      _builtinNaturalArg = arg,
+                      _builtinNaturalLoc = getLoc topApp
+                    }
+
+    -- fromNatural {Nat} {{FromNatNatI}} <literal>
+    -- NOTE: we do not check that FromNatNatI instance uses the builtin fromNat
+    fromLit :: (Members '[Reader BuiltinsTable] r') => Sem (Fail ': r') BuiltinNatural
+    fromLit = do
+      (ExpressionIden (IdenFunction fromNatural_), [nat_, _fromNatI_, arg_]) <- return (second toList (unfoldApplication' topApp))
+      matchBuiltinName BuiltinFromNat fromNatural_
+      ApplicationArg Implicit (ExpressionIden (IdenInductive natTy)) <- return nat_
+      matchBuiltinName BuiltinNat natTy
+      ApplicationArg Explicit (ExpressionLiteral (WithLoc loc (LitNatural num))) <- return arg_
+      zero <- runErrorWith @TypeCheckerError (const impossible) (getBuiltinNameTypeChecker loc BuiltinNatZero)
+      return $
+        BuiltinNatural
+          { _builtinNaturalSuc = num,
+            _builtinNaturalLoc = loc,
+            _builtinNaturalArg = toExpression zero
+          }
 
 getBuiltinName ::
   (IsBuiltin a, Members '[Error BuiltinNotDefined, Reader BuiltinsTable] r) =>

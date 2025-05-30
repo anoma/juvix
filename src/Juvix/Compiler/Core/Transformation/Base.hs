@@ -12,6 +12,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Data.Module
+import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Options
 
@@ -76,9 +77,13 @@ mapAllNodes f md =
     convertInductive :: InductiveInfo -> InductiveInfo
     convertInductive ii =
       ii
-        { _inductiveKind = f (ii ^. inductiveKind),
-          _inductiveParams = map (over paramKind f) (ii ^. inductiveParams)
+        { _inductiveKind = kind',
+          _inductiveParams = zipWithExact (set paramKind) params' (ii ^. inductiveParams)
         }
+      where
+        nParams = length (ii ^. inductiveParams)
+        kind' = f (ii ^. inductiveKind)
+        params' = take nParams (typeArgs kind')
 
 withOptimizationLevel :: (Member (Reader CoreOptions) r) => Int -> (Module -> Sem r Module) -> Module -> Sem r Module
 withOptimizationLevel n f tab = do

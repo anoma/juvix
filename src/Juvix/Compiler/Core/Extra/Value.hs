@@ -38,8 +38,7 @@ toValue tab = \case
           }
       where
         ci = lookupTabConstructorInfo tab _constrTag
-        ii = lookupTabInductiveInfo tab (ci ^. constructorInductive)
-        paramsNum = length (ii ^. inductiveParams)
+        paramsNum = lookupTabParamsNum tab (ci ^. constructorInductive)
 
     goType :: Value
     goType = ValueType

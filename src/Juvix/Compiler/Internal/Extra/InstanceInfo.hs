@@ -7,6 +7,7 @@ where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
+import Juvix.Compiler.Internal.Builtins
 import Juvix.Compiler.Internal.Data.TypedIden
 import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Language
@@ -27,8 +28,10 @@ lookupInstanceTable tab name = HashMap.lookup name (tab ^. instanceTableMap)
 
 makeRigidParam :: InstanceParam -> InstanceParam
 makeRigidParam p = case p of
-  InstanceParamVar {} ->
-    p
+  InstanceParamVar {} -> p
+  InstanceParamNatural n ->
+    InstanceParamNatural $
+      over instanceNatArg makeRigidParam n
   InstanceParamApp app@InstanceApp {..} ->
     InstanceParamApp $
       app
@@ -40,68 +43,54 @@ makeRigidParam p = case p of
         { _instanceFunLeft = makeRigidParam _instanceFunLeft,
           _instanceFunRight = makeRigidParam _instanceFunRight
         }
-  InstanceParamHole {} ->
-    p
-  InstanceParamMeta v ->
-    InstanceParamVar v
+  InstanceParamHole {} -> p
+  InstanceParamMeta v -> InstanceParamVar v
 
-paramToExpression :: (Member NameIdGen r) => InstanceParam -> Sem r Expression
+paramToExpression :: forall r. (Member NameIdGen r) => InstanceParam -> Sem r Expression
 paramToExpression = \case
-  InstanceParamVar v ->
-    return $ ExpressionIden (IdenVar v)
-  InstanceParamApp InstanceApp {..} ->
-    return _instanceAppExpression
-  InstanceParamFun InstanceFun {..} ->
-    return _instanceFunExpression
-  InstanceParamHole h ->
-    return $ ExpressionHole h
-  InstanceParamMeta v ->
-    ExpressionHole . mkHole (getLoc v) <$> freshNameId
+  InstanceParamVar v -> return $ ExpressionIden (IdenVar v)
+  InstanceParamNatural n -> goNat n
+  InstanceParamApp InstanceApp {..} -> return _instanceAppExpression
+  InstanceParamFun InstanceFun {..} -> return _instanceFunExpression
+  InstanceParamHole h -> return $ ExpressionHole h
+  InstanceParamMeta v -> ExpressionHole . mkHole (getLoc v) <$> freshNameId
+  where
+    goNat :: InstanceNat -> Sem r Expression
+    goNat InstanceNat {..} = do
+      arg <- paramToExpression _instanceNatArg
+      return $
+        ExpressionNatural
+          BuiltinNatural
+            { _builtinNaturalSuc = _instanceNatSuc,
+              _builtinNaturalArg = arg,
+              _builtinNaturalLoc = _instanceNatLoc
+            }
 
-paramFromExpression :: HashSet VarName -> Expression -> Maybe InstanceParam
+paramFromExpression :: forall r. (Members '[Reader BuiltinsTable] r) => HashSet VarName -> Expression -> Sem (Fail ': r) InstanceParam
 paramFromExpression metaVars e = case e of
-  ExpressionIden (IdenInductive n) ->
-    Just $
-      InstanceParamApp $
-        InstanceApp
-          { _instanceAppHead = n,
-            _instanceAppArgs = [],
-            _instanceAppExpression = e
-          }
-  ExpressionIden (IdenAxiom n) ->
-    Just $
-      InstanceParamApp $
-        InstanceApp
-          { _instanceAppHead = n,
-            _instanceAppArgs = [],
-            _instanceAppExpression = e
-          }
   ExpressionIden (IdenVar v)
-    | HashSet.member v metaVars -> Just $ InstanceParamMeta v
-    | otherwise -> Just $ InstanceParamVar v
-  ExpressionHole h -> Just $ InstanceParamHole h
-  ExpressionApplication app -> do
-    let (h, args) = unfoldApplication app
-    args' <- mapM (paramFromExpression metaVars) args
-    case h of
-      ExpressionIden (IdenInductive n) ->
-        return $
-          InstanceParamApp $
-            InstanceApp
-              { _instanceAppHead = n,
-                _instanceAppArgs = toList args',
-                _instanceAppExpression = e
-              }
-      ExpressionIden (IdenAxiom n) ->
-        return $
-          InstanceParamApp $
-            InstanceApp
-              { _instanceAppHead = n,
-                _instanceAppArgs = toList args',
-                _instanceAppExpression = e
-              }
-      _ ->
-        Nothing
+    | HashSet.member v metaVars -> return (InstanceParamMeta v)
+    | otherwise -> return (InstanceParamVar v)
+  ExpressionIden i -> do
+    h <- mkInstanceAppHeadIden i
+    return $
+      InstanceParamApp $
+        InstanceApp
+          { _instanceAppHead = h,
+            _instanceAppArgs = [],
+            _instanceAppExpression = e
+          }
+  ExpressionHole h -> return (InstanceParamHole h)
+  ExpressionApplication app -> normalApplication app
+  ExpressionNatural BuiltinNatural {..} -> do
+    arg <- paramFromExpression metaVars _builtinNaturalArg
+    return $
+      InstanceParamNatural
+        InstanceNat
+          { _instanceNatSuc = _builtinNaturalSuc,
+            _instanceNatLoc = _builtinNaturalLoc,
+            _instanceNatArg = arg
+          }
   ExpressionFunction Function {..}
     | _functionLeft ^. paramImplicit == Explicit -> do
         l <- paramFromExpression metaVars (_functionLeft ^. paramType)
@@ -113,20 +102,46 @@ paramFromExpression metaVars e = case e of
                 _instanceFunRight = r,
                 _instanceFunExpression = e
               }
-  _ ->
-    Nothing
+  _ -> fail
+  where
+    normalApplication :: Application -> Sem (Fail ': r) InstanceParam
+    normalApplication app = do
+      let (h, args) = unfoldApplication app
+      args' <- mapM (paramFromExpression metaVars) args
+      appHead <- mkInstanceAppHead h
+      return $
+        InstanceParamApp $
+          InstanceApp
+            { _instanceAppHead = appHead,
+              _instanceAppArgs = toList args',
+              _instanceAppExpression = e
+            }
 
-traitFromExpression :: HashSet VarName -> Expression -> Maybe InstanceApp
-traitFromExpression metaVars e = case paramFromExpression metaVars e of
-  Just (InstanceParamApp app) -> Just app
-  _ -> Nothing
+    mkInstanceAppHeadIden :: forall r'. (Members '[Fail] r') => Iden -> Sem r' InstanceAppHead
+    mkInstanceAppHeadIden = \case
+      IdenInductive n -> return (InstanceAppHeadInductive n)
+      IdenAxiom n -> return (InstanceAppHeadAxiom n)
+      IdenConstructor n -> return (InstanceAppHeadConstructor n)
+      _ -> fail
 
-instanceFromTypedIden :: TypedIden -> Maybe InstanceInfo
+    mkInstanceAppHead :: forall r'. (Members '[Fail] r') => Expression -> Sem r' InstanceAppHead
+    mkInstanceAppHead = \case
+      ExpressionIden i -> mkInstanceAppHeadIden i
+      _ -> fail
+
+traitFromExpression :: (Members '[Reader BuiltinsTable] r) => HashSet VarName -> Expression -> Sem (Fail ': r) InstanceApp
+traitFromExpression metaVars e = do
+  x <- paramFromExpression metaVars e
+  case x of
+    InstanceParamApp app -> return app
+    _ -> fail
+
+instanceFromTypedIden :: (Members '[Reader BuiltinsTable] r) => TypedIden -> Sem (Fail ': r) InstanceInfo
 instanceFromTypedIden TypedIden {..} = do
   InstanceApp {..} <- traitFromExpression metaVars e
   return $
     InstanceInfo
-      { _instanceInfoInductive = _instanceAppHead,
+      { _instanceInfoInductive = _instanceAppHead ^. instanceAppHeadName,
         _instanceInfoParams = _instanceAppArgs,
         _instanceInfoResult = _typedIden,
         _instanceInfoArgs = args
@@ -140,6 +155,7 @@ checkNoMeta = \case
   InstanceParamVar {} -> True
   InstanceParamMeta {} -> False
   InstanceParamHole {} -> True
+  InstanceParamNatural InstanceNat {..} -> checkNoMeta _instanceNatArg
   InstanceParamApp InstanceApp {..} -> all checkNoMeta _instanceAppArgs
   InstanceParamFun InstanceFun {..} ->
     checkNoMeta _instanceFunLeft && checkNoMeta _instanceFunRight
