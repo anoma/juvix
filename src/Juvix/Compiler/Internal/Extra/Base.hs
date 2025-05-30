@@ -242,6 +242,7 @@ instance HasExpressions FunctionDef where
           _funDefArgsInfo = infos',
           _funDefTerminating,
           _funDefIsInstanceCoercion,
+          _funDefExtern,
           _funDefName,
           _funDefBuiltin,
           _funDefPragmas,
@@ -903,6 +904,7 @@ simpleFunDef funName ty body =
       _funDefPragmas = mempty,
       _funDefArgsInfo = mempty,
       _funDefTerminating = False,
+      _funDefExtern = False,
       _funDefBuiltin = Nothing,
       _funDefBody = body,
       _funDefDocComment = Nothing
