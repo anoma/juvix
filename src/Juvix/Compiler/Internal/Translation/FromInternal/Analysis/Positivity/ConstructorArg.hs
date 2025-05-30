@@ -26,6 +26,7 @@ goArg ty = case ty of
   ExpressionSimpleLambda {} -> invalid
   ExpressionLambda {} -> invalid
   ExpressionCase {} -> invalid
+  ExpressionNatural {} -> invalid
   where
     invalid :: forall a. Sem r a
     invalid =

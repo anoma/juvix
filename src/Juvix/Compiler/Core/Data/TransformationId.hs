@@ -9,6 +9,7 @@ data TransformationId
   | LetRecLifting
   | TopEtaExpand
   | RemoveTypeArgs
+  | RemoveInductiveParams
   | MoveApps
   | NatToPrimInt
   | IntToPrimInt
@@ -43,6 +44,7 @@ data TransformationId
   | OptPhaseExec
   | OptPhaseMain
   | OptPhasePreLifting
+  | Trace
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
@@ -80,9 +82,24 @@ toNormalizeTransformations :: [TransformationId]
 toNormalizeTransformations =
   toEvalTransformations ++ [CombineInfoTables, LetRecLifting, LetFolding, UnrollRecursion]
 
+toStrippedTransformations0 :: TransformationId -> [TransformationId]
+toStrippedTransformations0 checkId =
+  [FilterUnreachable, checkId, RemoveTypeArgs]
+
+-- | The `toStrippedTransformations` need to be broken into two parts for the
+-- modular pipeline. The probelm is that `RemoveTypeArgs` modifies the types of
+-- inductives, changing their arity. The `RemoveInductiveParams` would query old
+-- inductive arities if they are from a different module. Breaking the stripped
+-- transformation pipeline after `RemoveTypeArgs` ensures that all modules are
+-- processed up to that point and `RemoveInductiveParams` uses new inductive
+-- arities.
+toStrippedTransformations1 :: [TransformationId]
+toStrippedTransformations1 =
+  [RemoveInductiveParams, DisambiguateNames]
+
 toStrippedTransformations :: TransformationId -> [TransformationId]
 toStrippedTransformations checkId =
-  [FilterUnreachable, checkId, RemoveTypeArgs, DisambiguateNames]
+  toStrippedTransformations0 checkId ++ toStrippedTransformations1
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
@@ -96,6 +113,7 @@ instance TransformationId' TransformationId where
     EtaExpandApps -> strEtaExpandApps
     IdentityTrans -> strIdentity
     RemoveTypeArgs -> strRemoveTypeArgs
+    RemoveInductiveParams -> strRemoveInductiveParams
     MoveApps -> strMoveApps
     NatToPrimInt -> strNatToPrimInt
     IntToPrimInt -> strIntToPrimInt
@@ -125,6 +143,7 @@ instance TransformationId' TransformationId where
     OptPhaseExec -> strOptPhaseExec
     OptPhaseMain -> strOptPhaseMain
     OptPhasePreLifting -> strOptPhasePreLifting
+    Trace -> strTrace
 
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text

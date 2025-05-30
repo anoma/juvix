@@ -38,26 +38,23 @@ constructorReturnType info =
 
 fullInductiveType :: InductiveInfo -> Expression
 fullInductiveType info =
-  let ps = info ^. inductiveInfoParameters
-   in foldr
-        (\p k -> p ^. inductiveParamType --> k)
-        (info ^. inductiveInfoType)
-        ps
+  let ps :: [FunctionParameter] = map (inductiveToFunctionParam Explicit) (info ^. inductiveInfoParameters)
+   in foldFunType ps (info ^. inductiveInfoType)
 
 constructorType :: ConstructorInfo -> Expression
 constructorType info =
   let (inductiveParams, constrArgs) = constructorArgTypes info
       args =
-        map inductiveToFunctionParam inductiveParams
+        map (inductiveToFunctionParam Implicit) inductiveParams
           ++ constrArgs
       saturatedTy = constructorReturnType info
    in foldFunType args saturatedTy
 
-inductiveToFunctionParam :: InductiveParameter -> FunctionParameter
-inductiveToFunctionParam InductiveParameter {..} =
+inductiveToFunctionParam :: IsImplicit -> InductiveParameter -> FunctionParameter
+inductiveToFunctionParam impl InductiveParameter {..} =
   FunctionParameter
     { _paramName = Just _inductiveParamName,
-      _paramImplicit = Implicit,
+      _paramImplicit = impl,
       _paramType = _inductiveParamType
     }
 
@@ -317,7 +314,9 @@ cloneFunctionDefSameName f = do
   return (set funDefName (f ^. funDefName) f')
 
 subsInstanceHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap InstanceHole Expression -> a -> Sem r a
-subsInstanceHoles s = umapM helper
+subsInstanceHoles s
+  | null s = return
+  | otherwise = umapM helper
   where
     helper :: Expression -> Sem r Expression
     helper le = case le of
@@ -329,7 +328,9 @@ subsInstanceHoles s = umapM helper
         e = toExpression le
 
 subsHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
-subsHoles s = umapM helper
+subsHoles s
+  | null s = return
+  | otherwise = umapM helper
   where
     helper :: Expression -> Sem r Expression
     helper le = case le of
@@ -366,7 +367,7 @@ substituteIndParams = substitutionE . HashMap.fromList . map (first (^. inductiv
 
 getInductiveKind :: InductiveDef -> Expression
 getInductiveKind InductiveDef {..} =
-  foldFunType (map inductiveToFunctionParam _inductiveParameters) _inductiveType
+  foldFunType (map (inductiveToFunctionParam Explicit) _inductiveParameters) _inductiveType
 
 buildMutualBlocks ::
   (Members '[Reader NameDependencyInfo] r) =>

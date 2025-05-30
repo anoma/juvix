@@ -241,6 +241,22 @@ upToCoreTypecheck = do
 -- Workflows from stored Core
 --------------------------------------------------------------------------------
 
+storedCoreToPreStripped ::
+  (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) =>
+  Core.TransformationId ->
+  Core.Module ->
+  Sem r Core.Module
+storedCoreToPreStripped checkId md =
+  Core.toPreStripped checkId md
+
+preStrippedToStripped ::
+  (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) =>
+  Core.Module ->
+  Sem r Stripped.Module
+preStrippedToStripped md =
+  Stripped.fromCore
+    <$> Core.toStripped' md
+
 storedCoreToStripped ::
   (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) =>
   Core.TransformationId ->

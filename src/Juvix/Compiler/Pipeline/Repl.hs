@@ -153,6 +153,7 @@ fromInternalExpression exp = do
     . runReader typedTable
     . tmpCoreInfoTableBuilderArtifacts
     . readerFunctionsTableArtifacts
+    . readerBuiltinsTableArtifacts
     . readerTypesTableArtifacts
     . runReader Core.initIndexTable
     . mapError (JuvixError . ErrBadScope)

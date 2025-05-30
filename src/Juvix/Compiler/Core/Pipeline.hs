@@ -30,14 +30,22 @@ toStored md = do
       EntryPoint.PipelineExec -> PipelineExec
       EntryPoint.PipelineTypecheck -> PipelineTypecheck
 
--- | Perform transformations on stored Core necessary before the translation to
--- Core.Stripped
-toStripped :: (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) => TransformationId -> Module -> Sem r Module
-toStripped checkId md = do
+toPreStripped :: (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) => TransformationId -> Module -> Sem r Module
+toPreStripped checkId md = do
   noCheck <- asks (^. entryPointNoCheck)
   let checkId' = if noCheck then IdentityTrans else checkId
   mapReader fromEntryPoint $
-    applyTransformations (toStrippedTransformations checkId') md
+    applyTransformations (toStrippedTransformations0 checkId') md
+
+toStripped' :: (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) => Module -> Sem r Module
+toStripped' md = do
+  mapReader fromEntryPoint $
+    applyTransformations toStrippedTransformations1 md
+
+-- | Perform transformations on stored Core necessary before the translation to
+-- Core.Stripped
+toStripped :: (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) => TransformationId -> Module -> Sem r Module
+toStripped checkId = toPreStripped checkId >=> toStripped'
 
 checkModule :: (Members '[Error JuvixError, Reader EntryPoint] r) => TransformationId -> Module -> Sem r ()
 checkModule checkId md = do

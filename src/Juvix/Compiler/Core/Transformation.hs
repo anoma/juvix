@@ -12,6 +12,7 @@ import Juvix.Compiler.Core.Data.Module
 import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Options
+import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Check.Anoma
 import Juvix.Compiler.Core.Transformation.Check.Cairo
@@ -46,8 +47,10 @@ import Juvix.Compiler.Core.Transformation.Optimize.Phase.PreLifting qualified as
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyComparisons (simplifyComparisons)
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyIfs
 import Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs
+import Juvix.Compiler.Core.Transformation.RemoveInductiveParams
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
+import Juvix.Compiler.Core.Transformation.Trace qualified as Trace
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
 import Juvix.Compiler.Verification.Dumper (Dumper, ignoreDumper)
 
@@ -74,6 +77,7 @@ applyTransformations ts = flip (foldM (flip appTrans)) ts
       IdentityTrans -> return . identity
       TopEtaExpand -> return . topEtaExpand
       RemoveTypeArgs -> return . removeTypeArgs
+      RemoveInductiveParams -> return . removeInductiveParams
       MoveApps -> return . moveApps
       NatToPrimInt -> return . natToPrimInt
       IntToPrimInt -> return . intToPrimInt
@@ -107,3 +111,4 @@ applyTransformations ts = flip (foldM (flip appTrans)) ts
       OptPhaseExec -> Phase.Exec.optimize
       OptPhaseMain -> Phase.Main.optimize
       OptPhasePreLifting -> Phase.PreLifting.optimize
+      Trace -> return . Trace.trace

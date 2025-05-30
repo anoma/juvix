@@ -685,7 +685,7 @@ instance PrettyCode InfoTable where
               BuiltinNat -> False
               BuiltinInt -> False
               BuiltinBool -> False
-            Just _ -> False
+            Just (BuiltinTypeAxiom _) -> False
             Nothing -> True
 
 instance PrettyCode Stripped.ArgumentInfo where
@@ -739,6 +739,9 @@ instance (PrettyCode a) => PrettyCode [a] where
   ppCode x = do
     cs <- mapM ppCode x
     return $ encloseSep "(" ")" ", " cs
+
+instance (PrettyCode a) => PrettyCode (Maybe a) where
+  ppCode = maybe (return "Nothing") (fmap ("Just " <>) . ppCode)
 
 --------------------------------------------------------------------------------
 -- printing values

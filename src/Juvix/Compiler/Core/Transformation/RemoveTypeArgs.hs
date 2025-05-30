@@ -53,6 +53,11 @@ convertNode md = convert mempty
                     End (convert vars h)
                 | otherwise ->
                     End (mkApps (convert vars h) (map (second (convert vars)) args'))
+      NTyp TypeConstr {..} ->
+        let ty = lookupInductiveInfo md _typeConstrSymbol ^. inductiveKind
+            args' = filterArgs id ty _typeConstrArgs
+         in End $
+              mkTypeConstr _typeConstrInfo _typeConstrSymbol (map (convert vars) args')
       NCtr Constr {..} ->
         let ci = lookupConstructorInfo md _constrTag
             ty = ci ^. constructorType
@@ -61,27 +66,21 @@ convertNode md = convert mempty
       NCase Case {..} ->
         End (mkCase _caseInfo _caseInductive (convert vars _caseValue) (map convertBranch _caseBranches) (fmap (convert vars) _caseDefault))
         where
-          nParams :: Int
-          nParams = maybe 0 (length . (^. inductiveParams)) (lookupInductiveInfo' md _caseInductive)
           convertBranch :: CaseBranch -> CaseBranch
           convertBranch br@CaseBranch {..} =
-            let paramBinders = map (set binderType mkSmallUniv) (take nParams _caseBranchBinders)
-                argBinders = drop nParams _caseBranchBinders
-                tyargs = drop nParams (typeArgs (lookupConstructorInfo md _caseBranchTag ^. constructorType))
-                argBinders' = zipWith (\b ty -> if isDynamic (b ^. binderType) && isTypeConstr md ty then set binderType ty b else b) argBinders (tyargs ++ repeat mkDynamic')
-                binders' =
-                  filterBinders
-                    (BL.prependRev paramBinders vars)
-                    argBinders'
+            let tyargs = typeArgs (lookupConstructorInfo md _caseBranchTag ^. constructorType)
+                binders = zipWith (\b ty -> if isDynamic (b ^. binderType) && isTypeConstr md ty then set binderType ty b else b) _caseBranchBinders (tyargs ++ repeat mkDynamic')
+                binders' = filterBinders vars binders
                 body' =
                   convert
-                    (BL.prependRev argBinders' (BL.prependRev paramBinders vars))
+                    (BL.prependRev binders vars)
                     _caseBranchBody
              in br
                   { _caseBranchBinders = binders',
                     _caseBranchBindersNum = length binders',
                     _caseBranchBody = body'
                   }
+
           filterBinders :: BinderList Binder -> [Binder] -> [Binder]
           filterBinders vars' = \case
             [] -> []
@@ -96,7 +95,7 @@ convertNode md = convert mempty
         | isTypeConstr md (_letItem ^. letItemBinder . binderType) ->
             End (convert (BL.cons (_letItem ^. letItemBinder) vars) _letBody)
       NPi Pi {..}
-        | isTypeConstr md (_piBinder ^. binderType) && not (isTypeConstr md _piBody) ->
+        | isTypeConstr md (_piBinder ^. binderType) ->
             End (convert (BL.cons _piBinder vars) _piBody)
       _ -> Recur node
       where
@@ -147,11 +146,12 @@ convertInductive :: Module -> InductiveInfo -> InductiveInfo
 convertInductive md ii =
   ii
     { _inductiveKind = ty',
-      _inductiveParams = map (over paramKind (convertNode md) . fst) $ filter (not . isTypeConstr md . snd) (zipExact (ii ^. inductiveParams) tyargs)
+      _inductiveParams = params'
     }
   where
     tyargs = typeArgs (ii ^. inductiveKind)
     ty' = convertNode md (ii ^. inductiveKind)
+    params' = map (over paramKind (convertNode md) . fst) $ filter (not . isTypeConstr md . snd) (zipExact (ii ^. inductiveParams) tyargs)
 
 -- | Removes type arguments and type abstractions.
 --

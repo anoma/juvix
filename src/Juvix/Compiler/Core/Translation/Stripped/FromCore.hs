@@ -282,9 +282,9 @@ translateNode node = case node of
   NCst Constant {..} ->
     Stripped.mkConstant _constantValue
   NApp App {} ->
-    let (tgt, args) = unfoldApps' node
+    let (hd, args) = unfoldApps' node
         args' = map translateNode args
-     in case tgt of
+     in case hd of
           NVar v -> Stripped.mkApps (Stripped.FunVar $ translateVar v) (nonEmpty' args')
           NIdt idt -> Stripped.mkApps (Stripped.FunIdent $ translateIdent idt) (nonEmpty' args')
           _ -> unsupported

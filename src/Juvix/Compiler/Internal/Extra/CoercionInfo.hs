@@ -13,6 +13,7 @@ import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Extra.InstanceInfo
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Store.Internal.Data.CoercionInfo
+import Juvix.Compiler.Store.Scoped.Data.InfoTable
 import Juvix.Prelude
 
 updateCoercionTable :: CoercionTable -> CoercionInfo -> CoercionTable
@@ -27,15 +28,15 @@ updateCoercionTable tab ci@CoercionInfo {..} =
 lookupCoercionTable :: CoercionTable -> Name -> Maybe [CoercionInfo]
 lookupCoercionTable tab name = HashMap.lookup name (tab ^. coercionTableMap)
 
-coercionFromTypedIden :: TypedIden -> Maybe CoercionInfo
+coercionFromTypedIden :: (Members '[Reader BuiltinsTable] r) => TypedIden -> Sem (Fail ': r) CoercionInfo
 coercionFromTypedIden TypedIden {..}
-  | null args = Nothing
+  | null args = fail
   | otherwise = do
       tgt <- traitFromExpression metaVars (t ^. paramType)
       InstanceApp {..} <- traitFromExpression metaVars e
       return $
         CoercionInfo
-          { _coercionInfoInductive = _instanceAppHead,
+          { _coercionInfoInductive = _instanceAppHead ^. instanceAppHeadName,
             _coercionInfoParams = _instanceAppArgs,
             _coercionInfoTarget = tgt,
             _coercionInfoResult = _typedIden,
@@ -54,7 +55,7 @@ cyclicCoercions ctab = nodesOnCycles depInfo
     depInfo =
       createDependencyInfo
         ( HashMap.map
-            (HashSet.fromList . map (^. coercionInfoTarget . instanceAppHead))
+            (hashSet . map (^. coercionInfoTarget . instanceAppHead . instanceAppHeadName))
             (ctab ^. coercionTableMap)
         )
         mempty

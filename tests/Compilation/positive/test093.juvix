@@ -1,0 +1,13 @@
+-- Pattern matching with indexed types
+module test093;
+
+import Stdlib.Prelude open;
+
+type uint' (A : Type) (bytes : A) (B : Type) := mk B;
+
+{-# eval: false, inline: false #-}
+f (bytes : Nat) (u : uint' Nat bytes Nat) : Nat :=
+  case u of
+    | (uint'.mk val) := bytes + val;
+
+main : Nat := f 6 (uint'.mk 3);

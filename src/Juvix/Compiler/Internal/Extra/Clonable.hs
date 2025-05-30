@@ -1,6 +1,7 @@
 module Juvix.Compiler.Internal.Extra.Clonable
   ( Clonable,
     clone,
+    clones,
   )
 where
 
@@ -12,6 +13,12 @@ import Juvix.Prelude
 
 type FreshBindersContext = HashMap NameId NameId
 
+clones :: (Clonable a, Members '[NameIdGen] r, Traversable l) => l a -> Sem r (l a)
+clones = runReader iniCtx . mapM freshNameIds
+  where
+    iniCtx :: FreshBindersContext
+    iniCtx = mempty
+
 clone :: (Clonable a, Members '[NameIdGen] r) => a -> Sem r a
 clone = runReader iniCtx . freshNameIds
   where
@@ -20,6 +27,15 @@ clone = runReader iniCtx . freshNameIds
 
 class Clonable a where
   freshNameIds :: (Members '[Reader FreshBindersContext, NameIdGen] r) => a -> Sem r a
+
+instance Clonable InductiveParameter where
+  freshNameIds InductiveParameter {..} = do
+    ty' <- freshNameIds _inductiveParamType
+    return
+      InductiveParameter
+        { _inductiveParamName,
+          _inductiveParamType = ty'
+        }
 
 instance Clonable Name where
   freshNameIds n = do
@@ -221,10 +237,14 @@ instance Clonable Lambda where
           _lambdaClauses = clauses'
         }
 
+instance Clonable BuiltinNatural where
+  freshNameIds = traverseOf builtinNaturalArg freshNameIds
+
 instance Clonable Expression where
   freshNameIds :: (Members '[Reader FreshBindersContext, NameIdGen] r) => Expression -> Sem r Expression
   freshNameIds = \case
     ExpressionIden i -> ExpressionIden <$> freshNameIds i
+    ExpressionNatural i -> ExpressionNatural <$> freshNameIds i
     ExpressionApplication a -> ExpressionApplication <$> freshNameIds a
     ExpressionLiteral a -> ExpressionLiteral <$> freshNameIds a
     ExpressionHole a -> ExpressionHole <$> freshNameIds a
