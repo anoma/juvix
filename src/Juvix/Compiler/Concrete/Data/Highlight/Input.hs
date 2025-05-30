@@ -10,6 +10,7 @@ data HighlightInput = HighlightInput
   { _highlightParsedItems :: [ParsedItem],
     _highlightDocTable :: Scoped.DocTable,
     _highlightNames :: [AName],
+    _highlightPrecItems :: [WithLoc Int],
     _highlightTypes :: Internal.TypesTable,
     _highlightErrors :: [Interval]
   }
@@ -22,6 +23,7 @@ emptyHighlightInput =
     { _highlightParsedItems = [],
       _highlightDocTable = mempty,
       _highlightNames = [],
+      _highlightPrecItems = [],
       _highlightTypes = mempty,
       _highlightErrors = []
     }
@@ -31,6 +33,7 @@ filterInput absPth HighlightInput {..} =
   HighlightInput
     { _highlightNames = filterByLoc absPth _highlightNames,
       _highlightParsedItems = filterByLoc absPth _highlightParsedItems,
+      _highlightPrecItems = filterByLoc absPth _highlightPrecItems,
       _highlightErrors = filterByLoc absPth _highlightErrors,
       _highlightTypes,
       _highlightDocTable

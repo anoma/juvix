@@ -11,6 +11,7 @@ import Data.Text.Encoding qualified as Text
 import Juvix.Compiler.Concrete.Data.Highlight.Builder
 import Juvix.Compiler.Concrete.Data.Highlight.PrettyJudoc
 import Juvix.Compiler.Concrete.Data.ScopedName
+import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
 import Juvix.Compiler.Store.Scoped.Data.InfoTable qualified as Scoped
@@ -45,7 +46,9 @@ buildProperties HighlightInput {..} =
           <> map goFaceError _highlightErrors,
       _propertiesGoto = map goGotoProperty _highlightNames,
       _propertiesTopDef = nubHashable (mapMaybe goDefProperty _highlightNames),
-      _propertiesInfo = mapMaybe (goDocProperty _highlightDocTable _highlightTypes) _highlightNames
+      _propertiesInfo =
+        mapMaybe (goDocProperty _highlightDocTable _highlightTypes) _highlightNames
+          <> map goPrecNumProperty _highlightPrecItems
     }
 
 goFaceError :: Interval -> WithLoc PropertyFace
@@ -94,3 +97,17 @@ goDocProperty doctbl tbl a = do
   let (txt, _infoInit) = renderEmacs d
       _infoInfo = String txt
   return (WithLoc (getLoc a) PropertyInfo {..})
+
+goPrecNumProperty :: WithLoc Int -> WithLoc PropertyInfo
+goPrecNumProperty (WithLoc loc i) =
+  let doc :: Doc CodeAnn =
+        ppCodeAnn Kw.kwPrecedence
+          <+> ppCodeAnn Kw.kwAssign
+          <+> pretty i
+      (txt, _infoInit) = renderEmacs doc
+   in WithLoc
+        loc
+        PropertyInfo
+          { _infoInit,
+            _infoInfo = String txt
+          }

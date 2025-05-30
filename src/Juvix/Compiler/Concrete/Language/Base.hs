@@ -55,6 +55,11 @@ type family ReservedInductiveDefType s = res | res -> s where
   ReservedInductiveDefType 'Parsed = ReservedInductiveDef
   ReservedInductiveDefType 'Scoped = Void
 
+type PrecNumType :: Stage -> GHCType
+type family PrecNumType s = res | res -> s where
+  PrecNumType 'Parsed = Maybe Int
+  PrecNumType 'Scoped = Int
+
 type FieldArgIxType :: Stage -> GHCType
 type family FieldArgIxType s = res | res -> s where
   FieldArgIxType 'Parsed = ()
@@ -421,9 +426,25 @@ deriving stock instance (Ord (SyntaxDef 'Parsed))
 
 deriving stock instance (Ord (SyntaxDef 'Scoped))
 
+data PrecNum
+  = PrecNumWildcard (Irrelevant KeywordRef)
+  | PrecNumExplicit (WithLoc IntegerWithBase)
+  deriving stock (Generic)
+
+instance NFData PrecNum
+
+instance Serialize PrecNum
+
+deriving stock instance (Show PrecNum)
+
+deriving stock instance (Eq PrecNum)
+
+deriving stock instance (Ord PrecNum)
+
 data ParsedFixityFields (s :: Stage) = ParsedFixityFields
   { _fixityFieldsAssoc :: Maybe BinaryAssoc,
     _fixityFieldsPrecSame :: Maybe (IdentifierType s),
+    _fixityFieldsPrecNum :: Maybe PrecNum,
     _fixityFieldsPrecBelow :: Maybe [IdentifierType s],
     _fixityFieldsPrecAbove :: Maybe [IdentifierType s],
     _fixityFieldsBraces :: Irrelevant (KeywordRef, KeywordRef)
@@ -3131,6 +3152,7 @@ makeLenses ''MarkdownInfo
 makeLenses ''Deriving
 
 makePrisms ''NamedArgument
+makePrisms ''PrecNum
 makePrisms ''Statement
 makePrisms ''ConstructorRhs
 makePrisms ''FunctionDefNameParsed
@@ -3158,6 +3180,9 @@ fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)
 
 fixityAssoc :: SimpleGetter (ParsedFixityInfo s) (Maybe (BinaryAssoc))
 fixityAssoc = fixityFieldHelper fixityFieldsAssoc
+
+fixityPrecNum :: SimpleGetter (ParsedFixityInfo s) (Maybe PrecNum)
+fixityPrecNum = fixityFieldHelper fixityFieldsPrecNum
 
 fixityPrecSame :: SimpleGetter (ParsedFixityInfo s) (Maybe (IdentifierType s))
 fixityPrecSame = fixityFieldHelper fixityFieldsPrecSame

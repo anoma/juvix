@@ -248,7 +248,7 @@ scoperErrorTests =
       "Incomparable precedences"
       $(mkRelDir ".")
       $(mkRelFile "IncomparablePrecedences.juvix")
-      $ wantsError ErrIncomparablePrecedences,
+      $ wantsError ErrInfixParser,
     negTest
       "Precedence inconsistency"
       $(mkRelDir ".")

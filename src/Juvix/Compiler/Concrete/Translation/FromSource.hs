@@ -716,14 +716,15 @@ parsedFixityFields ::
   ParsecS r (ParsedFixityFields 'Parsed)
 parsedFixityFields = do
   l <- kw delimBraceL
-  (_fixityFieldsAssoc, _fixityFieldsPrecBelow, _fixityFieldsPrecAbove, _fixityFieldsPrecSame) <- intercalateEffect semicolon $ do
+  (_fixityFieldsAssoc, _fixityFieldsPrecBelow, _fixityFieldsPrecAbove, _fixityFieldsPrecSame, _fixityFieldsPrecNum) <- intercalateEffect semicolon $ do
     as <- toPermutationWithDefault Nothing (Just <$> assoc)
     bel <- toPermutationWithDefault Nothing (Just <$> belowAbove kwBelow)
     abov <- toPermutationWithDefault Nothing (Just <$> belowAbove kwAbove)
     sam <- toPermutationWithDefault Nothing (Just <$> same)
+    num <- toPermutationWithDefault Nothing (Just <$> precNum)
     -- This is needed to allow an optional semicolon at the end
     toPermutationWithDefault Nothing (return (Just ()))
-    pure (as, bel, abov, sam)
+    pure (as, bel, abov, sam, num)
   r <- kw delimBraceR
   let _fixityFieldsBraces = Irrelevant (l, r)
   return ParsedFixityFields {..}
@@ -733,6 +734,15 @@ parsedFixityFields = do
       kw kwSame
       kw kwAssign
       name
+
+    precNum :: ParsecS r PrecNum
+    precNum = do
+      kw kwPrecedence
+      kw kwAssign
+      P.choice
+        [ PrecNumWildcard . Irrelevant <$> kw kwWildcard,
+          PrecNumExplicit <$> integerWithBase
+        ]
 
     belowAbove :: Keyword -> ParsecS r [Name]
     belowAbove aboveOrBelow = do
