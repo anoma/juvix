@@ -375,7 +375,8 @@ preFunctionDef f = do
             _identifierBuiltin = f ^. Internal.funDefBuiltin,
             _identifierPragmas =
               adjustPragmas' implArgs (f ^. Internal.funDefPragmas),
-            _identifierArgNames = argnames
+            _identifierArgNames = argnames,
+            _identifierFFI = []
           }
   case f ^. Internal.funDefBuiltin of
     Just b
@@ -1244,6 +1245,7 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
                 _identifierBuiltin = Nothing,
                 _identifierPragmas = a ^. Internal.axiomPragmas,
                 _identifierArgNames = [],
+                _identifierFFI = [],
                 _identifierName
               }
       registerIdent (mkIdentIndex name) info

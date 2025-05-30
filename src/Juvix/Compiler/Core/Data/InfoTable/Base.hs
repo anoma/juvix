@@ -128,7 +128,8 @@ instance Semigroup (InfoTable' n) where
         _infoSpecialisations = t1 ^. infoSpecialisations <> t2 ^. infoSpecialisations,
         _infoLiteralIntToNat = (t1 ^. infoLiteralIntToNat) <|> (t2 ^. infoLiteralIntToNat),
         _infoLiteralIntToInt = (t1 ^. infoLiteralIntToInt) <|> (t2 ^. infoLiteralIntToInt),
-        _infoBuiltins = t1 ^. infoBuiltins <> t2 ^. infoBuiltins
+        _infoBuiltins = t1 ^. infoBuiltins <> t2 ^. infoBuiltins,
+        _infoExterns = t1 ^. infoExterns <> t2 ^. infoExterns
       }
 
 instance Monoid (InfoTable' n) where
@@ -143,5 +144,6 @@ instance Monoid (InfoTable' n) where
         _infoSpecialisations = mempty,
         _infoLiteralIntToNat = Nothing,
         _infoLiteralIntToInt = Nothing,
-        _infoBuiltins = mempty
+        _infoBuiltins = mempty,
+        _infoExterns = mempty
       }

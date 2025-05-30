@@ -343,7 +343,8 @@ setupLiteralIntToNat mkNode = do
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing,
                 _identifierPragmas = mempty,
-                _identifierArgNames = [Just "x"]
+                _identifierArgNames = [Just "x"],
+                _identifierFFI = []
               }
 
         targetType :: Sem r Node
@@ -379,7 +380,8 @@ setupLiteralIntToInt node = do
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing,
                 _identifierPragmas = mempty,
-                _identifierArgNames = [Just "x"]
+                _identifierArgNames = [Just "x"],
+                _identifierFFI = []
               }
 
         targetType :: Sem r Node

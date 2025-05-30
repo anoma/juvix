@@ -189,7 +189,8 @@ convertNode = dmapLRM go
                                         _identifierBuiltin = Nothing,
                                         _identifierPragmas = pragmas,
                                         _identifierArgNames =
-                                          removeSpecargs specargs (ii ^. identifierArgNames)
+                                          removeSpecargs specargs (ii ^. identifierArgNames),
+                                        _identifierFFI = []
                                       }
                                   registerIdentNode sym' (reLambdas lams' body')
                                   let si =

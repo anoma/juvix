@@ -77,7 +77,8 @@ lambdaLiftNode aboveBl top =
                     _identifierIsExported = False,
                     _identifierBuiltin = Nothing,
                     _identifierPragmas = adjustPragmas freeVarsNum (getInfoPragma (l ^. lambdaInfo)),
-                    _identifierArgNames = []
+                    _identifierArgNames = [],
+                    _identifierFFI = []
                   }
               registerIdentNode f fBody'
               let fApp = mkApps' (mkIdent (setInfoName name mempty) f) (map NVar allfreevars)
@@ -160,7 +161,8 @@ lambdaLiftNode aboveBl top =
                             _identifierIsExported = False,
                             _identifierBuiltin = Nothing,
                             _identifierPragmas = adjustPragmas freeVarsNum pragma,
-                            _identifierArgNames = []
+                            _identifierArgNames = [],
+                            _identifierFFI = []
                           }
                     | (((sym, name), (itemBinder, (b, bty))), pragma) <-
                         zip

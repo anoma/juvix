@@ -16,6 +16,7 @@ toCore InfoTable {..} =
       _infoInductives = fmap goInductiveInfo _infoInductives,
       _infoConstructors = fmap goConstructorInfo _infoConstructors,
       _infoSpecialisations = fmap (map goSpecialisationInfo) _infoSpecialisations,
+      _infoExterns = mempty,
       _infoLiteralIntToNat,
       _infoLiteralIntToInt,
       _infoBuiltins
@@ -95,6 +96,7 @@ fromCore Core.InfoTable {..} =
       _infoInductives = fmap goInductiveInfo _infoInductives,
       _infoConstructors = fmap goConstructorInfo _infoConstructors,
       _infoSpecialisations = fmap (map goSpecialisationInfo) _infoSpecialisations,
+      _infoExterns = mempty,
       _infoLiteralIntToNat,
       _infoLiteralIntToInt,
       _infoBuiltins
