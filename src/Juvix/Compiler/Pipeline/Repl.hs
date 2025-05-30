@@ -231,7 +231,8 @@ runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ 
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing,
                 _identifierPragmas = mempty,
-                _identifierArgNames = []
+                _identifierArgNames = [],
+                _identifierFFI = []
               }
       Core.registerIdent name idenInfo
       return sym

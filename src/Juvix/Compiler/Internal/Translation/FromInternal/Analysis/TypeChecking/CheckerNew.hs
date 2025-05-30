@@ -410,6 +410,7 @@ checkFunctionDef FunctionDef {..} = do
           _funDefName,
           _funDefTerminating,
           _funDefIsInstanceCoercion,
+          _funDefExtern,
           _funDefBuiltin,
           _funDefPragmas,
           _funDefDocComment

@@ -66,7 +66,8 @@ setupMainFunction mid tab node =
           _identifierBuiltin = Nothing,
           _identifierIsExported = True,
           _identifierPragmas = mempty,
-          _identifierArgNames = []
+          _identifierArgNames = [],
+          _identifierFFI = []
         }
 
 throwCoreError ::
@@ -172,7 +173,8 @@ statementDef = do
                 _identifierIsExported = False,
                 _identifierBuiltin = Nothing,
                 _identifierPragmas = mempty,
-                _identifierArgNames = []
+                _identifierArgNames = [],
+                _identifierFFI = []
               }
       lift $ registerIdent txt info
       void $ optional (parseDefinition sym ty)

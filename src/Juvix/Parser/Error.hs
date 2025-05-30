@@ -32,6 +32,7 @@ data ParserError
   | ErrExpectedDerivingInstance ExpectedDerivingInstanceError
   | ErrDerivingInstancePatterns DerivingInstancePatternsError
   | ErrYamlParseError YamlParseError
+  | ErrExternNotAllowed ExternNotAllowedError
   | ErrCoercionNotAllowed CoercionNotAllowedError
   | ErrInstanceNotAllowed InstanceNotAllowedError
   | ErrExpectedInstance ExpectedInstanceError
@@ -57,6 +58,7 @@ instance ToGenericError ParserError where
     ErrExpectedDerivingInstance e -> genericError e
     ErrDerivingInstancePatterns e -> genericError e
     ErrYamlParseError e -> genericError e
+    ErrExternNotAllowed e -> genericError e
     ErrCoercionNotAllowed e -> genericError e
     ErrInstanceNotAllowed e -> genericError e
     ErrExpectedInstance e -> genericError e
@@ -129,6 +131,23 @@ instance ToGenericError ExpectedInstanceError where
       GenericError
         { _genericErrorLoc = getLoc e,
           _genericErrorMessage = mkAnsiText ("Expected 'instance'" :: Text),
+          _genericErrorIntervals = [getLoc e]
+        }
+
+newtype ExternNotAllowedError = ExternNotAllowedError
+  { _externNotAllowedErrorLoc :: Interval
+  }
+  deriving stock (Show)
+
+instance HasLoc ExternNotAllowedError where
+  getLoc ExternNotAllowedError {..} = _externNotAllowedErrorLoc
+
+instance ToGenericError ExternNotAllowedError where
+  genericError e =
+    return
+      GenericError
+        { _genericErrorLoc = getLoc e,
+          _genericErrorMessage = mkAnsiText ("'extern' not allowed here" :: Text),
           _genericErrorIntervals = [getLoc e]
         }
 

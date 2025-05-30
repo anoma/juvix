@@ -80,6 +80,7 @@ fromCore' tab =
       BuiltinJsonObject -> True
       BuiltinMkEq -> True
       BuiltinMkOrd -> True
+      BuiltinMkAnomaFFI -> True
       BuiltinOrderingLT -> True
       BuiltinOrderingGT -> True
       BuiltinOrderingEQ -> True
@@ -200,6 +201,7 @@ fromCore' tab =
         BuiltinAnomaComplianceInputs -> True
         BuiltinAnomaShieldedTransaction -> True
         BuiltinNockmaNoun -> True
+        BuiltinAnomaFFI -> True
 
 translateFunctionInfo :: InfoTable -> IdentifierInfo -> Stripped.FunctionInfo
 translateFunctionInfo tab IdentifierInfo {..} =

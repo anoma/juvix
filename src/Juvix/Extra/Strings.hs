@@ -701,6 +701,9 @@ dot = "."
 colon :: (IsString s) => s
 colon = ":"
 
+extern :: (IsString s) => s
+extern = "extern"
+
 terminating :: (IsString s) => s
 terminating = "terminating"
 
@@ -1175,6 +1178,9 @@ cairoEcPoint = "ec_point"
 cairoMkEcPoint :: (IsString s) => s
 cairoMkEcPoint = "mkEcPoint"
 
+anomaFFI :: (IsString s) => s
+anomaFFI = "anoma-ffi"
+
 nockmaNoun :: (IsString s) => s
 nockmaNoun = "nockma-noun"
 
@@ -1219,6 +1225,9 @@ mkEq = "mkEq"
 
 mkOrd :: (IsString s) => s
 mkOrd = "mkOrd"
+
+mkAnomaFFI :: (IsString s) => s
+mkAnomaFFI = "mkAnomaFFI"
 
 rustFn :: (IsString s) => s
 rustFn = "fn"

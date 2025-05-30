@@ -282,6 +282,7 @@ instance Clonable FunctionDef where
             _funDefArgsInfo = defaultSig',
             _funDefTerminating,
             _funDefIsInstanceCoercion,
+            _funDefExtern,
             _funDefBuiltin,
             _funDefPragmas,
             _funDefDocComment

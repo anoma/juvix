@@ -39,6 +39,7 @@ simplestFunctionDef funName funBody =
             _funLhsTerminating = Nothing,
             _funLhsInstance = Nothing,
             _funLhsCoercion = Nothing,
+            _funLhsExtern = Nothing,
             _funLhsIsTop = FunctionNotTop
           }
    in FunctionDef

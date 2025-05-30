@@ -178,6 +178,9 @@ kwPipe = asciiKw Str.pipe
 kwType :: Keyword
 kwType = asciiKw Str.type_
 
+kwExtern :: Keyword
+kwExtern = asciiKw Str.extern
+
 kwTerminating :: Keyword
 kwTerminating = asciiKw Str.terminating
 

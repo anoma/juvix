@@ -135,6 +135,7 @@ data FunctionDef = FunctionDef
     _funDefType :: Expression,
     _funDefBody :: Expression,
     _funDefTerminating :: Bool,
+    _funDefExtern :: Bool,
     _funDefIsInstanceCoercion :: Maybe IsInstanceCoercion,
     _funDefBuiltin :: Maybe BuiltinFunction,
     _funDefArgsInfo :: [ArgInfo],
