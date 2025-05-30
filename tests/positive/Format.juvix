@@ -125,8 +125,8 @@ module Integers;
   neghexadecimal : Int := -0x9076191aaff;
 end;
 
-syntax fixity l1 := binary {assoc := left; below := [pair]};
-syntax fixity r3 := binary {assoc := right; above := [pair]};
+syntax fixity l1 := binary {precedence := _; assoc := left; below := [pair]};
+syntax fixity r3 := binary {precedence := _; assoc := right; above := [pair]};
 syntax fixity l6 := binary {assoc := left; above := [r3]};
 syntax fixity r6 := binary {assoc := right; same := l6};
 syntax fixity l7 := binary {assoc := left; above := [l6]};
@@ -622,6 +622,7 @@ end;
 
 --- Judoc comment 0
 syntax fixity aaa := binary {};
+syntax fixity bbb := binary {precedence := -1};
 
 --- Judoc comment 1
 syntax alias Value := Nat;

@@ -134,6 +134,9 @@ open = "open"
 syntax :: (IsString s) => s
 syntax = "syntax"
 
+precedence :: (IsString s) => s
+precedence = "precedence"
+
 below :: (IsString s) => s
 below = "below"
 

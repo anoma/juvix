@@ -1213,12 +1213,13 @@ checkFixityFields ParsedFixityFields {..} = do
         _fixityFieldsPrecAbove = above',
         _fixityFieldsPrecBelow = below',
         _fixityFieldsAssoc,
+        _fixityFieldsPrecNum,
         _fixityFieldsBraces
       }
 
 checkFixitySyntaxDef ::
   forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, NameIdGen, InfoTableBuilder, Reader InfoTable, Reader MainPackageId, Reader PackageId] r) =>
+  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, NameIdGen, InfoTableBuilder, Reader InfoTable, Reader MainPackageId, Reader PackageId, HighlightBuilder] r) =>
   FixitySyntaxDef 'Parsed ->
   Sem r (FixitySyntaxDef 'Scoped)
 checkFixitySyntaxDef def@FixitySyntaxDef {..} = topBindings $ do
@@ -1247,7 +1248,18 @@ reserveFixitySyntaxDef FixitySyntaxDef {..} =
 
 resolveFixitySyntaxDef ::
   forall r.
-  (Members '[Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, NameIdGen, InfoTableBuilder, Reader InfoTable] r) =>
+  ( Members
+      '[ Error ScoperError,
+         Reader ScopeParameters,
+         State Scope,
+         State ScoperState,
+         NameIdGen,
+         InfoTableBuilder,
+         Reader InfoTable,
+         HighlightBuilder
+       ]
+      r
+  ) =>
   FixitySyntaxDef 'Parsed ->
   Sem r ()
 resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
@@ -1258,23 +1270,17 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
       below = fromMaybe [] (fi' ^. fixityPrecBelow)
       above = fromMaybe [] (fi' ^. fixityPrecAbove)
   fid <- maybe freshNameId getFixityId same
-  below' <- mapM getFixityId below
-  above' <- mapM getFixityId above
-  forM_ above' (`registerPrecedence` fid)
-  forM_ below' (registerPrecedence fid)
-  samePrec <- maybe (return Nothing) (fmap Just . getPrec) same
   belowPrecs <- mapM getPrec below
   abovePrecs <- mapM getPrec above
   let belowPrec :: Integer
-      belowPrec = fromIntegral $ maximum (minInt + 1 : abovePrecs)
+      belowPrec = fromIntegral $ maximum1 (minInt + 1 :| abovePrecs)
       abovePrec :: Integer
-      abovePrec = fromIntegral $ minimum (maxInt - 1 : belowPrecs)
-  when (belowPrec + 1 >= abovePrec) $
-    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
-  when (isJust same && not (null below && null above)) $
-    throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
+      abovePrec = fromIntegral $ minimum1 (maxInt - 1 :| belowPrecs)
+  precNum <- checkSamePrec fi'
+  when (belowPrec + 1 >= abovePrec) throwInconsistent
+  when (isJust same && not (null below && null above)) throwInconsistent
   -- we need Integer to avoid overflow when computing prec
-  let prec = fromMaybe (fromInteger $ (abovePrec + belowPrec) `div` 2) samePrec
+  let prec = fromMaybe (fromInteger $ (abovePrec + belowPrec) `div` 2) precNum
       fx =
         Fixity
           { _fixityId = Just fid,
@@ -1289,6 +1295,7 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
                   Just FI.AssocNone -> OpBinary AssocNone
                 FI.None -> OpNone
           }
+  whenJust (fi ^. fixityPrecNum) (highlightResolvedPrec prec)
   registerFixityDef
     @$> FixityDef
       { _fixityDefSymbol = sym,
@@ -1297,6 +1304,29 @@ resolveFixitySyntaxDef fdef@FixitySyntaxDef {..} = topBindings $ do
       }
   return ()
   where
+    throwInconsistent :: forall r' x. (Members '[Error ScoperError] r') => Sem r' x
+    throwInconsistent = throw (ErrPrecedenceInconsistency (PrecedenceInconsistencyError fdef))
+
+    highlightResolvedPrec ::
+      forall r'.
+      (Members '[HighlightBuilder] r') =>
+      Int ->
+      PrecNum ->
+      Sem r' ()
+    highlightResolvedPrec prec = \case
+      PrecNumExplicit {} -> return ()
+      PrecNumWildcard (Irrelevant w) -> highlightPrec (WithLoc (getLoc w) prec)
+
+    checkSamePrec :: forall r'. (Members '[Error ScoperError, Reader InfoTable, InfoTableBuilder] r') => ParsedFixityInfo 'Scoped -> Sem r' (Maybe Int)
+    checkSamePrec fi = do
+      let same = fi ^. fixityPrecSame
+      msamePrecField :: Maybe Int <- maybe (return Nothing) (fmap Just . getPrec) same
+      let mprecNum :: Maybe Int = fi ^? fixityPrecNum . _Just . _PrecNumExplicit . withLocParam . integerWithBaseValue . to fromIntegral
+      case (msamePrecField, mprecNum) of
+        (Just p1, Just p2) | p1 /= p2 -> throwInconsistent
+        _ -> return ()
+      return (msamePrecField <|> mprecNum)
+
     getFixityDef :: (Members '[InfoTableBuilder, Reader InfoTable] r') => ScopedIden -> Sem r' FixityDef
     getFixityDef = lookupFixity . (^. scopedIdenFinal . S.nameId)
 
@@ -3685,7 +3715,7 @@ checkParsePatternAtom' ::
 checkParsePatternAtom' = localBindings . runReader PatternNamesKindVariables . checkParsePatternAtom
 
 checkSyntaxDef ::
-  (Members '[Reader BindingStrategy, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader MainPackageId, Reader PackageId] r) =>
+  (Members '[Reader BindingStrategy, HighlightBuilder, Error ScoperError, Reader ScopeParameters, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader MainPackageId, Reader PackageId] r) =>
   SyntaxDef 'Parsed ->
   Sem r (SyntaxDef 'Scoped)
 checkSyntaxDef = \case
@@ -3745,48 +3775,6 @@ reserveSyntaxDef = \case
   -- NOTE we don't reserve alias because we don't allow alias to be forward
   -- referenced. This avoids alias cycles.
   SyntaxAlias {} -> return ()
-
--------------------------------------------------------------------------------
--- Check precedences are comparable
--------------------------------------------------------------------------------
-
-checkPrecedences ::
-  forall r.
-  (Members '[Error ScoperError, InfoTableBuilder, Reader InfoTable] r) =>
-  [S.Name] ->
-  Sem r ()
-checkPrecedences opers = do
-  graph <- getPrecedenceGraph
-  let fids = mapMaybe (^. fixityId) $ mapMaybe (^. S.nameFixity) opers
-      deps = createDependencyInfo graph mempty
-  mapM_ (uncurry (checkPath deps)) $
-    [(fid1, fid2) | fid1 <- fids, fid2 <- fids, fid1 /= fid2]
-  where
-    checkPath :: DependencyInfo S.NameId -> S.NameId -> S.NameId -> Sem r ()
-    checkPath deps fid1 fid2 =
-      unless (isPath deps fid1 fid2 || isPath deps fid2 fid1) $
-        throw (ErrIncomparablePrecedences (IncomaprablePrecedences (findOper fid1) (findOper fid2)))
-
-    findOper :: S.NameId -> S.Name
-    findOper fid =
-      fromJust $
-        find
-          (maybe False (\fx -> Just fid == (fx ^. fixityId)) . (^. S.nameFixity))
-          opers
-
-checkExpressionPrecedences :: (Members '[Error ScoperError, InfoTableBuilder, Reader InfoTable] r) => ExpressionAtoms 'Scoped -> Sem r ()
-checkExpressionPrecedences (ExpressionAtoms atoms _) =
-  checkPrecedences opers
-  where
-    opers :: [S.Name]
-    opers = mapMaybe P.getExpressionAtomIden (toList atoms)
-
-checkPatternPrecedences :: (Members '[Error ScoperError, InfoTableBuilder, Reader InfoTable] r) => PatternAtoms 'Scoped -> Sem r ()
-checkPatternPrecedences (PatternAtoms atoms _) =
-  checkPrecedences opers
-  where
-    opers :: [S.Name]
-    opers = mapMaybe P.getPatternAtomIden (toList atoms)
 
 -------------------------------------------------------------------------------
 -- Infix Expression
@@ -3904,7 +3892,6 @@ parseExpressionAtoms ::
   ExpressionAtoms 'Scoped ->
   Sem r Expression
 parseExpressionAtoms a@(ExpressionAtoms atoms _) = do
-  checkExpressionPrecedences a
   case res of
     Left {} ->
       throw
@@ -4309,7 +4296,6 @@ parsePatternAtoms ::
   PatternAtoms 'Scoped ->
   Sem r PatternArg
 parsePatternAtoms atoms = do
-  checkPatternPrecedences atoms
   case run (runError res) of
     Left e -> throw e -- Scoper effect error
     Right Left {} -> throw (ErrInfixPattern (InfixErrorP atoms)) -- Megaparsec error

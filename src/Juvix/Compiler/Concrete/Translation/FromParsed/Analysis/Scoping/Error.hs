@@ -46,7 +46,6 @@ data ScoperError
   | ErrNotAConstructor NotAConstructor
   | ErrMissingArgs MissingArgs
   | ErrPrecedenceInconsistency PrecedenceInconsistencyError
-  | ErrIncomparablePrecedences IncomaprablePrecedences
   | ErrInvalidRangeNumber InvalidRangeNumber
   | ErrWrongDefaultValue WrongDefaultValue
   | ErrUnsupported Unsupported
@@ -94,7 +93,6 @@ instance ToGenericError ScoperError where
     ErrNotAConstructor e -> genericError e
     ErrMissingArgs e -> genericError e
     ErrPrecedenceInconsistency e -> genericError e
-    ErrIncomparablePrecedences e -> genericError e
     ErrInvalidRangeNumber e -> genericError e
     ErrWrongDefaultValue e -> genericError e
     ErrUnsupported e -> genericError e

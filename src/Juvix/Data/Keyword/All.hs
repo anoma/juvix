@@ -154,6 +154,9 @@ kwBinary = asciiKw Str.binary
 kwSame :: Keyword
 kwSame = asciiKw Str.same
 
+kwPrecedence :: Keyword
+kwPrecedence = asciiKw Str.precedence
+
 kwBelow :: Keyword
 kwBelow = asciiKw Str.below
 

@@ -62,6 +62,7 @@ import Juvix.Data.Keyword.All
     kwOperator,
     kwPipe,
     kwPositive,
+    kwPrecedence,
     kwPublic,
     kwRange,
     kwRight,
