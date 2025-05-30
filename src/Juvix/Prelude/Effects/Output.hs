@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-unused-type-patterns #-}
-
 module Juvix.Prelude.Effects.Output where
 
 import Juvix.Prelude.Base.Foundation

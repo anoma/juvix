@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-unused-type-patterns #-}
-
 module Juvix.Formatter where
 
 import Juvix.Compiler.Concrete.Language
