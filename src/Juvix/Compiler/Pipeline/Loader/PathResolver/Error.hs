@@ -59,8 +59,8 @@ instance PrettyCodeAnn DependencyErrorGit where
         <> "The directory"
         <+> code (pretty (d ^. dependencyErrorGitCloneDir))
         <+> "is not a valid git clone."
-          <> line
-          <> "Try running"
+        <> line
+        <> "Try running"
         <+> code "juvix clean --global"
     NoSuchRef ref ->
       prefix
@@ -78,10 +78,10 @@ instance PrettyCodeAnn MissingLockfileDependency where
       <+> code dependencyId
       <+> "is declared in the package's juvix.yaml but is not declared in the lockfile:"
       <+> lockfilePath
-        <> line
-        <> "Try running the following command:"
-        <> line
-        <> code "juvix dependencies update"
+      <> line
+      <> "Try running the following command:"
+      <> line
+      <> code "juvix dependencies update"
     where
       lockfilePath :: Doc CodeAnn
       lockfilePath = pretty (e ^. missingLockfileDependencyPath)
@@ -99,8 +99,8 @@ data PathResolverError
 
 instance ToGenericError PathResolverError where
   genericError e =
-    return $
-      GenericError
+    return
+      $ GenericError
         { _genericErrorLoc = i,
           _genericErrorMessage = mkAnsiText $ ppCodeAnn e,
           _genericErrorIntervals = [i]
@@ -156,14 +156,14 @@ instance PrettyCodeAnn MissingModule where
     "The module"
       <+> importScanPrettyName _missingModule
       <+> "does not exist."
-        <> line
-        <> suggestion
+      <> line
+      <> suggestion
     where
       suggestion :: Doc Ann
       suggestion =
         "It should be in"
           <+> pcode (_missingInfo ^. packageRoot <//> addFileExt FileExtJuvix (importScanToRelPath _missingModule))
-            <> dependenciesSuggestion
+          <> dependenciesSuggestion
 
       dependenciesSuggestion :: Doc Ann
       dependenciesSuggestion
@@ -186,8 +186,8 @@ instance PrettyCodeAnn PackageInvalidImport where
     "The module"
       <+> pcode _packageInvalidImport
       <+> "cannot be imported by the Package file."
-        <> line
-        <> "Package files may only import modules from the Juvix standard library, Juvix.Builtin modules, or from the PackageDescription module."
+      <> line
+      <> "Package files may only import modules from the Juvix standard library, Juvix.Builtin modules, or from the PackageDescription module."
 
 data PackageNameConflict = PackageNameConflict
   { _packageNameConflictPackage :: PackageInfo,
@@ -204,13 +204,13 @@ instance PrettyCodeAnn PackageNameConflict where
     "The package"
       <+> important (pretty pkgName)
       <+> "is used with different versions:"
-        <> line
-        <> itemize
-          [ "version"
-              <+> (important . pretty . prettySemVer $ ver)
-                <> line
-                <> indent' (itemize ["at" <+> important (pretty p) | p <- toList paths])
-            | (ver, paths) <- toList _packageNameConflictVersions
-          ]
+      <> line
+      <> itemize
+        [ "version"
+            <+> (important . pretty . prettySemVer $ ver)
+            <> line
+            <> indent' (itemize ["at" <+> important (pretty p) | p <- toList paths])
+        | (ver, paths) <- toList _packageNameConflictVersions
+        ]
     where
       pkgName = _packageNameConflictPackage ^. packageInfoPackageId . packageIdName

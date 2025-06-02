@@ -179,10 +179,10 @@ hEval hout md = eval' [] mempty
               fi = lookupFunInfo md sym
               vs' = vs0 ++ vs
            in if
-                  | length vs' == fi ^. functionArgsNum ->
-                      eval' vs' mempty (fi ^. functionCode)
-                  | otherwise ->
-                      evalError "wrong number of arguments"
+                | length vs' == fi ^. functionArgsNum ->
+                    eval' vs' mempty (fi ^. functionCode)
+                | otherwise ->
+                    evalError "wrong number of arguments"
 
         doCallClosure :: Node -> [Node] -> Value
         doCallClosure cl cargs = case eval' args temps cl of

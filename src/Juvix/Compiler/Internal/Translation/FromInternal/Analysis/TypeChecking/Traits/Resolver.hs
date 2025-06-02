@@ -63,9 +63,9 @@ subsumingInstances ::
   Sem r [(InstanceInfo)]
 subsumingInstances tab InstanceInfo {..} = do
   is <- lookupInstance' [] mempty tab _instanceInfoInductive (map makeRigidParam _instanceInfoParams)
-  return $
-    map snd3 $
-      filter (\(_, x, _) -> x ^. instanceInfoResult /= _instanceInfoResult) is
+  return
+    $ map snd3
+    $ filter (\(_, x, _) -> x ^. instanceInfoResult /= _instanceInfoResult) is
 
 -------------------------------------------------------------------------------------
 -- Local functions
@@ -79,8 +79,8 @@ substitutionI subs p = case p of
     args <- mapM (substitutionI subs) _instanceAppArgs
     subs' <- subsIToE subs
     e <- substitutionE subs' _instanceAppExpression
-    return $
-      InstanceParamApp
+    return
+      $ InstanceParamApp
         InstanceApp
           { _instanceAppHead,
             _instanceAppArgs = args,
@@ -91,8 +91,8 @@ substitutionI subs p = case p of
     r <- substitutionI subs _instanceFunRight
     subs' <- subsIToE subs
     e <- substitutionE subs' _instanceFunExpression
-    return $
-      InstanceParamFun
+    return
+      $ InstanceParamFun
         InstanceFun
           { _instanceFunLeft = l,
             _instanceFunRight = r,
@@ -148,8 +148,8 @@ applyCoercion ::
 applyCoercion loc (CoercionInfo {..}, subs) e = do
   subs' <- subsIToE subs
   e' <- expandArity' loc subs' _coercionInfoArgs _coercionInfoResult
-  return $
-    ExpressionApplication (Application e' e ImplicitInstance)
+  return
+    $ ExpressionApplication (Application e' e ImplicitInstance)
 
 expandArity' ::
   (Members '[Error TypeCheckerError, NameIdGen] r) =>
@@ -174,16 +174,16 @@ expandArity loc subs params e = case params of
   fp@FunctionParameter {..} : params' -> do
     (appr, appi) <-
       if
-          | Just (Just t) <- flip HashMap.lookup subs <$> _paramName ->
-              return (t, _paramImplicit)
-          | _paramImplicit == Implicit -> do
-              h <- newHole
-              return (ExpressionHole h, Implicit)
-          | _paramImplicit == ImplicitInstance -> do
-              h <- newInstanceHole
-              return (ExpressionInstanceHole h, ImplicitInstance)
-          | otherwise ->
-              throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
+        | Just (Just t) <- flip HashMap.lookup subs <$> _paramName ->
+            return (t, _paramImplicit)
+        | _paramImplicit == Implicit -> do
+            h <- newHole
+            return (ExpressionHole h, Implicit)
+        | _paramImplicit == ImplicitInstance -> do
+            h <- newInstanceHole
+            return (ExpressionInstanceHole h, ImplicitInstance)
+        | otherwise ->
+            throw (ErrExplicitInstanceArgument (ExplicitInstanceArgument fp))
     expandArity loc subs params' (ExpressionApplication (Application e appr appi))
   where
     newInstanceHole :: (Member NameIdGen r) => Sem r InstanceHole
@@ -215,8 +215,8 @@ lookupInstance' visited ctab tab name params
     matchInstance ii@InstanceInfo {..} = runFail $ do
       failUnless (length params == length _instanceInfoParams)
       (si, b) <-
-        runState mempty $
-          andM (zipWithExact (goMatch True) _instanceInfoParams params)
+        runState mempty
+          $ andM (zipWithExact (goMatch True) _instanceInfoParams params)
       failUnless b
       return ([], ii, si)
 
@@ -224,8 +224,9 @@ lookupInstance' visited ctab tab name params
     matchCoercion ci@CoercionInfo {..} = runFail $ do
       failUnless (length params == length _coercionInfoParams)
       (si, b) <-
-        runState mempty $
-          and <$> sequence (zipWithExact (goMatch True) _coercionInfoParams params)
+        runState mempty
+          $ and
+          <$> sequence (zipWithExact (goMatch True) _coercionInfoParams params)
       failUnless b
       let name' = _coercionInfoTarget ^. instanceAppHead . instanceAppHeadName
       args' <- mapM (substitutionI si) (_coercionInfoTarget ^. instanceAppArgs)

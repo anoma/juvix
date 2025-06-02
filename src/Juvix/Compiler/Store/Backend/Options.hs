@@ -33,5 +33,5 @@ getOptionsSubdir midTarget opts =
   where
     subdir1 =
       if
-          | opts ^. optionsInfo . Store.optionsDebug -> $(mkRelDir "debug")
-          | otherwise -> $(mkRelDir "release")
+        | opts ^. optionsInfo . Store.optionsDebug -> $(mkRelDir "debug")
+        | otherwise -> $(mkRelDir "release")

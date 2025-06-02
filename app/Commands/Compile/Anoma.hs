@@ -18,13 +18,13 @@ runCommand opts@AnomaOptions {..} = do
   copts' <- fromCompileCommonOptionsMain _anomaCompileCommonOptions
   let opts' = AnomaOptions {_anomaCompileCommonOptions = copts', ..}
   if
-      | _anomaModular -> do
-          (mid, mtab) <- runPipelineModular opts' (Just (copts' ^. compileInputFile)) Nothing modularCoreToAnoma
-          outputAnomaModuleTable opts (copts' ^. compileDebug) nockmaFile mid mtab
-      | otherwise -> do
-          r <- runError @JuvixError $ runPipeline opts' (_anomaCompileCommonOptions ^. compileInputFile) upToAnoma
-          res <- getRight r
-          outputAnomaModule opts (copts' ^. compileDebug) nockmaFile res
+    | _anomaModular -> do
+        (mid, mtab) <- runPipelineModular opts' (Just (copts' ^. compileInputFile)) Nothing modularCoreToAnoma
+        outputAnomaModuleTable opts (copts' ^. compileDebug) nockmaFile mid mtab
+    | otherwise -> do
+        r <- runError @JuvixError $ runPipeline opts' (_anomaCompileCommonOptions ^. compileInputFile) upToAnoma
+        res <- getRight r
+        outputAnomaModule opts (copts' ^. compileDebug) nockmaFile res
 
 outputAnomaModule :: (Members '[EmbedIO, App, Files] r) => AnomaOptions i -> Bool -> Path Abs File -> Nockma.Module -> Sem r ()
 outputAnomaModule opts debugOutput nockmaFile Nockma.Module {..} = do
@@ -46,7 +46,8 @@ outputAnomaModuleTable opts debugOutput nockmaFile mid mtab = do
       modulesJammed =
         map Nockma.getModuleJammedCode
           . HashMap.elems
-          $ mtab ^. Nockma.moduleTable
+          $ mtab
+          ^. Nockma.moduleTable
       modulesTerms = map (Nockma.TermAtom . Encoding.byteStringToAtom') modulesJammed
       modules = Nockma.makeList modulesTerms
   writeFileBS storageNockmaFile (Encoding.jamToByteString modules)

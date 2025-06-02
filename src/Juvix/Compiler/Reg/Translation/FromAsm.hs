@@ -162,8 +162,8 @@ fromAsmInstr funInfo md si Asm.CmdInstr {..} =
       Asm.Ref mv -> case mv of
         Asm.DRef dref -> VRef $ mkVar dref
         Asm.ConstrRef Asm.Field {..} ->
-          CRef $
-            ConstrField
+          CRef
+            $ ConstrField
               { _constrFieldTag = _fieldTag,
                 _constrFieldRef = mkVar _fieldRef,
                 _constrFieldIndex = _fieldOffset,
@@ -179,16 +179,16 @@ fromAsmInstr funInfo md si Asm.CmdInstr {..} =
 
     mkPrealloc :: Asm.InstrPrealloc -> Instruction
     mkPrealloc Asm.InstrPrealloc {..} =
-      Prealloc $
-        InstrPrealloc
+      Prealloc
+        $ InstrPrealloc
           { _instrPreallocWordsNum = _preallocWordsNum,
             _instrPreallocLiveVars = liveVars 0
           }
 
     mkAlloc :: Tag -> Instruction
     mkAlloc tag =
-      Alloc $
-        InstrAlloc
+      Alloc
+        $ InstrAlloc
           { _instrAllocTag = tag,
             _instrAllocResult = mkVarRef VarGroupLocal (ntmps + m),
             _instrAllocArgs = getArgs' 0 (ci ^. Asm.constructorArgsNum),
@@ -200,8 +200,8 @@ fromAsmInstr funInfo md si Asm.CmdInstr {..} =
 
     mkAllocClosure :: Asm.InstrAllocClosure -> Instruction
     mkAllocClosure Asm.InstrAllocClosure {..} =
-      AllocClosure $
-        InstrAllocClosure
+      AllocClosure
+        $ InstrAllocClosure
           { _instrAllocClosureSymbol = fi ^. Asm.functionSymbol,
             _instrAllocClosureResult = mkVarRef VarGroupLocal (ntmps + m),
             _instrAllocClosureExpectedArgsNum = fi ^. Asm.functionArgsNum,
@@ -213,8 +213,8 @@ fromAsmInstr funInfo md si Asm.CmdInstr {..} =
 
     mkExtendClosure :: Asm.InstrExtendClosure -> Instruction
     mkExtendClosure Asm.InstrExtendClosure {..} =
-      ExtendClosure $
-        InstrExtendClosure
+      ExtendClosure
+        $ InstrExtendClosure
           { _instrExtendClosureResult = mkVarRef VarGroupLocal (ntmps + m),
             _instrExtendClosureValue = mkVarRef VarGroupLocal (ntmps + n),
             _instrExtendClosureArgs = getArgs' 1 _extendClosureArgsNum
@@ -225,16 +225,16 @@ fromAsmInstr funInfo md si Asm.CmdInstr {..} =
     mkCall :: Bool -> Asm.InstrCall -> Instruction
     mkCall isTail Asm.InstrCall {..}
       | not isTail =
-          Call $
-            InstrCall
+          Call
+            $ InstrCall
               { _instrCallResult = mkVarRef VarGroupLocal (ntmps + m),
                 _instrCallType = ct,
                 _instrCallArgs = getArgs' s _callArgsNum,
                 _instrCallLiveVars = liveVars (_callArgsNum + s)
               }
       | otherwise =
-          TailCall $
-            InstrTailCall
+          TailCall
+            $ InstrTailCall
               { _instrTailCallType = ct,
                 _instrTailCallArgs = getArgs' s _callArgsNum
               }
@@ -250,16 +250,16 @@ fromAsmInstr funInfo md si Asm.CmdInstr {..} =
     mkCallClosures :: Bool -> Asm.InstrCallClosures -> Instruction
     mkCallClosures isTail Asm.InstrCallClosures {..}
       | not isTail =
-          CallClosures $
-            InstrCallClosures
+          CallClosures
+            $ InstrCallClosures
               { _instrCallClosuresResult = mkVarRef VarGroupLocal (ntmps + m),
                 _instrCallClosuresValue = mkVarRef VarGroupLocal (ntmps + n),
                 _instrCallClosuresArgs = getArgs' 1 _callClosuresArgsNum,
                 _instrCallClosuresLiveVars = liveVars (_callClosuresArgsNum + 1)
               }
       | otherwise =
-          TailCallClosures $
-            InstrTailCallClosures
+          TailCallClosures
+            $ InstrTailCallClosures
               { _instrTailCallClosuresValue = mkVarRef VarGroupLocal (ntmps + n),
                 _instrTailCallClosuresArgs = getArgs' 1 _callClosuresArgsNum
               }
@@ -276,14 +276,14 @@ fromAsmBranch ::
   Code ->
   Sem r Instruction
 fromAsmBranch fi isTail si Asm.CmdBranch {} codeTrue codeFalse =
-  return $
-    Branch $
-      InstrBranch
-        { _instrBranchValue = VRef $ mkVarRef VarGroupLocal topIdx,
-          _instrBranchTrue = codeTrue,
-          _instrBranchFalse = codeFalse,
-          _instrBranchOutVar = if isTail then Nothing else Just $ mkVarRef VarGroupLocal topIdx
-        }
+  return
+    $ Branch
+    $ InstrBranch
+      { _instrBranchValue = VRef $ mkVarRef VarGroupLocal topIdx,
+        _instrBranchTrue = codeTrue,
+        _instrBranchFalse = codeFalse,
+        _instrBranchOutVar = if isTail then Nothing else Just $ mkVarRef VarGroupLocal topIdx
+      }
   where
     topIdx :: Int
     topIdx = fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1
@@ -298,29 +298,29 @@ fromAsmCase ::
   Maybe Code ->
   Sem r Instruction
 fromAsmCase fi md isTail si Asm.CmdCase {..} brs def =
-  return $
-    Case $
-      InstrCase
-        { _instrCaseValue = VRef $ mkVarRef VarGroupLocal topIdx,
-          _instrCaseInductive = _cmdCaseInductive,
-          _instrCaseIndRep = ii ^. Asm.inductiveRepresentation,
-          _instrCaseBranches =
-            zipWithExact
-              ( \br code ->
-                  let tag = br ^. Asm.caseBranchTag
-                      ci = lookupConstrInfo md tag
-                   in CaseBranch
-                        { _caseBranchTag = tag,
-                          _caseBranchMemRep = ci ^. Asm.constructorRepresentation,
-                          _caseBranchArgsNum = ci ^. Asm.constructorArgsNum,
-                          _caseBranchCode = code
-                        }
-              )
-              _cmdCaseBranches
-              brs,
-          _instrCaseDefault = def,
-          _instrCaseOutVar = if isTail then Nothing else Just $ mkVarRef VarGroupLocal topIdx
-        }
+  return
+    $ Case
+    $ InstrCase
+      { _instrCaseValue = VRef $ mkVarRef VarGroupLocal topIdx,
+        _instrCaseInductive = _cmdCaseInductive,
+        _instrCaseIndRep = ii ^. Asm.inductiveRepresentation,
+        _instrCaseBranches =
+          zipWithExact
+            ( \br code ->
+                let tag = br ^. Asm.caseBranchTag
+                    ci = lookupConstrInfo md tag
+                 in CaseBranch
+                      { _caseBranchTag = tag,
+                        _caseBranchMemRep = ci ^. Asm.constructorRepresentation,
+                        _caseBranchArgsNum = ci ^. Asm.constructorArgsNum,
+                        _caseBranchCode = code
+                      }
+            )
+            _cmdCaseBranches
+            brs,
+        _instrCaseDefault = def,
+        _instrCaseOutVar = if isTail then Nothing else Just $ mkVarRef VarGroupLocal topIdx
+      }
   where
     topIdx = fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1
     ii = lookupInductiveInfo md _cmdCaseInductive
@@ -332,14 +332,14 @@ fromAsmSave ::
   Code ->
   Sem r Instruction
 fromAsmSave fi si Asm.CmdSave {..} block =
-  return $
-    Block $
-      InstrBlock
-        { _instrBlockCode =
-            Assign
-              ( InstrAssign
-                  (VarRef VarGroupLocal (si ^. Asm.stackInfoTempStackHeight) _cmdSaveName)
-                  (VRef $ mkVarRef VarGroupLocal (fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1))
-              )
-              : block
-        }
+  return
+    $ Block
+    $ InstrBlock
+      { _instrBlockCode =
+          Assign
+            ( InstrAssign
+                (VarRef VarGroupLocal (si ^. Asm.stackInfoTempStackHeight) _cmdSaveName)
+                (VRef $ mkVarRef VarGroupLocal (fromJust (fi ^. Asm.functionExtra) ^. Asm.functionMaxTempStackHeight + si ^. Asm.stackInfoValueStackHeight - 1))
+            )
+            : block
+      }

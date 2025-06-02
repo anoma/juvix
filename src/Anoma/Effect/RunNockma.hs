@@ -74,9 +74,9 @@ runNockma i = do
       throw
         . SimpleError
         $ mkAnsiText @Text "runNockma failed:\n"
-          <> mkAnsiText (err ^. errorError)
-          <> "\n\nTraces:\n"
-          <> mkAnsiText (Text.unlines (map Nockma.ppTrace traces))
+        <> mkAnsiText (err ^. errorError)
+        <> "\n\nTraces:\n"
+        <> mkAnsiText (Text.unlines (map Nockma.ppTrace traces))
   where
     prepareArgument :: RunNockmaArg -> Text
     prepareArgument =

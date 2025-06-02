@@ -28,7 +28,8 @@ convertNode isFoldable md = rmapL go
       NLet Let {..}
         | not (Info.isVolatile _letInfo)
             && ( isImmediate md (_letItem ^. letItemValue)
-                   || Info.freeVarOccurrences 0 _letBody <= 1
+                   || Info.freeVarOccurrences 0 _letBody
+                   <= 1
                    || isFoldable md bl (_letItem ^. letItemValue)
                )
             && not (Info.hasDebugOps _letBody) ->

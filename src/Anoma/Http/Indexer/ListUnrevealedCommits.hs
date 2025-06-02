@@ -7,8 +7,9 @@ import Juvix.Prelude.Aeson as Aeson
 
 listUnrevealedCommitsUrl :: EndpointUrl
 listUnrevealedCommitsUrl =
-  mkEndpointUrl $
-    "indexer" :| ["unrevealed-commits"]
+  mkEndpointUrl
+    $ "indexer"
+    :| ["unrevealed-commits"]
 
 newtype Response = Response
   {_responseCommits :: [Text]}

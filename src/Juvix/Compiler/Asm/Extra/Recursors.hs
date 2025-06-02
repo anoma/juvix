@@ -52,9 +52,9 @@ recurse' sig = go True
     goNextCmd :: Bool -> Maybe Location -> Sem r (Memory, a) -> Code -> Sem r (Memory, [a])
     goNextCmd isTail loc mp t = do
       (mem', r) <- mp
-      when (isTail && null t && length (mem' ^. memoryValueStack) /= 1) $
-        throw $
-          AsmError loc "expected value stack height 1 on function exit"
+      when (isTail && null t && length (mem' ^. memoryValueStack) /= 1)
+        $ throw
+        $ AsmError loc "expected value stack height 1 on function exit"
       (mem'', rs) <- go isTail mem' t
       return (mem'', r : rs)
 
@@ -88,9 +88,9 @@ recurse' sig = go True
               ty <- getValueType' loc (sig ^. recursorModule) mem val
               return (pushValueStack ty mem)
             Pop -> do
-              when (null (mem ^. memoryValueStack)) $
-                throw $
-                  AsmError loc "popping empty value stack"
+              when (null (mem ^. memoryValueStack))
+                $ throw
+                $ AsmError loc "popping empty value stack"
               return (popValueStack 1 mem)
             Assert ->
               return mem
@@ -112,16 +112,16 @@ recurse' sig = go True
                   (\ty idx -> unifyTypes'' loc (sig ^. recursorModule) ty (topValueStack' idx mem))
                   tyargs
                   [0 ..]
-              return $
-                pushValueStack (mkTypeConstr (ci ^. constructorInductive) tag tys) $
-                  popValueStack n mem
+              return
+                $ pushValueStack (mkTypeConstr (ci ^. constructorInductive) tag tys)
+                $ popValueStack n mem
             AllocClosure InstrAllocClosure {..} -> do
               let fi = lookupFunInfo (sig ^. recursorModule) _allocClosureFunSymbol
                   (tyargs, tgt) = unfoldType (fi ^. functionType)
               checkValueStack' loc (sig ^. recursorModule) (take _allocClosureArgsNum tyargs) mem
-              return $
-                pushValueStack (mkTypeFun (drop _allocClosureArgsNum tyargs) tgt) $
-                  popValueStack _allocClosureArgsNum mem
+              return
+                $ pushValueStack (mkTypeFun (drop _allocClosureArgsNum tyargs) tgt)
+                $ popValueStack _allocClosureArgsNum mem
             ExtendClosure x ->
               fixMemExtendClosure mem x
             Call x ->
@@ -182,9 +182,9 @@ recurse' sig = go True
           OpStrToInt ->
             checkUnop TyString mkTypeInteger
           OpArgsNum -> do
-            when (null (mem ^. memoryValueStack)) $
-              throw $
-                AsmError loc "empty value stack"
+            when (null (mem ^. memoryValueStack))
+              $ throw
+              $ AsmError loc "empty value stack"
             checkFunType (topValueStack' 0 mem)
             return $ pushValueStack mkTypeInteger (popValueStack 1 mem)
           OpIntToField ->
@@ -207,70 +207,70 @@ recurse' sig = go True
 
         fixMemExtendClosure :: Memory -> InstrExtendClosure -> Sem r Memory
         fixMemExtendClosure mem InstrExtendClosure {..} = do
-          when (length (mem ^. memoryValueStack) < _extendClosureArgsNum + 1) $
-            throw $
-              AsmError loc "invalid closure extension: not enough values on the stack"
+          when (length (mem ^. memoryValueStack) < _extendClosureArgsNum + 1)
+            $ throw
+            $ AsmError loc "invalid closure extension: not enough values on the stack"
           let ty = topValueStack' 0 mem
           checkFunType ty
-          when (ty /= TyDynamic && length (typeArgs ty) < _extendClosureArgsNum) $
-            throw $
-              AsmError loc "invalid closure extension: too many supplied arguments"
+          when (ty /= TyDynamic && length (typeArgs ty) < _extendClosureArgsNum)
+            $ throw
+            $ AsmError loc "invalid closure extension: too many supplied arguments"
           fixMemValueStackArgs mem 1 _extendClosureArgsNum ty
 
         fixMemCall :: Memory -> InstrCall -> Sem r Memory
         fixMemCall mem InstrCall {..} = do
           let k = if _callType == CallClosure then 1 else 0
-          when (length (mem ^. memoryValueStack) < _callArgsNum + k) $
-            throw $
-              AsmError loc "invalid call: not enough values on the stack"
+          when (length (mem ^. memoryValueStack) < _callArgsNum + k)
+            $ throw
+            $ AsmError loc "invalid call: not enough values on the stack"
           let ty = case _callType of
                 CallClosure -> topValueStack' 0 mem
                 CallFun sym -> lookupFunInfo (sig ^. recursorModule) sym ^. functionType
           let argsNum = case _callType of
                 CallClosure -> length (typeArgs ty)
                 CallFun sym -> lookupFunInfo (sig ^. recursorModule) sym ^. functionArgsNum
-          when (argsNum /= 0) $
-            checkFunType ty
-          when (ty /= TyDynamic && argsNum /= _callArgsNum) $
-            throw $
-              AsmError loc "invalid call: the number of supplied arguments doesn't match the number of expected arguments"
+          when (argsNum /= 0)
+            $ checkFunType ty
+          when (ty /= TyDynamic && argsNum /= _callArgsNum)
+            $ throw
+            $ AsmError loc "invalid call: the number of supplied arguments doesn't match the number of expected arguments"
           fixMemValueStackArgs mem k _callArgsNum ty
 
         fixMemCallClosures :: Memory -> InstrCallClosures -> Sem r Memory
         fixMemCallClosures mem InstrCallClosures {..} = do
-          when (_callClosuresArgsNum < 1) $
-            throw $
-              AsmError loc "invalid closure call: expected at least one supplied argument"
-          when (null (mem ^. memoryValueStack)) $
-            throw $
-              AsmError loc "invalid closure call: value stack is empty"
+          when (_callClosuresArgsNum < 1)
+            $ throw
+            $ AsmError loc "invalid closure call: expected at least one supplied argument"
+          when (null (mem ^. memoryValueStack))
+            $ throw
+            $ AsmError loc "invalid closure call: value stack is empty"
           let ty = topValueStack' 0 mem
           checkFunType ty
           if
-              | ty == TyDynamic -> do
-                  let mem' = popValueStack 1 mem
-                  return $ pushValueStack TyDynamic (popValueStack _callClosuresArgsNum mem')
-              | length (typeArgs ty) < _callClosuresArgsNum -> do
-                  let n = length (typeArgs ty)
-                  mem' <- fixMemCall mem (InstrCall CallClosure n)
-                  fixMemCallClosures mem' (InstrCallClosures (_callClosuresArgsNum - n))
-              | length (typeArgs ty) > _callClosuresArgsNum ->
-                  fixMemExtendClosure mem (InstrExtendClosure _callClosuresArgsNum)
-              | otherwise ->
-                  fixMemCall mem (InstrCall CallClosure (length (typeArgs ty)))
+            | ty == TyDynamic -> do
+                let mem' = popValueStack 1 mem
+                return $ pushValueStack TyDynamic (popValueStack _callClosuresArgsNum mem')
+            | length (typeArgs ty) < _callClosuresArgsNum -> do
+                let n = length (typeArgs ty)
+                mem' <- fixMemCall mem (InstrCall CallClosure n)
+                fixMemCallClosures mem' (InstrCallClosures (_callClosuresArgsNum - n))
+            | length (typeArgs ty) > _callClosuresArgsNum ->
+                fixMemExtendClosure mem (InstrExtendClosure _callClosuresArgsNum)
+            | otherwise ->
+                fixMemCall mem (InstrCall CallClosure (length (typeArgs ty)))
 
         fixMemValueStackArgs :: Memory -> Int -> Int -> Type -> Sem r Memory
         fixMemValueStackArgs mem k argsNum ty = do
           checkValueStackHeight' loc (argsNum + k) mem
           let mem' = popValueStack k mem
-          unless (ty == TyDynamic) $
-            checkValueStack' loc (sig ^. recursorModule) (take argsNum (typeArgs ty)) mem'
+          unless (ty == TyDynamic)
+            $ checkValueStack' loc (sig ^. recursorModule) (take argsNum (typeArgs ty)) mem'
           let tyargs = topValuesFromValueStack' argsNum mem'
           -- `typeArgs ty` may be shorter than `tyargs` only if `ty` is dynamic
           zipWithM_ (unifyTypes'' loc (sig ^. recursorModule)) tyargs (typeArgs ty)
-          return $
-            pushValueStack (mkTypeFun (drop argsNum (typeArgs ty)) (typeTarget ty)) $
-              popValueStack argsNum mem'
+          return
+            $ pushValueStack (mkTypeFun (drop argsNum (typeArgs ty)) (typeTarget ty))
+            $ popValueStack argsNum mem'
 
         dropTempStack :: Memory -> Memory
         dropTempStack mem = mem {_memoryTempStack = Stack.empty}
@@ -280,8 +280,8 @@ recurse' sig = go True
           TyDynamic -> return ()
           TyFun {} -> return ()
           ty ->
-            throw $
-              AsmError
+            throw
+              $ AsmError
                 loc
                 ( "expected a function, got value of type "
                     <> ppTrace (sig ^. recursorModule) ty
@@ -322,33 +322,34 @@ recurse' sig = go True
 
     goSave :: Bool -> Memory -> CmdSave -> Sem r (Memory, a)
     goSave isTail mem cmd@CmdSave {..} = do
-      when (null (mem ^. memoryValueStack)) $
-        throw $
-          AsmError loc "popping empty value stack"
+      when (null (mem ^. memoryValueStack))
+        $ throw
+        $ AsmError loc "popping empty value stack"
       let mem1 = pushTempStack (topValueStack' 0 mem) (popValueStack 1 mem)
       (mem2, a) <- go isTail mem1 _cmdSaveCode
       a' <- (sig ^. recurseSave) mem cmd a
-      when (not isTail && _cmdSaveIsTail) $
-        throw $
-          AsmError loc "'tsave' not in tail position"
-      when (isTail && not _cmdSaveIsTail) $
-        throw $
-          AsmError loc "'save' in tail position"
-      when (not isTail && null (mem2 ^. memoryTempStack)) $
-        throw $
-          AsmError loc "popping empty temporary stack"
+      when (not isTail && _cmdSaveIsTail)
+        $ throw
+        $ AsmError loc "'tsave' not in tail position"
+      when (isTail && not _cmdSaveIsTail)
+        $ throw
+        $ AsmError loc "'save' in tail position"
+      when (not isTail && null (mem2 ^. memoryTempStack))
+        $ throw
+        $ AsmError loc "popping empty temporary stack"
       return (if isTail then mem2 else popTempStack 1 mem2, a')
       where
         loc = _cmdSaveInfo ^. commandInfoLocation
 
     checkBranchInvariant :: Int -> Maybe Location -> Memory -> Memory -> Sem r ()
     checkBranchInvariant k loc mem mem' = do
-      unless (length (mem' ^. memoryValueStack) == length (mem ^. memoryValueStack) + k) $
-        throw $
-          AsmError loc ("wrong value stack height after branching (must increase by " <> show k <> ")")
+      unless (length (mem' ^. memoryValueStack) == length (mem ^. memoryValueStack) + k)
+        $ throw
+        $ AsmError loc ("wrong value stack height after branching (must increase by " <> show k <> ")")
       unless
         ( null (mem' ^. memoryTempStack)
-            || length (mem' ^. memoryTempStack) == length (mem ^. memoryTempStack)
+            || length (mem' ^. memoryTempStack)
+            == length (mem ^. memoryTempStack)
         )
         $ throw
         $ AsmError loc "temporary stack height changed after branching"
@@ -427,14 +428,14 @@ recurseS' sig = go True
             AllocConstr tag -> do
               let ci = lookupConstrInfo (sig ^. recursorModule) tag
                   n = ci ^. constructorArgsNum
-              return $
-                stackInfoPopValueStack (n - 1) si
+              return
+                $ stackInfoPopValueStack (n - 1) si
             AllocClosure InstrAllocClosure {..} -> do
-              return $
-                stackInfoPopValueStack (_allocClosureArgsNum - 1) si
+              return
+                $ stackInfoPopValueStack (_allocClosureArgsNum - 1) si
             ExtendClosure InstrExtendClosure {..} ->
-              return $
-                stackInfoPopValueStack _extendClosureArgsNum si
+              return
+                $ stackInfoPopValueStack _extendClosureArgsNum si
             Call x ->
               fixStackCall si x
             TailCall x ->
@@ -496,9 +497,9 @@ recurseS' sig = go True
 
     checkStackInfo :: Maybe Location -> StackInfo -> StackInfo -> Sem r ()
     checkStackInfo loc si1 si2 =
-      when (si1 /= si2) $
-        throw $
-          AsmError loc "stack height mismatch"
+      when (si1 /= si2)
+        $ throw
+        $ AsmError loc "stack height mismatch"
 
     stackInfoPushValueStack :: Int -> StackInfo -> StackInfo
     stackInfoPushValueStack n si = si {_stackInfoValueStackHeight = si ^. stackInfoValueStackHeight + n}

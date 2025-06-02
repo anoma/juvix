@@ -20,6 +20,9 @@ checkPairConstr a b d@ConstructorDef {..} = do
   let ty = _inductiveConstructorType
   pair_ <- getBuiltinNameScoper (getLoc d) BuiltinPair
   let prty = a --> b --> pair_ @@ a @@ b
-  unless (ty === prty) $
-    builtinsErrorMsg (getLoc d) $
-      ", has the wrong type " <> ppOutDefault ty <> " | " <> ppOutDefault prty
+  unless (ty === prty)
+    $ builtinsErrorMsg (getLoc d)
+    $ ", has the wrong type "
+    <> ppOutDefault ty
+    <> " | "
+    <> ppOutDefault prty

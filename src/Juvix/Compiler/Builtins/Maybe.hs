@@ -22,14 +22,17 @@ checkNothing a d@ConstructorDef {..} = do
   let ty = _inductiveConstructorType
   maybe_ <- getBuiltinNameScoper (getLoc d) BuiltinMaybe
   let nothingty = maybe_ @@ a
-  unless (ty === nothingty) $
-    builtinsErrorMsg (getLoc d) $
-      "nothing has the wrong type " <> ppOutDefault ty <> " | " <> ppOutDefault nothingty
+  unless (ty === nothingty)
+    $ builtinsErrorMsg (getLoc d)
+    $ "nothing has the wrong type "
+    <> ppOutDefault ty
+    <> " | "
+    <> ppOutDefault nothingty
 
 checkJust :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => VarName -> ConstructorDef -> Sem r ()
 checkJust a d@ConstructorDef {..} = do
   let ty = _inductiveConstructorType
   maybe_ <- getBuiltinNameScoper (getLoc d) BuiltinMaybe
   let justty = a --> maybe_ @@ a
-  unless (ty === justty) $
-    builtinsErrorText (getLoc d) "just has the wrong type"
+  unless (ty === justty)
+    $ builtinsErrorText (getLoc d) "just has the wrong type"

@@ -7,21 +7,21 @@ import Juvix.Compiler.Tree.Language.Base
 
 userConstrs :: InfoTable' a e -> [ConstructorInfo]
 userConstrs tab =
-  filter (\ci -> not (isBuiltinTag (ci ^. constructorTag))) $
-    HashMap.elems (tab ^. infoConstrs)
+  filter (\ci -> not (isBuiltinTag (ci ^. constructorTag)))
+    $ HashMap.elems (tab ^. infoConstrs)
 
 computeUIDs :: Limits -> InfoTable' a e -> HashMap Tag Int
 computeUIDs lims tab =
-  HashMap.fromList $
-    zipWith
+  HashMap.fromList
+    $ zipWith
       (\ci uid -> (ci ^. constructorTag, uid))
       (userConstrs tab)
       [lims ^. limitsBuiltinUIDsNum ..]
 
 computeFUIDs :: InfoTable' a e -> HashMap Symbol Int
 computeFUIDs tab =
-  HashMap.fromList $
-    zipWith
+  HashMap.fromList
+    $ zipWith
       (\fi fuid -> (fi ^. functionSymbol, fuid))
       (HashMap.elems (tab ^. infoFunctions))
       [0 ..]

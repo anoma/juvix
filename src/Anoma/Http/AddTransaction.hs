@@ -7,8 +7,9 @@ import Juvix.Prelude.Aeson as Aeson
 
 addTransactionUrl :: EndpointUrl
 addTransactionUrl =
-  mkEndpointUrl $
-    "mempool" :| ["add"]
+  mkEndpointUrl
+    $ "mempool"
+    :| ["add"]
 
 data TransactionType
   = TransactionTransparent

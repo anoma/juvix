@@ -5,5 +5,6 @@ import Juvix.Compiler.Tree.Transformation.Optimize.ConvertUnaryCalls
 
 optimize :: (Member (Reader Options) r) => Module -> Sem r Module
 optimize =
-  withOptimizationLevel 1 $
-    return . convertUnaryCalls
+  withOptimizationLevel 1
+    $ return
+    . convertUnaryCalls

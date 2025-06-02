@@ -50,8 +50,8 @@ getOptionsSubdir opts = subdir1 Path.</> subdir2
   where
     subdir1 =
       if
-          | opts ^. optionsDebug -> $(mkRelDir "debug")
-          | otherwise -> $(mkRelDir "release")
+        | opts ^. optionsDebug -> $(mkRelDir "debug")
+        | otherwise -> $(mkRelDir "release")
     subdir2 =
       case opts ^. optionsPipeline of
         Just PipelineEval -> $(mkRelDir "eval")

@@ -22,13 +22,13 @@ checkNil a d@ConstructorDef {..} = do
   let ty = _inductiveConstructorType
   list_ <- getBuiltinNameScoper (getLoc d) BuiltinList
   let nilty = list_ @@ a
-  unless (ty === nilty) $
-    builtinsErrorMsg (getLoc d) ("nil has the wrong type " <> ppOutDefault ty <> " | " <> ppOutDefault nilty)
+  unless (ty === nilty)
+    $ builtinsErrorMsg (getLoc d) ("nil has the wrong type " <> ppOutDefault ty <> " | " <> ppOutDefault nilty)
 
 checkCons :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => VarName -> ConstructorDef -> Sem r ()
 checkCons a d@ConstructorDef {..} = do
   let ty = _inductiveConstructorType
   list_ <- getBuiltinNameScoper (getLoc d) BuiltinList
   let consty = a --> list_ @@ a --> list_ @@ a
-  unless (ty === consty) $
-    builtinsErrorText (getLoc d) "cons has the wrong type"
+  unless (ty === consty)
+    $ builtinsErrorText (getLoc d) "cons has the wrong type"

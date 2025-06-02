@@ -14,8 +14,8 @@ checkAnomaGet f = do
   keyT <- freshVar l "keyT"
   valueT <- freshVar l "valueT"
   let freeVars = hashSet [keyT, valueT]
-  unless ((ftype ==% (u <>--> u <>--> keyT --> valueT)) freeVars) $
-    builtinsErrorText (getLoc f) "anomaGet must be of type {Value Key : Type} -> Key -> Value"
+  unless ((ftype ==% (u <>--> u <>--> keyT --> valueT)) freeVars)
+    $ builtinsErrorText (getLoc f) "anomaGet must be of type {Value Key : Type} -> Key -> Value"
 
 checkAnomaEncode :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkAnomaEncode f = do
@@ -25,8 +25,8 @@ checkAnomaEncode f = do
   encodeT <- freshVar l "encodeT"
   nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
   let freeVars = hashSet [encodeT]
-  unless ((ftype ==% (u <>--> encodeT --> nat)) freeVars) $
-    builtinsErrorText (getLoc f) "anomaEncode must be of type {A : Type} -> A -> Nat"
+  unless ((ftype ==% (u <>--> encodeT --> nat)) freeVars)
+    $ builtinsErrorText (getLoc f) "anomaEncode must be of type {A : Type} -> A -> Nat"
 
 checkAnomaDecode :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkAnomaDecode f = do
@@ -36,8 +36,8 @@ checkAnomaDecode f = do
   decodeT <- freshVar l "decodeT"
   nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
   let freeVars = HashSet.fromList [decodeT]
-  unless ((ftype ==% (u <>--> nat --> decodeT)) freeVars) $
-    builtinsErrorText (getLoc f) "anomaEncode must be of type {A : Type} -> Nat -> A"
+  unless ((ftype ==% (u <>--> nat --> decodeT)) freeVars)
+    $ builtinsErrorText (getLoc f) "anomaEncode must be of type {A : Type} -> Nat -> A"
 
 checkAnomaVerifyDetached :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkAnomaVerifyDetached f = do
@@ -214,21 +214,21 @@ checkShieldedTransaction d = do
 
 checkDelta :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
 checkDelta d =
-  unless (isSmallUniverse' (d ^. axiomType)) $
-    builtinsErrorText (getLoc d) "AnomaDelta should be in the small universe"
+  unless (isSmallUniverse' (d ^. axiomType))
+    $ builtinsErrorText (getLoc d) "AnomaDelta should be in the small universe"
 
 checkKind :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
 checkKind d =
-  unless (isSmallUniverse' (d ^. axiomType)) $
-    builtinsErrorText (getLoc d) "AnomaDelta should be in the small universe"
+  unless (isSmallUniverse' (d ^. axiomType))
+    $ builtinsErrorText (getLoc d) "AnomaDelta should be in the small universe"
 
 checkResourceCommitment :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkResourceCommitment f = do
   let l = getLoc f
   resource <- getBuiltinNameScoper (getLoc f) BuiltinAnomaResource
   nat_ <- getBuiltinNameScoper l BuiltinNat
-  unless (f ^. axiomType === (resource --> nat_)) $
-    builtinsErrorText (getLoc f) "resourceCommitment must be of type AnomaResource -> Nat"
+  unless (f ^. axiomType === (resource --> nat_))
+    $ builtinsErrorText (getLoc f) "resourceCommitment must be of type AnomaResource -> Nat"
 
 checkResourceNullifier :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkResourceNullifier f = do
@@ -238,32 +238,32 @@ checkResourceNullifier f = do
   nat_ <- getBuiltinNameScoper l BuiltinNat
   nk <- getBuiltinNameScoper l BuiltinAnomaNullifierKey
   let expectedTy = nk --> resource --> nat_
-  unless (f ^. axiomType === expectedTy) $
-    builtinsErrorText l (name <> " must be of type " <> ppPrint expectedTy)
+  unless (f ^. axiomType === expectedTy)
+    $ builtinsErrorText l (name <> " must be of type " <> ppPrint expectedTy)
 
 checkResourceKind :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkResourceKind f = do
   let l = getLoc f
   resource <- getBuiltinNameScoper l BuiltinAnomaResource
   kind <- getBuiltinNameScoper l BuiltinAnomaKind
-  unless (f ^. axiomType === (resource --> kind)) $
-    builtinsErrorText l "resourceNullifier must be of type AnomaResource -> Nat"
+  unless (f ^. axiomType === (resource --> kind))
+    $ builtinsErrorText l "resourceNullifier must be of type AnomaResource -> Nat"
 
 checkResourceDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkResourceDelta f = do
   let l = getLoc f
   resource <- getBuiltinNameScoper l BuiltinAnomaResource
   delta <- getBuiltinNameScoper l BuiltinAnomaDelta
-  unless (f ^. axiomType === (resource --> delta)) $
-    builtinsErrorText l "resourceDelta must be of type AnomaResource -> AnomaDelta"
+  unless (f ^. axiomType === (resource --> delta))
+    $ builtinsErrorText l "resourceDelta must be of type AnomaResource -> AnomaDelta"
 
 checkActionDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkActionDelta f = do
   let l = getLoc f
   action <- getBuiltinNameScoper l BuiltinAnomaAction
   delta <- getBuiltinNameScoper l BuiltinAnomaDelta
-  unless (f ^. axiomType === (action --> delta)) $
-    builtinsErrorText l "actionDelta must be of type AnomaAction -> AnomaDelta"
+  unless (f ^. axiomType === (action --> delta))
+    $ builtinsErrorText l "actionDelta must be of type AnomaAction -> AnomaDelta"
 
 checkActionsDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkActionsDelta f = do
@@ -271,35 +271,35 @@ checkActionsDelta f = do
   action <- getBuiltinNameScoper l BuiltinAnomaAction
   delta <- getBuiltinNameScoper l BuiltinAnomaDelta
   list_ <- getBuiltinNameScoper l BuiltinList
-  unless (f ^. axiomType === (list_ @@ action --> delta)) $
-    builtinsErrorText l "actionsDelta must be of type List AnomaAction -> AnomaDelta"
+  unless (f ^. axiomType === (list_ @@ action --> delta))
+    $ builtinsErrorText l "actionsDelta must be of type List AnomaAction -> AnomaDelta"
 
 checkDeltaBinaryOp :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkDeltaBinaryOp f = do
   let l = getLoc f
   delta <- getBuiltinNameScoper l BuiltinAnomaDelta
-  unless (f ^. axiomType === (delta --> delta --> delta)) $
-    builtinsErrorText l "deltaAdd must be of type AnomaDelta -> AnomaDelta -> AnomaDelta"
+  unless (f ^. axiomType === (delta --> delta --> delta))
+    $ builtinsErrorText l "deltaAdd must be of type AnomaDelta -> AnomaDelta -> AnomaDelta"
 
 checkZeroDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkZeroDelta f = do
   let l = getLoc f
   delta <- getBuiltinNameScoper l BuiltinAnomaDelta
-  unless (f ^. axiomType === delta) $
-    builtinsErrorText (getLoc f) "zeroDelta must be of Delta"
+  unless (f ^. axiomType === delta)
+    $ builtinsErrorText (getLoc f) "zeroDelta must be of Delta"
 
 checkAnomaRandomGenerator :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaRandomGenerator d =
-  unless (isSmallUniverse' (d ^. axiomType)) $
-    builtinsErrorText (getLoc d) "AnomaRandomGenerator should be in the small universe"
+  unless (isSmallUniverse' (d ^. axiomType))
+    $ builtinsErrorText (getLoc d) "AnomaRandomGenerator should be in the small universe"
 
 checkAnomaRandomGeneratorInit :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaRandomGeneratorInit f = do
   let l = getLoc f
   gen <- getBuiltinNameScoper l BuiltinAnomaRandomGenerator
   nat_ <- getBuiltinNameScoper l BuiltinNat
-  unless (f ^. axiomType === (nat_ --> gen)) $
-    builtinsErrorText l "initRandomGenerator must be of type Nat -> AnomaRandomGenerator"
+  unless (f ^. axiomType === (nat_ --> gen))
+    $ builtinsErrorText l "initRandomGenerator must be of type Nat -> AnomaRandomGenerator"
 
 checkNockmaReify :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkNockmaReify f = do
@@ -309,8 +309,8 @@ checkNockmaReify f = do
   reifyTy <- freshVar l "reifyT"
   noun <- getBuiltinNameScoper l BuiltinNockmaNoun
   let freeVars = hashSet [reifyTy]
-  unless ((ftype ==% (u <>--> reifyTy --> noun)) freeVars) $
-    builtinsErrorText (getLoc f) (prettyText BuiltinNockmaReify <> " must be of type {A : Type} -> A -> " <> ppPrint noun)
+  unless ((ftype ==% (u <>--> reifyTy --> noun)) freeVars)
+    $ builtinsErrorText (getLoc f) (prettyText BuiltinNockmaReify <> " must be of type {A : Type} -> A -> " <> ppPrint noun)
 
 checkAnomaRandomNextBytes :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaRandomNextBytes f = do
@@ -319,32 +319,32 @@ checkAnomaRandomNextBytes f = do
   nat_ <- getBuiltinNameScoper l BuiltinNat
   bytearray <- getBuiltinNameScoper l BuiltinByteArray
   pair_ <- getBuiltinNameScoper l BuiltinPair
-  unless (f ^. axiomType === (nat_ --> gen --> (pair_ @@ bytearray @@ gen))) $
-    builtinsErrorText l "nextBytes must be of type Nat -> AnomaRandomGenerator -> Pair ByteArray AnomaRandomGenerator"
+  unless (f ^. axiomType === (nat_ --> gen --> (pair_ @@ bytearray @@ gen)))
+    $ builtinsErrorText l "nextBytes must be of type Nat -> AnomaRandomGenerator -> Pair ByteArray AnomaRandomGenerator"
 
 checkAnomaRandomSplit :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaRandomSplit f = do
   let l = getLoc f
   gen <- getBuiltinNameScoper l BuiltinAnomaRandomGenerator
   pair_ <- getBuiltinNameScoper l BuiltinPair
-  unless (f ^. axiomType === (gen --> pair_ @@ gen @@ gen)) $
-    builtinsErrorText l "randomSplit must be of type AnomaRandomGenerator -> Pair AnomaRandomGenerator AnomaRandomGenerator"
+  unless (f ^. axiomType === (gen --> pair_ @@ gen @@ gen))
+    $ builtinsErrorText l "randomSplit must be of type AnomaRandomGenerator -> Pair AnomaRandomGenerator AnomaRandomGenerator"
 
 checkAnomaIsCommitment :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaIsCommitment f = do
   let l = getLoc f
   nat_ <- getBuiltinNameScoper l BuiltinNat
   bool_ <- getBuiltinNameScoper l BuiltinBool
-  unless (f ^. axiomType === (nat_ --> bool_)) $
-    builtinsErrorText l "isCommitment must be of type Nat -> Bool"
+  unless (f ^. axiomType === (nat_ --> bool_))
+    $ builtinsErrorText l "isCommitment must be of type Nat -> Bool"
 
 checkAnomaIsNullifier :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaIsNullifier f = do
   let l = getLoc f
   nat_ <- getBuiltinNameScoper l BuiltinNat
   bool_ <- getBuiltinNameScoper l BuiltinBool
-  unless (f ^. axiomType === (nat_ --> bool_)) $
-    builtinsErrorText l "isNullifier must be of type Nat -> Bool"
+  unless (f ^. axiomType === (nat_ --> bool_))
+    $ builtinsErrorText l "isNullifier must be of type Nat -> Bool"
 
 checkAnomaActionCreate :: AxiomDef -> Sem r ()
 checkAnomaActionCreate _ = return ()
@@ -353,8 +353,8 @@ checkAnomaTransactionCompose :: (Members '[Reader BuiltinsTable, Error ScoperErr
 checkAnomaTransactionCompose f = do
   let l = getLoc f
   shieldedTransaction <- getBuiltinNameScoper l BuiltinAnomaShieldedTransaction
-  unless (f ^. axiomType === (shieldedTransaction --> shieldedTransaction --> shieldedTransaction)) $
-    builtinsErrorText l "transactionCompose must be of type: ShieldedTransaction -> ShieldedTransaction -> ShieldedTransaction"
+  unless (f ^. axiomType === (shieldedTransaction --> shieldedTransaction --> shieldedTransaction))
+    $ builtinsErrorText l "transactionCompose must be of type: ShieldedTransaction -> ShieldedTransaction -> ShieldedTransaction"
 
 checkAnomaCreateFromComplianceInputs :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaCreateFromComplianceInputs f = do
@@ -363,23 +363,23 @@ checkAnomaCreateFromComplianceInputs f = do
   list_ <- getBuiltinNameScoper l BuiltinList
   byteArray <- getBuiltinNameScoper l BuiltinByteArray
   shieldedTransaction <- getBuiltinNameScoper l BuiltinAnomaShieldedTransaction
-  unless (f ^. axiomType === (list_ @@ json_ --> list_ @@ byteArray --> list_ @@ json_ --> list_ @@ byteArray --> list_ @@ json_ --> shieldedTransaction)) $
-    builtinsErrorText l "createFromComplianceInputs must be of type: List Json -> List ByteArray -> List Json -> List ByteArray -> List Json -> ShieldedTransaction"
+  unless (f ^. axiomType === (list_ @@ json_ --> list_ @@ byteArray --> list_ @@ json_ --> list_ @@ byteArray --> list_ @@ json_ --> shieldedTransaction))
+    $ builtinsErrorText l "createFromComplianceInputs must be of type: List Json -> List ByteArray -> List Json -> List ByteArray -> List Json -> ShieldedTransaction"
 
 checkAnomaProveDelta :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaProveDelta f = do
   let l = getLoc f
   shieldedTransaction <- getBuiltinNameScoper l BuiltinAnomaShieldedTransaction
-  unless (f ^. axiomType === (shieldedTransaction --> shieldedTransaction)) $
-    builtinsErrorText l "proveDelta must be of type: ShieldedTransaction -> ShieldedTransaction"
+  unless (f ^. axiomType === (shieldedTransaction --> shieldedTransaction))
+    $ builtinsErrorText l "proveDelta must be of type: ShieldedTransaction -> ShieldedTransaction"
 
 checkAnomaSet :: (Members '[Error ScoperError] r) => AxiomDef -> Sem r ()
 checkAnomaSet t = do
   let ty = t ^. axiomType
       l = getLoc t
       u = ExpressionUniverse smallUniverseNoLoc
-  unless (ty === (u --> u)) $
-    builtinsErrorText l "AnomaSet should have type: Type -> Type"
+  unless (ty === (u --> u))
+    $ builtinsErrorText l "AnomaSet should have type: Type -> Type"
 
 checkAnomaSetToList :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkAnomaSetToList f = do
@@ -390,8 +390,8 @@ checkAnomaSetToList f = do
   list_ <- getBuiltinNameScoper l BuiltinList
   anomaSet <- getBuiltinNameScoper l BuiltinAnomaSet
   let freeVars = HashSet.fromList [elemT]
-  unless ((ty ==% (u <>--> anomaSet @@ elemT --> list_ @@ elemT)) freeVars) $
-    builtinsErrorText l "anomaSetToList should have type: {A : Type} -> AnomaSet A -> List A"
+  unless ((ty ==% (u <>--> anomaSet @@ elemT --> list_ @@ elemT)) freeVars)
+    $ builtinsErrorText l "anomaSetToList should have type: {A : Type} -> AnomaSet A -> List A"
 
 checkAnomaSetFromList :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkAnomaSetFromList f = do
@@ -402,5 +402,5 @@ checkAnomaSetFromList f = do
   list_ <- getBuiltinNameScoper l BuiltinList
   anomaSet <- getBuiltinNameScoper l BuiltinAnomaSet
   let freeVars = HashSet.fromList [elemT]
-  unless ((ty ==% (u <>--> list_ @@ elemT --> anomaSet @@ elemT)) freeVars) $
-    builtinsErrorText l "anomaSetFromList should have type: {A : Type} -> List A -> AnomaSet A"
+  unless ((ty ==% (u <>--> list_ @@ elemT --> anomaSet @@ elemT)) freeVars)
+    $ builtinsErrorText l "anomaSetFromList should have type: {A : Type} -> List A -> AnomaSet A"

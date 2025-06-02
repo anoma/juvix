@@ -27,13 +27,13 @@ fileLocs bs positions =
                     _locOffset = offset
                   }
           if
-              | pos == p -> ((i, fl) :) <$> go line col offset poss
-              | otherwise ->
-                  do
-                    c <- anyChar
-                    if
-                        | '\n' == c -> go (line + 1) 1 (succ offset) allPos
-                        | otherwise -> go line (col + 1) (succ offset) allPos
+            | pos == p -> ((i, fl) :) <$> go line col offset poss
+            | otherwise ->
+                do
+                  c <- anyChar
+                  if
+                    | '\n' == c -> go (line + 1) 1 (succ offset) allPos
+                    | otherwise -> go line (col + 1) (succ offset) allPos
 
       sorted :: [(Int, Pos)]
       sorted = sortBy (\(_, i) (_, j) -> compare i j) (zip [0 ..] positions)

@@ -146,8 +146,8 @@ ppCodeVar' :: (Member (Reader Options) r) => Text -> Var' i -> Sem r (Doc Ann)
 ppCodeVar' name v = do
   name' <- ppName KNameLocal name
   showDeBruijn <- asks (^. optShowDeBruijnIndices)
-  return $
-    if showDeBruijn || name == ""
+  return
+    $ if showDeBruijn || name == ""
       then name' <> kwDeBruijnVar <> pretty (v ^. varIndex)
       else name'
 
@@ -223,13 +223,14 @@ ppCodeConstr' name c = do
 instance (Pretty k, PrettyCode a) => PrettyCode (Map k a) where
   ppCode m = do
     m' <-
-      sep . punctuate ","
+      sep
+        . punctuate ","
         <$> sequence
           [ do
               a' <- ppCode a
               let k' = pretty k
               return $ k' <+> kwMapsto <+> a'
-            | (k, a) <- Map.toList m
+          | (k, a) <- Map.toList m
           ]
     return $ braces m'
 
@@ -240,7 +241,7 @@ instance (PrettyCode a) => PrettyCode (BinderList a) where
         [ do
             v' <- ppCode v
             return (pretty k <+> kwMapsto <+> v')
-          | (k, v) <- BL.toIndexedList bl
+        | (k, v) <- BL.toIndexedList bl
         ]
     return $ brackets (hsep $ punctuate "," m)
 
@@ -332,13 +333,13 @@ instance PrettyCode PatternWildcard where
     bPretty <- asks (^. optPrettyPatterns)
     let name = _patternWildcardBinder ^. binderName
     if
-        | not bPretty -> do
-            n <- ppName KNameLocal name
-            ppWithType n (_patternWildcardBinder ^. binderType)
-        | isPrefixOf "_" (fromText name) || name == "?" || name == "" ->
-            return kwWildcard
-        | otherwise ->
-            ppName KNameLocal name
+      | not bPretty -> do
+          n <- ppName KNameLocal name
+          ppWithType n (_patternWildcardBinder ^. binderType)
+      | isPrefixOf "_" (fromText name) || name == "?" || name == "" ->
+          return kwWildcard
+      | otherwise ->
+          ppName KNameLocal name
 
 instance PrettyCode PatternConstr where
   ppCode PatternConstr {..} = do
@@ -351,25 +352,25 @@ instance PrettyCode PatternConstr where
         mkpat pat = if name == "?" || name == "" || (bPretty && isPrefixOf "_" name) then pat else bn <> kwAt <> parens pat
         args0 =
           if
-              | bPretty ->
-                  filter (not . isWildcardTypeBinder) _patternConstrArgs
-              | otherwise ->
-                  _patternConstrArgs
+            | bPretty ->
+                filter (not . isWildcardTypeBinder) _patternConstrArgs
+            | otherwise ->
+                _patternConstrArgs
     args <- mapM (ppRightExpression appFixity) args0
     let pat = mkpat (hsep (n : args))
     if
-        | bPretty ->
-            case _patternConstrFixity of
-              Nothing -> do
-                return pat
-              Just fixity
-                | isBinary fixity ->
-                    goBinary (cname == ",") fixity n args0
-                | isUnary fixity ->
-                    goUnary fixity n args0
-              _ -> impossible
-        | otherwise ->
-            ppWithType pat (_patternConstrBinder ^. binderType)
+      | bPretty ->
+          case _patternConstrFixity of
+            Nothing -> do
+              return pat
+            Just fixity
+              | isBinary fixity ->
+                  goBinary (cname == ",") fixity n args0
+              | isUnary fixity ->
+                  goUnary fixity n args0
+            _ -> impossible
+      | otherwise ->
+          ppWithType pat (_patternConstrBinder ^. binderType)
     where
       isWildcardTypeBinder :: Pattern -> Bool
       isWildcardTypeBinder = \case
@@ -417,10 +418,10 @@ instance PrettyCode LetRec where
       [hbs] -> kwLetRec <+> hbs <+> kwAssign <+> head vs <+> kwIn <+> b'
       _ ->
         let bss =
-              indent' $
-                align $
-                  concatWith (\a b -> a <> kwSemicolon <> line <> b) $
-                    zipWithExact (\b val -> b <+> kwAssign <+> val) (toList bs) (toList vs)
+              indent'
+                $ align
+                $ concatWith (\a b -> a <> kwSemicolon <> line <> b)
+                $ zipWithExact (\b val -> b <+> kwAssign <+> val) (toList bs) (toList vs)
             nss = enclose kwSquareL kwSquareR (concatWith (<+>) names)
          in kwLetRec <> nss <> line <> bss <> kwSemicolon <> line <> kwIn <> line <> b'
     where
@@ -514,22 +515,22 @@ instance PrettyCode Pi where
   ppCode Pi {..} =
     let piType = _piBinder ^. binderType
      in if
-            | varOccurs 0 _piBody -> do
-                n <- ppName KNameLocal (_piBinder ^. binderName)
-                ty <- ppCode piType
-                b <- ppCode _piBody
-                return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
-            | otherwise -> do
-                ty <- ppLeftExpression funFixity piType
-                b <- ppRightExpression funFixity _piBody
-                return $ ty <+> kwArrow <+> b
+          | varOccurs 0 _piBody -> do
+              n <- ppName KNameLocal (_piBinder ^. binderName)
+              ty <- ppCode piType
+              b <- ppCode _piBody
+              return $ kwPi <+> n <+> kwColon <+> ty <> comma <+> b
+          | otherwise -> do
+              ty <- ppLeftExpression funFixity piType
+              b <- ppRightExpression funFixity _piBody
+              return $ ty <+> kwArrow <+> b
 
 instance PrettyCode (Univ' i) where
   ppCode Univ {..} =
-    return $
-      if
-          | _univLevel == 0 -> kwType
-          | otherwise -> kwType <+> pretty _univLevel
+    return
+      $ if
+        | _univLevel == 0 -> kwType
+        | otherwise -> kwType <+> pretty _univLevel
 
 instance PrettyCode Stripped.TypeApp where
   ppCode Stripped.TypeApp {..} = do
@@ -757,10 +758,10 @@ goBinary isComma fixity name = \case
     arg1' <- ppLeftExpression fixity arg1
     arg2' <- ppRightExpression fixity arg2
     if
-        | isComma ->
-            return $ arg1' <> name <+> arg2'
-        | otherwise ->
-            return $ arg1' <+> name <+> arg2'
+      | isComma ->
+          return $ arg1' <> name <+> arg2'
+      | otherwise ->
+          return $ arg1' <+> name <+> arg2'
   _ ->
     impossible
 

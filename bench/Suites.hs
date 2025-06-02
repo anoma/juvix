@@ -17,7 +17,7 @@ suites =
       "prime"
     ]
     <> [ Suite suiteName (allVariantsExcept [C] [CoreEval])
-         | suiteName <- ["fold", "mapfold", "mapfun"]
+       | suiteName <- ["fold", "mapfold", "mapfun"]
        ]
 
 defaultSuite :: String -> Suite

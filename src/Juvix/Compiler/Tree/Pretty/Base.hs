@@ -56,9 +56,9 @@ ppFunName :: (Member (Reader Options) r) => Symbol -> Sem r (Doc Ann)
 ppFunName sym = do
   symNames <- asks (^. optSymbolNames)
   maybe
-    ( return $
-        annotate (AnnKind KNameFunction) $
-          pretty ("unnamed_function_" ++ show sym :: String)
+    ( return
+        $ annotate (AnnKind KNameFunction)
+        $ pretty ("unnamed_function_" ++ show sym :: String)
     )
     (return . annotate (AnnKind KNameFunction) . pretty . quoteFunName . quoteName)
     (HashMap.lookup sym symNames)
@@ -122,11 +122,11 @@ instance PrettyCode TypeFun where
   ppCode TypeFun {..} = do
     l <-
       if
-          | null (NonEmpty.tail _typeFunArgs) ->
-              ppLeftExpression funFixity (head _typeFunArgs)
-          | otherwise -> do
-              args <- mapM ppCode _typeFunArgs
-              return $ parens $ hsep $ punctuate comma (toList args)
+        | null (NonEmpty.tail _typeFunArgs) ->
+            ppLeftExpression funFixity (head _typeFunArgs)
+        | otherwise -> do
+            args <- mapM ppCode _typeFunArgs
+            return $ parens $ hsep $ punctuate comma (toList args)
     r <- ppRightExpression funFixity _typeFunTarget
     return $ l <+> kwArrow <+> r
 
@@ -412,10 +412,10 @@ instance PrettyCode NodeBranch where
     br2 <- ppCode _nodeBranchFalse
     let true_ = annotate (AnnKind KNameConstructor) Str.true_
         false_ = annotate (AnnKind KNameConstructor) Str.false_
-    return $
-      primitive Str.instrBr
-        <> parens arg
-        <+> braces' (true_ <> colon <+> br1 <> line <> false_ <> colon <+> br2)
+    return
+      $ primitive Str.instrBr
+      <> parens arg
+      <+> braces' (true_ <> colon <+> br1 <> line <> false_ <> colon <+> br2)
 
 instance PrettyCode CaseBranch where
   ppCode :: (Member (Reader Options) r) => CaseBranch -> Sem r (Doc Ann)
@@ -481,25 +481,25 @@ ppFunInfo ppCode' FunctionInfo {..} = do
       args = zipWithExact (\mn ty -> maybe mempty (\n -> n <+> colon <> space) mn <> ty) argnames argtys
   targetty <- ppCode (if _functionArgsNum == 0 then _functionType else typeTarget _functionType)
   c <- ppCode' _functionCode
-  return $
-    keyword Str.function
-      <+> annotate (AnnKind KNameFunction) (pretty (quoteFunName $ quoteName _functionName))
-        <> parens (hsep (punctuate comma args))
-      <+> colon
-      <+> targetty
-      <+> braces' c
+  return
+    $ keyword Str.function
+    <+> annotate (AnnKind KNameFunction) (pretty (quoteFunName $ quoteName _functionName))
+    <> parens (hsep (punctuate comma args))
+    <+> colon
+    <+> targetty
+    <+> braces' c
 
 ppFunSig :: (Member (Reader Options) r) => FunctionInfo' t e -> Sem r (Doc Ann)
 ppFunSig FunctionInfo {..} = do
   argtys <- mapM ppCode (typeArgs _functionType)
   targetty <- ppCode (typeTarget _functionType)
-  return $
-    keyword Str.function
-      <+> annotate (AnnKind KNameFunction) (pretty (quoteFunName $ quoteName _functionName))
-        <> parens (hsep (punctuate comma argtys))
-      <+> colon
-      <+> targetty
-        <> semi
+  return
+    $ keyword Str.function
+    <+> annotate (AnnKind KNameFunction) (pretty (quoteFunName $ quoteName _functionName))
+    <> parens (hsep (punctuate comma argtys))
+    <+> colon
+    <+> targetty
+    <> semi
 
 instance PrettyCode ConstructorInfo where
   ppCode ConstructorInfo {..} = do

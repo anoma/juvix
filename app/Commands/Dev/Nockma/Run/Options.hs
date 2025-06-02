@@ -31,21 +31,21 @@ parseNockmaRunCommand =
 
 commandRunBuiltinEvaluator :: Mod CommandFields NockmaRunCommand
 commandRunBuiltinEvaluator =
-  command "builtin-evaluator" $
-    info
+  command "builtin-evaluator"
+    $ info
       (NockmaRunBuiltinEvaluator <$> parseNockmaRunBuiltinEvaluatorOptions)
       (progDesc "Run with the builtin Nockma evaluator")
 
 commandRunEphemeralClient :: Mod CommandFields NockmaRunCommand
 commandRunEphemeralClient =
-  command "ephemeral-client" $
-    info
+  command "ephemeral-client"
+    $ info
       (NockmaRunEphemeralClient <$> parseNockmaRunEphemeralClientOptions)
       (progDesc "Run with an ephemeral Anoma client")
 
 commandRunWithClient :: Mod CommandFields NockmaRunCommand
 commandRunWithClient =
-  command "with-client" $
-    info
+  command "with-client"
+    $ info
       (NockmaRunWithClient <$> parseNockmaRunWithClientOptions)
       (progDesc "Run with a running Anoma client")

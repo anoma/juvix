@@ -115,8 +115,8 @@ parseGlobalFlags = do
           <> help "Read from Stdin"
       )
   _globalIdeEndErrorChar <-
-    optional $
-      option
+    optional
+      $ option
         readMChar
         ( long "ide-end-error-char"
             <> help "End error message with the given character in order to facilitate parsing"

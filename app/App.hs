@@ -172,8 +172,8 @@ getEntryPoint' RunAppIOArgs {..} inputFile = do
       root = _runAppIOArgsRoot
   estdin <-
     if
-        | opts ^. globalStdin -> Just <$> liftIO getContents
-        | otherwise -> return Nothing
+      | opts ^. globalStdin -> Just <$> liftIO getContents
+      | otherwise -> return Nothing
   mainFile <- getMainAppFileMaybe inputFile
   mainFile' <- maybe (return Nothing) (fmap Just . fromAppFile) mainFile
   sha256 <- maybe (return Nothing) (fmap Just . runFilesIO . SHA256.digestFile) mainFile'
@@ -206,8 +206,8 @@ getEntryPointStdin' RunAppIOArgs {..} = do
       root = _runAppIOArgsRoot
   estdin <-
     if
-        | opts ^. globalStdin -> Just <$> liftIO getContents
-        | otherwise -> return Nothing
+      | opts ^. globalStdin -> Just <$> liftIO getContents
+      | otherwise -> return Nothing
   set entryPointStdin estdin <$> entryPointFromGlobalOptionsNoFile root opts
 
 getEntryPointPackage' :: (Members '[EmbedIO, TaggedLock] r) => RunAppIOArgs -> Sem r EntryPoint

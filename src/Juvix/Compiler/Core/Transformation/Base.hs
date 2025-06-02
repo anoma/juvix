@@ -49,11 +49,11 @@ mapT f = over (moduleInfoTable . identContext) (HashMap.mapWithKey f)
 
 mapT' :: (Symbol -> Node -> Sem (InfoTableBuilder ': r) Node) -> Module -> Sem r Module
 mapT' f m =
-  fmap fst $
-    runInfoTableBuilder m $
-      mapM_
-        (\(k, v) -> f k v >>= registerIdentNode k)
-        (HashMap.toList (m ^. moduleInfoTable . identContext))
+  fmap fst
+    $ runInfoTableBuilder m
+    $ mapM_
+      (\(k, v) -> f k v >>= registerIdentNode k)
+      (HashMap.toList (m ^. moduleInfoTable . identContext))
 
 walkT :: (Applicative f) => (Symbol -> Node -> f ()) -> InfoTable -> f ()
 walkT f tab = for_ (HashMap.toList (tab ^. identContext)) (uncurry f)
@@ -89,8 +89,8 @@ withOptimizationLevel :: (Member (Reader CoreOptions) r) => Int -> (Module -> Se
 withOptimizationLevel n f tab = do
   l <- asks (^. optOptimizationLevel)
   if
-      | l >= n -> f tab
-      | otherwise -> return tab
+    | l >= n -> f tab
+    | otherwise -> return tab
 
 withOptimizationLevel' :: (Member (Reader CoreOptions) r) => Module -> Int -> (Module -> Sem r Module) -> Sem r Module
 withOptimizationLevel' tab n f = withOptimizationLevel n f tab

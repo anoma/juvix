@@ -58,15 +58,15 @@ infoVersionRepo = do
         <> "Branch"
         <> colon
         <+> PP.pretty branch
-          <> line
-          <> "Commit"
-          <> colon
+        <> line
+        <> "Commit"
+        <> colon
         <+> PP.pretty commit
-          <> line
-          <> "Date"
-          <> colon
+        <> line
+        <> "Date"
+        <> colon
         <+> PP.pretty commitDate
-          <> line
+        <> line
     )
 
 runDisplayVersion :: (MonadIO m) => m ()

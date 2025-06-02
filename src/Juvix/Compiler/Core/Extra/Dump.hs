@@ -18,5 +18,5 @@ dump ::
 dump phase md = do
   v <- asks (^. optVerify)
   if
-      | v -> Dump.dump' phase md
-      | otherwise -> return md
+    | v -> Dump.dump' phase md
+    | otherwise -> return md

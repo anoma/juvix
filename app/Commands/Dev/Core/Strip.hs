@@ -22,8 +22,8 @@ runCommand opts = do
           . ignoreDumper
           $ Core.toStripped Core.IdentityTrans (Core.moduleFromInfoTable tab)
   tab' <-
-    getRight $
-      mapRight (Stripped.fromCore' . Core.computeCombinedInfoTable) r
+    getRight
+      $ mapRight (Stripped.fromCore' . Core.computeCombinedInfoTable) r
   unless (project opts ^. coreStripNoPrint) $ do
     renderStdOut (Core.ppOut opts tab')
   where

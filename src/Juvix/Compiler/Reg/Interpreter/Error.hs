@@ -25,8 +25,8 @@ throwRunError msg loc = Exception.throw (RunError msg loc)
 
 catchRunError :: (MonadIO m) => a -> m (Either RegError a)
 catchRunError a =
-  liftIO $
-    Exception.catch
+  liftIO
+    $ Exception.catch
       (Exception.evaluate a >>= \a' -> return $ Right a')
       (\(ex :: RunError) -> return $ Left (toRegError ex))
 

@@ -37,13 +37,13 @@ computeMaxStackHeight lims = maximum . map go
         length _instrTailCallClosuresArgs
           + 1
           + lims
-            ^. limitsDispatchStackSize
+          ^. limitsDispatchStackSize
       CallClosures InstrCallClosures {..} ->
         length _instrCallClosuresLiveVars
           + length _instrCallClosuresArgs
           + 1
           + lims
-            ^. limitsDispatchStackSize
+          ^. limitsDispatchStackSize
       Return {} -> 0
       If InstrIf {..} ->
         max
@@ -169,8 +169,8 @@ computeStringMap strs = snd . run . execState (HashMap.size strs, strs) . mapM g
         modify'
           ( \(sid :: Int, sstrs) ->
               if
-                  | HashMap.member str sstrs -> (sid, sstrs)
-                  | otherwise -> (sid + 1, HashMap.insert str sid sstrs)
+                | HashMap.member str sstrs -> (sid, sstrs)
+                | otherwise -> (sid + 1, HashMap.insert str sid sstrs)
           )
       _ -> return ()
 
@@ -266,7 +266,8 @@ computeExtraInfo lims tab =
         maximum (map (^. functionArgsNum) (HashMap.elems (tab ^. infoFunctions))),
       _extraInfoMaxCallClosuresArgsNum =
         maximum1
-          ( lims ^. limitsSpecialisedApply
+          ( lims
+              ^. limitsSpecialisedApply
               :| map (computeMaxCallClosuresArgsNum . (^. functionCode)) (HashMap.elems (tab ^. infoFunctions))
           ),
       _extraInfoConstrsNum =

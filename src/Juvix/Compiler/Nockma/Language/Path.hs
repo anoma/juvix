@@ -38,12 +38,12 @@ decodePath ep = execOutputList (go (ep ^. encodedPath))
       1 -> return ()
       x ->
         if
-            | even x -> do
-                go (x `div` 2)
-                output L
-            | otherwise -> do
-                go ((x - 1) `div` 2)
-                output R
+          | even x -> do
+              go (x `div` 2)
+              output L
+          | otherwise -> do
+              go ((x - 1) `div` 2)
+              output R
 
 decodePath' :: EncodedPath -> Path
 decodePath' = run . runFailDefault (error "encoded path cannot be 0") . decodePath

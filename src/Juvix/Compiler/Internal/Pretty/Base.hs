@@ -142,12 +142,12 @@ instance PrettyCode SideIfBranch where
   ppCode SideIfBranch {..} = do
     condition' <- ppCode _sideIfBranchCondition
     body' <- ppCode _sideIfBranchBody
-    return $
-      kwPipe
-        <+> kwIf
-        <+> condition'
-        <+> kwAssign
-        <+> oneLineOrNext body'
+    return
+      $ kwPipe
+      <+> kwIf
+      <+> condition'
+      <+> kwAssign
+      <+> oneLineOrNext body'
 
 instance PrettyCode SideIfs where
   ppCode SideIfs {..} =
@@ -157,8 +157,9 @@ instance PrettyCode SideIfs where
         ifbranches <- mapM ppCode (toList _sideIfBranches)
         elseBr <- mapM ppCode _sideIfElse
         let allBranches = snocMaybe ifbranches elseBr
-        return $
-          line <> indent' (vsep allBranches)
+        return
+          $ line
+          <> indent' (vsep allBranches)
 
 instance PrettyCode CaseBranchRhs where
   ppCode = \case
@@ -226,16 +227,16 @@ instance PrettyCode NameDependencyInfo where
     edges' <- vsep <$> mapM ppCode _depInfoEdgeList
     reachable' <- ppCode (toList _depInfoReachable)
     topsort' <- ppCode _depInfoTopSort
-    return $
-      header "Edges:"
-        <> edges'
-        <> line
-        <> header "Reachable:"
-        <> reachable'
-        <> line
-        <> header "Topologically sorted:"
-        <> topsort'
-        <> line
+    return
+      $ header "Edges:"
+      <> edges'
+      <> line
+      <> header "Reachable:"
+      <> reachable'
+      <> line
+      <> header "Topologically sorted:"
+      <> topsort'
+      <> line
 
 instance PrettyCode LambdaClause where
   ppCode LambdaClause {..} = do
@@ -354,13 +355,13 @@ instance PrettyCode FunctionDef where
     funDefType' <- ppCode (f ^. funDefType)
     instanceCoercion' <- mapM ppCode (f ^. funDefIsInstanceCoercion)
     body' <- ppCode (f ^. funDefBody)
-    return $
-      builtin'
-        <?+> instanceCoercion'
-        <?+> funDefName'
-          <+> kwColon
-          <+> funDefType'
-            <> oneLineOrNext (kwAssign <+> body')
+    return
+      $ builtin'
+      <?+> instanceCoercion'
+      <?+> funDefName'
+      <+> kwColon
+      <+> funDefType'
+      <> oneLineOrNext (kwAssign <+> body')
 
 instance PrettyCode PreLetStatement where
   ppCode = \case
@@ -411,14 +412,14 @@ instance PrettyCode Module where
   ppCode m = do
     name' <- ppCode (m ^. moduleName)
     body' <- ppCode (m ^. moduleBody)
-    return $
-      kwModule
-        <+> name'
-          <> kwSemicolon
-          <> line
-          <> line
-          <> body'
-          <> line
+    return
+      $ kwModule
+      <+> name'
+      <> kwSemicolon
+      <> line
+      <> line
+      <> body'
+      <> line
 
 instance PrettyCode Interval where
   ppCode = return . annotate AnnCode . pretty
@@ -489,15 +490,15 @@ instance PrettyCode InfoTable where
     inds <- ppCode (HashMap.keys (tbl ^. infoInductives))
     constrs <- ppCode (HashMap.keys (tbl ^. infoConstructors))
     funs <- ppCode (HashMap.keys (tbl ^. infoFunctions))
-    return $
-      header "InfoTable"
-        <> "\n========="
-        <> header "\nInductives: "
-        <> inds
-        <> header "\nConstructors: "
-        <> constrs
-        <> header "\nFunctions: "
-        <> funs
+    return
+      $ header "InfoTable"
+      <> "\n========="
+      <> header "\nInductives: "
+      <> inds
+      <> header "\nConstructors: "
+      <> constrs
+      <> header "\nFunctions: "
+      <> funs
 
 ppPostExpression ::
   (PrettyCode a, HasAtomicity a, Member (Reader Options) r) =>
@@ -542,12 +543,12 @@ instance (PrettyCode a) => PrettyCode (Maybe a) where
 
 bracesEncloseIndent :: forall l ann. (Foldable l) => l (Doc ann) -> Doc ann
 bracesEncloseIndent ls =
-  PP.group $
-    "{"
-      <> line'
-      <> indent' (concatWith (\x y -> x <> ";" <> line <> y) ls)
-      <> line'
-      <> "}"
+  PP.group
+    $ "{"
+    <> line'
+    <> indent' (concatWith (\x y -> x <> ";" <> line <> y) ls)
+    <> line'
+    <> "}"
 
 tuple :: [Doc ann] -> Doc ann
 tuple = encloseSep "(" ")" ", "

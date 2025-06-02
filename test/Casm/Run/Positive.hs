@@ -36,8 +36,8 @@ allTests = do
       vmGroup = testGroup "With VM" (mkTest . testDescr <$> vmTests)
   vmTestTree <- withPrecondition cairoVmPrecondition (return vmGroup)
   let nonVmTestTree = testGroup "Without VM" (mkTest . testDescr <$> nonVmTests)
-  return $
-    testGroup
+  return
+    $ testGroup
       "CASM run positive tests"
       [vmTestTree, nonVmTestTree]
 

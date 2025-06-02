@@ -186,7 +186,8 @@ geval opts herr tab env0 = eval' env0
 
     evalBody :: Info -> Binder -> Env -> Node -> Node -> Node
     evalBody i bi env v body
-      | opts ^. evalOptionsNormalize
+      | opts
+          ^. evalOptionsNormalize
           && isTypePrim (bi ^. binderType)
           && not (isImmediate' v)
           && not (isFailNode v) =
@@ -280,9 +281,9 @@ geval opts herr tab env0 = eval' env0
         divOp :: (Integer -> Integer -> Integer) -> [Node] -> Node
         divOp op = binOp' nodeFromInteger integerFromNode nonzeroIntegerFromNode $ \v1 v2 ->
           if
-              | v2 == 0 ->
-                  evalError "division by zero" (substEnv env n)
-              | otherwise -> v1 `op` v2
+            | v2 == 0 ->
+                evalError "division by zero" (substEnv env n)
+            | otherwise -> v1 `op` v2
         {-# INLINE divOp #-}
 
         binOp' :: (b -> Node) -> (Node -> Maybe a) -> (Node -> Maybe a) -> (a -> a -> b) -> [Node] -> Node
@@ -319,20 +320,20 @@ geval opts herr tab env0 = eval' env0
         fieldFromIntOp =
           unary $ \node ->
             let !v = eval' env node
-             in nodeFromField $
-                  fieldFromInteger (opts ^. evalOptionsFieldSize) $
-                    fromMaybe (evalError "expected integer" v) $
-                      integerFromNode v
+             in nodeFromField
+                  $ fieldFromInteger (opts ^. evalOptionsFieldSize)
+                  $ fromMaybe (evalError "expected integer" v)
+                  $ integerFromNode v
         {-# INLINE fieldFromIntOp #-}
 
         fieldToIntOp :: [Node] -> Node
         fieldToIntOp =
           unary $ \node ->
             let !v = eval' env node
-             in nodeFromInteger $
-                  fieldToInteger $
-                    fromMaybe (evalError "expected field element" v) $
-                      fieldFromNode v
+             in nodeFromInteger
+                  $ fieldToInteger
+                  $ fromMaybe (evalError "expected field element" v)
+                  $ fieldFromNode v
         {-# INLINE fieldToIntOp #-}
 
         eqOp :: [Node] -> Node
@@ -379,35 +380,35 @@ geval opts herr tab env0 = eval' env0
         failOp :: [Node] -> Node
         failOp = unary $ \msg ->
           if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpFail [eval' env msg]
-              | otherwise ->
-                  Exception.throw (EvalError ("failure: " <> printNode (eval' env msg)) Nothing)
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                mkBuiltinApp' OpFail [eval' env msg]
+            | otherwise ->
+                Exception.throw (EvalError ("failure: " <> printNode (eval' env msg)) Nothing)
         {-# INLINE failOp #-}
 
         traceOp :: [Node] -> Node
         traceOp = unary $ \msg ->
           let !v = eval' env msg
            in if
-                  | opts ^. evalOptionsSilent ->
-                      v
-                  | otherwise ->
-                      unsafePerformIO (hPutStrLn herr (printNode v) >> return v)
+                | opts ^. evalOptionsSilent ->
+                    v
+                | otherwise ->
+                    unsafePerformIO (hPutStrLn herr (printNode v) >> return v)
         {-# INLINE traceOp #-}
 
         assertOp :: [Node] -> Node
         assertOp = unary $ \val ->
           let !v = eval' env val
            in if
-                  | opts ^. evalOptionsSilent ->
-                      v
-                  | otherwise ->
-                      case v of
-                        NCtr Constr {..}
-                          | _constrTag == BuiltinTag TagTrue ->
-                              v
-                        _ ->
-                          Exception.throw (EvalError ("assertion failed: " <> printNode val) Nothing)
+                | opts ^. evalOptionsSilent ->
+                    v
+                | otherwise ->
+                    case v of
+                      NCtr Constr {..}
+                        | _constrTag == BuiltinTag TagTrue ->
+                            v
+                      _ ->
+                        Exception.throw (EvalError ("assertion failed: " <> printNode val) Nothing)
         {-# INLINE assertOp #-}
 
         rangeCheckOp :: [Node] -> Node
@@ -438,39 +439,39 @@ geval opts herr tab env0 = eval' env0
         normalizeOrUnsupported :: BuiltinOp -> [Node] -> Node
         normalizeOrUnsupported op args =
           if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' op (eval' env <$> args)
-              | otherwise ->
-                  err ("unsupported builtin operation: " <> show op)
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                mkBuiltinApp' op (eval' env <$> args)
+            | otherwise ->
+                err ("unsupported builtin operation: " <> show op)
         {-# INLINE normalizeOrUnsupported #-}
 
         anomaGetOp :: [Node] -> Node
         anomaGetOp = unary $ \arg ->
           if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpAnomaGet [eval' env arg]
-              | otherwise ->
-                  err "unsupported builtin operation: OpAnomaGet"
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                mkBuiltinApp' OpAnomaGet [eval' env arg]
+            | otherwise ->
+                err "unsupported builtin operation: OpAnomaGet"
         {-# INLINE anomaGetOp #-}
 
         anomaEncodeOp :: [Node] -> Node
         anomaEncodeOp = unary $ \arg ->
           let !v = eval' env arg
            in if
-                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                      mkBuiltinApp' OpAnomaEncode [v]
-                  | otherwise -> nodeFromInteger (serializeToInteger v)
+                | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                    mkBuiltinApp' OpAnomaEncode [v]
+                | otherwise -> nodeFromInteger (serializeToInteger v)
         {-# INLINE anomaEncodeOp #-}
 
         anomaDecodeOp :: [Node] -> Node
         anomaDecodeOp = unary $ \arg ->
           let !v = eval' env arg
            in if
-                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                      mkBuiltinApp' OpAnomaDecode [v]
-                  | otherwise -> case integerFromNode v of
-                      Just i -> deserializeFromInteger i
-                      Nothing -> err "anomaDecodeOp: argument not an integer"
+                | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                    mkBuiltinApp' OpAnomaDecode [v]
+                | otherwise -> case integerFromNode v of
+                    Just i -> deserializeFromInteger i
+                    Nothing -> err "anomaDecodeOp: argument not an integer"
         {-# INLINE anomaDecodeOp #-}
 
         anomaVerifyDetachedOp :: [Node] -> Node
@@ -479,12 +480,12 @@ geval opts herr tab env0 = eval' env0
               !v2 = eval' env arg2
               !v3 = eval' env arg3
            in if
-                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                      mkBuiltinApp' OpAnomaVerifyDetached [v1, v2, v3]
-                  | otherwise ->
-                      case (byteStringFromNode v1, byteStringFromNode v3) of
-                        (Just bs1, Just bs3) -> verifyDetached bs1 v2 bs3
-                        _ -> err "OpAnomaVerifyDetached: first and third arguments must be bytearrays"
+                | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                    mkBuiltinApp' OpAnomaVerifyDetached [v1, v2, v3]
+                | otherwise ->
+                    case (byteStringFromNode v1, byteStringFromNode v3) of
+                      (Just bs1, Just bs3) -> verifyDetached bs1 v2 bs3
+                      _ -> err "OpAnomaVerifyDetached: first and third arguments must be bytearrays"
         {-# INLINE anomaVerifyDetachedOp #-}
 
         anomaSignOp :: [Node] -> Node
@@ -492,11 +493,11 @@ geval opts herr tab env0 = eval' env0
           let !v1 = eval' env arg1
               !v2 = eval' env arg2
            in if
-                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                      mkBuiltinApp' OpAnomaSign [v1, v2]
-                  | otherwise -> case byteStringFromNode v2 of
-                      Just bs -> sign v1 bs
-                      Nothing -> err "anomaSignOp: second argument not an bytearray"
+                | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                    mkBuiltinApp' OpAnomaSign [v1, v2]
+                | otherwise -> case byteStringFromNode v2 of
+                    Just bs -> sign v1 bs
+                    Nothing -> err "anomaSignOp: second argument not an bytearray"
         {-# INLINE anomaSignOp #-}
 
         anomaSignDetachedOp :: [Node] -> Node
@@ -504,11 +505,11 @@ geval opts herr tab env0 = eval' env0
           let !v1 = eval' env arg1
               !v2 = eval' env arg2
            in if
-                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                      mkBuiltinApp' OpAnomaSignDetached [v1, v2]
-                  | otherwise -> case byteStringFromNode v2 of
-                      Just i -> signDetached v1 i
-                      Nothing -> err "anomaSignDetachedOp: second argument not a bytearray"
+                | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                    mkBuiltinApp' OpAnomaSignDetached [v1, v2]
+                | otherwise -> case byteStringFromNode v2 of
+                    Just i -> signDetached v1 i
+                    Nothing -> err "anomaSignDetachedOp: second argument not a bytearray"
         {-# INLINE anomaSignDetachedOp #-}
 
         anomaVerifyWithMessageOp :: [Node] -> Node
@@ -516,24 +517,24 @@ geval opts herr tab env0 = eval' env0
           let !v1 = eval' env arg1
               !v2 = eval' env arg2
            in if
-                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                      mkBuiltinApp' OpAnomaVerifyWithMessage [v1, v2]
-                  | otherwise ->
-                      case (byteStringFromNode v1, byteStringFromNode v2) of
-                        (Just bs1, Just bs2) -> verify bs1 bs2
-                        _ -> err "anomaVerifyWithMessageOp: both arguments are not bytearrays"
+                | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                    mkBuiltinApp' OpAnomaVerifyWithMessage [v1, v2]
+                | otherwise ->
+                    case (byteStringFromNode v1, byteStringFromNode v2) of
+                      (Just bs1, Just bs2) -> verify bs1 bs2
+                      _ -> err "anomaVerifyWithMessageOp: both arguments are not bytearrays"
         {-# INLINE anomaVerifyWithMessageOp #-}
 
         anomaByteArrayToAnomaContents :: [Node] -> Node
         anomaByteArrayToAnomaContents = checkApply $ \arg ->
           let !v = eval' env arg
            in if
-                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                      mkBuiltinApp' OpAnomaByteArrayToAnomaContents [v]
-                  | otherwise ->
-                      case (byteStringFromNode v) of
-                        (Just bs) -> nodeFromInteger (byteStringToIntegerLE bs)
-                        _ -> err "anomaByteArrayToAnomaContents: expected argument to be a bytearray"
+                | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                    mkBuiltinApp' OpAnomaByteArrayToAnomaContents [v]
+                | otherwise ->
+                    case (byteStringFromNode v) of
+                      (Just bs) -> nodeFromInteger (byteStringToIntegerLE bs)
+                      _ -> err "anomaByteArrayToAnomaContents: expected argument to be a bytearray"
         {-# INLINE anomaByteArrayToAnomaContents #-}
 
         anomaByteArrayFromAnomaContents :: [Node] -> Node
@@ -541,33 +542,33 @@ geval opts herr tab env0 = eval' env0
           let !v1 = eval' env arg1
               !v2 = eval' env arg2
            in if
-                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                      mkBuiltinApp' OpAnomaByteArrayFromAnomaContents [v1, v2]
-                  | otherwise ->
-                      case (integerFromNode v1, integerFromNode v2) of
-                        (Just i1, Just i2) -> nodeFromByteString (naturalToByteStringLELen (fromIntegral i1) (fromIntegral i2))
-                        _ -> err "anomaByteArrayFromAnomaContents: expected both argmuments to be integers"
+                | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                    mkBuiltinApp' OpAnomaByteArrayFromAnomaContents [v1, v2]
+                | otherwise ->
+                    case (integerFromNode v1, integerFromNode v2) of
+                      (Just i1, Just i2) -> nodeFromByteString (naturalToByteStringLELen (fromIntegral i1) (fromIntegral i2))
+                      _ -> err "anomaByteArrayFromAnomaContents: expected both argmuments to be integers"
         {-# INLINE anomaByteArrayFromAnomaContents #-}
 
         anomaSha256 :: [Node] -> Node
         anomaSha256 = checkApply $ \arg ->
           let !v = eval' env arg
            in if
-                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                      mkBuiltinApp' OpAnomaSha256 [v]
-                  | otherwise ->
-                      case integerFromNode v of
-                        Just i -> nodeFromByteString (Encoding.sha256Natural (fromIntegral i))
-                        _ -> err "anomaSha256: expected 1 integer argument"
+                | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                    mkBuiltinApp' OpAnomaSha256 [v]
+                | otherwise ->
+                    case integerFromNode v of
+                      Just i -> nodeFromByteString (Encoding.sha256Natural (fromIntegral i))
+                      _ -> err "anomaSha256: expected 1 integer argument"
         {-# INLINE anomaSha256 #-}
 
         poseidonHashOp :: [Node] -> Node
         poseidonHashOp = unary $ \arg ->
           if
-              | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                  mkBuiltinApp' OpPoseidonHash [eval' env arg]
-              | otherwise ->
-                  err "unsupported builtin operation: OpPoseidonHash"
+            | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                mkBuiltinApp' OpPoseidonHash [eval' env arg]
+            | otherwise ->
+                err "unsupported builtin operation: OpPoseidonHash"
         {-# INLINE poseidonHashOp #-}
 
         ecOp :: [Node] -> Node
@@ -623,8 +624,8 @@ geval opts herr tab env0 = eval' env0
         verify !signedMessage !publicKeyBs =
           let !publicKey = E.PublicKey publicKeyBs
            in if
-                  | E.verify publicKey signedMessage -> nodeMaybeJust (deserializeNode (E.removeSignature signedMessage))
-                  | otherwise -> nodeMaybeNothing
+                | E.verify publicKey signedMessage -> nodeMaybeJust (deserializeNode (E.removeSignature signedMessage))
+                | otherwise -> nodeMaybeNothing
         {-# INLINE verify #-}
 
         signDetached :: Node -> ByteString -> Node
@@ -648,14 +649,14 @@ geval opts herr tab env0 = eval' env0
           unary $ \node ->
             let !v = eval' env node
              in if
-                    | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                        mkBuiltinApp' OpUInt8FromInt [v]
-                    | otherwise ->
-                        nodeFromUInt8
-                          . fromIntegral
-                          . fromMaybe (evalError "expected integer" v)
-                          . integerFromNode
-                          $ v
+                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                      mkBuiltinApp' OpUInt8FromInt [v]
+                  | otherwise ->
+                      nodeFromUInt8
+                        . fromIntegral
+                        . fromMaybe (evalError "expected integer" v)
+                        . integerFromNode
+                        $ v
         {-# INLINE uint8FromIntOp #-}
 
         uint8ToIntOp :: [Node] -> Node
@@ -663,14 +664,14 @@ geval opts herr tab env0 = eval' env0
           unary $ \node ->
             let !v = eval' env node
              in if
-                    | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                        mkBuiltinApp' OpUInt8ToInt [v]
-                    | otherwise ->
-                        nodeFromInteger
-                          . toInteger
-                          . fromMaybe (evalError "expected uint8" v)
-                          . uint8FromNode
-                          $ v
+                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                      mkBuiltinApp' OpUInt8ToInt [v]
+                  | otherwise ->
+                      nodeFromInteger
+                        . toInteger
+                        . fromMaybe (evalError "expected uint8" v)
+                        . uint8FromNode
+                        $ v
         {-# INLINE uint8ToIntOp #-}
 
         byteArrayFromListByteOp :: [Node] -> Node
@@ -678,14 +679,14 @@ geval opts herr tab env0 = eval' env0
           unary $ \node ->
             let !v = eval' env node
              in if
-                    | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                        mkBuiltinApp' OpByteArrayFromListByte [v]
-                    | otherwise ->
-                        nodeFromByteString
-                          . BS.pack
-                          . fromMaybe (evalError "expected list byte" v)
-                          . listUInt8FromNode
-                          $ v
+                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                      mkBuiltinApp' OpByteArrayFromListByte [v]
+                  | otherwise ->
+                      nodeFromByteString
+                        . BS.pack
+                        . fromMaybe (evalError "expected list byte" v)
+                        . listUInt8FromNode
+                        $ v
         {-# INLINE byteArrayFromListByteOp #-}
 
         byteArrayLengthOp :: [Node] -> Node
@@ -693,15 +694,15 @@ geval opts herr tab env0 = eval' env0
           unary $ \node ->
             let !v = eval' env node
              in if
-                    | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
-                        mkBuiltinApp' OpByteArrayLength [v]
-                    | otherwise ->
-                        nodeFromInteger
-                          . fromIntegral
-                          . BS.length
-                          . fromMaybe (evalError "ByteArrayLengthOp expected bytestring" v)
-                          . byteStringFromNode
-                          $ v
+                  | opts ^. evalOptionsNormalize || opts ^. evalOptionsNoFailure ->
+                      mkBuiltinApp' OpByteArrayLength [v]
+                  | otherwise ->
+                      nodeFromInteger
+                        . fromIntegral
+                        . BS.length
+                        . fromMaybe (evalError "ByteArrayLengthOp expected bytestring" v)
+                        . byteStringFromNode
+                        $ v
         {-# INLINE byteArrayLengthOp #-}
 
     {-# INLINE applyBuiltin #-}
@@ -787,14 +788,14 @@ geval opts herr tab env0 = eval' env0
         consTag <- builtinConstructorTag BuiltinListCons
         nilTag <- builtinConstructorTag BuiltinListNil
         if
-            | t == nilTag -> return []
-            | t == consTag -> case (filter (not . isType') xs) of
-                (hd : tl) -> do
-                  uint8Hd <- uint8FromNode hd
-                  uint8Tl <- concatMapM listUInt8FromNode tl
-                  return (uint8Hd : uint8Tl)
-                _ -> Nothing
-            | otherwise -> Nothing
+          | t == nilTag -> return []
+          | t == consTag -> case (filter (not . isType') xs) of
+              (hd : tl) -> do
+                uint8Hd <- uint8FromNode hd
+                uint8Tl <- concatMapM listUInt8FromNode tl
+                return (uint8Hd : uint8Tl)
+              _ -> Nothing
+          | otherwise -> Nothing
       _ -> Nothing
     {-# INLINE listUInt8FromNode #-}
 
@@ -920,8 +921,8 @@ doEvalIO mfsize noIO i tab node = runM (doEval mfsize noIO i tab node)
 -- no location is available in EvalError.
 catchEvalError :: (MonadIO m) => Location -> a -> m (Either CoreError a)
 catchEvalError loc a =
-  liftIO $
-    Exception.catch
+  liftIO
+    $ Exception.catch
       (Exception.evaluate a <&> Right)
       (\(ex :: EvalError) -> return (Left (toCoreError loc ex)))
 

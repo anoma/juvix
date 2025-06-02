@@ -34,8 +34,7 @@ allTests :: TestTree
 allTests =
   testGroup
     "Parsing negative tests"
-    ( map (mkTest . testDescr) (parserErrorTests <> filesErrorTests)
-    )
+    (map (mkTest . testDescr) (parserErrorTests <> filesErrorTests))
 
 wrongError :: Maybe FailMsg
 wrongError = Just "Incorrect error"

@@ -14,13 +14,13 @@ checkByteArrayFromListByte d = do
   byte_ <- getBuiltinNameScoper loc BuiltinByte
   list_ <- getBuiltinNameScoper loc BuiltinList
   byteArray <- getBuiltinNameScoper loc BuiltinByteArray
-  unless (d ^. axiomType == (list_ @@ byte_ --> byteArray)) $
-    builtinsErrorText (getLoc d) "bytearray-from-list-byte has the wrong type"
+  unless (d ^. axiomType == (list_ @@ byte_ --> byteArray))
+    $ builtinsErrorText (getLoc d) "bytearray-from-list-byte has the wrong type"
 
 checkByteArrayLength :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkByteArrayLength d = do
   let loc = getLoc d
   byteArray <- getBuiltinNameScoper loc BuiltinByteArray
   nat_ <- getBuiltinNameScoper loc BuiltinNat
-  unless (d ^. axiomType == (byteArray --> nat_)) $
-    builtinsErrorText (getLoc d) "bytearray-length has the wrong type"
+  unless (d ^. axiomType == (byteArray --> nat_))
+    $ builtinsErrorText (getLoc d) "bytearray-length has the wrong type"

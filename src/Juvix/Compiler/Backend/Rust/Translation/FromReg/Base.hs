@@ -62,8 +62,8 @@ stmtsBlock stmts = [StatementExpression (ExprBlock (Block stmts))]
 
 stmtLet :: IsMut -> Text -> Expression -> Statement
 stmtLet isMut result value =
-  StatementLet $
-    Let
+  StatementLet
+    $ Let
       { _letMutable = isMut,
         _letVariable = result,
         _letType = Nothing,
@@ -72,8 +72,8 @@ stmtLet isMut result value =
 
 stmtDecl :: IsMut -> Text -> Type -> Statement
 stmtDecl isMut var ty =
-  StatementLet $
-    Let
+  StatementLet
+    $ Let
       { _letMutable = isMut,
         _letVariable = var,
         _letType = Just ty,

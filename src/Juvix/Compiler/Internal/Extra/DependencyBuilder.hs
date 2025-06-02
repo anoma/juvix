@@ -88,8 +88,9 @@ positivityNameDependencyInfo m =
 
 buildDependencyInfoLet :: NonEmpty PreLetStatement -> NameDependencyInfo
 buildDependencyInfoLet ls =
-  run . runReader letDependencyParams $
-    buildDependencyInfoHelper (goPreLetStatements Nothing (toList ls) >> addCastEdges)
+  run
+    . runReader letDependencyParams
+    $ buildDependencyInfoHelper (goPreLetStatements Nothing (toList ls) >> addCastEdges)
 
 buildDependencyInfoHelper ::
   Sem (State DependencyGraph ': State StartNodes ': State BuilderState ': r) () ->
@@ -131,8 +132,9 @@ addEdgeMayRev n2 = whenJustM ask $ \n1 -> addEdge n2 n1
 
 addNode :: (Member (State DependencyGraph) r) => Name -> Sem r ()
 addNode n =
-  modify @DependencyGraph . over (at n) $
-    \case
+  modify @DependencyGraph
+    . over (at n)
+    $ \case
       Just x -> Just x
       Nothing -> Just (mempty :: HashSet Name)
 

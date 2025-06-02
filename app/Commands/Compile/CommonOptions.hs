@@ -102,10 +102,10 @@ parseCompileCommonOptions' allowOutputFile = do
       )
   _compileOutputFile <-
     if
-        | allowOutputFile ->
-            optional parseGenericOutputFile
-        | otherwise ->
-            pure Nothing
+      | allowOutputFile ->
+          optional parseGenericOutputFile
+      | otherwise ->
+          pure Nothing
   _compileInputFile <- parseInputFileType @k
   pure CompileCommonOptions {..}
 

@@ -36,20 +36,20 @@ check file reference = runAppError @ParserError $ do
         yamlFile s = replaceExtensions' ["." <> show s, ".yaml"] file
     let err :: AnsiText
         err =
-          mkAnsiText @Text $
-            prettyText refStrat
-              <> " and "
-              <> prettyText strat
-              <> " don't match"
-              <> "\n"
-              <> prettyText refStrat
-              <> " written to:\n"
-              <> toFilePath (yamlFile refStrat)
-              <> "\n"
-              <> prettyText strat
-              <> " written to:\n"
-              <> toFilePath (yamlFile strat)
-              <> "\n"
+          mkAnsiText @Text
+            $ prettyText refStrat
+            <> " and "
+            <> prettyText strat
+            <> " don't match"
+            <> "\n"
+            <> prettyText refStrat
+            <> " written to:\n"
+            <> toFilePath (yamlFile refStrat)
+            <> "\n"
+            <> prettyText strat
+            <> " written to:\n"
+            <> toFilePath (yamlFile strat)
+            <> "\n"
     unless (res == reference) $ do
       liftIO (Yaml.encodeFile (toFilePath (yamlFile refStrat)) reference)
       liftIO (Yaml.encodeFile (toFilePath (yamlFile strat)) res)

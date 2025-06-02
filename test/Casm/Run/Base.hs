@@ -129,10 +129,10 @@ casmRunAssertion' entryPoint bInterp bRunVM labi instrs blts outputSize inputFil
     Left err -> do
       assertFailure (prettyString err)
     Right () -> do
-      when bInterp $
-        casmInterpret labi instrs inputFile expectedFile step
-      when bRunVM $
-        casmRunVM entryPoint labi instrs blts outputSize inputFile expectedFile step
+      when bInterp
+        $ casmInterpret labi instrs inputFile expectedFile step
+      when bRunVM
+        $ casmRunVM entryPoint labi instrs blts outputSize inputFile expectedFile step
 
 casmRunAssertion :: Bool -> Bool -> Path Abs Dir -> Path Abs File -> Maybe (Path Abs File) -> Path Abs File -> (String -> IO ()) -> Assertion
 casmRunAssertion bInterp bRunVM root mainFile inputFile expectedFile step = do

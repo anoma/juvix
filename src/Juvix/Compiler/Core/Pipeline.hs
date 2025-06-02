@@ -34,13 +34,13 @@ toPreStripped :: (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) => T
 toPreStripped checkId md = do
   noCheck <- asks (^. entryPointNoCheck)
   let checkId' = if noCheck then IdentityTrans else checkId
-  mapReader fromEntryPoint $
-    applyTransformations (toStrippedTransformations0 checkId') md
+  mapReader fromEntryPoint
+    $ applyTransformations (toStrippedTransformations0 checkId') md
 
 toStripped' :: (Members '[Error JuvixError, Reader EntryPoint, Dumper] r) => Module -> Sem r Module
 toStripped' md = do
-  mapReader fromEntryPoint $
-    applyTransformations toStrippedTransformations1 md
+  mapReader fromEntryPoint
+    $ applyTransformations toStrippedTransformations1 md
 
 -- | Perform transformations on stored Core necessary before the translation to
 -- Core.Stripped
@@ -51,5 +51,5 @@ checkModule :: (Members '[Error JuvixError, Reader EntryPoint] r) => Transformat
 checkModule checkId md = do
   noCheck <- asks (^. entryPointNoCheck)
   let checkId' = if noCheck then IdentityTrans else checkId
-  mapReader fromEntryPoint $
-    void (ignoreDumper $ applyTransformations [CombineInfoTables, FilterUnreachable, checkId'] md)
+  mapReader fromEntryPoint
+    $ void (ignoreDumper $ applyTransformations [CombineInfoTables, FilterUnreachable, checkId'] md)

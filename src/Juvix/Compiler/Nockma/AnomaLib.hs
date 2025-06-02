@@ -6,9 +6,9 @@ import Juvix.Prelude.Base
 
 anomaLib :: Term Natural
 anomaLib =
-  fromRight impossible $
-    parseText $
-      decodeUtf8 $(FE.makeRelativeToProject "runtime/nockma/anomalib.nockma" >>= FE.embedFile)
+  fromRight impossible
+    $ parseText
+    $ decodeUtf8 $(FE.makeRelativeToProject "runtime/nockma/anomalib.nockma" >>= FE.embedFile)
 
 -- | The anoma lib paths are obtained from the Urbit dojo
 -- * Load the anoma lib files into the Urbit dojo

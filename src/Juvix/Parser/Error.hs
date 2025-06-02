@@ -314,12 +314,12 @@ instance ToGenericError WrongTopModuleName where
             "The top module"
               <+> ppCode opts' _wrongTopModuleNameActualName
               <+> "is defined in the file:"
-                <> line
-                <> pretty _wrongTopModuleNameActualPath
-                <> line
-                <> "But it should be in the file:"
-                <> line
-                <> pretty _wrongTopModuleNameExpectedPath
+              <> line
+              <> pretty _wrongTopModuleNameActualPath
+              <> line
+              <> "But it should be in the file:"
+              <> line
+              <> pretty _wrongTopModuleNameExpectedPath
 
 data WrongTopModuleNameOrphan = WrongTopModuleNameOrphan
   { _wrongTopModuleNameOrpahnExpectedName :: Text,
@@ -345,8 +345,8 @@ instance ToGenericError WrongTopModuleNameOrphan where
               <> line
               <> "Expected module name:"
               <+> annotate (AnnKind KNameTopModule) (pcode _wrongTopModuleNameOrpahnExpectedName)
-                <> line
-                <> "Actual module name:"
+              <> line
+              <> "Actual module name:"
               <+> ppCode opts' _wrongTopModuleNameOrpahnActualName
 
 data StdinOrFileError = StdinOrFileError
@@ -400,13 +400,13 @@ instance ToGenericError NamedApplicationMissingAt where
             <> pretty funWord
             <+> ppCode opts _namedApplicationMissingAtLhs
             <+> kwAssign
-              <> "\nPerhaps you intended to write a named application and missed the"
+            <> "\nPerhaps you intended to write a named application and missed the"
             <+> kwAt
             <+> "symbol? That would be something like"
-              <> line
-              <> fun'
-              <> kwAt
-              <> "{arg1 := ...; arg2 := ...; ... }"
+            <> line
+            <> fun'
+            <> kwAt
+            <> "{arg1 := ...; arg2 := ...; ... }"
     return
       GenericError
         { _genericErrorLoc = i,

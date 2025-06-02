@@ -226,10 +226,10 @@ instance PrettyCode ConstrApp where
     args <- mapM ppCode _constrAppArgs
     name <- ppCode _constrAppConstructor
     if
-        | null args ->
-            return name
-        | otherwise ->
-            return $ name <+> hsep args
+      | null args ->
+          return name
+      | otherwise ->
+          return $ name <+> hsep args
 
 instance PrettyCode Lambda where
   ppCode Lambda {..} = do
@@ -322,20 +322,20 @@ instance PrettyCode Theory where
     n <- ppCode _theoryName
     imports <- ppImports _theoryImports
     stmts <- mapM ppCode _theoryStatements
-    return $
-      kwTheory
-        <+> n
-          <> line
-          <> kwImports
-        <+> align (vsep ("Main" : imports))
-          <> line
-          <> kwBegin
-          <> line
-          <> line
-          <> vsep (punctuate line stmts)
-          <> line
-          <> line
-          <> kwEnd
+    return
+      $ kwTheory
+      <+> n
+      <> line
+      <> kwImports
+      <+> align (vsep ("Main" : imports))
+      <> line
+      <> kwBegin
+      <> line
+      <> line
+      <> vsep (punctuate line stmts)
+      <> line
+      <> line
+      <> kwEnd
 
 ppRightExpression ::
   (PrettyCode a, HasAtomicity a, Members '[Reader Options, Input Comment] r) =>

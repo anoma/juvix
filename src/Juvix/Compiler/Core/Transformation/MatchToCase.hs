@@ -85,22 +85,22 @@ goMatchToCase recur node = case node of
         -- The matrix has no rows -- matching fails (Section 4, case 1).
         fCoverage <- asks (^. optCheckCoverage)
         if
-            | fCoverage ->
-                throw
-                  CoreError
-                    { _coreErrorMsg =
-                        ppOutput
-                          ( "Pattern matching not exhaustive. Example pattern "
-                              <> seq
-                              <> "not matched: "
-                              <> pat'
-                          ),
-                      _coreErrorNode = Nothing,
-                      _coreErrorLoc = fromMaybe defaultLoc (getNodeLocation node)
-                    }
-            | otherwise ->
-                return $
-                  mkBuiltinApp' OpFail [mkConstant' (ConstString ("Pattern sequence not matched: " <> ppTrace pat))]
+          | fCoverage ->
+              throw
+                CoreError
+                  { _coreErrorMsg =
+                      ppOutput
+                        ( "Pattern matching not exhaustive. Example pattern "
+                            <> seq
+                            <> "not matched: "
+                            <> pat'
+                        ),
+                    _coreErrorNode = Nothing,
+                    _coreErrorLoc = fromMaybe defaultLoc (getNodeLocation node)
+                  }
+          | otherwise ->
+              return
+                $ mkBuiltinApp' OpFail [mkConstant' (ConstString ("Pattern sequence not matched: " <> ppTrace pat))]
         where
           pat = err (replicate (length vs) ValueWildcard)
           seq = if isSingleton pat then "" else "sequence "
@@ -120,29 +120,29 @@ goMatchToCase recur node = case node of
             tagsSet = getPatTags col
             tags = toList tagsSet
          in if
-                | null tags ->
-                    -- There are no constructor patterns
-                    compileDefault Nothing err bindersNum vs' col matrix'
-                | otherwise -> do
-                    -- Section 4, case 3(a)
-                    let ind = lookupConstructorInfo tab (head' tags) ^. constructorInductive
-                        ctrsNum = length (lookupInductiveInfo tab ind ^. inductiveConstructors)
-                    branches <- mapM (compileBranch err bindersNum vs' col matrix') tags
-                    defaultBranch <-
-                      if
-                          | length tags == ctrsNum ->
-                              return Nothing
-                          | otherwise ->
-                              Just <$> compileDefault (Just $ missingTag tab ind tagsSet) err bindersNum vs' col matrix'
-                    return $
-                      NCase
-                        Case
-                          { _caseInfo = mempty,
-                            _caseInductive = ind,
-                            _caseValue = val,
-                            _caseBranches = branches,
-                            _caseDefault = defaultBranch
-                          }
+              | null tags ->
+                  -- There are no constructor patterns
+                  compileDefault Nothing err bindersNum vs' col matrix'
+              | otherwise -> do
+                  -- Section 4, case 3(a)
+                  let ind = lookupConstructorInfo tab (head' tags) ^. constructorInductive
+                      ctrsNum = length (lookupInductiveInfo tab ind ^. inductiveConstructors)
+                  branches <- mapM (compileBranch err bindersNum vs' col matrix') tags
+                  defaultBranch <-
+                    if
+                      | length tags == ctrsNum ->
+                          return Nothing
+                      | otherwise ->
+                          Just <$> compileDefault (Just $ missingTag tab ind tagsSet) err bindersNum vs' col matrix'
+                  return
+                    $ NCase
+                      Case
+                        { _caseInfo = mempty,
+                          _caseInductive = ind,
+                          _caseValue = val,
+                          _caseBranches = branches,
+                          _caseDefault = defaultBranch
+                        }
 
     mkVal :: Level -> Level -> Node
     mkVal bindersNum vl = mkVar' (getBinderIndex bindersNum vl)
@@ -161,8 +161,8 @@ goMatchToCase recur node = case node of
               _patternRowIgnoredPatternsNum = max 0 (nIgnored - 1),
               _patternRowBinderChangesRev =
                 if
-                    | nIgnored > 0 -> rbcs
-                    | otherwise -> mkBCRemove binder val : rbcs
+                  | nIgnored > 0 -> rbcs
+                  | otherwise -> mkBCRemove binder val : rbcs
             }
           where
             nIgnored = row ^. patternRowIgnoredPatternsNum
@@ -198,8 +198,8 @@ goMatchToCase recur node = case node of
       where
         recur' = recur . (bcs ++)
         bcs =
-          reverse $
-            foldl'
+          reverse
+            $ foldl'
               ( \acc (pat, vl) ->
                   mkBCRemove (getPatternBinder pat) (mkVal bindersNum vl) : acc
               )
@@ -263,8 +263,8 @@ goMatchToCase recur node = case node of
       binders' <- getBranchBinders col matrix tag
       matrix' <- getBranchMatrix col matrix tag
       body <- compile err' bindersNum' (vs' ++ vs) matrix'
-      return $
-        CaseBranch
+      return
+        $ CaseBranch
           { _caseBranchInfo = setInfoName (ci ^. constructorName) mempty,
             _caseBranchTag = tag,
             _caseBranchBinders = binders',
@@ -274,7 +274,8 @@ goMatchToCase recur node = case node of
 
     getBranchBinders :: [Pattern] -> PatternMatrix -> Tag -> Sem r [Binder]
     getBranchBinders col matrix tag =
-      reverse . snd
+      reverse
+        . snd
         <$> foldl'
           ( \a pat -> do
               (rbcs, acc) <- a
@@ -305,19 +306,19 @@ goMatchToCase recur node = case node of
           helper row = \case
             PatConstr PatternConstr {..}
               | _patternConstrTag == tag ->
-                  Just $
-                    row
+                  Just
+                    $ row
                       { _patternRowPatterns =
                           _patternConstrArgs ++ row ^. patternRowPatterns,
                         _patternRowBinderChangesRev = BCAdd argsNum : row ^. patternRowBinderChangesRev
                       }
             PatWildcard {} ->
-              Just $
-                row
+              Just
+                $ row
                   { _patternRowPatterns =
                       map (PatWildcard . PatternWildcard mempty . Binder "_" Nothing) argtys
                         ++ row
-                          ^. patternRowPatterns,
+                        ^. patternRowPatterns,
                     _patternRowBinderChangesRev = BCAdd argsNum : row ^. patternRowBinderChangesRev,
                     _patternRowIgnoredPatternsNum = argsNum + row ^. patternRowIgnoredPatternsNum
                   }

@@ -74,8 +74,8 @@ data CantGenerateRandomBits a = CantGenerateRandomBits
 throwInvalidNockOp :: (Members '[Error (NockEvalError a), Reader EvalCtx] r) => Atom a -> Sem r x
 throwInvalidNockOp a = do
   ctx <- ask
-  throw $
-    ErrInvalidNockOp
+  throw
+    $ ErrInvalidNockOp
       InvalidNockOp
         { _invalidNockOpCtx = ctx,
           _invalidNockOp = a
@@ -84,8 +84,8 @@ throwInvalidNockOp a = do
 throwInvalidPath :: (Members '[Error (NockEvalError a), Reader EvalCtx] r) => Term a -> Path -> Sem r x
 throwInvalidPath tm p = do
   ctx <- ask
-  throw $
-    ErrInvalidPath
+  throw
+    $ ErrInvalidPath
       InvalidPath
         { _invalidPathCtx = ctx,
           _invalidPathTerm = tm,
@@ -95,8 +95,8 @@ throwInvalidPath tm p = do
 throwExpectedCell :: (Members '[Error (NockEvalError a), Reader EvalCtx] r) => Atom a -> Sem r x
 throwExpectedCell a = do
   ctx <- ask
-  throw $
-    ErrExpectedCell
+  throw
+    $ ErrExpectedCell
       ExpectedCell
         { _expectedCellCtx = ctx,
           _expectedCellAtom = a
@@ -105,8 +105,8 @@ throwExpectedCell a = do
 throwExpectedAtom :: (Members '[Error (NockEvalError a), Reader EvalCtx] r) => Cell a -> Sem r x
 throwExpectedAtom a = do
   ctx <- ask
-  throw $
-    ErrExpectedAtom
+  throw
+    $ ErrExpectedAtom
       ExpectedAtom
         { _expectedAtomCtx = ctx,
           _expectedAtomCell = a
@@ -115,8 +115,8 @@ throwExpectedAtom a = do
 throwKeyNotInStorage :: (Members '[Reader (Storage a), Error (NockEvalError a)] r) => Term a -> Sem r x
 throwKeyNotInStorage k = do
   s <- ask
-  throw $
-    ErrKeyNotInStorage
+  throw
+    $ ErrKeyNotInStorage
       KeyNotInStorage
         { _keyNotInStorageKey = k,
           _keyNotInStorageStorage = s
@@ -125,8 +125,8 @@ throwKeyNotInStorage k = do
 throwDecodingFailed :: (Members '[Error (NockEvalError a), Reader EvalCtx] r) => Term a -> DecodingError -> Sem r x
 throwDecodingFailed a e = do
   ctx <- ask
-  throw $
-    ErrDecodingFailed
+  throw
+    $ ErrDecodingFailed
       DecodingFailed
         { _decodingFailedCtx = ctx,
           _decodingFailedTerm = a,
@@ -136,8 +136,8 @@ throwDecodingFailed a e = do
 throwVerificationFailed :: (Members '[Error (NockEvalError a), Reader EvalCtx] r) => Atom a -> Atom a -> Sem r x
 throwVerificationFailed m k = do
   ctx <- ask
-  throw $
-    ErrVerificationFailed
+  throw
+    $ ErrVerificationFailed
       VerificationFailed
         { _verificationFailedCtx = ctx,
           _verificationFailedMessage = m,

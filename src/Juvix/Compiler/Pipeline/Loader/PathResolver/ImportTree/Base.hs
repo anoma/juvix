@@ -89,8 +89,10 @@ withImportNode fromNode m = do
     ImportTreeAddEdge importScan toNode -> internalRegisterEdge importScan fromNode toNode
 
 importTreeNodesByPackage :: ImportTree -> HashMap (Path Abs Dir) (HashSet ImportNode)
-importTreeNodesByPackage tree = run . execState mempty $
-  forM_ (tree ^. importTreeNodes) $ \node ->
+importTreeNodesByPackage tree = run
+  . execState mempty
+  $ forM_ (tree ^. importTreeNodes)
+  $ \node ->
     modify @(HashMap (Path Abs Dir) (HashSet ImportNode))
       (over (at (node ^. importNodePackageRoot)) (Just . maybe (HashSet.singleton node) (HashSet.insert node)))
 

@@ -18,18 +18,18 @@ runCommand opts = runAppError @SimpleError
     go = do
       whenJustM checkClientRunning $ \config ->
         if
-            | (opts ^. startForce) -> stopClient config
-            | otherwise ->
-                throw
-                  ( SimpleError
-                      ( mkAnsiText
-                          ( "An Anoma client is already running"
-                              <> line
-                              <> line
-                              <> ppCodeAnn config
-                          )
-                      )
-                  )
+          | (opts ^. startForce) -> stopClient config
+          | otherwise ->
+              throw
+                ( SimpleError
+                    ( mkAnsiText
+                        ( "An Anoma client is already running"
+                            <> line
+                            <> line
+                            <> ppCodeAnn config
+                        )
+                    )
+                )
       i <- startClient
       let processH = i ^. anomaClientLaunchInfoProcess . anomaProcessHandle
       mpid <- getPid processH

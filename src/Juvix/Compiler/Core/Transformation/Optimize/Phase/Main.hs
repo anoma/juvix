@@ -29,14 +29,16 @@ optimize' opts@CoreOptions {..} md = do
           >=> dump "inlining"
           >=> doSimplification 2
           >=> dump "simplification"
-          >=> pure . specializeArgs
+          >=> pure
+          . specializeArgs
           >=> dump "specialize_args"
           >=> doSimplification 1
           >=> dump "simplification"
           >=> doConstantFolding
           >=> dump "constant_folding"
       )
-    >>= pure . filterUnreachable
+    >>= pure
+    . filterUnreachable
   where
     tab :: InfoTable
     tab = computeCombinedInfoTable md
@@ -63,8 +65,8 @@ optimize' opts@CoreOptions {..} md = do
       where
         nonRecs' =
           if
-              | _optOptimizationLevel > 1 -> nonRecursiveIdents md'
-              | otherwise -> nonRecs
+            | _optOptimizationLevel > 1 -> nonRecursiveIdents md'
+            | otherwise -> nonRecs
 
     doSimplification :: Int -> Module -> Sem r Module
     doSimplification n =

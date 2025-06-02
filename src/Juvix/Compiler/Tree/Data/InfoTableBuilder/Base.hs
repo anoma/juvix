@@ -51,10 +51,10 @@ mkBuilderState md =
   where
     mkIdentsMap :: InfoTable' t e -> HashMap Text IdentKind
     mkIdentsMap tab =
-      HashMap.fromList $
-        map (\fi -> (fi ^. functionName, IdentFun (fi ^. functionSymbol))) (HashMap.elems (tab ^. infoFunctions))
-          ++ map (\ii -> (ii ^. inductiveName, IdentInd (ii ^. inductiveSymbol))) (HashMap.elems (tab ^. infoInductives))
-          ++ map (\ci -> (ci ^. constructorName, IdentConstr (ci ^. constructorTag))) (HashMap.elems (tab ^. infoConstrs))
+      HashMap.fromList
+        $ map (\fi -> (fi ^. functionName, IdentFun (fi ^. functionSymbol))) (HashMap.elems (tab ^. infoFunctions))
+        ++ map (\ii -> (ii ^. inductiveName, IdentInd (ii ^. inductiveSymbol))) (HashMap.elems (tab ^. infoInductives))
+        ++ map (\ci -> (ci ^. constructorName, IdentConstr (ci ^. constructorTag))) (HashMap.elems (tab ^. infoConstrs))
 
 runInfoTableBuilder :: Module'' t e -> Sem (InfoTableBuilder' t e ': r) b -> Sem r (Module'' t e, b)
 runInfoTableBuilder md = fmap (first (^. stateModule)) . runInfoTableBuilder' (mkBuilderState md)

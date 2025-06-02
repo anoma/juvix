@@ -27,8 +27,8 @@ disambiguateNodeNames' disambiguate md = dmapL go
         NRec
           ( set
               letRecValues
-              ( NonEmpty.fromList $
-                  zipWithExact
+              ( NonEmpty.fromList
+                  $ zipWithExact
                     (set letItemBinder)
                     (disambiguateBinders bl (map (^. letItemBinder) vs))
                     vs

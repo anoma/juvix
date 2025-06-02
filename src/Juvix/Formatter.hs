@@ -109,8 +109,8 @@ formatModuleInfo pnode = do
       scopeRes = pnode ^. processedNodeData
   originalSource :: Text <- readFile' (node ^. importNodeAbsFile)
   formattedTxt <-
-    runReader originalSource $
-      formatScoperResult False scopeRes
+    runReader originalSource
+      $ formatScoperResult False scopeRes
   let formatRes =
         SourceCode
           { _sourceCodeFormatted = formattedTxt,
@@ -148,8 +148,8 @@ formatResultSourceCode ::
   Sem r FormatResult
 formatResultSourceCode filepath src = do
   if
-      | src ^. sourceCodeOriginal /= src ^. sourceCodeFormatted -> mkResult FormatResultNotFormatted
-      | otherwise -> mkResult FormatResultOK
+    | src ^. sourceCodeOriginal /= src ^. sourceCodeFormatted -> mkResult FormatResultNotFormatted
+    | otherwise -> mkResult FormatResultOK
   where
     mkResult :: FormatResult -> Sem r FormatResult
     mkResult res = do

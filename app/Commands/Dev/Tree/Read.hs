@@ -20,8 +20,8 @@ runCommand opts = do
       case r of
         Left err -> exitJuvixError (JuvixError err)
         Right md' -> do
-          unless (project opts ^. treeReadNoPrint) $
-            renderStdOut (Tree.ppOutDefault md' (Tree.computeCombinedInfoTable md'))
+          unless (project opts ^. treeReadNoPrint)
+            $ renderStdOut (Tree.ppOutDefault md' (Tree.computeCombinedInfoTable md'))
           doEval md'
   where
     file :: AppPath File

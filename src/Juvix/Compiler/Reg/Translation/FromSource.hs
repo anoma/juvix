@@ -115,8 +115,8 @@ parseBinaryOp kwd op vref = do
   kw kwd
   arg1 <- value
   arg2 <- value
-  return $
-    InstrBinop
+  return
+    $ InstrBinop
       { _instrBinopOpcode = op,
         _instrBinopResult = vref,
         _instrBinopArg1 = arg1,
@@ -143,8 +143,8 @@ parseUnaryOp ::
 parseUnaryOp kwd op vref = do
   kw kwd
   arg <- value
-  return $
-    InstrUnop
+  return
+    $ InstrUnop
       { _instrUnopOpcode = op,
         _instrUnopResult = vref,
         _instrUnopArg = arg
@@ -169,8 +169,8 @@ parseCairoOp ::
 parseCairoOp kwd op vref = do
   kw kwd
   args <- replicateM (cairoOpArgsNum op) value
-  return $
-    InstrCairo
+  return
+    $ InstrCairo
       { _instrCairoOpcode = op,
         _instrCairoResult = vref,
         _instrCairoArgs = args

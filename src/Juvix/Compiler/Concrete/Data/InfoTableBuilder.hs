@@ -108,8 +108,8 @@ getBuiltinSymbolHelper i b =
   where
     notDefined :: forall r' x. (Members '[Error BuiltinNotDefined] r') => Sem r' x
     notDefined =
-      throw $
-        BuiltinNotDefined
+      throw
+        $ BuiltinNotDefined
           { _notDefinedBuiltin = b,
             _notDefinedLoc = i
           }
@@ -123,8 +123,8 @@ registerBuiltinHelper b n = do
   where
     alreadyDefined :: forall r' x. (Members '[Error ScoperError] r') => Sem r' x
     alreadyDefined =
-      throw $
-        ErrBuiltinAlreadyDefined
+      throw
+        $ ErrBuiltinAlreadyDefined
           BuiltinAlreadyDefined
             { _builtinAlreadyDefined = b,
               _builtinAlreadyDefinedLoc = getLoc n

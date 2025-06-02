@@ -97,29 +97,35 @@ fromInternal sha256 i = mapError (JuvixError . ErrBadScope) $ do
           reserveLiteralIntToIntSymbol
         let resultModule :: Internal.Module = i ^. InternalTyped.resultModule
             builtinsTable :: BuiltinsTable =
-              i ^. InternalTyped.resultInternal . Internal.resultScoper . Scoped.scoperResultBuiltinsTable
+              i
+                ^. InternalTyped.resultInternal
+                . Internal.resultScoper
+                . Scoped.scoperResultBuiltinsTable
                 <> Store.computeCombinedBuiltins storeTab
 
             resultTable :: InternalTyped.InfoTable =
-              i ^. InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
+              i
+                ^. InternalTyped.resultInternalModule
+                . Internal.internalModuleInfoTable
                 <> Internal.computeCombinedInfoTable importTab
         runReader resultTable
           . runReader builtinsTable
           $ goModule resultModule
         md' <- getModule
-        when (InternalTyped.getInternalTypedResultIsMainFile i) $
-          forM_ (md' ^. moduleInfoTable . infoIdentifiers) $ \f -> do
-            when (f ^. identifierName == Str.main) $
-              registerMain (f ^. identifierSymbol)
+        when (InternalTyped.getInternalTypedResultIsMainFile i)
+          $ forM_ (md' ^. moduleInfoTable . infoIdentifiers)
+          $ \f -> do
+            when (f ^. identifierName == Str.main)
+              $ registerMain (f ^. identifierSymbol)
         when
           (isNothing (lookupBuiltinInductive md' BuiltinBool))
           declareBoolBuiltins
-        when (isNothing (coreImportsTab ^. infoLiteralIntToNat)) $
-          setupLiteralIntToNat literalIntToNatNode
-        when (isNothing (coreImportsTab ^. infoLiteralIntToInt)) $
-          setupLiteralIntToInt literalIntToIntNode
-  return $
-    CoreResult
+        when (isNothing (coreImportsTab ^. infoLiteralIntToNat))
+          $ setupLiteralIntToNat literalIntToNatNode
+        when (isNothing (coreImportsTab ^. infoLiteralIntToInt))
+          $ setupLiteralIntToInt literalIntToIntNode
+  return
+    $ CoreResult
       { _coreResultModule = res,
         _coreResultInternalTypedResult = i
       }
@@ -127,7 +133,10 @@ fromInternal sha256 i = mapError (JuvixError . ErrBadScope) $ do
 fromInternalExpression :: (Members '[Reader BuiltinsTable, NameIdGen, Error BadScope] r) => Internal.InternalModuleTable -> CoreResult -> Internal.Expression -> Sem r Node
 fromInternalExpression importTab res exp = do
   let mtab =
-        res ^. coreResultInternalTypedResult . InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
+        res
+          ^. coreResultInternalTypedResult
+          . InternalTyped.resultInternalModule
+          . Internal.internalModuleInfoTable
           <> Internal.computeCombinedInfoTable importTab
       tabs = res ^. coreResultInternalTypedResult . InternalTyped.resultTypeCheckingTables
   fmap snd
@@ -537,11 +546,11 @@ mkBody ppLam ty loc clauses
       [] -> len
       ps : pats | length ps == len -> checkPatternsNum len pats
       _ ->
-        error $
-          "internal-to-core: all clauses must have the same number of patterns. Offending lambda at"
-            <> Internal.ppPrint (getLoc ppLam)
-            <> "\n"
-            <> (ppLam ^. withLocParam)
+        error
+          $ "internal-to-core: all clauses must have the same number of patterns. Offending lambda at"
+          <> Internal.ppPrint (getLoc ppLam)
+          <> "\n"
+          <> (ppLam ^. withLocParam)
 
     goClause :: Level -> [Internal.PatternArg] -> Internal.Expression -> Sem r MatchBranch
     goClause lvl pats body = do
@@ -617,8 +626,8 @@ goCaseBranchRhs = \case
         goSideIfBranch Internal.SideIfBranch {..} = do
           cond <- goExpression _sideIfBranchCondition
           body <- goExpression _sideIfBranchBody
-          return $
-            SideIfBranch
+          return
+            $ SideIfBranch
               { _sideIfBranchInfo = setInfoLocation (getLoc _sideIfBranchCondition) mempty,
                 _sideIfBranchCondition = cond,
                 _sideIfBranchBody = body
@@ -1301,8 +1310,8 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
         m <- getIdent identIndex
         case m of
           Just (IdentConstr tag) ->
-            return $
-              PatConstr
+            return
+              $ PatConstr
                 PatternConstr
                   { _patternConstrInfo = setInfoName (ctrName ^. nameText) mempty,
                     _patternConstrFixity = ctrName ^. nameFixity,

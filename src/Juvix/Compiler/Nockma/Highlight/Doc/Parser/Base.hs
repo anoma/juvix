@@ -37,18 +37,19 @@ isStackSymbol = (== 's') . toLower
 
 pPathSymbol :: Parse PathSymbol
 pPathSymbol =
-  lexeme $
-    chunk "p" $> PathP
+  lexeme
+    $ chunk "p"
+    $> PathP
 
 pStack :: Parse Symbol
 pStack = lexeme $ satisfy isStackSymbol $> SymbolStack
 
 pNockOp :: Parse NockOp
 pNockOp =
-  lexeme $
-    choice
+  lexeme
+    $ choice
       [ chunk (opName <> " ") $> op
-        | (opName, op) <- HashMap.toList atomOps
+      | (opName, op) <- HashMap.toList atomOps
       ]
 
 kw :: Keyword -> Parse ()
@@ -58,7 +59,7 @@ kw k =
     . choice
     . map chunk
     $ (k ^. keywordAscii)
-      : maybeToList (k ^. keywordUnicode)
+    : maybeToList (k ^. keywordUnicode)
 
 delims :: Keyword -> Keyword -> Parse a -> Parse a
 delims l r p = do
@@ -155,8 +156,10 @@ pCell = brackets $ do
 
 pTerm :: Parse Term
 pTerm =
-  TermCell <$> pCell
-    <|> TermAtom <$> pAtom
+  TermCell
+    <$> pCell
+    <|> TermAtom
+    <$> pAtom
 
 pContext :: Parse Context
 pContext = do

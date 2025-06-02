@@ -109,13 +109,13 @@ ppReplace Replace {..} = do
   b' <- ppTerm _replaceBase
   ix' <- ppPathSymbol _replacePath
   by' <- ppTerm _replaceBy
-  return $
-    b'
-      <> ppCodeAnn delimBraceL
-      <> ix'
-      <+> ppCodeAnn kwMapsTo
-      <+> by'
-        <> ppCodeAnn delimBraceR
+  return
+    $ b'
+    <> ppCodeAnn delimBraceL
+    <> ix'
+    <+> ppCodeAnn kwMapsTo
+    <+> by'
+    <> ppCodeAnn delimBraceR
 
 ppPathSymbol :: PP PathSymbol
 ppPathSymbol = \case
@@ -127,15 +127,19 @@ ppNeq :: PP Neq
 ppNeq Neq {..} = do
   l' <- ppTerm _neqLhs
   r' <- ppTerm _neqRhs
-  return $
-    l' <+> ppCodeAnn kwNeqSymbol <+> r'
+  return
+    $ l'
+    <+> ppCodeAnn kwNeqSymbol
+    <+> r'
 
 ppIndexAt :: PP IndexAt
 ppIndexAt IndexAt {..} = do
   b' <- ppTerm _indexAtBase
   ix' <- ppTerm _indexAtPath
-  return $
-    b' <+> ppCodeAnn kwExclamation <+> ix'
+  return
+    $ b'
+    <+> ppCodeAnn kwExclamation
+    <+> ix'
 
 ppStack :: (Members '[ColorCounter] r) => Sem r (Doc CodeAnn)
 ppStack = do
@@ -145,18 +149,20 @@ ppStack = do
 ppSuccessor :: PP Successor
 ppSuccessor Successor {..} = do
   t' <- ppTerm _successor
-  return $
-    t' <+> "+" <+> "1"
+  return
+    $ t'
+    <+> "+"
+    <+> "1"
 
 ppCell :: PP Cell
 ppCell Cell {..} = do
   l <- ppTerm _cellLhs
   r <- ppTerm _cellRhs
-  return $
-    ppCodeAnn delimBracketL
-      <> l
-      <+> r
-        <> ppCodeAnn delimBracketR
+  return
+    $ ppCodeAnn delimBracketL
+    <> l
+    <+> r
+    <> ppCodeAnn delimBracketR
 
 ppTerm :: PP Term
 ppTerm = \case
@@ -167,15 +173,19 @@ ppEvalRelation :: PP EvalRelation
 ppEvalRelation EvalRelation {..} = do
   ctx' <- ppContext _evalContext
   r' <- ppTerm _evalRhs
-  return $
-    ctx' <+> ppCodeAnn kwDoubleArrowR <+> r'
+  return
+    $ ctx'
+    <+> ppCodeAnn kwDoubleArrowR
+    <+> r'
 
 ppContext :: PP Context
 ppContext Context {..} = do
   l <- ppTerm _contextLhs
   r <- ppTerm _contextRhs
-  return $
-    l <+> ppCodeAnn kwStar <+> r
+  return
+    $ l
+    <+> ppCodeAnn kwStar
+    <+> r
 
 ppRelation :: PP Relation
 ppRelation = \case
@@ -190,18 +200,18 @@ ppRule Rule {..} = do
   let n1 = Text.length (toPlainText conds')
       n2 = Text.length (toPlainText post')
       hrule = pretty (Text.replicate (max n1 (max n2 3)) "─")
-  return $
-    conds'
-      <> hardline
-      <> hrule
-      <> hardline
-      <> post'
+  return
+    $ conds'
+    <> hardline
+    <> hrule
+    <> hardline
+    <> post'
 
 ppRules :: PP Rules
 ppRules Rules {..} = do
   rules' <- mapM ppRule _rules
-  return $
-    concatWith
+  return
+    $ concatWith
       ( \r1 r2 ->
           r1
             <> hardline

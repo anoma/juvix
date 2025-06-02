@@ -26,7 +26,7 @@ runCommand opts = do
         . runReader (project' @Core.CoreOptions gopts)
         . Core.applyTransformations' compileTransformations
         $ coremodule
-      )
+    )
       >>= getRight
   let txt = ppPrint (res ^. Core.moduleInfoTable)
   writeFileEnsureLn outFile txt

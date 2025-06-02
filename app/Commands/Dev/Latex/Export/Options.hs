@@ -60,35 +60,35 @@ parseExport = do
           <> value ExportStandalone
       )
   _exportFromLine <-
-    optional $
-      option
+    optional
+      $ option
         readLineNumber
         ( long "from"
             <> metavar "LINE"
             <> help "Output from the given line onwards"
         )
   _exportToLine <-
-    optional $
-      option
+    optional
+      $ option
         readLineNumber
         ( long "to"
             <> metavar "LINE"
             <> help "Output until the given line (included)"
         )
   mexportNames <-
-    optional $
-      option
+    optional
+      $ option
         readMIdentifierList
         ( long "statements"
             <> metavar "[STATEMENT_NAME]"
             <> help "Export a list of statements. E.g. --statements \"List; foldl; foldr; map\". Comments are not printed"
         )
 
-  pure $
-    let _exportFilter :: ExportFilter = case mexportNames of
-          Nothing -> ExportFilterRange ExportRange {..}
-          Just names -> ExportFilterNames names
-     in ExportOptions {..}
+  pure
+    $ let _exportFilter :: ExportFilter = case mexportNames of
+            Nothing -> ExportFilterRange ExportRange {..}
+            Just names -> ExportFilterNames names
+       in ExportOptions {..}
   where
     readLineNumber :: ReadM Int
     readLineNumber = eitherReader readr

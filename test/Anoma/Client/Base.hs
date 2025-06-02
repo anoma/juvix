@@ -23,8 +23,8 @@ pollForOutput timeoutMillis isDataAvailable action = runConcurrent $ do
     go = do
       res <- inject action
       if
-          | isDataAvailable res -> return res
-          | otherwise -> threadDelay (50 * 1000) >> go
+        | isDataAvailable res -> return res
+        | otherwise -> threadDelay (50 * 1000) >> go
 
     timeoutAction :: (Member Concurrent x) => Sem x ()
     timeoutAction = void (threadDelay (timeoutMillis * 1000))

@@ -12,8 +12,8 @@ checkTrace f = do
       l = getLoc f
   a <- freshVar l "a"
   let freeVars = HashSet.fromList [a]
-  unless ((ftype ==% (u <>--> a --> a)) freeVars) $
-    builtinsErrorText (getLoc f) "trace must be of type {A : Type} -> A -> A"
+  unless ((ftype ==% (u <>--> a --> a)) freeVars)
+    $ builtinsErrorText (getLoc f) "trace must be of type {A : Type} -> A -> A"
 
 checkFail :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
 checkFail f = do
@@ -23,5 +23,5 @@ checkFail f = do
   a <- freshVar l "a"
   let freeVars = HashSet.fromList [a]
   string_ <- getBuiltinNameScoper (getLoc f) BuiltinString
-  unless ((ftype ==% (u <>--> string_ --> a)) freeVars) $
-    builtinsErrorText (getLoc f) "fail must be of type {A : Type} -> String -> A"
+  unless ((ftype ==% (u <>--> string_ --> a)) freeVars)
+    $ builtinsErrorText (getLoc f) "fail must be of type {A : Type} -> String -> A"

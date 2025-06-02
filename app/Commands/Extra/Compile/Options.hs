@@ -167,8 +167,8 @@ optCompileTarget supportedTargets =
 
     parseTarget :: String -> Either String CompileTarget
     parseTarget txt =
-      maybe err return $
-        lookup
+      maybe err return
+        $ lookup
           (map toLower txt)
           [(Prelude.show t, t) | t <- listTargets]
       where

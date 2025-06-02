@@ -25,8 +25,8 @@ checkJsonArray d@ConstructorDef {..} = do
   json_ <- getBuiltinNameScoper (getLoc d) BuiltinJson
   list_ <- getBuiltinNameScoper (getLoc d) BuiltinList
   let cty = list_ @@ json_ --> json_
-  unless (ty === cty) $
-    builtinsErrorText (getLoc d) "json array constructor has the wrong type"
+  unless (ty === cty)
+    $ builtinsErrorText (getLoc d) "json array constructor has the wrong type"
 
 checkJsonBool :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => ConstructorDef -> Sem r ()
 checkJsonBool d@ConstructorDef {..} = do
@@ -34,8 +34,8 @@ checkJsonBool d@ConstructorDef {..} = do
   json_ <- getBuiltinNameScoper (getLoc d) BuiltinJson
   bool_ <- getBuiltinNameScoper (getLoc d) BuiltinBool
   let cty = bool_ --> json_
-  unless (ty === cty) $
-    builtinsErrorText (getLoc d) "json bool constructor has the wrong type"
+  unless (ty === cty)
+    $ builtinsErrorText (getLoc d) "json bool constructor has the wrong type"
 
 checkJsonObject :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => ConstructorDef -> Sem r ()
 checkJsonObject d@ConstructorDef {..} = do
@@ -45,8 +45,8 @@ checkJsonObject d@ConstructorDef {..} = do
   pair_ <- getBuiltinNameScoper (getLoc d) BuiltinPair
   string_ <- getBuiltinNameScoper (getLoc d) BuiltinString
   let cty = list_ @@ (pair_ @@ string_ @@ json_) --> json_
-  unless (ty === cty) $
-    builtinsErrorText (getLoc d) "json object constructor has the wrong type"
+  unless (ty === cty)
+    $ builtinsErrorText (getLoc d) "json object constructor has the wrong type"
 
 checkJsonNumber :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => ConstructorDef -> Sem r ()
 checkJsonNumber d@ConstructorDef {..} = do
@@ -54,8 +54,8 @@ checkJsonNumber d@ConstructorDef {..} = do
   json_ <- getBuiltinNameScoper (getLoc d) BuiltinJson
   nat_ <- getBuiltinNameScoper (getLoc d) BuiltinNat
   let cty = nat_ --> json_
-  unless (ty === cty) $
-    builtinsErrorText (getLoc d) "json number constructor has the wrong type"
+  unless (ty === cty)
+    $ builtinsErrorText (getLoc d) "json number constructor has the wrong type"
 
 checkJsonString :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => ConstructorDef -> Sem r ()
 checkJsonString d@ConstructorDef {..} = do
@@ -63,5 +63,5 @@ checkJsonString d@ConstructorDef {..} = do
   json_ <- getBuiltinNameScoper (getLoc d) BuiltinJson
   string_ <- getBuiltinNameScoper (getLoc d) BuiltinString
   let cty = string_ --> json_
-  unless (ty === cty) $
-    builtinsErrorText (getLoc d) "json string constructor has the wrong type"
+  unless (ty === cty)
+    $ builtinsErrorText (getLoc d) "json string constructor has the wrong type"

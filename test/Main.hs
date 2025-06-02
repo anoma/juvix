@@ -44,12 +44,12 @@ slowTests =
         return Anoma.allTests,
         return Repl.allTests
       ]
-      <> sequence (if Config.config ^. Config.configRust then [Rust.allTests] else [])
+    <> sequence (if Config.config ^. Config.configRust then [Rust.allTests] else [])
 
 fastTests :: IO TestTree
 fastTests =
-  return $
-    testGroup
+  return
+    $ testGroup
       "Juvix fast tests"
       [ Parsing.allTests,
         Resolver.allTests,

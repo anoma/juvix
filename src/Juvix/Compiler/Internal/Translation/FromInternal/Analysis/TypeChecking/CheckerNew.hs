@@ -151,8 +151,8 @@ checkCoercionCycles = do
   ctab <- (^. typeCheckingTablesCoercionTable) <$> getCombinedTables
   let cyclic = cyclicCoercions ctab
       s = toList cyclic
-  when (any (notDecreasing cyclic ctab) s) $
-    throw (ErrCoercionCycles (CoercionCycles (nonEmpty' s)))
+  when (any (notDecreasing cyclic ctab) s)
+    $ throw (ErrCoercionCycles (CoercionCycles (nonEmpty' s)))
   where
     notDecreasing :: HashSet Name -> CoercionTable -> Name -> Bool
     notDecreasing cyclic ctab n =
@@ -283,8 +283,8 @@ checkInductiveDef InductiveDef {..} = runInferenceDef $ do
         ret = snd (viewConstructorType _inductiveConstructorType)
         errRet :: Expression -> Sem (Inference ': r) a
         errRet expected =
-          throw $
-            ErrWrongReturnType
+          throw
+            $ ErrWrongReturnType
               WrongReturnType
                 { _wrongReturnTypeConstructorName = _inductiveConstructorName,
                   _wrongReturnTypeExpected = expected,
@@ -356,11 +356,11 @@ mutualStatementTypes = \case
             let cname = c ^. inductiveConstructorName
             cty <- constructorType <$> lookupConstructor cname
             return (cname, cty)
-          | c <- ind ^. inductiveConstructors
+        | c <- ind ^. inductiveConstructors
         ]
-    return $
-      (indName, indty)
-        :| ctypes
+    return
+      $ (indName, indty)
+      :| ctypes
 
 checkMutualStatement ::
   (Members '[HighlightBuilder, Reader BuiltinsTable, Reader EntryPoint, Inference, Reader LocalVars, Reader InfoTable, Error TypeCheckerError, NameIdGen, ResultBuilder, Termination, Reader InsertedArgsStack] r) =>
@@ -501,12 +501,12 @@ checkInstanceType FunctionDef {..} = do
   case mi of
     Just ii@InstanceInfo {..} -> do
       tab <- ask
-      unless (isTrait tab _instanceInfoInductive) $
-        throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
+      unless (isTrait tab _instanceInfoInductive)
+        $ throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
       itab <- (^. typeCheckingTablesInstanceTable) <$> getCombinedTables
       is <- subsumingInstances itab ii
-      unless (null is) $
-        throw (ErrSubsumedInstance (SubsumedInstance ii is (getLoc _funDefName)))
+      unless (null is)
+        $ throw (ErrSubsumedInstance (SubsumedInstance ii is (getLoc _funDefName)))
       checkInstanceArgs (ii ^. instanceInfoArgs) (ii ^. instanceInfoParams)
       addInstanceInfo ii
     Nothing ->
@@ -534,8 +534,8 @@ checkCoercionType ::
 checkCoercionType FunctionDef {..} = do
   ty <- strongNormalize _funDefType
   mi <-
-    runFail $
-      coercionFromTypedIden
+    runFail
+      $ coercionFromTypedIden
         TypedIden
           { _typedIdenType = ty ^. normalizedExpression,
             _typedIden = IdenFunction _funDefName
@@ -543,10 +543,10 @@ checkCoercionType FunctionDef {..} = do
   case mi of
     Just ci@CoercionInfo {..} -> do
       tab <- ask
-      unless (isTrait tab _coercionInfoInductive) $
-        throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
-      unless (isTrait tab (_coercionInfoTarget ^. instanceAppHead . instanceAppHeadName)) $
-        throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
+      unless (isTrait tab _coercionInfoInductive)
+        $ throw (ErrTargetNotATrait (TargetNotATrait _funDefType))
+      unless (isTrait tab (_coercionInfoTarget ^. instanceAppHead . instanceAppHeadName))
+        $ throw (ErrInvalidCoercionType (InvalidCoercionType _funDefType))
       checkInstanceArgs (ci ^. coercionInfoArgs) (ci ^. coercionInfoParams)
       addCoercionInfo (checkCoercionInfo ci)
       checkCoercionCycles
@@ -662,7 +662,7 @@ resolveInstanceHoles s = do
         [ do
             h' <- goResolve h
             return (h ^. typedInstanceHoleHole, h')
-          | h <- hs
+        | h <- hs
         ]
   subsInstanceHoles subs e
   where
@@ -811,13 +811,13 @@ checkClause clauseLoc clauseType clausePats body = do
             aI :: Int = preImplicits (map (^. paramImplicit) bodyParams)
             targetI :: Int = preImplicits (map (^. arityParameterImplicit) guessedBodyParams)
         if
-            | 0 < pref -> do
-                let n = length pref'
-                    bodyParams' = drop n bodyParams
-                    ty' = foldFunType bodyParams' bodyRest
-                wildcards <- mapM (genPatternWildcard clauseLoc) pref'
-                return (wildcards, ty')
-            | otherwise -> return ([], bodyTy)
+          | 0 < pref -> do
+              let n = length pref'
+                  bodyParams' = drop n bodyParams
+                  ty' = foldFunType bodyParams' bodyRest
+              wildcards <- mapM (genPatternWildcard clauseLoc) pref'
+              return (wildcards, ty')
+          | otherwise -> return ([], bodyTy)
       p : ps -> do
         bodyTy' <- weakNormalize bodyTy
         case bodyTy' of
@@ -854,16 +854,18 @@ checkClause clauseLoc clauseType clausePats body = do
         where
           throwWrongIsImplicit :: (Members '[Error TypeCheckerError] r') => PatternArg -> IsImplicit -> Sem r' a
           throwWrongIsImplicit patArg expected =
-            throw . ErrArityCheckerError $
-              ErrWrongPatternIsImplicit
+            throw
+              . ErrArityCheckerError
+              $ ErrWrongPatternIsImplicit
                 WrongPatternIsImplicit
                   { _wrongPatternIsImplicitActual = patArg,
                     _wrongPatternIsImplicitExpected = expected
                   }
           throwTooManyPatterns :: (Members '[Error TypeCheckerError] r') => Sem r' a
           throwTooManyPatterns =
-            throw . ErrArityCheckerError $
-              ErrLhsTooManyPatterns
+            throw
+              . ErrArityCheckerError
+              $ ErrLhsTooManyPatterns
                 LhsTooManyPatterns
                   { _lhsTooManyPatternsRemaining = p :| ps
                   }
@@ -951,8 +953,8 @@ checkPattern = go
               constrName = a ^. constrAppConstructor
               err :: MatchError -> Sem r ()
               err m =
-                throw $
-                  ErrWrongType
+                throw
+                  $ ErrWrongType
                     WrongType
                       { _wrongTypeThing = WrongTypeThingPattern pat,
                         _wrongTypeExpected = m ^. matchErrorRight,
@@ -997,8 +999,8 @@ checkPattern = go
 
         appErr :: ConstructorApp -> Int -> TypeCheckerError
         appErr app expected =
-          ErrArityCheckerError $
-            ErrWrongConstructorAppLength
+          ErrArityCheckerError
+            $ ErrWrongConstructorAppLength
               WrongConstructorAppLength
                 { _wrongConstructorAppLength = app,
                   _wrongConstructorAppLengthExpected = expected
@@ -1017,8 +1019,8 @@ checkPattern = go
               numParams = length params
           when
             (numArgs < numParams)
-            ( throw $
-                ErrTooFewArgumentsIndType
+            ( throw
+                $ ErrTooFewArgumentsIndType
                   WrongNumberArgumentsIndType
                     { _wrongNumberArgumentsIndTypeActualType = ty,
                       _wrongNumberArgumentsIndTypeActualNumArgs = numArgs,
@@ -1027,8 +1029,8 @@ checkPattern = go
             )
           when
             (numArgs > numParams)
-            ( throw $
-                ErrTooManyArgumentsIndType
+            ( throw
+                $ ErrTooManyArgumentsIndType
                   WrongNumberArgumentsIndType
                     { _wrongNumberArgumentsIndTypeActualType = ty,
                       _wrongNumberArgumentsIndTypeActualNumArgs = numArgs,
@@ -1228,15 +1230,15 @@ inferLeftAppExpression mhint e = case e of
       LitNumeric v -> typedLitNumeric v
       LitInteger {} -> do
         ty <- getIntTy i
-        return $
-          TypedExpression
+        return
+          $ TypedExpression
             { _typedType = ty,
               _typedExpression = ExpressionLiteral lit
             }
       LitNatural {} -> do
         ty <- getNatTy i
-        return $
-          TypedExpression
+        return
+          $ TypedExpression
             { _typedType = ty,
               _typedExpression = ExpressionLiteral lit
             }
@@ -1252,16 +1254,16 @@ inferLeftAppExpression mhint e = case e of
         typedLitNumeric v = do
           castHole v
           if
-              | v < 0 -> getIntTy i >>= typedLit LitInteger BuiltinFromInt
-              | otherwise -> getNatTy i >>= typedLit (LitNatural . fromInteger) BuiltinFromNat
+            | v < 0 -> getIntTy i >>= typedLit LitInteger BuiltinFromInt
+            | otherwise -> getNatTy i >>= typedLit (LitNatural . fromInteger) BuiltinFromNat
           where
             typedLit :: (Integer -> Literal) -> BuiltinFunction -> Expression -> Sem r TypedExpression
             typedLit litt blt ty = do
               from <- getBuiltinNameTypeChecker i blt
               ihole <- freshHoleImpl i ImplicitInstance
               let ty' = maybe ty (adjustLocation i) (mhint ^. typeHint)
-              inferExpression' (mkTypeHint (Just ty')) $
-                foldApplication
+              inferExpression' (mkTypeHint (Just ty'))
+                $ foldApplication
                   (ExpressionIden (IdenFunction from))
                   [ ApplicationArg Implicit ty',
                     ApplicationArg ImplicitInstance ihole,
@@ -1279,8 +1281,8 @@ inferLeftAppExpression mhint e = case e of
                           _castHoleType = ty
                         }
                in if
-                      | v < 0 -> outCastHole CastInt
-                      | otherwise -> outCastHole CastNat
+                    | v < 0 -> outCastHole CastInt
+                    | otherwise -> outCastHole CastNat
             _ -> return ()
 
 idenType :: forall r. (HasCallStack, Members '[Reader LocalVars, Reader InfoTable, ResultBuilder] r) => Iden -> Sem r TypedExpression
@@ -1437,15 +1439,15 @@ holesHelper mhint expr = do
     checkBuiltinApp n implArgsNum argsNum args = do
       args' <- goImplArgs implArgsNum args
       if
-          | length args' >= argsNum -> return ()
-          | otherwise ->
-              throw
-                . ErrArityCheckerError
-                $ ErrBuiltinNotFullyApplied
-                  BuiltinNotFullyApplied
-                    { _builtinNotFullyAppliedName = n,
-                      _builtinNotFullyAplliedExpectedArgsNum = argsNum
-                    }
+        | length args' >= argsNum -> return ()
+        | otherwise ->
+            throw
+              . ErrArityCheckerError
+              $ ErrBuiltinNotFullyApplied
+                BuiltinNotFullyApplied
+                  { _builtinNotFullyAppliedName = n,
+                    _builtinNotFullyAplliedExpectedArgsNum = argsNum
+                  }
       where
         goImplArgs :: Int -> [ApplicationArg] -> Sem r [ApplicationArg]
         goImplArgs 0 as = return as
@@ -1637,8 +1639,8 @@ holesHelper mhint expr = do
                       builderTy <- gets (^. appBuilderType)
                       args <- gets (^. appBuilderArgs)
                       let a :: Expression = foldApplication l (map (^. appBuilderArg) args)
-                      throw $
-                        ErrExpectedFunctionType
+                      throw
+                        $ ErrExpectedFunctionType
                           ExpectedFunctionType
                             { _expectedFunctionTypeExpression = a,
                               _expectedFunctionTypeLeft = l,
@@ -1805,10 +1807,10 @@ arityUniverse = ArityUnit
 arityLambda :: forall r. (Members '[ResultBuilder, Reader InfoTable, Inference, Reader LocalVars] r) => Lambda -> Sem r Arity
 arityLambda l = do
   aris <- mapM guessClauseArity (l ^. lambdaClauses)
-  return $
-    if
-        | allSame aris -> head aris
-        | otherwise -> ArityNotKnown
+  return
+    $ if
+      | allSame aris -> head aris
+      | otherwise -> ArityNotKnown
   where
     guessClauseArity :: LambdaClause -> Sem r Arity
     guessClauseArity cl = do
@@ -1897,16 +1899,16 @@ addArgsInfo fun topArgs ari = unfoldingArity helper ari
           where
             err :: [ArityParameter]
             err =
-              impossibleError $
-                "There are more ArgInfo than ArityParameter for function "
-                  <> ppTrace fun
-                  <> "\n"
-                  <> "[ArgInfo] = "
-                  <> ppTrace infos
-                  <> "\n[ArityParameter] = "
-                  <> ppTrace (topAris ^. ufoldArityParams)
-                  <> "\nArity = "
-                  <> ppTrace ari
+              impossibleError
+                $ "There are more ArgInfo than ArityParameter for function "
+                <> ppTrace fun
+                <> "\n"
+                <> "[ArgInfo] = "
+                <> ppTrace infos
+                <> "\n[ArityParameter] = "
+                <> ppTrace (topAris ^. ufoldArityParams)
+                <> "\nArity = "
+                <> ppTrace ari
 
 getLocalArity :: (Members '[Reader LocalVars, Inference] r) => VarName -> Sem r Arity
 getLocalArity v = do

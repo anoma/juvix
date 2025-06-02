@@ -82,7 +82,7 @@ compileErrorAssertion root' mainFile step = do
               . runReader entryPoint
               . ignoreDumper
               $ Core.toStored (core ^. pipelineResult . Core.coreResultModule)
-                >>= Core.toStripped Core.CheckExec
+              >>= Core.toStripped Core.CheckExec
       case res' of
         Left {} -> return ()
         Right {} -> noError

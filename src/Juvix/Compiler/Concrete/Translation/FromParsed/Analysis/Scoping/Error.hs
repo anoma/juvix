@@ -106,8 +106,8 @@ instance ToGenericError ScoperError where
 
 builtinsErrorMsg :: (Members '[Error ScoperError] r) => Interval -> AnsiText -> Sem r a
 builtinsErrorMsg loc msg =
-  throw $
-    ErrBuiltinErrorMessage
+  throw
+    $ ErrBuiltinErrorMessage
       BuiltinErrorMessage
         { _builtinErrorMessageLoc = loc,
           _builtinErrorMessage = msg

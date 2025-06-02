@@ -39,7 +39,8 @@ class HasTextBackend a where
 
   toTextDoc :: a -> Doc b
 
-data AnsiTextAtom = forall t.
+data AnsiTextAtom
+  = forall t.
   (HasAnsiBackend t, HasTextBackend t) =>
   AnsiTextAtom
   { _ansiTextAtom :: t

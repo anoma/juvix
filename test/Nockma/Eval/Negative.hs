@@ -24,8 +24,8 @@ negAnomaTest name mainFun args checkErr =
       _testEvalOptions = EvalOptions {..}
       _testAssertEvalError = Just $ \e ->
         if
-            | checkErr e -> return ()
-            | otherwise -> error "Incorrect error"
+          | checkErr e -> return ()
+          | otherwise -> error "Incorrect error"
       _testCheck :: Pos.Check () = return ()
    in Pos.Test {..}
 

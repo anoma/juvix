@@ -14,13 +14,15 @@ makeLenses ''CallGraphOptions
 parseCallGraph :: Parser CallGraphOptions
 parseCallGraph = do
   _graphFunctionNameFilter <-
-    fmap msum . optional $
-      nonEmpty . Text.words
-        <$> option
-          str
-          ( long "function"
-              <> short 'f'
-              <> help "Only shows the specified function"
-          )
+    fmap msum
+      . optional
+      $ nonEmpty
+      . Text.words
+      <$> option
+        str
+        ( long "function"
+            <> short 'f'
+            <> help "Only shows the specified function"
+        )
   _graphInputFile <- optional (parseInputFile FileExtJuvix)
   pure CallGraphOptions {..}

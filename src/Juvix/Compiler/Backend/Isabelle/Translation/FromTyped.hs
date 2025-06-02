@@ -57,8 +57,8 @@ fromInternal res@Internal.InternalTypedResult {..} = do
   where
     go :: Bool -> [Comment] -> Internal.InfoTable -> Internal.Module -> Sem r Result
     go onlyTypes comments tab md =
-      return $
-        Result
+      return
+        $ Result
           { _resultTheory = goModule onlyTypes tab md,
             _resultModuleId = md ^. Internal.moduleId,
             _resultComments = filter (\c -> c ^. commentInterval . intervalFile == file) comments
@@ -109,8 +109,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     goMutualBlock :: Internal.MutualBlock -> [Statement]
     goMutualBlock Internal.MutualBlock {..} =
-      filter (\stmt -> not onlyTypes || isTypeDef stmt) $
-        mapMaybe goMutualStatement (toList _mutualStatements)
+      filter (\stmt -> not onlyTypes || isTypeDef stmt)
+        $ mapMaybe goMutualStatement (toList _mutualStatements)
 
     checkNotIgnored :: Pragmas -> a -> Maybe a
     checkNotIgnored pragmas x = case pragmas ^. pragmasIsabelleIgnore of
@@ -125,8 +125,10 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     goInductiveDef :: Internal.InductiveDef -> Statement
     goInductiveDef Internal.InductiveDef {..}
-      | length _inductiveConstructors == 1
-          && head' _inductiveConstructors ^. Internal.inductiveConstructorIsRecord =
+      | length _inductiveConstructors
+          == 1
+          && head' _inductiveConstructors
+          ^. Internal.inductiveConstructorIsRecord =
           let tyargs = fst $ Internal.unfoldFunType $ head' _inductiveConstructors ^. Internal.inductiveConstructorType
            in StmtRecord
                 RecordDef
@@ -298,8 +300,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
     mkDefaultBranch loc val remainingBranches = case remainingBranches of
       [] -> Nothing
       _ ->
-        Just $
-          CaseBranch
+        Just
+          $ CaseBranch
             { _caseBranchPattern = PatVar (defaultName loc "_"),
               _caseBranchBody =
                 mkExprCase
@@ -426,8 +428,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
     goFunName :: Expression -> Expression
     goFunName = \case
       ExprIden name ->
-        ExprIden $
-          case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
+        ExprIden
+          $ case HashMap.lookup name (infoTable ^. Internal.infoFunctions) of
             Just funInfo ->
               case funInfo ^. Internal.functionInfoPragmas . pragmasIsabelleFunction of
                 Just PragmaIsabelleFunction {..} -> setNameText _pragmaIsabelleFunctionName name
@@ -521,8 +523,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
           | Just (op, fixity, arg1, arg2) <- getBoolOperator app = do
               arg1' <- goExpression arg1
               arg2' <- goExpression arg2
-              return $
-                ExprBinop
+              return
+                $ ExprBinop
                   Binop
                     { _binopOperator = op,
                       _binopLeft = arg1',
@@ -559,8 +561,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
         mkIsabelleOperator loc PragmaIsabelleOperator {..} arg1 arg2 = do
           arg1' <- goExpression arg1
           arg2' <- goExpression arg2
-          return $
-            ExprBinop
+          return
+            $ ExprBinop
               Binop
                 { _binopOperator = defaultName loc _pragmaIsabelleOperatorName,
                   _binopLeft = arg1',
@@ -786,8 +788,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
           cls <- mapM goFunDef fdefs
           let ns = zipExact (map (^. Internal.funDefName) fdefs) (map (^. letClauseName) cls)
           expr <- localNames ns $ goExpression _letExpression
-          return $
-            ExprLet
+          return
+            $ ExprLet
               Let
                 { _letClauses = nonEmpty' cls,
                   _letBody = expr
@@ -803,8 +805,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
               nset <- asks (^. nameSet)
               let name' = overNameText (disambiguate nset) _funDefName
               val <- localName _funDefName name' $ goExpression _funDefBody
-              return $
-                LetClause
+              return
+                $ LetClause
                   { _letClauseName = name',
                     _letClauseValue = val
                   }
@@ -818,10 +820,10 @@ goModule onlyTypes infoTable Internal.Module {..} =
           let v = _slambdaBinder ^. Internal.sbinderVar
               v' = overNameText (disambiguate nset) v
           body <-
-            localName v v' $
-              goExpression _slambdaBody
-          return $
-            ExprLambda
+            localName v v'
+              $ goExpression _slambdaBody
+          return
+            $ ExprLambda
               Lambda
                 { _lambdaVar = v',
                   _lambdaType = Just $ goType $ _slambdaBinder ^. Internal.sbinderType,
@@ -839,12 +841,14 @@ goModule onlyTypes infoTable Internal.Module {..} =
                   length
                     . filterTypeArgs 0 ty
                     . toList
-                    $ head _lambdaClauses ^. Internal.lambdaPatterns
+                    $ head _lambdaClauses
+                    ^. Internal.lambdaPatterns
                 Nothing ->
                   length
                     . filter ((/= Internal.Implicit) . (^. Internal.patternArgIsImplicit))
                     . toList
-                    $ head _lambdaClauses ^. Internal.lambdaPatterns
+                    $ head _lambdaClauses
+                    ^. Internal.lambdaPatterns
             vars = map (\i -> defaultName (getLoc lam) ("x" <> show i)) [0 .. patsNum - 1]
 
             goLams :: [Name] -> Sem r Expression
@@ -853,10 +857,10 @@ goModule onlyTypes infoTable Internal.Module {..} =
                 nset <- asks (^. nameSet)
                 let v' = overNameText (disambiguate nset) v
                 body <-
-                  localName v v' $
-                    goLams vs
-                return $
-                  ExprLambda
+                  localName v v'
+                    $ goLams vs
+                return
+                  $ ExprLambda
                     Lambda
                       { _lambdaType = Nothing,
                         _lambdaVar = v',
@@ -869,14 +873,14 @@ goModule onlyTypes infoTable Internal.Module {..} =
                       lookupName v
                     _ -> do
                       vars' <- mapM lookupName vars
-                      return $
-                        ExprTuple
+                      return
+                        $ ExprTuple
                           Tuple
                             { _tupleComponents = nonEmpty' vars'
                             }
                 brs <- goLambdaClauses (toList _lambdaClauses)
-                return $
-                  mkExprCase
+                return
+                  $ mkExprCase
                     Case
                       { _caseValue = val,
                         _caseBranches = nonEmpty' brs
@@ -886,8 +890,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
         goCase Internal.Case {..} = do
           val <- goExpression _caseExpression
           brs <- goCaseBranches (toList _caseBranches)
-          return $
-            mkExprCase
+          return
+            $ mkExprCase
               Case
                 { _caseValue = val,
                   _caseBranches = nonEmpty' brs
@@ -901,12 +905,12 @@ goModule onlyTypes infoTable Internal.Module {..} =
               Nested pat [] -> do
                 rhs <- withLocalNames nset nmap $ goCaseBranchRhs _caseBranchRhs
                 brs' <- goCaseBranches brs
-                return $
-                  CaseBranch
+                return
+                  $ CaseBranch
                     { _caseBranchPattern = pat,
                       _caseBranchBody = rhs
                     }
-                    : brs'
+                  : brs'
               Nested pat npats -> do
                 let vname = defaultName (getLoc br) (disambiguate (nset ^. nameSet) "v")
                     nset' = over nameSet (HashSet.insert (vname ^. namePretty)) nset
@@ -956,12 +960,12 @@ goModule onlyTypes infoTable Internal.Module {..} =
           Nested pat [] -> do
             body <- withLocalNames nset nmap $ goExpression _lambdaBody
             brs <- goLambdaClauses cls
-            return $
-              CaseBranch
+            return
+              $ CaseBranch
                 { _caseBranchPattern = pat,
                   _caseBranchBody = body
                 }
-                : brs
+              : brs
           Nested pat npats -> do
             let vname = defaultName (getLoc cl) (disambiguate (nset ^. nameSet) "v")
                 nset' = over nameSet (HashSet.insert (vname ^. namePretty)) nset
@@ -1068,25 +1072,25 @@ goModule onlyTypes infoTable Internal.Module {..} =
               return $ PatCons (Cons x' y')
           | Just (indName, fields) <- getRecordPat _constrAppConstructor _constrAppParameters =
               if
-                  | isTop -> do
-                      fields' <- mapM (secondM (goPatternArg False)) fields
-                      return $ PatRecord (Record indName fields')
-                  | otherwise -> do
-                      binders <- gets (^. nameSet)
-                      let adjustName :: Name -> Expression
-                          adjustName name =
-                            let name' = qualifyRecordProjection indName name
-                             in ExprApp (Application (ExprIden name') (ExprIden vname))
-                          vname = defaultName (getLoc app) (disambiguate binders "v")
-                          fieldsVars = map (second (fromJust . getPatternArgName)) $ map (first adjustName) $ filter (isPatternArgVar . snd) fields
-                          fieldsNonVars = map (first adjustName) $ filter (not . isPatternArgVar . snd) fields
-                      modify' (over nameSet (HashSet.insert (vname ^. namePretty)))
-                      forM fieldsVars $ \(e, fname) -> do
-                        modify' (over nameSet (HashSet.insert (fname ^. namePretty)))
-                        modify' (over nameMap (HashMap.insert fname e))
-                      fieldsNonVars' <- mapM (secondM goNestedPatternArg) fieldsNonVars
-                      forM fieldsNonVars' output
-                      return (PatVar vname)
+                | isTop -> do
+                    fields' <- mapM (secondM (goPatternArg False)) fields
+                    return $ PatRecord (Record indName fields')
+                | otherwise -> do
+                    binders <- gets (^. nameSet)
+                    let adjustName :: Name -> Expression
+                        adjustName name =
+                          let name' = qualifyRecordProjection indName name
+                           in ExprApp (Application (ExprIden name') (ExprIden vname))
+                        vname = defaultName (getLoc app) (disambiguate binders "v")
+                        fieldsVars = map (second (fromJust . getPatternArgName)) $ map (first adjustName) $ filter (isPatternArgVar . snd) fields
+                        fieldsNonVars = map (first adjustName) $ filter (not . isPatternArgVar . snd) fields
+                    modify' (over nameSet (HashSet.insert (vname ^. namePretty)))
+                    forM fieldsVars $ \(e, fname) -> do
+                      modify' (over nameSet (HashSet.insert (fname ^. namePretty)))
+                      modify' (over nameMap (HashMap.insert fname e))
+                    fieldsNonVars' <- mapM (secondM goNestedPatternArg) fieldsNonVars
+                    forM fieldsNonVars' output
+                    return (PatVar vname)
           | Just (x, y) <- getPairPat _constrAppConstructor _constrAppParameters = do
               x' <- goPatternArg False x
               y' <- goPatternArg False y
@@ -1099,8 +1103,8 @@ goModule onlyTypes infoTable Internal.Module {..} =
                   return (PatConstrApp (ConstrApp (goConstrName _constrAppConstructor) [arg']))
           | otherwise = do
               args <- mapM (goPatternArg False) _constrAppParameters
-              return $
-                PatConstrApp
+              return
+                $ PatConstrApp
                   ConstrApp
                     { _constrAppConstructor = goConstrName _constrAppConstructor,
                       _constrAppArgs = args
@@ -1217,12 +1221,12 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
         names :: HashSet Text
         names =
-          HashSet.fromList $
-            map quote $
-              map (^. Internal.functionInfoName . namePretty) (filter (not . (^. Internal.functionInfoIsLocal)) (HashMap.elems (infoTable ^. Internal.infoFunctions)))
-                ++ map (^. Internal.constructorInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoConstructors))
-                ++ map (^. Internal.inductiveInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoInductives))
-                ++ map (^. Internal.axiomInfoDef . Internal.axiomName . namePretty) (HashMap.elems (infoTable ^. Internal.infoAxioms))
+          HashSet.fromList
+            $ map quote
+            $ map (^. Internal.functionInfoName . namePretty) (filter (not . (^. Internal.functionInfoIsLocal)) (HashMap.elems (infoTable ^. Internal.infoFunctions)))
+            ++ map (^. Internal.constructorInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoConstructors))
+            ++ map (^. Internal.inductiveInfoName . namePretty) (HashMap.elems (infoTable ^. Internal.infoInductives))
+            ++ map (^. Internal.axiomInfoDef . Internal.axiomName . namePretty) (HashMap.elems (infoTable ^. Internal.infoAxioms))
 
     quote :: Text -> Text
     quote = quote' . Text.filter isLatin1 . Text.filter (isLetter .||. isDigit .||. (== '_') .||. (== '\''))
@@ -1262,9 +1266,9 @@ goModule onlyTypes infoTable Internal.Module {..} =
 
     filterTypeArgs :: Int -> Internal.Expression -> [a] -> [a]
     filterTypeArgs paramsNum ty args =
-      map fst $
-        filter (not . snd) $
-          zip (drop paramsNum args) (argtys ++ repeat False)
+      map fst
+        $ filter (not . snd)
+        $ zip (drop paramsNum args) (argtys ++ repeat False)
       where
         argtys =
           map Internal.isTypeConstructor

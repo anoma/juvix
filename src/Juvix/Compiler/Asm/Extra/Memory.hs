@@ -14,8 +14,8 @@ type Arguments = HashMap Offset Type
 
 argumentsFromFunctionInfo :: FunctionInfo -> Arguments
 argumentsFromFunctionInfo fi =
-  HashMap.fromList $
-    zip [0 ..] (take (fi ^. functionArgsNum) (typeArgs (fi ^. functionType)))
+  HashMap.fromList
+    $ zip [0 ..] (take (fi ^. functionArgsNum) (typeArgs (fi ^. functionType)))
 
 -- | A static representation of JuvixAsm memory providing type information for
 -- memory locations.
@@ -61,8 +61,8 @@ topValueStack n mem = Stack.nthFromTop n (mem ^. memoryValueStack)
 
 topValueStack' :: Int -> Memory -> Type
 topValueStack' n mem =
-  fromMaybe (error "invalid value stack access") $
-    topValueStack n mem
+  fromMaybe (error "invalid value stack access")
+    $ topValueStack n mem
 
 -- | Values from top of the value stack, in order from top to bottom.
 topValuesFromValueStack :: Int -> Memory -> Maybe [Type]
@@ -71,8 +71,8 @@ topValuesFromValueStack n mem = Stack.topValues n (mem ^. memoryValueStack)
 -- | Values from top of the value stack, in order from top to bottom.
 topValuesFromValueStack' :: Int -> Memory -> [Type]
 topValuesFromValueStack' n mem =
-  fromMaybe (error "invalid value stack access") $
-    Stack.topValues n (mem ^. memoryValueStack)
+  fromMaybe (error "invalid value stack access")
+    $ Stack.topValues n (mem ^. memoryValueStack)
 
 -- | Read temporary stack at index `n` from the bottom.
 bottomTempStack :: Int -> Memory -> Maybe Type
@@ -80,8 +80,8 @@ bottomTempStack n mem = Stack.nthFromBottom n (mem ^. memoryTempStack)
 
 bottomTempStack' :: Int -> Memory -> Type
 bottomTempStack' n mem =
-  fromMaybe (error "invalid temporary stack access") $
-    bottomTempStack n mem
+  fromMaybe (error "invalid temporary stack access")
+    $ bottomTempStack n mem
 
 getArgumentType :: Offset -> Memory -> Maybe Type
 getArgumentType off mem = HashMap.lookup off (mem ^. memoryArgumentArea)
@@ -131,16 +131,16 @@ getValueType md mem val =
 -- | Check if the value stack has at least the given height
 checkValueStackHeight' :: (Member (Error AsmError) r) => Maybe Location -> Int -> Memory -> Sem r ()
 checkValueStackHeight' loc n mem = do
-  unless (length (mem ^. memoryValueStack) >= n) $
-    throw $
-      AsmError
-        loc
-        ( fromString $
-            "wrong value stack height: expected at least "
-              ++ show n
-              ++ ", but the height is "
-              ++ show (length (mem ^. memoryValueStack))
-        )
+  unless (length (mem ^. memoryValueStack) >= n)
+    $ throw
+    $ AsmError
+      loc
+      ( fromString
+          $ "wrong value stack height: expected at least "
+          ++ show n
+          ++ ", but the height is "
+          ++ show (length (mem ^. memoryValueStack))
+      )
 
 -- | Check if the values on top of the value stack have the given types (the
 -- first element of the list corresponds to the top of the stack)
@@ -150,15 +150,15 @@ checkValueStack' loc md tys mem = do
   mapM_
     ( \(ty, idx) -> do
         let ty' = fromJust $ topValueStack idx mem
-        unless (isSubtype ty' ty) $
-          throw $
-            AsmError loc $
-              "type mismatch on value stack cell "
-                <> show idx
-                <> " from top: expected "
-                <> ppTrace md ty
-                <> " but got "
-                <> ppTrace md ty'
+        unless (isSubtype ty' ty)
+          $ throw
+          $ AsmError loc
+          $ "type mismatch on value stack cell "
+          <> show idx
+          <> " from top: expected "
+          <> ppTrace md ty
+          <> " but got "
+          <> ppTrace md ty'
     )
     (zip tys [0 ..])
 
@@ -168,17 +168,21 @@ checkValueStack' loc md tys mem = do
 -- of the argument areas don't match.
 unifyMemory' :: (Member (Error AsmError) r) => Maybe Location -> Module -> Memory -> Memory -> Sem r Memory
 unifyMemory' loc md mem1 mem2 = do
-  unless (length (mem1 ^. memoryValueStack) == length (mem2 ^. memoryValueStack)) $
-    throw $
-      AsmError loc "value stack height mismatch"
+  unless (length (mem1 ^. memoryValueStack) == length (mem2 ^. memoryValueStack))
+    $ throw
+    $ AsmError loc "value stack height mismatch"
   vs <- zipWithM (unifyTypes'' loc md) (toList (mem1 ^. memoryValueStack)) (toList (mem2 ^. memoryValueStack))
-  unless (length (mem1 ^. memoryTempStack) == length (mem2 ^. memoryTempStack)) $
-    throw $
-      AsmError loc "temporary stack height mismatch"
+  unless (length (mem1 ^. memoryTempStack) == length (mem2 ^. memoryTempStack))
+    $ throw
+    $ AsmError loc "temporary stack height mismatch"
   ts <- zipWithM (unifyTypes'' loc md) (toList (mem1 ^. memoryTempStack)) (toList (mem2 ^. memoryTempStack))
   unless
-    ( length (mem1 ^. memoryArgumentArea) == length (mem2 ^. memoryArgumentArea)
-        && mem1 ^. memoryArgsNum == mem2 ^. memoryArgsNum
+    ( length (mem1 ^. memoryArgumentArea)
+        == length (mem2 ^. memoryArgumentArea)
+        && mem1
+        ^. memoryArgsNum
+        == mem2
+        ^. memoryArgsNum
     )
     $ throw
     $ AsmError loc "argument area size mismatch"
@@ -193,8 +197,8 @@ unifyMemory' loc md mem1 mem2 = do
             (fromJust $ HashMap.lookup off (mem1 ^. memoryArgumentArea))
       )
       [0 .. n - 1]
-  return $
-    Memory
+  return
+    $ Memory
       { _memoryValueStack = Stack.fromList vs,
         _memoryTempStack = Stack.fromList ts,
         _memoryArgumentArea = HashMap.fromList (zipExact [0 .. n - 1] args),

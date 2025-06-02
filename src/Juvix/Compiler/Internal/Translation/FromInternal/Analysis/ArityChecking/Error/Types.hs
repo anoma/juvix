@@ -31,10 +31,10 @@ instance ToGenericError WrongConstructorAppLength where
               <+> ppCode opts' (e ^. wrongConstructorAppLength . constrAppConstructor)
               <+> "should have"
               <+> arguments (e ^. wrongConstructorAppLengthExpected)
-                <> ", but has been given"
+              <> ", but has been given"
               <+> pretty actual
-                <> line
-                <> "Perhaps you forgot parentheses around a pattern?"
+              <> line
+              <> "Perhaps you forgot parentheses around a pattern?"
 
           actual :: Int
           actual = length (e ^. wrongConstructorAppLength . constrAppParameters)
@@ -73,8 +73,8 @@ instance ToGenericError LhsTooManyPatterns where
               <+> "on the left hand side of the function clause"
               <+> wasWere
               <+> "not expected"
-                <> line
-                <> itemize (ppCode opts' <$> (e ^. lhsTooManyPatternsRemaining))
+              <> line
+              <> itemize (ppCode opts' <$> (e ^. lhsTooManyPatternsRemaining))
           wasWere
             | n == 1 = "was"
             | otherwise = "were"
@@ -155,7 +155,8 @@ instance ToGenericError PatternFunction where
           i = getLoc (e ^. patternFunction)
           msg =
             "Invalid pattern"
-              <+> ppCode opts' (e ^. patternFunction) <> "."
+              <+> ppCode opts' (e ^. patternFunction)
+              <> "."
               <+> "Function types cannot be pattern matched"
 
 data TooManyArguments = TooManyArguments
@@ -188,12 +189,13 @@ instance ToGenericError TooManyArguments where
           app = foldApplication fun args
           msg =
             "Too many arguments in the application"
-              <+> ppCode opts' app <> "."
+              <+> ppCode opts' app
+              <> "."
               <+> "The last"
               <+> numArguments
-                <> ", namely"
+              <> ", namely"
               <+> ppUnexpectedArgs
-                <> ","
+              <> ","
               <+> wasNotExpected
           numArguments :: Doc ann
           numArguments = plural "argument" (pretty numUnexpected <+> "arguments") numUnexpected

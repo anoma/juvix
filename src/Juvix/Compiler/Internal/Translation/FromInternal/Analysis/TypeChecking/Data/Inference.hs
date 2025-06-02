@@ -108,8 +108,8 @@ closeState InferenceState {..} = do
           let st = getState h
            in case st of
                 Fresh ->
-                  throw $
-                    ErrUnsolvedMeta
+                  throw
+                    $ ErrUnsolvedMeta
                       UnsolvedMeta
                         { _unsolvedMeta = h,
                           _unsolvedIsLoop = False
@@ -611,8 +611,8 @@ runInferenceState inis = reinterpret (runState inis) $ \case
                           m <- ask @(HashMap VarName VarName)
                           (m', patMatch) <- runState m (mapM (uncurry matchPatterns) z)
                           if
-                              | and patMatch -> local (const m') (go b1 b2)
-                              | otherwise -> err
+                            | and patMatch -> local (const m') (go b1 b2)
+                            | otherwise -> err
 
 matchPatterns ::
   forall r.

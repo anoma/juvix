@@ -19,10 +19,10 @@ detectRedundantPatterns :: (Members '[Error CoreError, Reader CoreOptions] r) =>
 detectRedundantPatterns md = do
   fCoverage <- asks (^. optCheckCoverage)
   if
-      | fCoverage ->
-          mapAllNodesM (umapM (goDetectRedundantPatterns md)) md
-      | otherwise ->
-          return md
+    | fCoverage ->
+        mapAllNodesM (umapM (goDetectRedundantPatterns md)) md
+    | otherwise ->
+        return md
 
 goDetectRedundantPatterns ::
   forall r.
@@ -49,8 +49,8 @@ goDetectRedundantPatterns md node = case node of
           [] -> return ()
           MatchBranch {..} : branches -> do
             let row = toList _matchBranchPatterns
-            unless (check matrix row) $
-              throw
+            unless (check matrix row)
+              $ throw
                 CoreError
                   { _coreErrorMsg = ppOutput ("Redundant pattern" <> seq <> ": " <> pat <> "\nPerhaps you mistyped a constructor name in an earlier pattern?"),
                     _coreErrorNode = Nothing,
@@ -84,10 +84,10 @@ goDetectRedundantPatterns md node = case node of
               ind = lookupConstructorInfo md (head' tags) ^. constructorInductive
               ctrsNum = length (lookupInductiveInfo md ind ^. inductiveConstructors)
            in if
-                  | not (null tags) && length tags == ctrsNum ->
-                      go tags
-                  | otherwise ->
-                      check (computeDefault matrix) ps
+                | not (null tags) && length tags == ctrsNum ->
+                    go tags
+                | otherwise ->
+                    check (computeDefault matrix) ps
           where
             go :: [Tag] -> Bool
             go = \case

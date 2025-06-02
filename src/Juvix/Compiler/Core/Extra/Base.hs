@@ -66,12 +66,12 @@ mkBuiltinExpanded' b argTys =
       prefixTypes = length (takeWhile isUniverse argTys)
       app = mkBuiltinApp' b [mkVar' argIx | argIx <- reverse [0 .. numArgs - 1 - prefixTypes]]
    in if
-          | builtinOpArgsNum b == numArgs - prefixTypes -> mkLambdas' argTys app
-          | otherwise ->
-              impossibleError
-                ( "unexpected number of args to builtin "
-                    <> show b
-                )
+        | builtinOpArgsNum b == numArgs - prefixTypes -> mkLambdas' argTys app
+        | otherwise ->
+            impossibleError
+              ( "unexpected number of args to builtin "
+                  <> show b
+              )
 
 mkLambda' :: Type -> Node -> Node
 mkLambda' ty = mkLambda Info.empty (mkBinder' ty)
@@ -314,12 +314,12 @@ expandType :: [Binder] -> Type -> Type
 expandType argtys ty =
   let (tyargs, target) = unfoldPi ty
    in if
-          | length tyargs >= length argtys ->
-              ty
-          | isDynamic target ->
-              rePis tyargs (mkPis (drop (length tyargs) argtys) target)
-          | otherwise ->
-              impossible
+        | length tyargs >= length argtys ->
+            ty
+        | isDynamic target ->
+            rePis tyargs (mkPis (drop (length tyargs) argtys) target)
+        | otherwise ->
+            impossible
 
 {------------------------------------------------------------------------}
 {- functions on Node -}
@@ -623,12 +623,12 @@ destruct = \case
               items' =
                 nonEmpty'
                   [ LetItem (Binder name loc ty') v'
-                    | (v', ty', name, loc) <-
-                        zip4Exact
-                          values'
-                          tys'
-                          (map (^. letItemBinder . binderName) (toList vs))
-                          (map (^. letItemBinder . binderLocation) (toList vs))
+                  | (v', ty', name, loc) <-
+                      zip4Exact
+                        values'
+                        tys'
+                        (map (^. letItemBinder . binderName) (toList vs))
+                        (map (^. letItemBinder . binderLocation) (toList vs))
                   ]
            in mkLetRec i' items' b'
       }
@@ -636,15 +636,15 @@ destruct = \case
     let branchChildren :: [([Binder], NodeChild)]
         branchChildren =
           [ (binders, manyBinders binders (br ^. caseBranchBody))
-            | br <- brs,
-              let binders = br ^. caseBranchBinders
+          | br <- brs,
+            let binders = br ^. caseBranchBinders
           ]
         -- in this list we have the bodies and the binder types interleaved
         allNodes :: [NodeChild]
         allNodes =
           concat
             [ br : reverse (foldl' (\r b -> manyBinders (take (length r) bi) (b ^. binderType) : r) [] bi)
-              | (bi, br) <- branchChildren
+            | (bi, br) <- branchChildren
             ]
         mkBranch :: Info -> CaseBranch -> Sem '[Input Node] CaseBranch
         mkBranch nfo' br = do
@@ -663,7 +663,7 @@ destruct = \case
             . runInputList allNodes'
             $ sequence
               [ mkBranch ci' br
-                | (ci', br) <- zipExact is' brs
+              | (ci', br) <- zipExact is' brs
               ]
      in case mdef of
           Nothing ->
@@ -687,18 +687,18 @@ destruct = \case
         allNodes =
           noBinders rty
             : map noBinders (toList vtys)
-            ++ map noBinders (toList vs)
-            ++ concat
-              [ brs
-                  ++ reverse (foldl' (\acc b -> manyBinders (take (length acc) bis) (b ^. binderType) : acc) [] bis)
+              ++ map noBinders (toList vs)
+              ++ concat
+                [ brs
+                    ++ reverse (foldl' (\acc b -> manyBinders (take (length acc) bis) (b ^. binderType) : acc) [] bis)
                 | (bis, brs) <- branchChildren
-              ]
+                ]
           where
             branchChildren :: [([Binder], [NodeChild])]
             branchChildren =
               [ (binders, map (manyBinders binders) (branchRhsChildren (br ^. matchBranchRhs)))
-                | br <- branches,
-                  let binders = concatMap getPatternBinders (toList (br ^. matchBranchPatterns))
+              | br <- branches,
+                let binders = concatMap getPatternBinders (toList (br ^. matchBranchPatterns))
               ]
 
             branchRhsChildren :: MatchBranchRhs -> [Node]
@@ -716,8 +716,8 @@ destruct = \case
             [ br
                 ^. matchBranchInfo
                 : getSideIfBranchInfos (br ^. matchBranchRhs)
-                ++ concatMap getPatternInfos (br ^. matchBranchPatterns)
-              | br <- branches
+                  ++ concatMap getPatternInfos (br ^. matchBranchPatterns)
+            | br <- branches
             ]
 
         getSideIfBranchInfos :: MatchBranchRhs -> [Info]
@@ -786,10 +786,10 @@ destruct = \case
                   (values', branchesChildren') = first nonEmpty' (splitAtExact numVals chs'')
                   branches' :: [MatchBranch]
                   branches' =
-                    run $
-                      runInputList is' $
-                        runInputList branchesChildren' $
-                          mapM mkBranch branches
+                    run
+                      $ runInputList is'
+                      $ runInputList branchesChildren'
+                      $ mapM mkBranch branches
                in mkMatch
                     i'
                     valueTypes'

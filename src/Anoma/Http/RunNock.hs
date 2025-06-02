@@ -7,8 +7,9 @@ import Juvix.Prelude.Aeson as Aeson
 
 runNockUrl :: EndpointUrl
 runNockUrl =
-  mkEndpointUrl $
-    "nock" :| ["prove"]
+  mkEndpointUrl
+    $ "nock"
+    :| ["prove"]
 
 data RunNock = RunNock
   { _runNockJammedProgram :: Text,

@@ -41,8 +41,8 @@ treeEvalAssertionParam evalParam mainFile expectedFile trans testTrans step = do
       case run $ runReader opts $ runError @JuvixError $ applyTransformations [Validate] md0 of
         Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right md1 -> do
-          unless (null trans) $
-            step "Transform"
+          unless (null trans)
+            $ step "Transform"
           case run $ runReader opts $ runError @JuvixError $ applyTransformations trans md1 of
             Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
             Right md -> do

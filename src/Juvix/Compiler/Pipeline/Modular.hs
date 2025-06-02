@@ -80,23 +80,29 @@ processModuleCacheMiss midTarget mt f mid = do
           subdir = Stored.getOptionsSubdir midTarget' opts
           absPath = buildDir Path.</> subdir Path.</> relPath
        in if
-              | changed ->
-                  recompile opts (Just absPath) imports md0
-              | otherwise -> do
-                  mmd :: Maybe (Stored.Module' t') <- Serialize.loadFromFile absPath
-                  case mmd of
-                    Just md
-                      | md ^. Stored.moduleSHA256 == sha256
-                          && md ^. Stored.moduleOptions == opts
-                          && md ^. Stored.moduleId == mid -> do
-                          return
-                            PipelineResult
-                              { _pipelineResult = Stored.toBaseModule imports md,
-                                _pipelineResultChanged = False
-                              }
-                      | otherwise -> recompile opts (Just absPath) imports md0
-                    _ ->
-                      recompile opts (Just absPath) imports md0
+            | changed ->
+                recompile opts (Just absPath) imports md0
+            | otherwise -> do
+                mmd :: Maybe (Stored.Module' t') <- Serialize.loadFromFile absPath
+                case mmd of
+                  Just md
+                    | md
+                        ^. Stored.moduleSHA256
+                        == sha256
+                        && md
+                        ^. Stored.moduleOptions
+                        == opts
+                        && md
+                        ^. Stored.moduleId
+                        == mid -> do
+                        return
+                          PipelineResult
+                            { _pipelineResult = Stored.toBaseModule imports md,
+                              _pipelineResultChanged = False
+                            }
+                    | otherwise -> recompile opts (Just absPath) imports md0
+                  _ ->
+                    recompile opts (Just absPath) imports md0
   where
     recompile :: Stored.Options -> Maybe (Path Abs File) -> [Module' t'] -> Module' t -> Sem r (PipelineResult (Module' t'))
     recompile opts absPath imports md0 = do

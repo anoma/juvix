@@ -14,8 +14,8 @@ data AssetKind
   | Images
 
 assetsDirByKind :: AssetKind -> [(Path Rel File, ByteString)]
-assetsDirByKind k = map (first relFile) $
-  case k of
+assetsDirByKind k = map (first relFile)
+  $ case k of
     Css -> $(cssDirQ)
     Js -> $(jsDirQ)
     Images -> $(imagesDirQ)
@@ -32,9 +32,9 @@ absDirAssetsByKind baseDir k = baseDir <//> $(mkRelDir "assets") <//> dir
 assetsWithAbsPathAndContent :: Path Abs Dir -> [(Path Abs File, ByteString)]
 assetsWithAbsPathAndContent baseDir =
   [ (absPath, content)
-    | kind <- [Css, Js, Images],
-      (relPart, content) <- assetsDirByKind kind,
-      let absPath = absDirAssetsByKind baseDir kind <//> relPart
+  | kind <- [Css, Js, Images],
+    (relPart, content) <- assetsDirByKind kind,
+    let absPath = absDirAssetsByKind baseDir kind <//> relPart
   ]
 
 writeAssets :: forall m. (MonadIO m) => Path Abs Dir -> m ()

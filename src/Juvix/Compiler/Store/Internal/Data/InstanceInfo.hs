@@ -110,8 +110,8 @@ makeLenses ''InstanceTable
 
 instance Semigroup InstanceTable where
   t1 <> t2 =
-    InstanceTable $
-      HashMap.unionWith combine (t1 ^. instanceTableMap) (t2 ^. instanceTableMap)
+    InstanceTable
+      $ HashMap.unionWith combine (t1 ^. instanceTableMap) (t2 ^. instanceTableMap)
     where
       combine :: [InstanceInfo] -> [InstanceInfo] -> [InstanceInfo]
       combine ii1 ii2 = nubHashable (ii1 ++ ii2)

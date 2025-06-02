@@ -122,8 +122,8 @@ testRunIOModular ::
   m (Either JuvixError (ModuleId, a))
 testRunIOModular checkId entry f = do
   entry' <- setEntryPointSHA256 entry
-  testTaggedLockedToIO $
-    Pipeline.Modular.runIOEitherModular checkId entry' f
+  testTaggedLockedToIO
+    $ Pipeline.Modular.runIOEitherModular checkId entry' f
 
 setEntryPointSHA256 :: (MonadIO m) => EntryPoint -> m EntryPoint
 setEntryPointSHA256 entry =
@@ -139,8 +139,8 @@ setEntryPointSHA256 entry =
 
 testDefaultEntryPointIO :: (MonadIO m) => Path Abs Dir -> Path Abs File -> m EntryPoint
 testDefaultEntryPointIO cwd mainFile =
-  testTaggedLockedToIO $
-    defaultEntryPointIO' cwd (Just mainFile)
+  testTaggedLockedToIO
+    $ defaultEntryPointIO' cwd (Just mainFile)
 
 testDefaultEntryPointNoFileIO :: Path Abs Dir -> IO EntryPoint
 testDefaultEntryPointNoFileIO cwd = testTaggedLockedToIO (defaultEntryPointIO' cwd Nothing)

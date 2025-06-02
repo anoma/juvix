@@ -15,8 +15,8 @@ makeLenses ''FormatOptions
 parseMigration :: Parser Migration
 parseMigration = do
   m <-
-    optional $
-      option
+    optional
+      $ option
         (enumReader (Proxy @Migrate))
         ( long "migration"
             <> metavar "MIGRATION"

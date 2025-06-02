@@ -71,8 +71,8 @@ fromReg backend lims tab =
       where
         mkFunConstDecl :: Reg.FunctionInfo -> Statement
         mkFunConstDecl funInfo =
-          StatementConst $
-            ConstDecl
+          StatementConst
+            $ ConstDecl
               { _constVariable = getFunctionIdent info (funInfo ^. Reg.functionSymbol),
                 _constType = Word,
                 _constValue = mkInteger (getFUID info (funInfo ^. Reg.functionSymbol))
@@ -80,12 +80,12 @@ fromReg backend lims tab =
 
     juvixFunctions :: [Statement]
     juvixFunctions =
-      [ StatementLoop $
-          Loop
+      [ StatementLoop
+          $ Loop
             { _loopLabel = Just "'program",
               _loopBody =
-                [ StatementMatch $
-                    Match
+                [ StatementMatch
+                    $ Match
                       { _matchValue = mkVar "funid",
                         _matchBranches = map (fromRegFunction info) funs ++ [errBranch]
                       }
@@ -354,8 +354,8 @@ fromRegInstr info = \case
 
     fromTailCallClosures :: Reg.InstrTailCallClosures -> [Statement]
     fromTailCallClosures Reg.InstrTailCallClosures {..} =
-      [ StatementExpression $
-          mkCall
+      [ StatementExpression
+          $ mkCall
             "tapply!"
             [ mkVar "'program",
               mkVar "program",
@@ -395,8 +395,8 @@ fromRegInstr info = \case
     fromCase Reg.InstrCase {..} = do
       case _instrCaseIndRep of
         Reg.IndRepStandard ->
-          [ StatementMatch $
-              Match
+          [ StatementMatch
+              $ Match
                 { _matchValue = mkCall "mem.get_constr_tag" [fromValue _instrCaseValue],
                   _matchBranches = brs'
                 }

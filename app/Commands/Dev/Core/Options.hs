@@ -23,8 +23,8 @@ data CoreCommand
 
 parseCoreCommand :: Parser CoreCommand
 parseCoreCommand =
-  hsubparser $
-    mconcat
+  hsubparser
+    $ mconcat
       [ commandRepl,
         commandEval,
         commandNormalize,

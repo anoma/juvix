@@ -20,9 +20,9 @@ runCommand opts = do
   r <- runReader ep . runError @JuvixError . ignoreDumper $ coreToAsm (Core.moduleFromInfoTable tab)
   md' <- getRight r
   if
-      | project opts ^. coreAsmPrint ->
-          renderStdOut (Asm.ppOutDefault md' (Asm.computeCombinedInfoTable md'))
-      | otherwise -> runAsm True md'
+    | project opts ^. coreAsmPrint ->
+        renderStdOut (Asm.ppOutDefault md' (Asm.computeCombinedInfoTable md'))
+    | otherwise -> runAsm True md'
   where
     sinputFile :: AppPath File
     sinputFile = project opts ^. coreAsmInputFile

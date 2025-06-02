@@ -29,11 +29,11 @@ checkExecutable p = whenMaybeM (liftIO (isExecutable p)) (return p)
 findClangFromConfig :: forall r. (Member EmbedIO r) => Sem r (Maybe (Path Abs File))
 findClangFromConfig =
   if
-      | isAbsolute clangPath -> do
-          let p :: Maybe (Path Abs File)
-              p = parseAbsFile clangPath
-          join <$> mapM checkExecutable p
-      | otherwise -> return Nothing
+    | isAbsolute clangPath -> do
+        let p :: Maybe (Path Abs File)
+            p = parseAbsFile clangPath
+        join <$> mapM checkExecutable p
+    | otherwise -> return Nothing
   where
     clangPath :: FilePath
     clangPath = unpack $ Config.config ^. Config.configClang

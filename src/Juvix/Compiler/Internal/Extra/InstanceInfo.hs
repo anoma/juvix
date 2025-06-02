@@ -30,16 +30,16 @@ makeRigidParam :: InstanceParam -> InstanceParam
 makeRigidParam p = case p of
   InstanceParamVar {} -> p
   InstanceParamNatural n ->
-    InstanceParamNatural $
-      over instanceNatArg makeRigidParam n
+    InstanceParamNatural
+      $ over instanceNatArg makeRigidParam n
   InstanceParamApp app@InstanceApp {..} ->
-    InstanceParamApp $
-      app
+    InstanceParamApp
+      $ app
         { _instanceAppArgs = map makeRigidParam _instanceAppArgs
         }
   InstanceParamFun fn@InstanceFun {..} ->
-    InstanceParamFun $
-      fn
+    InstanceParamFun
+      $ fn
         { _instanceFunLeft = makeRigidParam _instanceFunLeft,
           _instanceFunRight = makeRigidParam _instanceFunRight
         }
@@ -58,8 +58,8 @@ paramToExpression = \case
     goNat :: InstanceNat -> Sem r Expression
     goNat InstanceNat {..} = do
       arg <- paramToExpression _instanceNatArg
-      return $
-        ExpressionNatural
+      return
+        $ ExpressionNatural
           BuiltinNatural
             { _builtinNaturalSuc = _instanceNatSuc,
               _builtinNaturalArg = arg,
@@ -73,19 +73,19 @@ paramFromExpression metaVars e = case e of
     | otherwise -> return (InstanceParamVar v)
   ExpressionIden i -> do
     h <- mkInstanceAppHeadIden i
-    return $
-      InstanceParamApp $
-        InstanceApp
-          { _instanceAppHead = h,
-            _instanceAppArgs = [],
-            _instanceAppExpression = e
-          }
+    return
+      $ InstanceParamApp
+      $ InstanceApp
+        { _instanceAppHead = h,
+          _instanceAppArgs = [],
+          _instanceAppExpression = e
+        }
   ExpressionHole h -> return (InstanceParamHole h)
   ExpressionApplication app -> normalApplication app
   ExpressionNatural BuiltinNatural {..} -> do
     arg <- paramFromExpression metaVars _builtinNaturalArg
-    return $
-      InstanceParamNatural
+    return
+      $ InstanceParamNatural
         InstanceNat
           { _instanceNatSuc = _builtinNaturalSuc,
             _instanceNatLoc = _builtinNaturalLoc,
@@ -95,8 +95,8 @@ paramFromExpression metaVars e = case e of
     | _functionLeft ^. paramImplicit == Explicit -> do
         l <- paramFromExpression metaVars (_functionLeft ^. paramType)
         r <- paramFromExpression metaVars _functionRight
-        return $
-          InstanceParamFun
+        return
+          $ InstanceParamFun
             InstanceFun
               { _instanceFunLeft = l,
                 _instanceFunRight = r,
@@ -109,13 +109,13 @@ paramFromExpression metaVars e = case e of
       let (h, args) = unfoldApplication app
       args' <- mapM (paramFromExpression metaVars) args
       appHead <- mkInstanceAppHead h
-      return $
-        InstanceParamApp $
-          InstanceApp
-            { _instanceAppHead = appHead,
-              _instanceAppArgs = toList args',
-              _instanceAppExpression = e
-            }
+      return
+        $ InstanceParamApp
+        $ InstanceApp
+          { _instanceAppHead = appHead,
+            _instanceAppArgs = toList args',
+            _instanceAppExpression = e
+          }
 
     mkInstanceAppHeadIden :: forall r'. (Members '[Fail] r') => Iden -> Sem r' InstanceAppHead
     mkInstanceAppHeadIden = \case
@@ -139,8 +139,8 @@ traitFromExpression metaVars e = do
 instanceFromTypedIden :: (Members '[Reader BuiltinsTable] r) => TypedIden -> Sem (Fail ': r) InstanceInfo
 instanceFromTypedIden TypedIden {..} = do
   InstanceApp {..} <- traitFromExpression metaVars e
-  return $
-    InstanceInfo
+  return
+    $ InstanceInfo
       { _instanceInfoInductive = _instanceAppHead ^. instanceAppHeadName,
         _instanceInfoParams = _instanceAppArgs,
         _instanceInfoResult = _typedIden,

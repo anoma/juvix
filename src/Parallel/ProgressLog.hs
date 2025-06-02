@@ -147,12 +147,13 @@ runProgressLogOptions opts m = do
 
             msg :: AnsiText
             msg =
-              mkAnsiText $
-                (brackets <$> tid)
-                  <?+> (brackets <$> dependencyTag)
-                  <?+> brackets num
-                    <+> annotate AnnKeyword (pretty (l ^. logItemAction))
-                    <+> l ^. logItemMessage
+              mkAnsiText
+                $ (brackets <$> tid)
+                <?+> (brackets <$> dependencyTag)
+                <?+> brackets num
+                <+> annotate AnnKeyword (pretty (l ^. logItemAction))
+                <+> l
+                ^. logItemMessage
 
         let loglvl = compileActionLogLevel (l ^. logItemAction)
         logMessage loglvl msg

@@ -41,8 +41,8 @@ loopHoisting md = mapT (const (umapL go)) md
     goLamApp bl sym info h arg argNum args'
       | null subterms = goApp bl sym (mkApp info h arg) argNum args'
       | otherwise =
-          setLetsVolatile n $
-            mkLets'
+          setLetsVolatile n
+            $ mkLets'
               (map (\node -> (computeNodeType' md bl node, node)) subterms')
               ( adjustLetBoundVars
                   . shift n

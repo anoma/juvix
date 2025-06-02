@@ -19,8 +19,8 @@ data NockmaCommand
 
 parseNockmaCommand :: Parser NockmaCommand
 parseNockmaCommand =
-  hsubparser $
-    mconcat
+  hsubparser
+    $ mconcat
       [ commandRepl,
         commandFromAsm,
         commandFormat,

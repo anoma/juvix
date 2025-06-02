@@ -72,8 +72,8 @@ genCode fi =
               (go isTail _nodeBinopArg2)
           )
       Tree.PrimBinop op ->
-        snocReturn isTail $
-          DL.append
+        snocReturn isTail
+          $ DL.append
             (go False _nodeBinopArg2)
             ( DL.snoc
                 (go False _nodeBinopArg1)
@@ -82,59 +82,59 @@ genCode fi =
 
     goUnop :: Bool -> Tree.NodeUnop -> Code'
     goUnop isTail Tree.NodeUnop {..} =
-      snocReturn isTail $
-        DL.snoc (go False _nodeUnopArg) (genUnOp _nodeUnopOpcode)
+      snocReturn isTail
+        $ DL.snoc (go False _nodeUnopArg) (genUnOp _nodeUnopOpcode)
 
     goCairo :: Bool -> Tree.NodeCairo -> Code'
     goCairo isTail Tree.NodeCairo {..} =
-      snocReturn isTail $
-        DL.snoc (goArgs _nodeCairoArgs) (mkInstr $ Cairo _nodeCairoOpcode)
+      snocReturn isTail
+        $ DL.snoc (goArgs _nodeCairoArgs) (mkInstr $ Cairo _nodeCairoOpcode)
 
     goConstant :: Bool -> Tree.NodeConstant -> Code'
     goConstant isTail Tree.NodeConstant {..} =
-      snocReturn isTail $
-        DL.singleton $
-          mkInstr $
-            Push (Constant _nodeConstant)
+      snocReturn isTail
+        $ DL.singleton
+        $ mkInstr
+        $ Push (Constant _nodeConstant)
 
     goMemRef :: Bool -> Tree.NodeMemRef -> Code'
     goMemRef isTail Tree.NodeMemRef {..} =
-      snocReturn isTail $
-        DL.singleton $
-          mkInstr (Push (Ref _nodeMemRef))
+      snocReturn isTail
+        $ DL.singleton
+        $ mkInstr (Push (Ref _nodeMemRef))
 
     goAllocConstr :: Bool -> Tree.NodeAllocConstr -> Code'
     goAllocConstr isTail Tree.NodeAllocConstr {..} =
-      snocReturn isTail $
-        DL.snoc
+      snocReturn isTail
+        $ DL.snoc
           (goArgs _nodeAllocConstrArgs)
           (mkInstr (AllocConstr _nodeAllocConstrTag))
 
     goAllocClosure :: Bool -> Tree.NodeAllocClosure -> Code'
     goAllocClosure isTail Tree.NodeAllocClosure {..} =
-      snocReturn isTail $
-        DL.snoc
+      snocReturn isTail
+        $ DL.snoc
           (goArgs _nodeAllocClosureArgs)
-          ( mkInstr $
-              AllocClosure $
-                InstrAllocClosure
-                  { _allocClosureFunSymbol = _nodeAllocClosureFunSymbol,
-                    _allocClosureArgsNum = length _nodeAllocClosureArgs
-                  }
+          ( mkInstr
+              $ AllocClosure
+              $ InstrAllocClosure
+                { _allocClosureFunSymbol = _nodeAllocClosureFunSymbol,
+                  _allocClosureArgsNum = length _nodeAllocClosureArgs
+                }
           )
 
     goExtendClosure :: Bool -> Tree.NodeExtendClosure -> Code'
     goExtendClosure isTail Tree.NodeExtendClosure {..} =
-      snocReturn isTail $
-        DL.append
+      snocReturn isTail
+        $ DL.append
           (goArgs (toList _nodeExtendClosureArgs))
           ( DL.snoc
               (go False _nodeExtendClosureFun)
-              ( mkInstr $
-                  ExtendClosure $
-                    InstrExtendClosure
-                      { _extendClosureArgsNum = length _nodeExtendClosureArgs
-                      }
+              ( mkInstr
+                  $ ExtendClosure
+                  $ InstrExtendClosure
+                    { _extendClosureArgsNum = length _nodeExtendClosureArgs
+                    }
               )
           )
 
@@ -143,24 +143,24 @@ genCode fi =
       Tree.CallFun sym ->
         DL.snoc
           (goArgs _nodeCallArgs)
-          ( mkInstr $
-              (if isTail then TailCall else Call) $
-                InstrCall
-                  { _callType = CallFun sym,
-                    _callArgsNum = length _nodeCallArgs
-                  }
+          ( mkInstr
+              $ (if isTail then TailCall else Call)
+              $ InstrCall
+                { _callType = CallFun sym,
+                  _callArgsNum = length _nodeCallArgs
+                }
           )
       Tree.CallClosure arg ->
         DL.append
           (goArgs _nodeCallArgs)
           ( DL.snoc
               (go False arg)
-              ( mkInstr $
-                  (if isTail then TailCall else Call) $
-                    InstrCall
-                      { _callType = CallClosure,
-                        _callArgsNum = length _nodeCallArgs
-                      }
+              ( mkInstr
+                  $ (if isTail then TailCall else Call)
+                  $ InstrCall
+                    { _callType = CallClosure,
+                      _callArgsNum = length _nodeCallArgs
+                    }
               )
           )
 
@@ -168,12 +168,12 @@ genCode fi =
     goCallClosures isTail Tree.NodeCallClosures {..} =
       DL.append
         (goArgs (toList _nodeCallClosuresArgs))
-        ( DL.snoc (go False _nodeCallClosuresFun) $
-            mkInstr $
-              (if isTail then TailCallClosures else CallClosures) $
-                InstrCallClosures
-                  { _callClosuresArgsNum = length _nodeCallClosuresArgs
-                  }
+        ( DL.snoc (go False _nodeCallClosuresFun)
+            $ mkInstr
+            $ (if isTail then TailCallClosures else CallClosures)
+            $ InstrCallClosures
+              { _callClosuresArgsNum = length _nodeCallClosuresArgs
+              }
         )
 
     goBranch :: Bool -> Tree.NodeBranch -> Code'
@@ -208,8 +208,8 @@ genCode fi =
           CaseBranch
             { _caseBranchTag,
               _caseBranchCode =
-                [ Save $
-                    CmdSave
+                [ Save
+                    $ CmdSave
                       { _cmdSaveInfo = emptyInfo,
                         _cmdSaveName = Nothing,
                         _cmdSaveIsTail = isTail,

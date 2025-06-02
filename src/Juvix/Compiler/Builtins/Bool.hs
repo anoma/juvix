@@ -18,17 +18,23 @@ checkTrue :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => Construct
 checkTrue d@ConstructorDef {..} = do
   let ctorTy = _inductiveConstructorType
   boolTy <- getBuiltinNameScoper (getLoc d) BuiltinBool
-  unless (ctorTy === boolTy) $
-    builtinsErrorMsg (getLoc d) $
-      "true has the wrong type " <> ppOutDefault ctorTy <> " | " <> ppOutDefault boolTy
+  unless (ctorTy === boolTy)
+    $ builtinsErrorMsg (getLoc d)
+    $ "true has the wrong type "
+    <> ppOutDefault ctorTy
+    <> " | "
+    <> ppOutDefault boolTy
 
 checkFalse :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => ConstructorDef -> Sem r ()
 checkFalse d@ConstructorDef {..} = do
   let ctorTy = _inductiveConstructorType
   boolTy <- getBuiltinNameScoper (getLoc d) BuiltinBool
-  unless (ctorTy === boolTy) $
-    builtinsErrorMsg (getLoc d) $
-      "false has the wrong type " <> ppOutDefault ctorTy <> " | " <> ppOutDefault boolTy
+  unless (ctorTy === boolTy)
+    $ builtinsErrorMsg (getLoc d)
+    $ "false has the wrong type "
+    <> ppOutDefault ctorTy
+    <> " | "
+    <> ppOutDefault boolTy
 
 checkIf :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkIf f = do
@@ -111,5 +117,5 @@ checkBoolPrint :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => Axio
 checkBoolPrint f = do
   bool_ <- getBuiltinNameScoper (getLoc f) BuiltinBool
   io <- getBuiltinNameScoper (getLoc f) BuiltinIO
-  unless (f ^. axiomType === (bool_ --> io)) $
-    builtinsErrorText (getLoc f) "Bool print has the wrong type signature"
+  unless (f ^. axiomType === (bool_ --> io))
+    $ builtinsErrorText (getLoc f) "Bool print has the wrong type signature"

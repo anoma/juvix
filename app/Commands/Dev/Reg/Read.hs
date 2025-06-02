@@ -23,8 +23,8 @@ runCommand opts = do
       case r of
         Left err -> exitJuvixError (JuvixError err)
         Right md' -> do
-          unless (project opts ^. regReadNoPrint) $
-            renderStdOut (Reg.ppOutDefault md' (Reg.computeCombinedInfoTable md'))
+          unless (project opts ^. regReadNoPrint)
+            $ renderStdOut (Reg.ppOutDefault md' (Reg.computeCombinedInfoTable md'))
           doRun md'
   where
     file :: AppPath File

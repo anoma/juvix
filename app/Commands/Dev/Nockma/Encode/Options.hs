@@ -78,6 +78,6 @@ parseNockmaEncodeOptions = do
                 <> encodingHelp
             )
       )
-  pure $
-    let _nockmaEncodeApply = guard optCue $> Cue
-     in NockmaEncodeOptions {..}
+  pure
+    $ let _nockmaEncodeApply = guard optCue $> Cue
+       in NockmaEncodeOptions {..}

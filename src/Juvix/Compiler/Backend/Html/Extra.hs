@@ -36,19 +36,19 @@ livejs =
 cssLink :: (Members '[Reader HtmlOptions] r) => AttributeValue -> Sem r Html
 cssLink css = do
   assetsPrefix <- textValue <$> asks (^. htmlOptionsAssetsPrefix)
-  return $
-    link
-      ! Attr.href (assetsPrefix <> "assets/css/" <> css)
-      ! Attr.rel "stylesheet"
-      ! Attr.type_ "text/css"
+  return
+    $ link
+    ! Attr.href (assetsPrefix <> "assets/css/" <> css)
+    ! Attr.rel "stylesheet"
+    ! Attr.type_ "text/css"
 
 jsLink :: (Members '[Reader HtmlOptions] r) => AttributeValue -> Sem r Html
 jsLink js = do
   assetsPrefix <- textValue <$> asks (^. htmlOptionsAssetsPrefix)
   return
     $ script
-      ! Attr.src (assetsPrefix <> "assets/js/" <> js)
-      ! Attr.type_ "text/javascript"
+    ! Attr.src (assetsPrefix <> "assets/js/" <> js)
+    ! Attr.type_ "text/javascript"
     $ mempty
 
 toggleJs :: (Members '[Reader HtmlOptions] r) => Sem r Html
@@ -115,12 +115,13 @@ metaUtf8 = meta ! Attr.charset "UTF-8"
 taraSmiling :: (Members '[Reader HtmlOptions] r) => Sem r Html
 taraSmiling = do
   assetsPrefix <- textValue <$> asks (^. htmlOptionsAssetsPrefix)
-  return $
-    Html.a ! Attr.href Str.juvixDotOrg $
-      Html.img
-        ! Attr.id "tara"
-        ! Attr.src (assetsPrefix <> "assets/images/tara-smiling.svg")
-        ! Attr.alt "Tara"
+  return
+    $ Html.a
+    ! Attr.href Str.juvixDotOrg
+    $ Html.img
+    ! Attr.id "tara"
+    ! Attr.src (assetsPrefix <> "assets/images/tara-smiling.svg")
+    ! Attr.alt "Tara"
 
 htmlJuvixFooter ::
   (Members '[Reader HtmlOptions] r) =>
@@ -130,30 +131,32 @@ htmlJuvixFooter = do
   htmlKind <- asks (^. htmlOptionsKind)
   tara <- taraSmiling
   if
-      | noFooter -> return mempty
-      | otherwise -> do
-          let juvixLinkOrg :: Html
-              juvixLinkOrg =
-                a ! Attr.href Str.juvixDotOrg $
-                  toHtml ("Juvix " :: Text)
+    | noFooter -> return mempty
+    | otherwise -> do
+        let juvixLinkOrg :: Html
+            juvixLinkOrg =
+              a
+                ! Attr.href Str.juvixDotOrg
+                $ toHtml ("Juvix " :: Text)
 
-              commitInfo :: Html
-              commitInfo =
-                a
-                  ! Attr.href
-                    (textValue ("https://github.com/anoma/juvix/commit/" <> shortHash))
-                  $ toHtml versionTag
+            commitInfo :: Html
+            commitInfo =
+              a
+                ! Attr.href
+                  (textValue ("https://github.com/anoma/juvix/commit/" <> shortHash))
+                $ toHtml versionTag
 
-              juvixVersion :: Html
-              juvixVersion =
-                toHtml ("Powered by " :: Text)
-                  <> juvixLinkOrg
-                  <> commitInfo
+            juvixVersion :: Html
+            juvixVersion =
+              toHtml ("Powered by " :: Text)
+                <> juvixLinkOrg
+                <> commitInfo
 
-          return $
-            case htmlKind of
-              HtmlDoc ->
-                Html.div ! Attr.id "footer" $
-                  p juvixVersion
-                    <> tara
-              _ -> footer . pre $ juvixVersion
+        return
+          $ case htmlKind of
+            HtmlDoc ->
+              Html.div
+                ! Attr.id "footer"
+                $ p juvixVersion
+                <> tara
+            _ -> footer . pre $ juvixVersion

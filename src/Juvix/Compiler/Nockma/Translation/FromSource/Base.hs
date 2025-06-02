@@ -72,8 +72,8 @@ cueJammedFile fp = do
   where
     err :: AnsiText -> Sem r x
     err msg =
-      throw $
-        JuvixError
+      throw
+        $ JuvixError
           GenericError
             { _genericErrorLoc = i,
               _genericErrorIntervals = [i],
@@ -95,8 +95,8 @@ cueJammedFile fp = do
 parseTermFile :: (Members '[Files, Error JuvixError, HighlightBuilder] r) => Prelude.Path Abs File -> Sem r (Term Natural)
 parseTermFile fp = do
   txt <- readFile' fp
-  mapError (JuvixError @MegaparsecError) $
-    runParserForSem term fp txt
+  mapError (JuvixError @MegaparsecError)
+    $ runParserForSem term fp txt
 
 parseProgramFile :: (Members '[Files, Error JuvixError] r) => Prelude.Path Abs File -> Sem r (Program Natural)
 parseProgramFile fp = do
@@ -164,8 +164,8 @@ rsbracket = delimiter "]"
 
 stringLiteral :: Parser Text
 stringLiteral =
-  semanticParser AnnLiteralString $
-    lexeme (pack <$> (char '"' >> manyTill L.charLiteral (char '"')))
+  semanticParser AnnLiteralString
+    $ lexeme (pack <$> (char '"' >> manyTill L.charLiteral (char '"')))
 
 dottedNatural :: Parser Natural
 dottedNatural = lexeme $ do
@@ -185,7 +185,7 @@ atomOp mtag = do
     withLoc
       ( choice
           [ semanticSymbolBare (AnnKind (getNameKind op)) opName $> op
-            | (opName, op) <- HashMap.toList atomOps
+          | (opName, op) <- HashMap.toList atomOps
           ]
       )
   lift (highlightNockOp lop)
@@ -224,8 +224,8 @@ direction = choice [directionSymbol (show lr) $> lr | lr <- allElements :: [Dire
 pPath :: Parser Path
 pPath = do
   p <-
-    withLoc $
-      choice
+    withLoc
+      $ choice
         [ directionSymbol "S" $> [],
           NonEmpty.toList <$> some direction
         ]
@@ -342,8 +342,10 @@ cell = do
 
 term :: Parser (Term Natural)
 term =
-  TermAtom <$> patom
-    <|> TermCell <$> cell
+  TermAtom
+    <$> patom
+    <|> TermCell
+    <$> cell
 
 assig :: Parser (Assignment Natural)
 assig = do
@@ -362,7 +364,8 @@ program = Program <$> many statement <* eof
     statement :: Parser (Statement Natural)
     statement =
       P.try (StatementAssignment <$> assig)
-        <|> StatementStandalone <$> term
+        <|> StatementStandalone
+        <$> term
 
 name :: Parser Text
 name = lexeme $ do
@@ -383,15 +386,21 @@ withStack = do
 
 replExpression :: Parser (ReplExpression Natural)
 replExpression =
-  ReplExpressionWithStack <$> P.try withStack
-    <|> ReplExpressionTerm <$> replTerm
+  ReplExpressionWithStack
+    <$> P.try withStack
+    <|> ReplExpressionTerm
+    <$> replTerm
 
 replStatement :: Parser (ReplStatement Natural)
 replStatement =
-  ReplStatementAssignment <$> P.try assig
-    <|> ReplStatementExpression <$> replExpression
+  ReplStatementAssignment
+    <$> P.try assig
+    <|> ReplStatementExpression
+    <$> replExpression
 
 replTerm :: Parser (ReplTerm Natural)
 replTerm =
-  ReplName <$> name
-    <|> ReplTerm <$> term
+  ReplName
+    <$> name
+    <|> ReplTerm
+    <$> term

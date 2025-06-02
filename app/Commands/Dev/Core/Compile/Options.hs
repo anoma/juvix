@@ -13,16 +13,16 @@ type CoreCompileOptions = CompileOptions
 
 coreSupportedTargets :: NonEmpty CompileTarget
 coreSupportedTargets =
-  NonEmpty.fromList $
-    [ AppTargetNative64,
-      AppTargetTree,
-      AppTargetAsm,
-      AppTargetReg,
-      AppTargetCasm,
-      AppTargetCairo
-    ]
-      <> [AppTargetWasm32Wasi | Config.config ^. Config.configWasm]
-      <> [AppTargetRiscZeroRust | Config.config ^. Config.configRust]
+  NonEmpty.fromList
+    $ [ AppTargetNative64,
+        AppTargetTree,
+        AppTargetAsm,
+        AppTargetReg,
+        AppTargetCasm,
+        AppTargetCairo
+      ]
+    <> [AppTargetWasm32Wasi | Config.config ^. Config.configWasm]
+    <> [AppTargetRiscZeroRust | Config.config ^. Config.configRust]
 
 parseCoreCompileOptions :: Parser CoreCompileOptions
 parseCoreCompileOptions =
