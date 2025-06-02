@@ -49,6 +49,7 @@ import Juvix.Compiler.Core.Transformation.Optimize.SimplifyIfs
 import Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs
 import Juvix.Compiler.Core.Transformation.RemoveInductiveParams
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
+import Juvix.Compiler.Core.Transformation.ResolveExterns
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
 import Juvix.Compiler.Core.Transformation.Trace qualified as Trace
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
@@ -78,6 +79,7 @@ applyTransformations ts = flip (foldM (flip appTrans)) ts
       TopEtaExpand -> return . topEtaExpand
       RemoveTypeArgs -> return . removeTypeArgs
       RemoveInductiveParams -> return . removeInductiveParams
+      ResolveExterns -> mapError (JuvixError @CoreError) . resolveExterns
       MoveApps -> return . moveApps
       NatToPrimInt -> return . natToPrimInt
       IntToPrimInt -> return . intToPrimInt

@@ -53,14 +53,7 @@ convertNode opts nonRecSyms tab md = umap go
       _ -> isType' node
 
     doEval' :: Node -> Node
-    doEval' = removeClosures . geval eopts stderr tab []
-      where
-        eopts =
-          defaultEvalOptions
-            { _evalOptionsNoFailure = True,
-              _evalOptionsSilent = True,
-              _evalOptionsFieldSize = opts ^. optFieldSize
-            }
+    doEval' = evalPartial (opts ^. optFieldSize) tab
 
 constantFolding' :: CoreOptions -> HashSet Symbol -> InfoTable -> Module -> Module
 constantFolding' opts nonRecSyms tab md =

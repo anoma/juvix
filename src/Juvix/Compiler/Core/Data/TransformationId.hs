@@ -10,6 +10,7 @@ data TransformationId
   | TopEtaExpand
   | RemoveTypeArgs
   | RemoveInductiveParams
+  | ResolveExterns
   | MoveApps
   | NatToPrimInt
   | IntToPrimInt
@@ -59,7 +60,12 @@ type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
 
 toTypecheckTransformations :: [TransformationId]
 toTypecheckTransformations =
-  [DetectConstantSideConditions, DetectRedundantPatterns, MatchToCase]
+  [ EtaExpandApps,
+    DetectConstantSideConditions,
+    DetectRedundantPatterns,
+    MatchToCase,
+    ResolveExterns
+  ]
 
 toEvalTransformations :: [TransformationId]
 toEvalTransformations =
@@ -76,7 +82,7 @@ toEvalTransformations =
 
 toExecTransformations :: [TransformationId]
 toExecTransformations =
-  toEvalTransformations ++ [OptPhasePreLifting, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps]
+  toEvalTransformations ++ [ResolveExterns, OptPhasePreLifting, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps]
 
 toNormalizeTransformations :: [TransformationId]
 toNormalizeTransformations =
@@ -114,6 +120,7 @@ instance TransformationId' TransformationId where
     IdentityTrans -> strIdentity
     RemoveTypeArgs -> strRemoveTypeArgs
     RemoveInductiveParams -> strRemoveInductiveParams
+    ResolveExterns -> strResolveExterns
     MoveApps -> strMoveApps
     NatToPrimInt -> strNatToPrimInt
     IntToPrimInt -> strIntToPrimInt

@@ -1,4 +1,8 @@
-module Juvix.Compiler.FFI where
+module Juvix.Compiler.FFI
+  ( module Juvix.Compiler.FFI.Anoma,
+    module Juvix.Compiler.FFI,
+  )
+where
 
 import Juvix.Compiler.FFI.Anoma
 import Juvix.Prelude
