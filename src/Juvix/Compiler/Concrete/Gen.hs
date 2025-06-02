@@ -256,11 +256,11 @@ mkWildcardParsed loc =
     . AtomHole
     $ mkWildcardKw loc
 
-mkWildcardExpression :: forall (s :: Stage) r. (SingI s, Members '[NameIdGen] r) =>  Sem r (ExpressionType s)
+mkWildcardExpression :: forall (s :: Stage) r. (SingI s, Members '[NameIdGen] r) => Sem r (ExpressionType s)
 mkWildcardExpression =
-    case sing :: SStage s of
-      SParsed -> return $ mkWildcardParsed defaultLoc
-      SScoped -> ExpressionHole . mkHole defaultLoc <$> freshNameId
+  case sing :: SStage s of
+    SParsed -> return $ mkWildcardParsed defaultLoc
+    SScoped -> ExpressionHole . mkHole defaultLoc <$> freshNameId
   where
     defaultLoc :: Interval
     defaultLoc = singletonInterval (mkInitialLoc sourcePath)
