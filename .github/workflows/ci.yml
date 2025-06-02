@@ -45,10 +45,15 @@ jobs:
   ormolu:
     runs-on: ubuntu-latest
     env:
-      STACK_RESOLVER: lts-21.25
+      # used for the cache id only. It should coincide with juvix/stack.yaml
+      STACK_RESOLVER: nightly-2025-05-28
     steps:
-      - uses: actions/checkout@v3
       - uses: extractions/setup-just@v2
+
+      - name: Checkout juvix repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
 
       - name: Install hpack
         run: sudo apt install -y hpack
@@ -66,7 +71,9 @@ jobs:
 
       - name: Install ormolu
         if: steps.ormolu-cache.outputs.cache-hit != 'true'
-        run: stack install ormolu --resolver=${{ env.STACK_RESOLVER }}
+        run: |
+          # we install ormolu using the cofiguration in juvix/stack.yaml
+          stack install ormolu
 
       - name: Run ormolu
         run: just format check

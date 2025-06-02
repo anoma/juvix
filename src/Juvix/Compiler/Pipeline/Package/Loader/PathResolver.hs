@@ -47,8 +47,9 @@ runPackagePathResolver rootPath sem = do
     RegisterDependencies {} -> return ()
     ResolvePath scan -> case mkRootInfo ds fs (addFileExt FileExtJuvix (importScanToRelPath scan)) of
       Nothing ->
-        throw . JuvixError $
-          ErrPackageInvalidImport
+        throw
+          . JuvixError
+          $ ErrPackageInvalidImport
             PackageInvalidImport
               { _packageInvalidImport = scan
               }
@@ -60,8 +61,8 @@ runPackagePathResolver rootPath sem = do
       let _pathInfoTopModule = m
           _pathInfoRootInfo =
             --  A Package file is a member of a package by definition.
-            fromMaybe (error "runPackagePathResolver: expected root info") $
-              mkRootInfo' (topModulePathToRelativePath' m)
+            fromMaybe (error "runPackagePathResolver: expected root info")
+              $ mkRootInfo' (topModulePathToRelativePath' m)
       return PathInfoTopModule {..}
     WithResolverRoot _root' m ->
       -- the _root' is not used because ResolvePath does not depend on it
@@ -78,7 +79,8 @@ runPackagePathResolver rootPath sem = do
       pkgType <- mkPkgPackageType
       return
         . hashMap
-        $ mkAssoc <$> [pkgBase, pkgType, globalPkg, pkgDotJuvix]
+        $ mkAssoc
+        <$> [pkgBase, pkgType, globalPkg, pkgDotJuvix]
       where
         mkAssoc :: PackageInfo -> (Path Abs Dir, PackageInfo)
         mkAssoc pkg = (pkg ^. packageRoot, pkg)

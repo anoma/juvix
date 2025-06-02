@@ -31,8 +31,8 @@ runCommand opts = runSimpleErrorIO $ do
         Just Cue ->
           termToByteString from
             >>= renderStdOut
-              . decodeUtf8
-              . Base64.encode
+            . decodeUtf8
+            . Base64.encode
     EncodeText ->
       case opts ^. nockmaEncodeApply of
         Nothing -> renderStdOut (Nockma.ppSerialize from)

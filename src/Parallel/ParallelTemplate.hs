@@ -91,7 +91,7 @@ instance (Show nodeId, Pretty nodeId) => Pretty (Dependencies nodeId) where
   pretty d =
     itemize
       [ pretty from <> ":\n" <> indent' (itemize (pretty <$> toList deps))
-        | (from, deps) <- HashMap.toList (d ^. dependenciesTable)
+      | (from, deps) <- HashMap.toList (d ^. dependenciesTable)
       ]
 
 compilationStateFinished :: CompilationState nodeId compileProof -> Finished
@@ -166,8 +166,8 @@ compile args@CompileArgs {..} = do
     . runReader deps
     . crashOnError
     $ do
-      replicateConcurrently_ _compileArgsNumWorkers $
-        lookForWork @nodeId @node @compileProof
+      replicateConcurrently_ _compileArgsNumWorkers
+        $ lookForWork @nodeId @node @compileProof
   (^. compilationState) <$> readTVarIO varCompilationState
 
 getTask ::
@@ -202,8 +202,8 @@ getTask = do
         modifyTVar stVar (over compilationStartedNum succ)
         let num = succ (compSt ^. compilationStartedNum)
             total = compSt ^. compilationTotalNum
-        return $
-          Just
+        return
+          $ Just
             Task
               { _taskNum = num,
                 _taskTotal = total,

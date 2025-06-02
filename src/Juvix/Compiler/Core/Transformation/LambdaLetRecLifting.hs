@@ -47,8 +47,8 @@ lambdaLiftNode aboveBl top =
         goLambda l = do
           onlyLetRec <- ask @OnlyLetRec
           if
-              | onlyLetRec -> return (Recur (NLam l))
-              | otherwise -> goLambdaGo l
+            | onlyLetRec -> return (Recur (NLam l))
+            | otherwise -> goLambdaGo l
           where
             goLambdaGo :: Lambda -> Sem r Recur
             goLambdaGo lm = do
@@ -125,7 +125,7 @@ lambdaLiftNode aboveBl top =
               letItems :: [Node]
               letItems =
                 [ mkApps' (mkIdent (setInfoName name mempty) sym) (map (NVar . fst) recItemsFreeVars)
-                  | (sym, name) <- topSymsWithName
+                | (sym, name) <- topSymsWithName
                 ]
 
               subsCalls :: Node -> Node
@@ -162,16 +162,16 @@ lambdaLiftNode aboveBl top =
                             _identifierPragmas = adjustPragmas freeVarsNum pragma,
                             _identifierArgNames = []
                           }
-                    | (((sym, name), (itemBinder, (b, bty))), pragma) <-
-                        zip
-                          ( zipExact
-                              topSymsWithName
-                              ( zipExact
-                                  letRecBinders'
-                                  (zipExact liftedDefs defsTypes)
-                              )
-                          )
-                          (pragmas ++ repeat mempty)
+                  | (((sym, name), (itemBinder, (b, bty))), pragma) <-
+                      zip
+                        ( zipExact
+                            topSymsWithName
+                            ( zipExact
+                                letRecBinders'
+                                (zipExact liftedDefs defsTypes)
+                            )
+                        )
+                        (pragmas ++ repeat mempty)
                   ]
           declareTopSyms
 

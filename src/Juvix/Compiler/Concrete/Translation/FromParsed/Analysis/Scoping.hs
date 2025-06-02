@@ -55,8 +55,8 @@ scopeCheck ::
   Parser.ParserResult ->
   Sem r ScoperResult
 scopeCheck importMap pr =
-  mapError (JuvixError @ScoperError) $
-    scopeCheck' importMap pr m
+  mapError (JuvixError @ScoperError)
+    $ scopeCheck' importMap pr m
   where
     m :: Module 'Parsed 'ModuleTop
     m = pr ^. Parser.resultModule
@@ -525,16 +525,16 @@ reserveDerivingSymbol ::
   Sem r ()
 reserveDerivingSymbol f = do
   let lhs = f ^. derivingFunLhs
-  when (P.isLhsFunctionRecursive lhs) $
-    void (reserveFunctionSymbol lhs)
+  when (P.isLhsFunctionRecursive lhs)
+    $ void (reserveFunctionSymbol lhs)
 
 reserveFunctionLikeSymbol ::
   (Members '[Error ScoperError, NameIdGen, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable] r) =>
   FunctionDef 'Parsed ->
   Sem r ()
 reserveFunctionLikeSymbol f =
-  when (P.isFunctionRecursive f) $
-    void (reserveFunctionSymbol (f ^. functionDefLhs))
+  when (P.isFunctionRecursive f)
+    $ void (reserveFunctionSymbol (f ^. functionDefLhs))
 
 reservePatternFunctionSymbols ::
   forall r.
@@ -865,8 +865,8 @@ getTopModulePath Module {..} =
 
 getModuleExportInfo :: forall r. (HasCallStack, Members '[State ScoperState] r) => ModuleSymbolEntry -> Sem r ModuleExportInfo
 getModuleExportInfo m =
-  fromMaybeM err $
-    gets (^. scoperExportInfo . at (m ^. moduleEntry . S.nameId))
+  fromMaybeM err
+    $ gets (^. scoperExportInfo . at (m ^. moduleEntry . S.nameId))
   where
     err :: Sem r a
     err = do
@@ -944,8 +944,8 @@ lookupSymbolAux modules final = do
         let modules' = drop (length path1) modules
             pref' = commonPrefix path2 modules'
         lookPrefix pref' path2 modules'
-      when (notNull pref) $
-        lookPrefix pref path2 modules
+      when (notNull pref)
+        $ lookPrefix pref path2 modules
       lookupLocalSymbolAux (const True) modules final
 
     lookPrefix :: [Symbol] -> [Symbol] -> [Symbol] -> Sem r ()
@@ -1036,8 +1036,8 @@ lookupQualifiedSymbol sms = do
               tbl <- gets (^. scopeImports)
               sequence_
                 [ lookInExport sym remaining (scopedModuleToModuleExportInfo ref)
-                  | Just t <- [tbl ^. at topPath],
-                    ref <- toList t
+                | Just t <- [tbl ^. at topPath],
+                  ref <- toList t
                 ]
 
 -- | This assumes that alias do not have cycles.
@@ -1141,8 +1141,8 @@ genExportInfo = do
       where
         err :: NonEmpty (NameSpaceEntryType ns) -> Sem r a
         err es =
-          throw $
-            ErrMultipleExport
+          throw
+            $ ErrMultipleExport
               MultipleExportConflict
                 { _multipleExportModule = _scopePath,
                   _multipleExportSymbol = s,
@@ -1416,8 +1416,8 @@ checkDeriving Deriving {..} = do
   typeSig' <- withLocalScope (checkTypeSig _funLhsTypeSig)
   name' <-
     if
-        | P.isLhsFunctionRecursive lhs -> getReservedDefinitionSymbol name
-        | otherwise -> reserveFunctionSymbol lhs
+      | P.isLhsFunctionRecursive lhs -> getReservedDefinitionSymbol name
+      | otherwise -> reserveFunctionSymbol lhs
   let defname' =
         FunctionDefNameScoped
           { _functionDefNameScoped = name',
@@ -1494,8 +1494,8 @@ checkFunctionDef fdef@FunctionDef {..} = do
     FunctionDefName name -> do
       name' <-
         if
-            | P.isFunctionRecursive fdef -> getReservedDefinitionSymbol name
-            | otherwise -> reserveFunctionSymbol (fdef ^. functionDefLhs)
+          | P.isFunctionRecursive fdef -> getReservedDefinitionSymbol name
+          | otherwise -> reserveFunctionSymbol (fdef ^. functionDefLhs)
       return
         FunctionDefNameScoped
           { _functionDefNameScoped = name',
@@ -1594,7 +1594,7 @@ checkInductiveDef reserved = do
       nonEmpty'
         <$> sequence
           [ checkConstructorDef inductiveName' cname cdef
-            | (cname, cdef) <- zipExact (toList constructorNames') (toList _inductiveConstructors)
+          | (cname, cdef) <- zipExact (toList constructorNames') (toList _inductiveConstructors)
           ]
     return (inductiveParameters', inductiveType', inductiveTypeApplied', inductiveDoc', inductiveConstructors')
   let withModule' = case _inductiveWithModule of
@@ -1798,8 +1798,8 @@ checkTopModule m@Module {..} = checkedModule
         runInfoTableBuilder mempty $ do
           path' <- freshTopModulePath
           let iniScope :: Scope = emptyScopeTop (path' ^. S.nameId) (getTopModulePath m)
-          runState iniScope $
-            do
+          runState iniScope
+            $ do
               withTopScope $ do
                 body' <- topBindings (checkTopModuleBody _moduleBody)
                 e <- genExportInfo
@@ -2219,12 +2219,12 @@ reserveInductive d = do
           | notNull cs -> fail
           | otherwise -> do
               fs <-
-                failMaybe $
-                  mkRec
-                    ^? ( constructorRhs
-                           . _ConstructorRhsRecord
-                           . to mkRecordNameSignature
-                       )
+                failMaybe
+                  $ mkRec
+                  ^? ( constructorRhs
+                         . _ConstructorRhsRecord
+                         . to mkRecordNameSignature
+                     )
               let info =
                     RecordInfo
                       { _recordInfoSignature = fs,
@@ -2517,8 +2517,8 @@ checkUsingHiding moduleName exportInfo = \case
       let s = h ^. hidingSymbol
       scopedSym <-
         if
-            | isJust (h ^. hidingModuleKw) -> scopeSymbol SNameSpaceModules s
-            | otherwise -> scopeSymbol SNameSpaceSymbols s
+          | isJust (h ^. hidingModuleKw) -> scopeSymbol SNameSpaceModules s
+          | otherwise -> scopeSymbol SNameSpaceSymbols s
       return
         HidingItem
           { _hidingSymbol = scopedSym,
@@ -2530,8 +2530,8 @@ checkUsingHiding moduleName exportInfo = \case
       let s = i ^. usingSymbol
       scopedSym <-
         if
-            | isJust (i ^. usingModuleKw) -> scopeSymbol SNameSpaceModules s
-            | otherwise -> scopeSymbol SNameSpaceSymbols s
+          | isJust (i ^. usingModuleKw) -> scopeSymbol SNameSpaceModules s
+          | otherwise -> scopeSymbol SNameSpaceSymbols s
       let scopedAs = do
             c <- i ^. usingAs
             return (set S.nameConcrete c scopedSym)
@@ -2621,7 +2621,7 @@ filterExportInfo pub openModif = alterEntries . filterScope
           u =
             hashMap
               [ (i ^. usingSymbol . S.nameId, i ^? usingAs . _Just . S.nameConcrete)
-                | i <- toList (l ^. usingList)
+              | i <- toList (l ^. usingList)
               ]
       Just (Hiding l) ->
         over exportSymbols (HashMap.filter (not . inHiding))
@@ -2732,10 +2732,10 @@ checkRecordPattern r = do
   fields <- fromMaybeM (return (RecordNameSignature mempty)) (gets (^. scoperConstructorFields . at (c' ^. scopedIdenFinal . S.nameId)))
   l' <-
     if
-        | null (r ^. recordPatternItems) -> return []
-        | otherwise -> do
-            when (null (fields ^. recordNames)) (throw (noFields c'))
-            runReader fields (mapM checkItem (r ^. recordPatternItems))
+      | null (r ^. recordPatternItems) -> return []
+      | otherwise -> do
+          when (null (fields ^. recordNames)) (throw (noFields c'))
+          runReader fields (mapM checkItem (r ^. recordPatternItems))
   return
     RecordPattern
       { _recordPatternConstructor = c',
@@ -2786,8 +2786,8 @@ findRecordFieldIdx ::
   Symbol ->
   Sem r Int
 findRecordFieldIdx f =
-  fromMaybeM (throw err) $
-    asks @(RecordNameSignature 'Parsed) (^? recordNames . at f . _Just . nameItemIndex)
+  fromMaybeM (throw err)
+    $ asks @(RecordNameSignature 'Parsed) (^? recordNames . at f . _Just . nameItemIndex)
   where
     err :: ScoperError
     err = ErrUnexpectedField (UnexpectedField f)
@@ -2947,8 +2947,8 @@ checkCaseBranch ::
 checkCaseBranch CaseBranch {..} = withLocalScope $ do
   pattern' <- checkParsePatternAtoms' _caseBranchPattern
   rhs' <- checkCaseBranchRhs _caseBranchRhs
-  return $
-    CaseBranch
+  return
+    $ CaseBranch
       { _caseBranchPattern = pattern',
         _caseBranchRhs = rhs',
         ..
@@ -2961,8 +2961,8 @@ checkDoBind ::
 checkDoBind DoBind {..} = do
   expr' <- checkParseExpressionAtoms _doBindExpression
   pat' <- checkParsePatternAtoms' _doBindPattern
-  unless (Explicit == pat' ^. patternArgIsImplicit) $
-    throw (ErrDoBindImplicitPattern (DoBindImplicitPattern pat'))
+  unless (Explicit == pat' ^. patternArgIsImplicit)
+    $ throw (ErrDoBindImplicitPattern (DoBindImplicitPattern pat'))
   return
     DoBind
       { _doBindArrowKw,
@@ -3051,8 +3051,8 @@ checkCase ::
 checkCase Case {..} = do
   caseBranches' <- mapM checkCaseBranch _caseBranches
   caseExpression' <- checkParseExpressionAtoms _caseExpression
-  return $
-    Case
+  return
+    $ Case
       { _caseExpression = caseExpression',
         _caseBranches = caseBranches',
         _caseKw,
@@ -3069,8 +3069,8 @@ checkIfBranch IfBranch {..} = withLocalScope $ do
     SBranchIfBool -> checkParseExpressionAtoms _ifBranchCondition
     SBranchIfElse -> return _ifBranchCondition
   expression' <- checkParseExpressionAtoms _ifBranchExpression
-  return $
-    IfBranch
+  return
+    $ IfBranch
       { _ifBranchCondition = cond',
         _ifBranchExpression = expression',
         ..
@@ -3083,8 +3083,8 @@ checkIf ::
 checkIf If {..} = do
   ifBranches' <- mapM checkIfBranch _ifBranches
   ifBranchElse' <- checkIfBranch _ifBranchElse
-  return $
-    If
+  return
+    $ If
       { _ifBranchElse = ifBranchElse',
         _ifBranches = ifBranches',
         _ifKw
@@ -3259,8 +3259,8 @@ checkPatternBinding PatternBinding {..} = do
   p' <- checkParsePatternAtom' _patternBindingPattern
   n' <- bindVariableSymbol _patternBindingName
   if
-      | isJust (p' ^. patternArgName) -> throw (ErrDoubleBinderPattern (DoubleBinderPattern n' p'))
-      | otherwise -> return (set patternArgName (Just n') p')
+    | isJust (p' ^. patternArgName) -> throw (ErrDoubleBinderPattern (DoubleBinderPattern n' p'))
+    | otherwise -> return (set patternArgName (Just n') p')
 
 checkPatternAtoms ::
   (Members '[Reader PatternNamesKind, Error ScoperError, State Scope, State ScoperState, Reader BindingStrategy, InfoTableBuilder, Reader InfoTable, NameIdGen] r) =>
@@ -3373,14 +3373,14 @@ checkNamedApplication napp = do
   aname <- checkScopedIden (napp ^. namedApplicationName)
   sig :: NameSignature 'Parsed <-
     if
-        | null nargs -> return (NameSignature [])
-        | otherwise -> getNameSignatureParsed aname
+      | null nargs -> return (NameSignature [])
+      | otherwise -> getNameSignatureParsed aname
   let namesInSignature =
-        hashSet $
-          sig
-            ^.. nameSignatureArgs
-              . each
-              . nameBlockSymbols
+        hashSet
+          $ sig
+          ^.. nameSignatureArgs
+          . each
+          . nameBlockSymbols
   forM_ nargs (checkNameInSignature namesInSignature . (^. namedArgumentSymbol))
   puns <- scopePuns (napp ^.. namedApplicationArguments . each . _NamedArgumentItemPun)
   args' <- withLocalScope . localBindings $ do
@@ -3390,12 +3390,13 @@ checkNamedApplication napp = do
         hashSet
           . concatMap (^.. nameBlockSymbols)
           . filter (not . isImplicitOrInstance . (^. nameBlockImplicit))
-          $ sig ^. nameSignatureArgs
+          $ sig
+          ^. nameSignatureArgs
       givenNames :: [Symbol] = map (^. namedArgumentSymbol) nargs
   checkRepeated givenNames
   let missingArgs = HashSet.difference signatureExplicitNames (hashSet givenNames)
-  unless (null missingArgs) $
-    throw (ErrMissingArgs (MissingArgs (aname ^. scopedIdenFinal . nameConcrete) missingArgs))
+  unless (null missingArgs)
+    $ throw (ErrMissingArgs (MissingArgs (aname ^. scopedIdenFinal . nameConcrete) missingArgs))
   return
     NamedApplication
       { _namedApplicationName = aname,
@@ -3404,10 +3405,10 @@ checkNamedApplication napp = do
       }
   where
     checkRepeated :: [Symbol] -> Sem r ()
-    checkRepeated syms = whenJust (findRepeatedOn id syms ^? _head . _1) $
-      \(x, y :| _) ->
-        throw $
-          ErrMultipleDeclarations
+    checkRepeated syms = whenJust (findRepeatedOn id syms ^? _head . _1)
+      $ \(x, y :| _) ->
+        throw
+          $ ErrMultipleDeclarations
             MultipleDeclarations
               { _multipleDeclFirst = getLoc x,
                 _multipleDeclSecond = y
@@ -3415,8 +3416,8 @@ checkNamedApplication napp = do
 
     checkNameInSignature :: HashSet Symbol -> Symbol -> Sem r ()
     checkNameInSignature namesInSig fname =
-      unless (HashSet.member fname namesInSig) $
-        throw (ErrUnexpectedArgument (UnexpectedArgument fname))
+      unless (HashSet.member fname namesInSig)
+        $ throw (ErrUnexpectedArgument (UnexpectedArgument fname))
 
     scopePuns :: [NamedArgumentPun s] -> Sem r (HashMap Symbol ScopedIden)
     scopePuns puns = hashMap <$> mapWithM scopePun (puns ^.. each . namedArgumentPunSymbol)
@@ -3658,7 +3659,8 @@ checkJudoc ::
 checkJudoc (Judoc groups) =
   evalHighlightBuilder
     . ignoreInfoTableBuilder
-    $ Judoc <$> mapM checkJudocGroup groups
+    $ Judoc
+    <$> mapM checkJudocGroup groups
 
 checkJudocGroup ::
   (Members '[HighlightBuilder, Reader ScopeParameters, Error ScoperError, State Scope, State ScoperState, InfoTableBuilder, Reader InfoTable, NameIdGen, Reader MainPackageId, Reader PackageId] r) =>
@@ -3846,8 +3848,8 @@ makeExpressionTable (ExpressionAtoms atoms _) = [recordUpdate] : [appOpExplicit]
       where
         app :: Expression -> Expression -> Expression
         app f x =
-          ExpressionApplication $
-            Application
+          ExpressionApplication
+            $ Application
               { _applicationFunction = f,
                 _applicationParameter = x
               }

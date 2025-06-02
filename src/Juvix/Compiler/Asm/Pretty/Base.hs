@@ -52,19 +52,19 @@ instance PrettyCode Frame where
     let header =
           pretty (Str.function :: String)
             <+> n
-              <> maybe mempty (\loc -> pretty (" called at" :: String) <+> pretty loc) _frameCallLocation
+            <> maybe mempty (\loc -> pretty (" called at" :: String) <+> pretty loc) _frameCallLocation
     args <- ppCode _frameArgs
     temp <- ppCode _frameTemp
     stack <- ppCode _frameStack
-    return $
-      header
-        <> line
-        <> indent' (pretty ("arguments = " :: String) <> args)
-        <> line
-        <> indent' (pretty ("temporaries = " :: String) <> temp)
-        <> line
-        <> indent' (pretty ("value stack = " :: String) <> stack)
-        <> line
+    return
+      $ header
+      <> line
+      <> indent' (pretty ("arguments = " :: String) <> args)
+      <> line
+      <> indent' (pretty ("temporaries = " :: String) <> temp)
+      <> line
+      <> indent' (pretty ("value stack = " :: String) <> stack)
+      <> line
 
 instance PrettyCode RuntimeState where
   ppCode :: (Member (Reader Options) r) => RuntimeState -> Sem r (Doc Ann)
@@ -137,17 +137,19 @@ instance PrettyCode Command where
     Branch CmdBranch {..} -> do
       br1 <- ppCodeCode _cmdBranchTrue
       br2 <- ppCodeCode _cmdBranchFalse
-      return $
-        primitive Str.instrBr
-          <+> braces'
-            ( constr Str.true_ <> colon
-                <+> braces' br1
-                  <> semi
-                  <> line
-                  <> constr Str.false_
-                  <> colon
-                <+> braces' br2 <> semi
-            )
+      return
+        $ primitive Str.instrBr
+        <+> braces'
+          ( constr Str.true_
+              <> colon
+              <+> braces' br1
+              <> semi
+              <> line
+              <> constr Str.false_
+              <> colon
+              <+> braces' br2
+              <> semi
+          )
     Case CmdCase {..} -> do
       name <- Tree.ppIndName _cmdCaseInductive
       brs <- mapM ppCode _cmdCaseBranches
@@ -156,7 +158,7 @@ instance PrettyCode Command where
           d <-
             ( ppCodeCode
                 >=> (\x -> return $ primitive Str.default_ <> colon <+> braces' x <> semi)
-              )
+            )
               def
           return $ brs ++ [d]
         Nothing -> return brs

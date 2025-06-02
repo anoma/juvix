@@ -43,11 +43,11 @@ computeFreeVarsInfo' lambdaMultiplier = umap go
         modifyInfo (Info.insert fvi) node
         where
           fvi =
-            FreeVarsInfo $
-              foldr
+            FreeVarsInfo
+              $ foldr
                 ( \NodeChild {..} acc ->
-                    Map.unionWith (+) acc $
-                      getFreeVars' _childBindersNum _childNode
+                    Map.unionWith (+) acc
+                      $ getFreeVars' _childBindersNum _childNode
                 )
                 mempty
                 (children node)
@@ -56,7 +56,8 @@ computeFreeVarsInfo' lambdaMultiplier = umap go
     getFreeVars' bindersNum node =
       Map.mapKeysMonotonic (\idx -> idx - bindersNum)
         . Map.filterWithKey (\idx _ -> idx >= bindersNum)
-        $ getFreeVarsInfo node ^. infoFreeVars
+        $ getFreeVarsInfo node
+        ^. infoFreeVars
 
 getFreeVarsInfo :: Node -> FreeVarsInfo
 getFreeVarsInfo = fromJust . Info.lookup kFreeVarsInfo . getInfo

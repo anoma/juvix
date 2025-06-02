@@ -41,15 +41,17 @@ instance PrettyCode Edge where
     fromFun <- ppCode _edgeFrom
     toFun <- ppCode _edgeTo
     matrices <-
-      indent 2 . ppMatrices . zip [0 :: Int ..]
+      indent 2
+        . ppMatrices
+        . zip [0 :: Int ..]
         <$> mapM ppCode (toList _edgeMatrices)
-    return $
-      pretty ("Edge" :: Text)
-        <+> fromFun
-        <+> kwWaveArrow
-        <+> toFun
-          <> line
-          <> matrices
+    return
+      $ pretty ("Edge" :: Text)
+      <+> fromFun
+      <+> kwWaveArrow
+      <+> toFun
+      <> line
+      <> matrices
     where
       ppMatrices :: [(Int, Doc a)] -> Doc a
       ppMatrices = vsep2 . map ppMatrix
@@ -70,11 +72,11 @@ instance PrettyCode RecursiveBehaviour where
   ppCode (RecursiveBehaviour f m0) = do
     f' <- ppCode f
     let m' = PP.vsep (map (PP.list . map pretty) m)
-    return $
-      pretty ("Recursive behaviour of" :: Text)
-        <+> f'
-          <> colon
-          <> line
-          <> indent 2 (align m')
+    return
+      $ pretty ("Recursive behaviour of" :: Text)
+      <+> f'
+      <> colon
+      <> line
+      <> indent 2 (align m')
     where
       m = toList (HashSet.fromList m0)

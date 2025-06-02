@@ -84,7 +84,7 @@ parseProveArg' =
     pProveArgTag =
       choice
         [ chunk (show a) $> a
-          | a :: ProveArgTag <- allElements
+        | a :: ProveArgTag <- allElements
         ]
 
     pAppPath :: ParsecS r (AppPath File)
@@ -116,8 +116,8 @@ parseProveArg' =
         SProveArgTagNat -> do
           i <- (^. withLocParam . integerWithBaseValue) <$> integerWithBase'
           if
-              | i < 0 -> P.lift $ throw NegativeError
-              | otherwise -> return (fromIntegral i)
+            | i < 0 -> P.lift $ throw NegativeError
+            | otherwise -> return (fromIntegral i)
       eof
       return ret
 

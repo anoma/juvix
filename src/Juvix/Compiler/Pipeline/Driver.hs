@@ -144,9 +144,8 @@ compileNode ::
   Sem r (PipelineResult Store.ModuleInfo)
 compileNode e =
   withResolverRoot (e ^. entryIxImportNode . importNodePackageRoot)
-  -- As opposed to parallel compilation, here we don't force the result
-  $
-    processModule e
+    -- As opposed to parallel compilation, here we don't force the result
+    $ processModule e
 
 -- | Used for parallel compilation
 evalModuleInfoCacheSetup ::
@@ -262,16 +261,16 @@ processModuleCacheMissDecide entryIx = do
     unless (info ^. Store.moduleInfoOptions == opts) (throw RecompileOptionsChanged)
     CompileResult {..} <- runReader entry (processImports (info ^. Store.moduleInfoImports))
     if
-        | _compileResultChanged -> throw RecompileImportsChanged
-        | otherwise ->
-            return $
-              ProcessModuleReuse
-                PipelineResult
-                  { _pipelineResult = info,
-                    _pipelineResultImports = _compileResultModuleTable,
-                    _pipelineResultImportTables = _compileResultImportTables,
-                    _pipelineResultChanged = False
-                  }
+      | _compileResultChanged -> throw RecompileImportsChanged
+      | otherwise ->
+          return
+            $ ProcessModuleReuse
+              PipelineResult
+                { _pipelineResult = info,
+                  _pipelineResultImports = _compileResultModuleTable,
+                  _pipelineResultImportTables = _compileResultImportTables,
+                  _pipelineResultChanged = False
+                }
 
 processModuleCacheMiss ::
   forall r.
@@ -354,15 +353,15 @@ processProjectWith ::
 processProjectWith procNode = do
   l <- processProject
   pkgId <- asks (^. entryPointPackageId)
-  runReader pkgId $
-    sequence
+  runReader pkgId
+    $ sequence
       [ do
           d <-
             withResolverRoot (n ^. processedNode . importNodePackageRoot)
               . evalHighlightBuilder
               $ procNode n
           return (set processedNodeData d n)
-        | n <- l
+      | n <- l
       ]
 
 processProjectUpToScoping ::
@@ -414,8 +413,8 @@ processNodeUpToParsing ::
   ProcessedNode () ->
   Sem r ParserResult
 processNodeUpToParsing node =
-  runTopModuleNameChecker $
-    fromSource False Nothing (Just (node ^. processedNode . importNodeAbsFile))
+  runTopModuleNameChecker
+    $ fromSource False Nothing (Just (node ^. processedNode . importNodeAbsFile))
 
 processNodeUpToScoping ::
   ( Members
@@ -438,8 +437,8 @@ processNodeUpToScoping node = do
       scopedModules :: ScopedModuleTable = getScopedModuleTable modules
       tmp :: TopModulePathKey = relPathtoTopModulePathKey (node ^. processedNode . importNodeFile)
       moduleid :: ModuleId = run (runReader pkg (getModuleId tmp))
-  evalTopNameIdGen moduleid $
-    scopeCheck scopedModules parseRes
+  evalTopNameIdGen moduleid
+    $ scopeCheck scopedModules parseRes
 
 processRecursivelyUpTo ::
   forall a r.

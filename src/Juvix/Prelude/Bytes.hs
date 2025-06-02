@@ -34,8 +34,8 @@ padByteStringMod :: Int -> ByteString -> ByteString
 padByteStringMod align bs =
   let (d, m) = divMod (BS.length bs) align
    in if
-          | m == 0 -> bs
-          | otherwise -> padByteString ((d + 1) * align) bs
+        | m == 0 -> bs
+        | otherwise -> padByteString ((d + 1) * align) bs
 
 padByteStringWord :: ByteString -> ByteString
 padByteStringWord = padByteStringMod bytesPerWord

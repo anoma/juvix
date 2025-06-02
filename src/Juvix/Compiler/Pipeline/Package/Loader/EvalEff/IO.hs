@@ -138,7 +138,8 @@ loadPackage' packagePath = do
     . runTopModuleNameChecker
     . runReader noMigration
     . evalModuleInfoCachePackageDotJuvix
-    $ (^. pipelineResult) <$> processFileToStoredCore (packageEntryPoint entry)
+    $ (^. pipelineResult)
+    <$> processFileToStoredCore (packageEntryPoint entry)
   where
     toPackageError :: JuvixError -> PackageLoaderError
     toPackageError e =

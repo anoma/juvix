@@ -64,9 +64,12 @@ fromCairo elems0 =
         goCall :: Cairo.Instruction -> [Cairo.Element] -> (Instruction, Int)
         goCall i@Cairo.Instruction {..} elems
           | (_instrPcUpdate == Cairo.PcUpdateJump || _instrPcUpdate == Cairo.PcUpdateJumpRel)
-              && _instrApUpdate == Cairo.ApUpdateRegular
-              && _instrDstReg == Ap
-              && _instrOffDst == 0 =
+              && _instrApUpdate
+              == Cairo.ApUpdateRegular
+              && _instrDstReg
+              == Ap
+              && _instrOffDst
+              == 0 =
               (call, delta)
           | otherwise =
               errorMsg addr ("invalid call: " <> show i)
@@ -85,13 +88,20 @@ fromCairo elems0 =
 
         goRet :: Cairo.Instruction -> [Cairo.Element] -> (Instruction, Int)
         goRet i@Cairo.Instruction {..} _
-          | _instrApUpdate == Cairo.ApUpdateRegular
-              && _instrPcUpdate == Cairo.PcUpdateJump
-              && _instrResLogic == Cairo.ResOp1
-              && _instrOp1Src == Cairo.Op1SrcFp
-              && _instrOffOp1 == -1
-              && _instrDstReg == Fp
-              && _instrOffDst == -2 =
+          | _instrApUpdate
+              == Cairo.ApUpdateRegular
+              && _instrPcUpdate
+              == Cairo.PcUpdateJump
+              && _instrResLogic
+              == Cairo.ResOp1
+              && _instrOp1Src
+              == Cairo.Op1SrcFp
+              && _instrOffOp1
+              == -1
+              && _instrDstReg
+              == Fp
+              && _instrOffDst
+              == -2 =
               (Return, 0)
           | otherwise =
               errorMsg addr ("invalid ret: " <> show i)
@@ -99,7 +109,8 @@ fromCairo elems0 =
         goAssertEq :: Cairo.Instruction -> [Cairo.Element] -> (Instruction, Int)
         goAssertEq i@Cairo.Instruction {..} elems
           | (_instrApUpdate == Cairo.ApUpdateInc || _instrApUpdate == Cairo.ApUpdateRegular)
-              && _instrPcUpdate == Cairo.PcUpdateRegular =
+              && _instrPcUpdate
+              == Cairo.PcUpdateRegular =
               (asng, delta)
           | otherwise =
               errorMsg addr ("invalid assignment: " <> show i)

@@ -63,9 +63,9 @@ checkStrictSubterm p1 p2 = case (p1, p2) of
     let suc1 = n1 ^. instanceNatSuc
         suc2 = n2 ^. instanceNatSuc
      in if
-            | suc1 < suc2 -> checkSubterm (n1 ^. instanceNatArg) (n2 ^. instanceNatArg)
-            | suc1 == suc2 -> checkStrictSubterm (n1 ^. instanceNatArg) (n2 ^. instanceNatArg)
-            | otherwise -> False
+          | suc1 < suc2 -> checkSubterm (n1 ^. instanceNatArg) (n2 ^. instanceNatArg)
+          | suc1 == suc2 -> checkStrictSubterm (n1 ^. instanceNatArg) (n2 ^. instanceNatArg)
+          | otherwise -> False
   (_, InstanceParamNatural n2)
     | n2 ^. instanceNatSuc == 0 -> checkStrictSubterm p1 (n2 ^. instanceNatArg)
     | otherwise -> checkSubterm p1 (n2 ^. instanceNatArg)

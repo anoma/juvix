@@ -131,8 +131,8 @@ parseUtility =
 
     commandFormat :: Mod CommandFields TopCommand
     commandFormat =
-      command "format" $
-        info
+      command "format"
+        $ info
           (JuvixFormat <$> parseFormat)
           ( headerDoc
               ( Just
@@ -162,50 +162,50 @@ parseUtility =
 
 commandCheck :: Mod CommandFields TopCommand
 commandCheck =
-  command "typecheck" $
-    info
+  command "typecheck"
+    $ info
       (Typecheck <$> parseTypecheck)
       (progDesc "Typecheck a Juvix file")
 
 commandCompile :: Mod CommandFields TopCommand
 commandCompile =
-  command "compile" $
-    info
+  command "compile"
+    $ info
       (Compile <$> parseCompileCommand)
       (progDesc "Compile a Juvix file")
 
 commandEval :: Mod CommandFields TopCommand
 commandEval =
-  command "eval" $
-    info
+  command "eval"
+    $ info
       (Eval <$> parseEvalOptions)
       (progDesc "Evaluate a Juvix file")
 
 commandHtml :: Mod CommandFields TopCommand
 commandHtml =
-  command "html" $
-    info
+  command "html"
+    $ info
       (Html <$> parseHtml)
       (progDesc "Generate HTML for a Juvix file")
 
 commandMarkdown :: Mod CommandFields TopCommand
 commandMarkdown =
-  command "markdown" $
-    info
+  command "markdown"
+    $ info
       (Markdown <$> parseJuvixMarkdown)
       (progDesc "Translate Juvix code blocks in a Markdown file to Markdown")
 
 commandIsabelle :: Mod CommandFields TopCommand
 commandIsabelle =
-  command "isabelle" $
-    info
+  command "isabelle"
+    $ info
       (Isabelle <$> parseIsabelle)
       (progDesc "Translate a Juvix file to Isabelle/HOL")
 
 commandDev :: Mod CommandFields TopCommand
 commandDev =
-  command "dev" $
-    info
+  command "dev"
+    $ info
       (Dev <$> Dev.parseDevCommand)
       (progDesc "Commands for the Juvix compiler developers")
 

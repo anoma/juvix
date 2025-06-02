@@ -34,6 +34,6 @@ emptyConfig =
 
 config :: Config
 config =
-  fromMaybe emptyConfig $
-    decode $
-      BL.fromStrict $(FE.makeRelativeToProject "config/config.json" >>= FE.embedFile)
+  fromMaybe emptyConfig
+    $ decode
+    $ BL.fromStrict $(FE.makeRelativeToProject "config/config.json" >>= FE.embedFile)

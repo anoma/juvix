@@ -75,8 +75,8 @@ clientTests =
           resList <- pollForOutput 10000 isListUnrevealedCommitsAvailable listUnrevealedCommits
           case (proveTraces, resList ^. listUnrevealedCommitsResultCommits) of
             ([proveCommitment], [listCommitment]) ->
-              liftIO $
-                assertBool
+              liftIO
+                $ assertBool
                   "expected commitment from prove and list to be equal"
                   (nockmaEq proveCommitment listCommitment)
             _ ->

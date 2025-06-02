@@ -65,8 +65,7 @@ allTests :: TestTree
 allTests =
   testGroup
     "Package loading negative tests"
-    ( map (mkTest . testDescr) packageErrorTests
-    )
+    (map (mkTest . testDescr) packageErrorTests)
 
 wrongError :: Maybe FailMsg
 wrongError = Just "Incorrect error"

@@ -124,7 +124,7 @@ parseHtml = do
     availableStr =
       dotSep
         [ showCategory (light, filter ((== light) . themeLight) allThemes)
-          | light <- allElements
+        | light <- allElements
         ]
       where
         showCategory :: (ThemeLight, [Theme]) -> String

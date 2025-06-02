@@ -43,8 +43,8 @@ makeLenses ''CoercionTable
 
 instance Semigroup CoercionTable where
   t1 <> t2 =
-    CoercionTable $
-      HashMap.unionWith combine (t1 ^. coercionTableMap) (t2 ^. coercionTableMap)
+    CoercionTable
+      $ HashMap.unionWith combine (t1 ^. coercionTableMap) (t2 ^. coercionTableMap)
     where
       combine :: [CoercionInfo] -> [CoercionInfo] -> [CoercionInfo]
       combine ii1 ii2 = nubHashable (ii1 ++ ii2)

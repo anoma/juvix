@@ -108,12 +108,13 @@ genCode :: Core.Module -> Core.FunctionInfo -> FunctionInfo
 genCode md fi =
   let argnames = map (Just . (^. Core.argumentName)) (fi ^. Core.functionArgsInfo)
       bl =
-        BL.fromList . reverse $
-          ( zipWithExact
-              (\x y -> DRef $ ArgRef $ OffsetRef x y)
-              [0 .. fi ^. Core.functionArgsNum - 1]
-              argnames
-          )
+        BL.fromList
+          . reverse
+          $ ( zipWithExact
+                (\x y -> DRef $ ArgRef $ OffsetRef x y)
+                [0 .. fi ^. Core.functionArgsNum - 1]
+                argnames
+            )
       code = go 0 bl (fi ^. Core.functionBody)
    in FunctionInfo
         { _functionName = fi ^. Core.functionName,
@@ -145,15 +146,15 @@ genCode md fi =
     goIdent :: Core.Ident -> Node
     goIdent Core.Ident {..}
       | getArgsNum _identSymbol == 0 =
-          Call $
-            NodeCall
+          Call
+            $ NodeCall
               { _nodeCallInfo = mempty,
                 _nodeCallType = CallFun _identSymbol,
                 _nodeCallArgs = []
               }
       | otherwise =
-          AllocClosure $
-            NodeAllocClosure
+          AllocClosure
+            $ NodeAllocClosure
               { _nodeAllocClosureInfo = mempty,
                 _nodeAllocClosureFunSymbol = _identSymbol,
                 _nodeAllocClosureArgs = []
@@ -180,43 +181,43 @@ genCode md fi =
        in case _appsFun of
             Core.FunIdent Core.Ident {..} ->
               if
-                  | argsNum > suppliedArgsNum ->
-                      AllocClosure $
-                        NodeAllocClosure
-                          { _nodeAllocClosureInfo = mempty,
-                            _nodeAllocClosureFunSymbol = _identSymbol,
-                            _nodeAllocClosureArgs = suppliedArgs
-                          }
-                  | argsNum == suppliedArgsNum ->
-                      Call $
-                        NodeCall
-                          { _nodeCallInfo = mempty,
-                            _nodeCallType = CallFun _identSymbol,
-                            _nodeCallArgs = suppliedArgs
-                          }
-                  | otherwise ->
-                      -- If more arguments are supplied (suppliedArgsNum) than
-                      -- the function eats up (argsNum), then the function
-                      -- returns a closure. We should first call the function
-                      -- (with Call) and then use CallClosures on the result
-                      -- with the remaining arguments.
-                      CallClosures $
-                        NodeCallClosures
-                          { _nodeCallClosuresInfo = mempty,
-                            _nodeCallClosuresFun =
-                              Call $
-                                NodeCall
-                                  { _nodeCallInfo = mempty,
-                                    _nodeCallType = CallFun _identSymbol,
-                                    _nodeCallArgs = take argsNum suppliedArgs
-                                  },
-                            _nodeCallClosuresArgs = nonEmpty' $ drop argsNum suppliedArgs
-                          }
+                | argsNum > suppliedArgsNum ->
+                    AllocClosure
+                      $ NodeAllocClosure
+                        { _nodeAllocClosureInfo = mempty,
+                          _nodeAllocClosureFunSymbol = _identSymbol,
+                          _nodeAllocClosureArgs = suppliedArgs
+                        }
+                | argsNum == suppliedArgsNum ->
+                    Call
+                      $ NodeCall
+                        { _nodeCallInfo = mempty,
+                          _nodeCallType = CallFun _identSymbol,
+                          _nodeCallArgs = suppliedArgs
+                        }
+                | otherwise ->
+                    -- If more arguments are supplied (suppliedArgsNum) than
+                    -- the function eats up (argsNum), then the function
+                    -- returns a closure. We should first call the function
+                    -- (with Call) and then use CallClosures on the result
+                    -- with the remaining arguments.
+                    CallClosures
+                      $ NodeCallClosures
+                        { _nodeCallClosuresInfo = mempty,
+                          _nodeCallClosuresFun =
+                            Call
+                              $ NodeCall
+                                { _nodeCallInfo = mempty,
+                                  _nodeCallType = CallFun _identSymbol,
+                                  _nodeCallArgs = take argsNum suppliedArgs
+                                },
+                          _nodeCallClosuresArgs = nonEmpty' $ drop argsNum suppliedArgs
+                        }
               where
                 argsNum = getArgsNum _identSymbol
             Core.FunVar Core.Var {..} ->
-              CallClosures $
-                NodeCallClosures
+              CallClosures
+                $ NodeCallClosures
                   { _nodeCallClosuresInfo = mempty,
                     _nodeCallClosuresFun = mkMemRef $ BL.lookup _varIndex refs,
                     _nodeCallClosuresArgs = suppliedArgs'
@@ -225,37 +226,37 @@ genCode md fi =
     goBuiltinApp :: Int -> BinderList MemRef -> Core.BuiltinApp -> Node
     goBuiltinApp tempSize refs Core.BuiltinApp {..} = case toTreeOp _builtinAppOp of
       TreeByteArrayOp op ->
-        ByteArray $
-          NodeByteArray
+        ByteArray
+          $ NodeByteArray
             { _nodeByteArrayInfo = mempty,
               _nodeByteArrayOpcode = op,
               _nodeByteArrayArgs = args
             }
       TreeCairoOp op ->
-        Cairo $
-          NodeCairo
+        Cairo
+          $ NodeCairo
             { _nodeCairoInfo = mempty,
               _nodeCairoOpcode = op,
               _nodeCairoArgs = args
             }
       TreeAnomaOp op ->
-        Anoma $
-          NodeAnoma
+        Anoma
+          $ NodeAnoma
             { _nodeAnomaInfo = mempty,
               _nodeAnomaOpcode = op,
               _nodeAnomaArgs = args
             }
       TreeNockmaOp op ->
-        Nockma $
-          NodeNockma
+        Nockma
+          $ NodeNockma
             { _nodeNockmaInfo = mempty,
               _nodeNockmaOpcode = op,
               _nodeNockmaArgs = args
             }
       TreeBinaryOpcode op -> case args of
         [arg1, arg2] ->
-          Binop $
-            NodeBinop
+          Binop
+            $ NodeBinop
               { _nodeBinopInfo = mempty,
                 _nodeBinopOpcode = op,
                 _nodeBinopArg1 = arg1,
@@ -264,8 +265,8 @@ genCode md fi =
         _ -> impossible
       TreeUnaryOpcode op -> case args of
         [arg] ->
-          Unop $
-            NodeUnop
+          Unop
+            $ NodeUnop
               { _nodeUnopInfo = mempty,
                 _nodeUnopOpcode = op,
                 _nodeUnopArg = arg
@@ -281,8 +282,8 @@ genCode md fi =
       Core.Constr _ (Core.BuiltinTag Core.TagFalse) _ ->
         mkConst (ConstBool False)
       Core.Constr {..} ->
-        AllocConstr $
-          NodeAllocConstr
+        AllocConstr
+          $ NodeAllocConstr
             { _nodeAllocConstrInfo = mempty,
               _nodeAllocConstrTag = _constrTag,
               _nodeAllocConstrArgs = args
@@ -292,8 +293,8 @@ genCode md fi =
 
     goLet :: Int -> BinderList MemRef -> Core.Let -> Node
     goLet tempSize refs (Core.Let {..}) =
-      Save $
-        NodeSave
+      Save
+        $ NodeSave
           { _nodeSaveInfo = mempty,
             _nodeSaveArg = arg,
             _nodeSaveBody = body,
@@ -313,8 +314,8 @@ genCode md fi =
 
     goCase :: Int -> BinderList MemRef -> Core.Case -> Node
     goCase tempSize refs Core.Case {..} =
-      Case $
-        NodeCase
+      Case
+        $ NodeCase
           { _nodeCaseInfo = mempty,
             _nodeCaseArg = go tempSize refs _caseValue,
             _nodeCaseInductive = _caseInductive,
@@ -327,10 +328,10 @@ genCode md fi =
           map
             ( \Core.CaseBranch {..} ->
                 if
-                    | _caseBranchBindersNum == 0 ->
-                        compileCaseBranchNoBinders _caseBranchTag _caseBranchBody
-                    | otherwise ->
-                        compileCaseBranch _caseBranchBindersNum _caseBranchTag _caseBranchBody
+                  | _caseBranchBindersNum == 0 ->
+                      compileCaseBranchNoBinders _caseBranchTag _caseBranchBody
+                  | otherwise ->
+                      compileCaseBranch _caseBranchBindersNum _caseBranchTag _caseBranchBody
             )
             branches
 
@@ -361,8 +362,8 @@ genCode md fi =
           where
             mkFieldRef :: Offset -> MemRef
             mkFieldRef off =
-              ConstrRef $
-                Field
+              ConstrRef
+                $ Field
                   { _fieldName = Nothing,
                     _fieldTag = tag,
                     _fieldRef = mkTempRef (OffsetRef tempSize Nothing),
@@ -374,8 +375,8 @@ genCode md fi =
 
     goIf :: Int -> BinderList MemRef -> Core.If -> Node
     goIf tempSize refs Core.If {..} =
-      Branch $
-        NodeBranch
+      Branch
+        $ NodeBranch
           { _nodeBranchInfo = mempty,
             _nodeBranchArg = go tempSize refs _ifValue,
             _nodeBranchTrue = go tempSize refs _ifTrue,

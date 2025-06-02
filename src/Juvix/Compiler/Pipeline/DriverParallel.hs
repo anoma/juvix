@@ -43,7 +43,7 @@ mkNodesIndex tree =
     . hashMap
     <$> sequence
       [ mkAssoc fromNode
-        | fromNode <- HashMap.keys (tree ^. importTree)
+      | fromNode <- HashMap.keys (tree ^. importTree)
       ]
   where
     mkAssoc :: ImportNode -> Sem r (ImportNode, EntryIndex)

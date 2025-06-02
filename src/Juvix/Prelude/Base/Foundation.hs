@@ -793,7 +793,7 @@ hashMapFromHashSetM s fun =
       [ do
           r <- fun x
           return (x, r)
-        | x <- toList s
+      | x <- toList s
       ]
 
 hashMapFromHashSet :: (Hashable k) => HashSet k -> (k -> v) -> HashMap k v

@@ -84,8 +84,8 @@ checkMutualBlockPositivity noPositivityFlag mut = do
   let ldefs :: [InductiveDef] =
         mut
           ^.. mutualStatements
-            . each
-            . _StatementInductive
+          . each
+          . _StatementInductive
 
   whenJust (nonEmpty ldefs) $ \defs -> do
     args :: [ConstructorArg] <-
@@ -93,10 +93,10 @@ checkMutualBlockPositivity noPositivityFlag mut = do
         mkConstructorArg
         ( defs
             ^.. each
-              . inductiveConstructors
-              . each
-              . inductiveConstructorNormalizedType
-              . to fromJust
+            . inductiveConstructors
+            . each
+            . inductiveConstructorNormalizedType
+            . to fromJust
         )
     poltab <- (^. typeCheckingTablesPolarityTable) <$> getCombinedTables
     let occ :: Occurrences = mkOccurrences args
@@ -113,8 +113,8 @@ checkMutualBlockPositivity noPositivityFlag mut = do
       let neg = checkStrictlyPositive poltab' names occ
           markedPositive d = fromJust (find ((== d) . (^. inductiveName)) defs) ^. inductivePositive
       whenJust (nonEmpty (filter (not . markedPositive) neg)) $ \negTys ->
-        throw $
-          ErrNonStrictlyPositive
+        throw
+          $ ErrNonStrictlyPositive
             NonStrictlyPositive
               { _nonStrictlyPositiveOccurrences = negTys
               }
@@ -210,15 +210,15 @@ computePolarities tab defs topOccurrences =
       let params = getDef d ^. inductiveParameters
       return
         [ (name, b ^. builderPolarities . at name)
-          | p :: InductiveParameter <- params,
-            let name = p ^. inductiveParamName
+        | p :: InductiveParameter <- params,
+          let name = p ^. inductiveParamName
         ]
 
     go :: forall r. (Members '[State Builder, Reader Polarity] r) => Occurrences -> Sem r ()
     go o = do
       sequence_
         [ addPolarity param (functionSidePolarity side)
-          | ((side, AppVar param), _) <- HashMap.toList (o ^. occurrences)
+        | ((side, AppVar param), _) <- HashMap.toList (o ^. occurrences)
         ]
       forM_ (HashMap.toList (o ^. occurrences)) (uncurry goApp)
       where

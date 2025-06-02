@@ -59,16 +59,16 @@ consumeLength :: forall r. (Members '[BitReader, Error BitReadError] r) => Sem r
 consumeLength = do
   lenOfLen <- countBitsUntilOne
   if
-      | lenOfLen == 0 -> return 0
-      | otherwise -> do
-          -- The most significant bit of the length is omitted
-          let lenBits = lenOfLen - 1
-          foldlM go (bit lenBits) [0 .. lenBits - 1]
+    | lenOfLen == 0 -> return 0
+    | otherwise -> do
+        -- The most significant bit of the length is omitted
+        let lenBits = lenOfLen - 1
+        foldlM go (bit lenBits) [0 .. lenBits - 1]
   where
     go :: Int -> Int -> Sem r Int
     go acc n = do
       Bit b <- nextBit
-      return $
-        if
-            | b -> setBit acc n
-            | otherwise -> acc
+      return
+        $ if
+          | b -> setBit acc n
+          | otherwise -> acc

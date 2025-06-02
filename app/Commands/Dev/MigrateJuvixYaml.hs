@@ -13,8 +13,8 @@ runCommand MigrateJuvixYamlOptions {..} = do
   pkgFileExists <- fileExists' pkgFilePath
   pkg <- askPackage
   if
-      | isGlobalPackage -> exitMsg (ExitFailure 1) "No Package file found"
-      | not pkgFileExists || _migrateJuvixYamlOptionsForce -> do
-          writePackageFile pkgDir pkg
-          removeFile' (pkgDir <//> juvixYamlFile)
-      | otherwise -> exitMsg (ExitFailure 1) (show pkgFilePath <> " already exists.")
+    | isGlobalPackage -> exitMsg (ExitFailure 1) "No Package file found"
+    | not pkgFileExists || _migrateJuvixYamlOptionsForce -> do
+        writePackageFile pkgDir pkg
+        removeFile' (pkgDir <//> juvixYamlFile)
+    | otherwise -> exitMsg (ExitFailure 1) (show pkgFilePath <> " already exists.")

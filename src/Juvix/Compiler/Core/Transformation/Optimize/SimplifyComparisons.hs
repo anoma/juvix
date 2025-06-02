@@ -27,12 +27,12 @@ convertNode md = dmap go
                 | OpIntLt <- blt' ^. builtinAppOp,
                   blt ^. builtinAppArgs == blt' ^. builtinAppArgs ->
                     if
-                        | isFalseConstr b1 ->
-                            b2
-                        | isTrueConstr b1 ->
-                            NBlt blt {_builtinAppOp = OpIntLe}
-                        | otherwise ->
-                            mkIf' boolSym v b1 b2
+                      | isFalseConstr b1 ->
+                          b2
+                      | isTrueConstr b1 ->
+                          NBlt blt {_builtinAppOp = OpIntLe}
+                      | otherwise ->
+                          mkIf' boolSym v b1 b2
               _ ->
                 mkIf' boolSym v b1 b2
         | OpIntLt <- _builtinAppOp,
@@ -58,34 +58,34 @@ convertNode md = dmap go
         | (OpEq, OpIntLt) <- (blt ^. builtinAppOp, blt' ^. builtinAppOp),
           blt ^. builtinAppArgs == blt' ^. builtinAppArgs ->
             if
-                | isFalseConstr b1 && isTrueConstr b1' && isFalseConstr b2' ->
-                    v'
-                | isTrueConstr b1 && isFalseConstr b1' && isFalseConstr b2' ->
-                    v
-                | isTrueConstr b1 && isTrueConstr b1' && isFalseConstr b2' ->
-                    NBlt blt {_builtinAppOp = OpIntLe}
-                | isFalseConstr b1 && isFalseConstr b1' && isTrueConstr b2' ->
-                    NBlt
-                      blt
-                        { _builtinAppOp = OpIntLt,
-                          _builtinAppArgs = reverse (blt ^. builtinAppArgs)
-                        }
-                | isTrueConstr b1 && isFalseConstr b1' && isTrueConstr b2' ->
-                    NBlt
-                      blt
-                        { _builtinAppOp = OpIntLe,
-                          _builtinAppArgs = reverse (blt ^. builtinAppArgs)
-                        }
-                | isFalseConstr b1 && isTrueConstr b1' && isTrueConstr b2' ->
-                    mkIf' boolSym v b1 b1'
-                | b1 == b2' ->
-                    mkIf' boolSym v' b1' b2'
-                | b1' == b2' ->
-                    mkIf' boolSym v b1 b1'
-                | b1 == b1' ->
-                    mkIf' boolSym (NBlt blt {_builtinAppOp = OpIntLe}) b1 b2'
-                | otherwise ->
-                    theIfs
+              | isFalseConstr b1 && isTrueConstr b1' && isFalseConstr b2' ->
+                  v'
+              | isTrueConstr b1 && isFalseConstr b1' && isFalseConstr b2' ->
+                  v
+              | isTrueConstr b1 && isTrueConstr b1' && isFalseConstr b2' ->
+                  NBlt blt {_builtinAppOp = OpIntLe}
+              | isFalseConstr b1 && isFalseConstr b1' && isTrueConstr b2' ->
+                  NBlt
+                    blt
+                      { _builtinAppOp = OpIntLt,
+                        _builtinAppArgs = reverse (blt ^. builtinAppArgs)
+                      }
+              | isTrueConstr b1 && isFalseConstr b1' && isTrueConstr b2' ->
+                  NBlt
+                    blt
+                      { _builtinAppOp = OpIntLe,
+                        _builtinAppArgs = reverse (blt ^. builtinAppArgs)
+                      }
+              | isFalseConstr b1 && isTrueConstr b1' && isTrueConstr b2' ->
+                  mkIf' boolSym v b1 b1'
+              | b1 == b2' ->
+                  mkIf' boolSym v' b1' b2'
+              | b1' == b2' ->
+                  mkIf' boolSym v b1 b1'
+              | b1 == b1' ->
+                  mkIf' boolSym (NBlt blt {_builtinAppOp = OpIntLe}) b1 b2'
+              | otherwise ->
+                  theIfs
       _ ->
         theIfs
       where

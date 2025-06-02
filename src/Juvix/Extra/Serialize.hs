@@ -39,8 +39,8 @@ loadFromFile :: forall a r. (Members '[Files, TaggedLock] r, Serialize a) => Pat
 loadFromFile file = withTaggedLockDir (parent file) $ do
   ex <- fileExists' file
   if
-      | ex -> deserialize <$> readFileBS' file
-      | otherwise -> return Nothing
+    | ex -> deserialize <$> readFileBS' file
+    | otherwise -> return Nothing
   where
     deserialize :: ByteString -> Maybe a
     deserialize bs = case runGet (Serial.get @a) bs of

@@ -36,12 +36,12 @@ instance ToGenericError WrongConstructorType where
             "The constructor"
               <+> ppCode opts' ctorName
               <+> "belongs to the inductive type:"
-                <> line
-                <> indent' (ppCode opts' (e ^. wrongCtorTypeActual))
-                <> line
-                <> "but is expected to belong to the inductive type:"
-                <> line
-                <> indent' (ppCode opts' (e ^. wrongCtorTypeExpected))
+              <> line
+              <> indent' (ppCode opts' (e ^. wrongCtorTypeActual))
+              <> line
+              <> "but is expected to belong to the inductive type:"
+              <> line
+              <> indent' (ppCode opts' (e ^. wrongCtorTypeExpected))
 
 data WrongReturnType = WrongReturnType
   { _wrongReturnTypeConstructorName :: Name,
@@ -71,12 +71,12 @@ instance ToGenericError WrongReturnType where
             "The constructor"
               <+> ppCode opts' ctorName
               <+> "has the wrong return type:"
-                <> line
-                <> indent' (ppCode opts' ty)
-                <> line
-                <> "but is expected to have type:"
-                <> line
-                <> indent' (ppCode opts' (e ^. wrongReturnTypeExpected))
+              <> line
+              <> indent' (ppCode opts' ty)
+              <> line
+              <> "but is expected to have type:"
+              <> line
+              <> indent' (ppCode opts' (e ^. wrongReturnTypeExpected))
 
 data UnsolvedMeta = UnsolvedMeta
   { _unsolvedMeta :: Hole,
@@ -139,15 +139,15 @@ instance ToGenericError WrongConstructorAppArgs where
               <+> ctorName
               <+> "is being matched against"
               <+> numPats
-                <> ":"
-                <> line
-                <> indent' (ppCode opts' (e ^. wrongCtorAppApp))
-                <> line
-                <> "but is expected to be matched against"
+              <> ":"
+              <> line
+              <> indent' (ppCode opts' (e ^. wrongCtorAppApp))
+              <> line
+              <> "but is expected to be matched against"
               <+> numTypes
               <+> "with the following types:"
-                <> line
-                <> indent' (hsep (ctorName : (ppCode opts' <$> (e ^. wrongCtorAppTypes))))
+              <> line
+              <> indent' (hsep (ctorName : (ppCode opts' <$> (e ^. wrongCtorAppTypes))))
           numPats :: Doc ann
           numPats = pat (length (e ^. wrongCtorAppApp . constrAppParameters))
           numTypes :: Doc ann
@@ -205,12 +205,12 @@ instance ToGenericError WrongType where
               <+> thingName
               <+> thing
               <+> "has type:"
-                <> line
-                <> indent' (ppCode opts' (err ^. wrongTypeActual . normalizedExpression))
-                <> line
-                <> "but is expected to have type:"
-                <> line
-                <> indent' (ppCode opts' (err ^. wrongTypeExpected . normalizedExpression))
+              <> line
+              <> indent' (ppCode opts' (err ^. wrongTypeActual . normalizedExpression))
+              <> line
+              <> "but is expected to have type:"
+              <> line
+              <> indent' (ppCode opts' (err ^. wrongTypeExpected . normalizedExpression))
 
           thingName :: Doc a
           thingName = case err ^. wrongTypeThing of
@@ -248,17 +248,17 @@ instance ToGenericError ExpectedFunctionType where
           msg =
             "Type error near"
               <+> pretty (getLoc subjectExpr)
-                <> "."
-                <> line
-                <> "In the expression:"
-                <> line
-                <> indent' (ppCode opts' (e ^. expectedFunctionTypeExpression))
-                <> line
-                <> "the expression"
+              <> "."
+              <> line
+              <> "In the expression:"
+              <> line
+              <> indent' (ppCode opts' (e ^. expectedFunctionTypeExpression))
+              <> line
+              <> "the expression"
               <+> ppCode opts' (e ^. expectedFunctionTypeLeft)
               <+> "is expected to have a function type but has type:"
-                <> line
-                <> indent' (ppCode opts' (e ^. expectedFunctionTypeType))
+              <> line
+              <> indent' (ppCode opts' (e ^. expectedFunctionTypeType))
           subjectExpr :: Expression
           subjectExpr = e ^. expectedFunctionTypeExpression
 
@@ -291,15 +291,15 @@ instance ToGenericError WrongNumberArgumentsIndType where
               <+> ppCode opts' ty
               <+> "expects"
               <+> ( if
-                        | expectedNumArgs == 0 -> "no arguments"
-                        | expectedNumArgs == 1 -> "one argument"
-                        | otherwise -> pretty expectedNumArgs <+> "arguments"
+                      | expectedNumArgs == 0 -> "no arguments"
+                      | expectedNumArgs == 1 -> "one argument"
+                      | otherwise -> pretty expectedNumArgs <+> "arguments"
                   )
-                <> ", but"
+              <> ", but"
               <+> ( if
-                        | actualNumArgs == 0 -> "no argument is"
-                        | actualNumArgs == 1 -> "only one argument is"
-                        | otherwise -> pretty actualNumArgs <+> "arguments are"
+                      | actualNumArgs == 0 -> "no argument is"
+                      | actualNumArgs == 1 -> "only one argument is"
+                      | otherwise -> pretty actualNumArgs <+> "arguments are"
                   )
               <+> "given"
 
@@ -339,9 +339,9 @@ instance ToGenericError UnsupportedTypeFunction where
     let msg =
           "Unsupported type function"
             <+> ppCode opts (_unsupportedTypeFunction ^. funDefName)
-              <> "."
-              <> line
-              <> "Only terminating functions with a single clause and no pattern matching are supported."
+            <> "."
+            <> line
+            <> "Only terminating functions with a single clause and no pattern matching are supported."
     return
       GenericError
         { _genericErrorLoc = i,
@@ -382,8 +382,8 @@ instance ToGenericError InvalidCoercionType where
     let msg =
           "Invalid coercion type:"
             <+> ppCode opts _invalidCoercionTypeExpression
-              <> line
-              <> "A coercion must have a target instance argument."
+            <> line
+            <> "A coercion must have a target instance argument."
     return
       GenericError
         { _genericErrorLoc = i,
@@ -510,10 +510,10 @@ instance ToGenericError AmbiguousInstances where
           msg =
             "Multiple trait instances found for"
               <+> ppCode opts' (e ^. ambiguousInstancesType . normalizedExpression)
-                <> line
-                <> "Matching instances found at:"
-                <> line
-                <> indent' locs
+              <> line
+              <> "Matching instances found at:"
+              <> line
+              <> indent' locs
 
 data SubsumedInstance = SubsumedInstance
   { _subsumedInstance :: InstanceInfo,
@@ -541,8 +541,8 @@ instance ToGenericError SubsumedInstance where
             "The instance"
               <+> ppCode opts' (e ^. subsumedInstance . instanceInfoResult)
               <+> "is subsumed by instances at:"
-                <> line
-                <> indent' locs
+              <> line
+              <> indent' locs
 
 newtype ExplicitInstanceArgument = ExplicitInstanceArgument
   { _explicitInstanceArgumentParameter :: FunctionParameter
@@ -636,10 +636,10 @@ instance ToGenericError BadScope where
               <> "Most likely, the inference algorithm inserted the variable"
               <+> ppCode opts' var
               <+> "in a place where it is not in scope."
-                <> line
-                <> "As a workaround, explicitly provide a type in the place where you think the variable got inserted."
-                <> line
-                <> "More information at https://github.com/anoma/juvix/issues/2247"
+              <> line
+              <> "As a workaround, explicitly provide a type in the place where you think the variable got inserted."
+              <> line
+              <> "More information at https://github.com/anoma/juvix/issues/2247"
 
 newtype InvalidConstructorArgType = InvalidConstructorArgType
   { _invalidConstructorArgType :: Expression
@@ -696,11 +696,11 @@ instance ToGenericError NonStrictlyPositive where
                       _ -> "types" <> line <> itemize (ppCode opts' <$> tys) <> line <> "are"
                   )
               <+> "not strictly positive."
-                <> line
-                <> line
-                <> "A type D is strictly positive iff two conditions hold:"
-                <> line
-                <> itemize
-                  [ "D does not appear applied to a bound variable",
-                    "D does not appear on the left of an arrow in any argument type of its constructors"
-                  ]
+              <> line
+              <> line
+              <> "A type D is strictly positive iff two conditions hold:"
+              <> line
+              <> itemize
+                [ "D does not appear applied to a bound variable",
+                  "D does not appear on the left of an arrow in any argument type of its constructors"
+                ]

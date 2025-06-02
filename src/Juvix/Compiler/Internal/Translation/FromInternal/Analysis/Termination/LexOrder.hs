@@ -91,9 +91,9 @@ completeCallGraph CallMap {..} = CompleteCallGraph (go startingEdges)
     allCalls :: [Call]
     allCalls =
       [ fromFunCall caller funCall
-        | (caller, callerMap) <- HashMap.toList _callMap,
-          (_, funCalls) <- HashMap.toList callerMap,
-          funCall <- funCalls
+      | (caller, callerMap) <- HashMap.toList _callMap,
+        (_, funCalls) <- HashMap.toList callerMap,
+        funCall <- funCalls
       ]
 
     go :: EdgeMap -> EdgeMap

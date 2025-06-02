@@ -36,9 +36,9 @@ lookupIdentifierNode' Module {..} sym =
 
 lookupSpecialisationInfo :: Module -> Symbol -> [SpecialisationInfo]
 lookupSpecialisationInfo Module {..} sym =
-  fromMaybe [] $
-    lookupTabSpecialisationInfo' _moduleInfoTable sym
-      <|> lookupTabSpecialisationInfo' _moduleImportsTable sym
+  fromMaybe []
+    $ lookupTabSpecialisationInfo' _moduleInfoTable sym
+    <|> lookupTabSpecialisationInfo' _moduleImportsTable sym
 
 impossibleSymbolNotFound :: (HasCallStack) => Symbol -> a
 impossibleSymbolNotFound sym = impossibleError ("Could not find symbol " <> ppTrace sym)
@@ -67,18 +67,24 @@ lookupBuiltinConstructor Module {..} b =
 
 getInfoLiteralIntToNat :: Module -> Maybe Symbol
 getInfoLiteralIntToNat Module {..} =
-  _moduleInfoTable ^. infoLiteralIntToNat
-    <|> _moduleImportsTable ^. infoLiteralIntToNat
+  _moduleInfoTable
+    ^. infoLiteralIntToNat
+    <|> _moduleImportsTable
+    ^. infoLiteralIntToNat
 
 getInfoLiteralIntToInt :: Module -> Maybe Symbol
 getInfoLiteralIntToInt Module {..} =
-  _moduleInfoTable ^. infoLiteralIntToInt
-    <|> _moduleImportsTable ^. infoLiteralIntToInt
+  _moduleInfoTable
+    ^. infoLiteralIntToInt
+    <|> _moduleImportsTable
+    ^. infoLiteralIntToInt
 
 getInfoMain :: Module -> Maybe Symbol
 getInfoMain Module {..} =
-  _moduleInfoTable ^. infoMain
-    <|> _moduleImportsTable ^. infoMain
+  _moduleInfoTable
+    ^. infoMain
+    <|> _moduleImportsTable
+    ^. infoMain
 
 lookupParamsNum :: Module -> Symbol -> Int
 lookupParamsNum m sym = length (lookupInductiveInfo m sym ^. inductiveParams)

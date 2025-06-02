@@ -14,8 +14,8 @@ regSupportedTargets =
     :| [ AppTargetCasm,
          AppTargetCairo
        ]
-      <> [AppTargetWasm32Wasi | Config.config ^. Config.configWasm]
-      <> [AppTargetRiscZeroRust | Config.config ^. Config.configRust]
+    <> [AppTargetWasm32Wasi | Config.config ^. Config.configWasm]
+    <> [AppTargetRiscZeroRust | Config.config ^. Config.configRust]
 
 parseRegCompileOptions :: Parser CompileOptions
 parseRegCompileOptions =

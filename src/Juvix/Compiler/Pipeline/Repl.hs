@@ -45,9 +45,9 @@ upToInternalExpression p = do
     . runReader pkg
     . runReader mpkg
     $ runNameIdGenArtifacts (Scoper.scopeCheckExpression (Store.getScopedModuleTable mtab) scopeTable p)
-      >>= runNameIdGenArtifacts
-        . runReader scopeTable
-        . Internal.fromConcreteExpression
+    >>= runNameIdGenArtifacts
+    . runReader scopeTable
+    . Internal.fromConcreteExpression
 
 expressionUpToAtomsParsed ::
   (Members '[State Artifacts, Error JuvixError] r) =>
@@ -55,8 +55,8 @@ expressionUpToAtomsParsed ::
   Text ->
   Sem r (ExpressionAtoms 'Parsed)
 expressionUpToAtomsParsed fp txt =
-  runNameIdGenArtifacts $
-    Parser.expressionFromTextSource fp txt
+  runNameIdGenArtifacts
+    $ Parser.expressionFromTextSource fp txt
 
 expressionUpToAtomsScoped ::
   (Members '[Reader EntryPoint, State Artifacts, Error JuvixError] r) =>
@@ -74,7 +74,7 @@ expressionUpToAtomsScoped fp txt = do
     . runReader pkg
     . runReader mpkg
     $ Parser.expressionFromTextSource fp txt
-      >>= Scoper.scopeCheckExpressionAtoms (Store.getScopedModuleTable mtab) scopeTable
+    >>= Scoper.scopeCheckExpressionAtoms (Store.getScopedModuleTable mtab) scopeTable
 
 scopeCheckExpression ::
   (Members '[Reader EntryPoint, Error JuvixError, State Artifacts] r) =>
@@ -242,8 +242,8 @@ runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ 
       md' <- ignoreDumper . mapReader Core.fromEntryPoint $ Core.applyTransformations' ts' md
       let md'' =
             if
-                | shouldDisambiguate' -> disambiguateNames md'
-                | otherwise -> md'
+              | shouldDisambiguate' -> disambiguateNames md'
+              | otherwise -> md'
       Core.setModule md''
 
     getNode :: Core.Symbol -> Sem (Core.InfoTableBuilder ': r) Core.Node

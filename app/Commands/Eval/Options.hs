@@ -41,8 +41,8 @@ parseEvalOptions :: Parser EvalOptions
 parseEvalOptions = do
   _evalInputFile <- optional (parseInputFiles (FileExtJuvix :| [FileExtJuvixMarkdown]))
   _evalSymbolName <-
-    optional $
-      strOption
+    optional
+      $ strOption
         ( long "symbol-name"
             <> short 's'
             <> help "Evaluate a specific function identifier (default: main)"

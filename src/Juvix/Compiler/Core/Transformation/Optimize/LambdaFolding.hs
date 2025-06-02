@@ -31,8 +31,8 @@ convertNode = rmap go
                   (go (recur . (revAppend bcs)) body)
                   (map (go (recur . (BCAdd (length bcs) :))) args)
               (lam : lams', arg : args') ->
-                mkLet mempty bd' (go (recur . (BCAdd (length bcs) :)) arg) $
-                  goLams (BCKeep bd : bcs) lams' args' body
+                mkLet mempty bd' (go (recur . (BCAdd (length bcs) :)) arg)
+                  $ goLams (BCKeep bd : bcs) lams' args' body
                 where
                   bd = lam ^. lambdaLhsBinder
                   bd' = over binderType (go (recur . (revAppend bcs))) bd

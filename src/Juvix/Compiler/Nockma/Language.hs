@@ -231,9 +231,15 @@ parseRmValue t = textToRmValueMap ^. at t
 
 parseAnomaLib :: Text -> Maybe AnomaLib
 parseAnomaLib t =
-  AnomaLibFunction . AnomaStdlibFunction <$> parseStdlibFunction t
-    <|> AnomaLibFunction . AnomaRmFunction <$> parseRmFunction t
-    <|> AnomaLibValue . AnomaRmValue <$> parseRmValue t
+  AnomaLibFunction
+    . AnomaStdlibFunction
+    <$> parseStdlibFunction t
+    <|> AnomaLibFunction
+    . AnomaRmFunction
+    <$> parseRmFunction t
+    <|> AnomaLibValue
+    . AnomaRmValue
+    <$> parseRmValue t
 
 atomOps :: HashMap Text NockOp
 atomOps = HashMap.fromList [(prettyText op, op) | op <- allElements]

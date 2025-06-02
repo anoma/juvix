@@ -35,8 +35,10 @@ jsonAppendFields keyValues = \case
   a -> a
 
 addDefaultValues :: HashMap Key Value -> Object -> Object
-addDefaultValues defVals obj = run . execState obj $
-  forM_ (HashMap.toList defVals) $ \(k, def) -> do
+addDefaultValues defVals obj = run
+  . execState obj
+  $ forM_ (HashMap.toList defVals)
+  $ \(k, def) -> do
     modify (insertWith (\_new old -> old) k def)
 
 -- | Fails when the given Value is not an object

@@ -13,8 +13,8 @@ createCallGraphMap :: InfoTable -> HashMap Symbol (HashSet Symbol)
 createCallGraphMap tab =
   fmap
     ( \IdentifierInfo {..} ->
-        HashSet.map (\Ident {..} -> _identSymbol) $
-          getIdents (lookupTabIdentifierNode tab _identifierSymbol)
+        HashSet.map (\Ident {..} -> _identSymbol)
+          $ getIdents (lookupTabIdentifierNode tab _identifierSymbol)
     )
     (tab ^. infoIdentifiers)
 
@@ -80,23 +80,23 @@ recursiveIdentsClosure tab =
     dfs path acc sym = do
       visited <- get
       if
-          | HashSet.member sym visited ->
-              return acc
-          | otherwise -> do
-              let path' = HashSet.insert sym path
-                  acc' =
-                    if
-                        | any (`HashSet.member` path') chlds ->
-                            HashSet.insert sym acc
-                        | otherwise ->
-                            acc
-              modify' (HashSet.insert sym)
-              acc'' <- foldM (dfs path') acc' chlds
-              if
-                  | any (`HashSet.member` acc'') chlds ->
-                      return $ HashSet.insert sym acc''
-                  | otherwise ->
-                      return acc''
+        | HashSet.member sym visited ->
+            return acc
+        | otherwise -> do
+            let path' = HashSet.insert sym path
+                acc' =
+                  if
+                    | any (`HashSet.member` path') chlds ->
+                        HashSet.insert sym acc
+                    | otherwise ->
+                        acc
+            modify' (HashSet.insert sym)
+            acc'' <- foldM (dfs path') acc' chlds
+            if
+              | any (`HashSet.member` acc'') chlds ->
+                  return $ HashSet.insert sym acc''
+              | otherwise ->
+                  return acc''
       where
         chlds = fromJust $ HashMap.lookup sym graph
 

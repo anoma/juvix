@@ -35,8 +35,7 @@ allTests :: TestTree
 allTests =
   testGroup
     "Scope negative tests"
-    ( map (mkTest . testDescr) scoperErrorTests
-    )
+    (map (mkTest . testDescr) scoperErrorTests)
 
 negTest ::
   String ->

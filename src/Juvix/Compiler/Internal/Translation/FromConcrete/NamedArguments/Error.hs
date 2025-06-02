@@ -30,11 +30,11 @@ instance ToGenericError DuplicateArgument where
         _genericErrorMessage :: AnsiText
         argumentStr = plural "argument" "arguments" (length _duplicateArguments)
         _genericErrorMessage =
-          prettyError $
-            "Duplicate"
-              <+> argumentStr
-              <+> "in named application:"
-              <+> hsep (ppCode opts <$> _duplicateArguments)
+          prettyError
+            $ "Duplicate"
+            <+> argumentStr
+            <+> "in named application:"
+            <+> hsep (ppCode opts <$> _duplicateArguments)
         _genericErrorIntervals = getLoc <$> toList _duplicateArguments
     return GenericError {..}
 
@@ -49,10 +49,10 @@ instance ToGenericError UnexpectedArguments where
     let _genericErrorLoc = getLocSpan _unexpectedArguments
         _genericErrorMessage :: AnsiText
         _genericErrorMessage =
-          prettyError $
-            "Unexpected named arguments:"
-              <> line
-              <> itemize (ppCode opts <$> _unexpectedArguments)
+          prettyError
+            $ "Unexpected named arguments:"
+            <> line
+            <> itemize (ppCode opts <$> _unexpectedArguments)
         _genericErrorIntervals = getLoc <$> toList _unexpectedArguments
     return GenericError {..}
 
@@ -69,9 +69,9 @@ instance ToGenericError MissingArguments where
         _genericErrorLoc = i
         _genericErrorMessage :: AnsiText
         _genericErrorMessage =
-          prettyError $
-            "Missing arguments in named application:"
-              <> line
-              <> itemize (ppCode opts <$> _missingArguments)
+          prettyError
+            $ "Missing arguments in named application:"
+            <> line
+            <> itemize (ppCode opts <$> _missingArguments)
         _genericErrorIntervals = pure i
     return GenericError {..}

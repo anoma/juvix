@@ -91,11 +91,15 @@ pImport = lexeme $ do
 
 pToken :: Parser e Token
 pToken =
-  lexeme $
-    TokenString <$ pString
-      <|> TokenImport <$> pImport
-      <|> TokenReserved <$ pReserved
-      <|> TokenCode <$ pCode
+  lexeme
+    $ TokenString
+    <$ pString
+    <|> TokenImport
+    <$> pImport
+    <|> TokenReserved
+    <$ pReserved
+    <|> TokenCode
+    <$ pCode
 
 pCode :: Parser e ()
 pCode = skipSome (satisfy validCodeChar)
@@ -141,13 +145,15 @@ comment =
         go :: Int -> Parser e ()
         go n = do
           let startOrEnd =
-                start $> True
-                  <|> end $> False
+                start
+                  $> True
+                  <|> end
+                  $> False
           isStart <- snd <$> manyTill_ skipAnyChar startOrEnd
           if
-              | isStart -> go (n + 1)
-              | n > 1 -> go (n - 1)
-              | otherwise -> return ()
+            | isStart -> go (n + 1)
+            | n > 1 -> go (n - 1)
+            | otherwise -> return ()
 
     pragmaBlock :: Parser e ()
     pragmaBlock = nonNestedBlock $(string Str.pragmasStart) $(string Str.pragmasEnd)

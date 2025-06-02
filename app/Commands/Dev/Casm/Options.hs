@@ -15,8 +15,8 @@ data CasmCommand
 
 parseCasmCommand :: Parser CasmCommand
 parseCasmCommand =
-  hsubparser $
-    mconcat
+  hsubparser
+    $ mconcat
       [ commandCompile,
         commandRun,
         commandRead,

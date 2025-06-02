@@ -62,10 +62,10 @@ label addr = P.try $ do
     Just sym -> do
       b <- lift $ hasOffset sym
       if
-          | b -> parsingError' loc "duplicate label"
-          | otherwise -> do
-              lift $ registerLabelAddress sym addr
-              return $ Label $ LabelRef {_labelRefSymbol = sym, _labelRefName = Just txt}
+        | b -> parsingError' loc "duplicate label"
+        | otherwise -> do
+            lift $ registerLabelAddress sym addr
+            return $ Label $ LabelRef {_labelRefSymbol = sym, _labelRefName = Just txt}
 
 instruction :: (Members '[Error SimpleParserError, LabelInfoBuilder] r) => ParsecS r Instruction
 instruction =
@@ -113,11 +113,11 @@ parseAlloc = do
   kw kwAp
   kw kwPlusEq
   i <- parseRValue
-  return $
-    Alloc $
-      InstrAlloc
-        { _instrAllocSize = i
-        }
+  return
+    $ Alloc
+    $ InstrAlloc
+      { _instrAllocSize = i
+      }
 
 parseRValue :: forall r. (Members '[Error SimpleParserError, LabelInfoBuilder] r) => ParsecS r RValue
 parseRValue = load <|> binop <|> val
@@ -128,12 +128,12 @@ parseRValue = load <|> binop <|> val
       src <- parseMemRef
       off <- parseOffset
       rbracket
-      return $
-        Load $
-          LoadValue
-            { _loadValueSrc = src,
-              _loadValueOff = off
-            }
+      return
+        $ Load
+        $ LoadValue
+          { _loadValueSrc = src,
+            _loadValueOff = off
+          }
 
     binop :: ParsecS r RValue
     binop = P.try $ do
@@ -144,25 +144,25 @@ parseRValue = load <|> binop <|> val
         subconst arg1 = do
           kw kwMinus
           v <- parseImm
-          return $
-            Binop $
-              BinopValue
-                { _binopValueOpcode = FieldAdd,
-                  _binopValueArg1 = arg1,
-                  _binopValueArg2 = Imm (-v)
-                }
+          return
+            $ Binop
+            $ BinopValue
+              { _binopValueOpcode = FieldAdd,
+                _binopValueArg1 = arg1,
+                _binopValueArg2 = Imm (-v)
+              }
 
         oper :: MemRef -> ParsecS r RValue
         oper arg1 = do
           op <- opcode
           arg2 <- parseValue
-          return $
-            Binop $
-              BinopValue
-                { _binopValueOpcode = op,
-                  _binopValueArg1 = arg1,
-                  _binopValueArg2 = arg2
-                }
+          return
+            $ Binop
+            $ BinopValue
+              { _binopValueOpcode = op,
+                _binopValueArg1 = arg1,
+                _binopValueArg2 = arg2
+              }
 
     val :: ParsecS r RValue
     val = Val <$> parseValue
@@ -218,41 +218,41 @@ parseJump = do
       kw kwNotEq
       symbol "0"
       incAp <- parseIncAp
-      return $
-        JumpIf $
-          InstrJumpIf
-            { _instrJumpIfTarget = tgt,
-              _instrJumpIfValue = v,
-              _instrJumpIfIncAp = incAp,
-              _instrJumpIfComment = Nothing
-            }
+      return
+        $ JumpIf
+        $ InstrJumpIf
+          { _instrJumpIfTarget = tgt,
+            _instrJumpIfValue = v,
+            _instrJumpIfIncAp = incAp,
+            _instrJumpIfComment = Nothing
+          }
 
     jmp :: ParsecS r Instruction
     jmp = do
       isRel <- parseRel
       tgt <- parseRValue
       incAp <- parseIncAp
-      return $
-        Jump $
-          InstrJump
-            { _instrJumpTarget = tgt,
-              _instrJumpRel = isRel,
-              _instrJumpIncAp = incAp,
-              _instrJumpComment = Nothing
-            }
+      return
+        $ Jump
+        $ InstrJump
+          { _instrJumpTarget = tgt,
+            _instrJumpRel = isRel,
+            _instrJumpIncAp = incAp,
+            _instrJumpComment = Nothing
+          }
 
 parseCall :: (Members '[Error SimpleParserError, LabelInfoBuilder] r) => ParsecS r Instruction
 parseCall = do
   kw kwCall
   isRel <- parseRel
   v <- parseValue
-  return $
-    Call $
-      InstrCall
-        { _instrCallTarget = v,
-          _instrCallRel = isRel,
-          _instrCallComment = Nothing
-        }
+  return
+    $ Call
+    $ InstrCall
+      { _instrCallTarget = v,
+        _instrCallRel = isRel,
+        _instrCallComment = Nothing
+      }
 
 parseReturn :: ParsecS r Instruction
 parseReturn = do
@@ -281,14 +281,14 @@ parseAssign = do
     asn res = do
       v <- parseRValue
       incAp <- parseIncAp
-      return $
-        Assign $
-          InstrAssign
-            { _instrAssignValue = v,
-              _instrAssignResult = res,
-              _instrAssignIncAp = incAp,
-              _instrAssignComment = Nothing
-            }
+      return
+        $ Assign
+        $ InstrAssign
+          { _instrAssignValue = v,
+            _instrAssignResult = res,
+            _instrAssignIncAp = incAp,
+            _instrAssignComment = Nothing
+          }
 
     extraBinop :: MemRef -> ParsecS r Instruction
     extraBinop res = P.try $ do
@@ -296,16 +296,16 @@ parseAssign = do
       op <- extraOpcode
       arg2 <- parseExtraValue op
       incAp <- parseIncAp
-      return $
-        ExtraBinop $
-          InstrExtraBinop
-            { _instrExtraBinopArg1 = arg1,
-              _instrExtraBinopArg2 = arg2,
-              _instrExtraBinopOpcode = op,
-              _instrExtraBinopResult = res,
-              _instrExtraBinopIncAp = incAp,
-              _instrExtraBinopComment = Nothing
-            }
+      return
+        $ ExtraBinop
+        $ InstrExtraBinop
+          { _instrExtraBinopArg1 = arg1,
+            _instrExtraBinopArg2 = arg2,
+            _instrExtraBinopOpcode = op,
+            _instrExtraBinopResult = res,
+            _instrExtraBinopIncAp = incAp,
+            _instrExtraBinopComment = Nothing
+          }
 
     parseExtraValue :: ExtraOpcode -> ParsecS r Value
     parseExtraValue = \case

@@ -30,8 +30,8 @@ goArg ty = case ty of
   where
     invalid :: forall a. Sem r a
     invalid =
-      throw $
-        ErrInvalidConstructorArgType
+      throw
+        $ ErrInvalidConstructorArgType
           InvalidConstructorArgType
             { _invalidConstructorArgType = ty
             }
@@ -45,8 +45,8 @@ goArg ty = case ty of
     goFunction fun = do
       l <- goArg (fun ^. functionLeft . paramType)
       r <- goArg (fun ^. functionRight)
-      return $
-        ConstructorArgFun
+      return
+        $ ConstructorArgFun
           Fun
             { _funLeft = l,
               _funRight = r

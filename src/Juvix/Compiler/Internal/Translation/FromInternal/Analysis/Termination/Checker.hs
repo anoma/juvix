@@ -40,8 +40,11 @@ runTermination ini m = do
   where
     checkNonTerminating :: TerminationState -> Sem r ()
     checkNonTerminating i =
-      whenJust (i ^. terminationFailedSet . to (nonEmpty . toList)) $
-        throw . JuvixError . ErrNoLexOrder . NoLexOrder
+      whenJust (i ^. terminationFailedSet . to (nonEmpty . toList))
+        $ throw
+        . JuvixError
+        . ErrNoLexOrder
+        . NoLexOrder
 
 evalTermination :: (Members '[Error JuvixError] r) => TerminationState -> Sem (Termination ': r) a -> Sem r a
 evalTermination s = fmap snd . runTermination s
@@ -94,11 +97,11 @@ checkTerminationShallow' topModule = do
           where
             err = error ("Impossible: function not found: " <> funName ^. nameText)
         order = findOrder rb
-    addTerminating funName $
-      if
-          | Just {} <- order -> TerminatingChecked
-          | markedTerminating -> TerminatingFailedMarked
-          | Nothing <- order -> TerminatingFailed
+    addTerminating funName
+      $ if
+        | Just {} <- order -> TerminatingChecked
+        | markedTerminating -> TerminatingFailedMarked
+        | Nothing <- order -> TerminatingFailed
 
 scanModule ::
   (Members '[State CallMap] r) =>
@@ -210,12 +213,12 @@ scanExpression e =
       -- Are we recursively calling a function being defined?
       recCall <- asks (elem (c ^. callRef) . map fst . (^. sizeInfoMap))
       if
-          | recCall ->
-              runReader (c ^. callRef) (registerCall c)
-          | otherwise ->
-              whenJustM
-                (ask @(Maybe FunctionRef))
-                (\caller -> runReader caller (registerCall c))
+        | recCall ->
+            runReader (c ^. callRef) (registerCall c)
+        | otherwise ->
+            whenJustM
+              (ask @(Maybe FunctionRef))
+              (\caller -> runReader caller (registerCall c))
       mapM_ (scanExpression . snd) (c ^. callArgs)
     Nothing -> case e of
       ExpressionApplication a -> directExpressions_ scanExpression a

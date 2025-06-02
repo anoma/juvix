@@ -163,10 +163,10 @@ replCommand opts input_ = catchAll $ do
   evalRes <- compileThenEval ctx input_
   whenJust evalRes $ \n ->
     if
-        | Info.member Info.kNoDisplayInfo (Core.getInfo n) -> return ()
-        | opts ^. replPrintValues ->
-            renderOutLn (Core.ppOut opts (toValue tab n))
-        | otherwise -> renderOutLn (Core.ppOut opts n)
+      | Info.member Info.kNoDisplayInfo (Core.getInfo n) -> return ()
+      | opts ^. replPrintValues ->
+          renderOutLn (Core.ppOut opts (toValue tab n))
+      | otherwise -> renderOutLn (Core.ppOut opts n)
   where
     compileThenEval :: ReplContext -> String -> Repl (Maybe Core.Node)
     compileThenEval ctx s = compileString >>= mapM eval
@@ -213,15 +213,15 @@ dev :: String -> Repl ()
 dev input_ = do
   ctx <- replGetContext
   if
-      | input_ == scoperStateCmd -> do
-          renderOutLn (Concrete.ppTrace (ctx ^. replContextArtifacts . artifactScoperState))
-      | otherwise ->
-          renderOutLn
-            ( "Unrecognized command "
-                <> input_
-                <> "\nAvailable commands: "
-                <> unwords cmds
-            )
+    | input_ == scoperStateCmd -> do
+        renderOutLn (Concrete.ppTrace (ctx ^. replContextArtifacts . artifactScoperState))
+    | otherwise ->
+        renderOutLn
+          ( "Unrecognized command "
+              <> input_
+              <> "\nAvailable commands: "
+              <> unwords cmds
+          )
   where
     cmds :: [String]
     cmds = [scoperStateCmd]

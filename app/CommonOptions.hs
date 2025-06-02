@@ -446,5 +446,5 @@ readMIdentifier = readMParsecS identifier
 
 readMIdentifierList :: ReadM [Text]
 readMIdentifierList =
-  readMParsecS $
-    P.sepEndBy identifier (kw Kw.delimSemicolon)
+  readMParsecS
+    $ P.sepEndBy identifier (kw Kw.delimSemicolon)

@@ -98,7 +98,8 @@ fromConcrete _resultScoper = do
   let it :: InternalModuleTable = Store.getInternalModuleTable mtab
       ms :: [Store.ModuleInfo] = HashMap.elems (mtab ^. Store.moduleTable)
       exportTbl =
-        _resultScoper ^. Scoper.resultExports
+        _resultScoper
+          ^. Scoper.resultExports
           <> mconcatMap (createExportsTable . (^. Store.moduleInfoScopedModule . S.scopedModuleExportInfo)) ms
       internalTable :: Internal.InfoTable = computeCombinedInfoTable it
       tab :: S.InfoTable =
@@ -242,8 +243,8 @@ goModuleBody stmts = evalState emptyLocalTable $ do
     concat
       <$> sequence
         [ map (Indexed i . Internal.PreFunctionDef) <$> defs
-          | Indexed i s <- ss,
-            let defs = mkFunctionLike s
+        | Indexed i s <- ss,
+          let defs = mkFunctionLike s
         ]
   let unsorted = otherThanFunctions <> funs
       _moduleStatements = map (^. indexedThing) (sortOn (^. indexedIx) unsorted)
@@ -489,10 +490,11 @@ throwDerivingWrongForm ret = do
         guard (isJust (Internal.derivingTraitFromBuiltin p))
         return (goSymbol s)
   _derivingTypeSupportedBuiltins <-
-    mapMaybe getSym . HashMap.toList
+    mapMaybe getSym
+      . HashMap.toList
       <$> asks (^. S.infoBuiltins)
-  throw $
-    ErrDerivingTypeWrongForm
+  throw
+    $ ErrDerivingTypeWrongForm
       DerivingTypeWrongForm
         { _derivingTypeWrongForm = ret,
           _derivingTypeBuiltin = Internal.DerivingEq,
@@ -772,10 +774,10 @@ deriveEq der@DerivingArgs {..} = do
           cl' <- mapM lambdaClause cs
           defaultCl' <-
             if
-                | notNull (NonEmpty.tail cs) -> Just <$> defaultLambdaClause
-                | otherwise -> return Nothing
-          return $
-            Internal.ExpressionLambda
+              | notNull (NonEmpty.tail cs) -> Just <$> defaultLambdaClause
+              | otherwise -> return Nothing
+          return
+            $ Internal.ExpressionLambda
               Internal.Lambda
                 { _lambdaType = Nothing,
                   _lambdaClauses = snocNonEmptyMaybe cl' defaultCl'
@@ -1130,8 +1132,8 @@ goInductive ty@InductiveDef {..} = do
   let inductiveName' = goSymbol _inductiveName
       constrRetType = Internal.foldExplicitApplication (Internal.toExpression inductiveName') (map (Internal.ExpressionIden . Internal.IdenVar . (^. Internal.inductiveParamName)) _inductiveParameters')
   _inductiveConstructors' <-
-    local (const _inductivePragmas') $
-      mapM (goConstructorDef constrRetType) _inductiveConstructors
+    local (const _inductivePragmas')
+      $ mapM (goConstructorDef constrRetType) _inductiveConstructors
   let loc = getLoc _inductiveName
       indDef =
         Internal.InductiveDef
@@ -1201,8 +1203,8 @@ goConstructorDef retTy ConstructorDef {..} = do
           Concrete.RecordStatementSyntax {} -> return Nothing
           Concrete.RecordStatementField RecordField {..} -> do
             ty' <- goTypeSig _fieldTypeSig
-            return $
-              Just
+            return
+              $ Just
                 Internal.FunctionParameter
                   { _paramName = Just (goSymbol _fieldName),
                     _paramImplicit = fromIsImplicitField _fieldIsImplicit,
@@ -1372,10 +1374,10 @@ goExpression = \case
             let funsNames :: [Internal.Name] =
                   funs
                     ^.. each
-                      . namedArgumentFunctionDef
-                      . functionDefName
-                      . functionDefNameScoped
-                      . to goSymbol
+                    . namedArgumentFunctionDef
+                    . functionDefName
+                    . functionDefNameScoped
+                    . to goSymbol
                 -- changes the kind from Variable to Function
                 updateKind :: Internal.Subs = Internal.subsKind funsNames KNameFunction
             let l =
@@ -1399,10 +1401,10 @@ goExpression = \case
             Internal.subsKind
               ( a
                   ^.. dnamedAppArgs
-                    . each
-                    . argName
-                    . _Just
-                    . to goSymbol
+                  . each
+                  . argName
+                  . _Just
+                  . to goSymbol
               )
               KNameFunction
           mkAppArg :: Arg -> Sem r Internal.ApplicationArg
@@ -1422,8 +1424,8 @@ goExpression = \case
       clauses :: [Internal.LetClause] <- mapMaybeM mkClause (toList (a ^. dnamedAppArgs))
 
       expr <-
-        Internal.substitutionE updateKind $
-          case nonEmpty clauses of
+        Internal.substitutionE updateKind
+          $ case nonEmpty clauses of
             Nothing -> app
             Just clauses1 ->
               Internal.ExpressionLet
@@ -1444,8 +1446,8 @@ goExpression = \case
             local adjust $ do
               body' <- goExpression (arg ^. argValue)
               ty <- goExpression (arg ^. argType)
-              return $
-                Just
+              return
+                $ Just
                   ( Internal.LetFunDef
                       (Internal.simpleFunDef (goSymbol name) ty body')
                   )
@@ -1493,8 +1495,8 @@ goExpression = \case
         mkArgs :: IntMap (IsImplicit, Internal.VarName) -> Sem r [Internal.ApplicationArg]
         mkArgs vs = do
           fieldMap <- mkFieldmap
-          execOutputList $
-            go (uncurry Indexed <$> IntMap.toAscList fieldMap) (intMapToList vs)
+          execOutputList
+            $ go (uncurry Indexed <$> IntMap.toAscList fieldMap) (intMapToList vs)
           where
             go :: [Indexed (RecordUpdateField 'Scoped)] -> [Indexed (IsImplicit, Internal.VarName)] -> Sem (Output Internal.ApplicationArg ': r) ()
             go fields = \case
@@ -1642,8 +1644,8 @@ goExpression = \case
       rngpats' <- mapM goPatternArg rngpats
       expr <- goExpression _iteratorBody
       let lam =
-            Internal.ExpressionLambda $
-              Internal.Lambda
+            Internal.ExpressionLambda
+              $ Internal.Lambda
                 { _lambdaClauses = Internal.LambdaClause (nonEmpty' (inipats' ++ rngpats')) expr :| [],
                   _lambdaType = Nothing
                 }
@@ -1823,8 +1825,8 @@ goFunction :: (Members '[Reader DefaultArgsStack, NameIdGen, Error ScoperError, 
 goFunction f = do
   headParam :| tailParams <- goFunctionParameters (f ^. funParameters)
   ret <- goExpression (f ^. funReturn)
-  return $
-    Internal.Function
+  return
+    $ Internal.Function
       { _functionLeft = headParam,
         _functionRight = foldr (\param acc -> Internal.ExpressionFunction $ Internal.Function param acc) ret tailParams
       }
@@ -1845,8 +1847,8 @@ goFunctionParameters FunctionParameters {..} = do
     . fromMaybe (pure (mkParam Nothing))
     . nonEmpty
     $ mkParam
-      . goFunctionParameter
-      <$> _paramNames
+    . goFunctionParameter
+    <$> _paramNames
   where
     goFunctionParameter :: FunctionParameter 'Scoped -> Maybe (SymbolType 'Scoped)
     goFunctionParameter = \case
@@ -1983,10 +1985,10 @@ goRecordPattern r = do
     mkPatterns :: Sem r [Internal.PatternArg]
     mkPatterns = do
       sig <-
-        asks $
-          fromJust
-            . HashMap.lookup (constr ^. Internal.nameId)
-            . (^. S.infoConstructorSigs)
+        asks
+          $ fromJust
+          . HashMap.lookup (constr ^. Internal.nameId)
+          . (^. S.infoConstructorSigs)
       let maxIdx = length (sig ^. recordNames) - 1
       args <- IntMap.toAscList <$> byIndex
       execOutputList (go maxIdx 0 args)

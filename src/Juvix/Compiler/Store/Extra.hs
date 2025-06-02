@@ -25,10 +25,10 @@ getScopedModuleTable mtab =
 
 getInternalModuleTable :: ModuleTable -> InternalModuleTable
 getInternalModuleTable mtab =
-  InternalModuleTable $
-    hashMap
+  InternalModuleTable
+    $ hashMap
       [ (mi ^. moduleInfoInternalModule . internalModuleName, mi ^. moduleInfoInternalModule)
-        | mi <- toList (mtab ^. moduleTable)
+      | mi <- toList (mtab ^. moduleTable)
       ]
 
 mkModuleTable :: [ModuleInfo] -> ModuleTable

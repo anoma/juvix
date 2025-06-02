@@ -16,8 +16,8 @@ data LatexCommand
 
 parseLatex :: Parser LatexCommand
 parseLatex =
-  hsubparser $
-    mconcat
+  hsubparser
+    $ mconcat
       [ commandExport,
         commandGetJuvixSty
       ]

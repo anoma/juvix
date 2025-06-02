@@ -49,5 +49,6 @@ convertUnaryCalls md = mapT convert md
 
     isUnaryWithAtomicTarget :: Type -> Bool
     isUnaryWithAtomicTarget ty =
-      length (typeArgs ty) == 1
+      length (typeArgs ty)
+        == 1
         && isConcreteAtomType (typeTarget ty)

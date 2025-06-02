@@ -11,7 +11,7 @@ parseDependenciesCommand = hsubparser commandUpdate
 
 commandUpdate :: Mod CommandFields DependenciesCommand
 commandUpdate =
-  command "update" $
-    info
+  command "update"
+    $ info
       (pure Update)
       (progDesc "Fetch package dependencies and update the lock file")

@@ -13,8 +13,8 @@ data AsmCommand
 
 parseAsmCommand :: Parser AsmCommand
 parseAsmCommand =
-  hsubparser $
-    mconcat
+  hsubparser
+    $ mconcat
       [ commandRun,
         commandValidate,
         commandCompile

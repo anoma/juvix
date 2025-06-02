@@ -105,14 +105,14 @@ hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
       let len = MV.length mem
       mem' <-
         if
-            | addr >= len -> do
-                mem' <- MV.grow mem (max (addr + initialMemSize - len) len)
-                mapM_ (\i -> MV.write mem' i Nothing) [len .. MV.length mem' - 1]
-                return mem'
-            | otherwise ->
-                return mem
-      whenJustM (MV.read mem' addr) $
-        throwRunError ("double memory write at address " <> show addr)
+          | addr >= len -> do
+              mem' <- MV.grow mem (max (addr + initialMemSize - len) len)
+              mapM_ (\i -> MV.write mem' i Nothing) [len .. MV.length mem' - 1]
+              return mem'
+          | otherwise ->
+              return mem
+      whenJustM (MV.read mem' addr)
+        $ throwRunError ("double memory write at address " <> show addr)
       MV.write mem' addr (Just v)
       return mem'
 
@@ -130,10 +130,10 @@ hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
 
     readLabel :: LabelRef -> FField
     readLabel LabelRef {..} =
-      fieldFromInteger fsize $
-        fromIntegral $
-          fromMaybe (throwRunError "invalid label") $
-            HashMap.lookup _labelRefSymbol labelInfo
+      fieldFromInteger fsize
+        $ fromIntegral
+        $ fromMaybe (throwRunError "invalid label")
+        $ HashMap.lookup _labelRefSymbol labelInfo
 
     readValue' :: Bool -> Address -> Address -> Address -> Memory s -> Value -> ST s FField
     readValue' isRel pc ap fp mem = \case
@@ -201,8 +201,8 @@ hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
           IntDiv -> fieldFromInteger fsize (fieldToInt x `quot` fieldToInt y)
           IntMod -> fieldFromInteger fsize (fieldToInt x `rem` fieldToInt y)
           IntLt ->
-            fieldFromInteger fsize $
-              if fieldToInt x < fieldToInt y then 0 else 1
+            fieldFromInteger fsize
+              $ if fieldToInt x < fieldToInt y then 0 else 1
 
         fieldToInt :: FField -> Integer
         fieldToInt f
@@ -248,8 +248,8 @@ hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
     goAssert :: InstrAssert -> Address -> Address -> Address -> Memory s -> ST s FField
     goAssert InstrAssert {..} pc ap fp mem = do
       v <- readMemRef ap fp mem _instrAssertValue
-      when (fieldToInteger v /= 0) $
-        throwRunError "assertion failed"
+      when (fieldToInteger v /= 0)
+        $ throwRunError "assertion failed"
       go (pc + 1) ap fp mem
 
     goTrace :: InstrTrace -> Address -> Address -> Address -> Memory s -> ST s FField
@@ -262,8 +262,8 @@ hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
     goHint hint pc ap fp mem = case hint of
       HintInput var -> do
         let val =
-              fromMaybe (throwRunError "invalid input") $
-                HashMap.lookup var (inputInfo ^. inputInfoMap)
+              fromMaybe (throwRunError "invalid input")
+                $ HashMap.lookup var (inputInfo ^. inputInfoMap)
         mem' <- writeMem mem ap val
         go (pc + 1) ap fp mem'
       HintAlloc size -> do
@@ -277,8 +277,8 @@ hRunCode hout inputInfo (LabelInfo labelInfo) instrs0 = runST goCode
     goFinish :: Address -> Memory s -> ST s FField
     goFinish ap mem = do
       checkGaps mem
-      when (ap == 0) $
-        throwRunError "nothing to return"
+      when (ap == 0)
+        $ throwRunError "nothing to return"
       readMem mem (ap - 1)
 
 catchRunErrorIO :: a -> IO (Either CasmError a)

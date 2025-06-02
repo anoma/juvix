@@ -62,7 +62,7 @@ extendWithReplExpression e =
     ( HashMap.union
         ( HashMap.fromList
             [ (f ^. funDefName, functionInfoFromFunctionDef True f)
-              | f <- letFunctionDefs e
+            | f <- letFunctionDefs e
             ]
         )
     )
@@ -71,7 +71,7 @@ letFunctionDefs :: (HasExpressions a) => a -> [FunctionDef]
 letFunctionDefs e =
   concat
     [ concatMap (toList . flattenClause) _letClauses
-      | Let {..} <- letDefs e
+    | Let {..} <- letDefs e
     ]
   where
     flattenClause :: LetClause -> NonEmpty FunctionDef
@@ -101,56 +101,56 @@ computeInternalModuleInfoTable m = InfoTable {..}
     mutuals :: [MutualStatement]
     mutuals =
       [ d
-        | MutualBlock b <- ss,
-          d <- toList b
+      | MutualBlock b <- ss,
+        d <- toList b
       ]
 
     inductives :: [InductiveDef]
     inductives =
       [ d
-        | StatementInductive d <- mutuals
+      | StatementInductive d <- mutuals
       ]
 
     _infoInductives :: HashMap Name InductiveInfo
     _infoInductives =
       HashMap.fromList
         [ (d ^. inductiveName, inductiveInfoFromInductiveDef d)
-          | d <- inductives
+        | d <- inductives
         ]
 
     _infoConstructors :: HashMap Name ConstructorInfo
     _infoConstructors =
       HashMap.fromList
         [ e
-          | d <- inductives,
-            e <- mkConstructorEntries d
+        | d <- inductives,
+          e <- mkConstructorEntries d
         ]
 
     _infoFunctions :: HashMap Name FunctionInfo
     _infoFunctions =
-      HashMap.fromList $
-        [ (f ^. funDefName, functionInfoFromFunctionDef False f)
+      HashMap.fromList
+        $ [ (f ^. funDefName, functionInfoFromFunctionDef False f)
           | StatementFunction f <- mutuals
-        ]
-          <> [ (f ^. funDefName, functionInfoFromFunctionDef True f)
-               | s <- ss,
-                 f <- letFunctionDefs s
-             ]
+          ]
+        <> [ (f ^. funDefName, functionInfoFromFunctionDef True f)
+           | s <- ss,
+             f <- letFunctionDefs s
+           ]
 
     _infoAxioms :: HashMap Name AxiomInfo
     _infoAxioms =
       HashMap.fromList
         [ (d ^. axiomName, AxiomInfo d)
-          | StatementAxiom d <- mutuals
+        | StatementAxiom d <- mutuals
         ]
 
     _infoBuiltins :: HashMap BuiltinPrim Name
     _infoBuiltins =
-      HashMap.fromList $
-        mapMaybe goInd (HashMap.elems _infoInductives)
-          <> mapMaybe goConstr (HashMap.elems _infoConstructors)
-          <> mapMaybe goFun (HashMap.elems _infoFunctions)
-          <> mapMaybe goAxiom (HashMap.elems _infoAxioms)
+      HashMap.fromList
+        $ mapMaybe goInd (HashMap.elems _infoInductives)
+        <> mapMaybe goConstr (HashMap.elems _infoConstructors)
+        <> mapMaybe goFun (HashMap.elems _infoFunctions)
+        <> mapMaybe goAxiom (HashMap.elems _infoAxioms)
       where
         goInd :: InductiveInfo -> Maybe (BuiltinPrim, Name)
         goInd InductiveInfo {..} =
@@ -169,7 +169,8 @@ computeInternalModuleInfoTable m = InfoTable {..}
 
         goAxiom :: AxiomInfo -> Maybe (BuiltinPrim, Name)
         goAxiom AxiomInfo {..} =
-          _axiomInfoDef ^. axiomBuiltin
+          _axiomInfoDef
+            ^. axiomBuiltin
             >>= (\b -> Just (BuiltinsAxiom b, _axiomInfoDef ^. axiomName))
 
     ss :: [MutualBlock]
@@ -186,10 +187,10 @@ lookupConstructor f = do
       return
         . error
         $ "impossible: "
-          <> ppTrace f
-          <> " is not in the InfoTable\n"
-          <> "\nThe registered constructors are: "
-          <> ppTrace (HashMap.keys tbl)
+        <> ppTrace f
+        <> " is not in the InfoTable\n"
+        <> "\nThe registered constructors are: "
+        <> ppTrace (HashMap.keys tbl)
 
 lookupConstructorArgTypes :: (Member (Reader InfoTable) r) => Name -> Sem r ([InductiveParameter], [FunctionParameter])
 lookupConstructorArgTypes = fmap constructorArgTypes . lookupConstructor
@@ -205,10 +206,10 @@ lookupInductive f = do
       return
         . error
         $ "impossible: "
-          <> ppTrace f
-          <> " is not in the InfoTable\n"
-          <> "\nThe registered inductives are: "
-          <> ppTrace (HashMap.keys tbl)
+        <> ppTrace f
+        <> " is not in the InfoTable\n"
+        <> "\nThe registered inductives are: "
+        <> ppTrace (HashMap.keys tbl)
 
 lookupFunctionMaybe :: forall r. (Member (Reader InfoTable) r) => Name -> Sem r (Maybe FunctionInfo)
 lookupFunctionMaybe f = HashMap.lookup f <$> asks (^. infoFunctions)
@@ -223,11 +224,11 @@ lookupFunction f =
       return
         . error
         $ "impossible: "
-          <> ppTrace f
-          <> " is not in the InfoTable\n"
-          <> ppTrace (getLoc f)
-          <> "\nThe registered functions are: "
-          <> ppTrace (HashMap.keys tbl)
+        <> ppTrace f
+        <> " is not in the InfoTable\n"
+        <> ppTrace (getLoc f)
+        <> "\nThe registered functions are: "
+        <> ppTrace (HashMap.keys tbl)
 
 lookupAxiom :: (Member (Reader InfoTable) r) => Name -> Sem r AxiomInfo
 lookupAxiom f = HashMap.lookupDefault (error ("impossible: couldn't find axiom " <> ppTrace f)) f <$> asks (^. infoAxioms)
@@ -258,16 +259,16 @@ getFunctionBuiltinInfo n = do
 mkConstructorEntries :: InductiveDef -> [(ConstructorName, ConstructorInfo)]
 mkConstructorEntries d =
   [ (c ^. inductiveConstructorName, ConstructorInfo {..})
-    | let _constructorInfoInductive = d ^. inductiveName
-          n = length (d ^. inductiveConstructors)
-          _constructorInfoInductiveParameters = d ^. inductiveParameters
-          builtins = maybe (replicate n Nothing) (map Just . builtinConstructors) (d ^. inductiveBuiltin),
-      (_constructorInfoBuiltin, c) <- zipExact builtins (d ^. inductiveConstructors),
-      let _constructorInfoType = c ^. inductiveConstructorType,
-      let _constructorInfoName = c ^. inductiveConstructorName,
-      let _constructorInfoTrait = d ^. inductiveTrait,
-      let _constructorInfoRecord = c ^. inductiveConstructorIsRecord,
-      let _constructorSelfRecursiveArgs = selfRecursiveArgs (c ^. inductiveConstructorType)
+  | let _constructorInfoInductive = d ^. inductiveName
+        n = length (d ^. inductiveConstructors)
+        _constructorInfoInductiveParameters = d ^. inductiveParameters
+        builtins = maybe (replicate n Nothing) (map Just . builtinConstructors) (d ^. inductiveBuiltin),
+    (_constructorInfoBuiltin, c) <- zipExact builtins (d ^. inductiveConstructors),
+    let _constructorInfoType = c ^. inductiveConstructorType,
+    let _constructorInfoName = c ^. inductiveConstructorName,
+    let _constructorInfoTrait = d ^. inductiveTrait,
+    let _constructorInfoRecord = c ^. inductiveConstructorIsRecord,
+    let _constructorSelfRecursiveArgs = selfRecursiveArgs (c ^. inductiveConstructorType)
   ]
   where
     selfRecursiveArgs :: Expression -> [Bool]

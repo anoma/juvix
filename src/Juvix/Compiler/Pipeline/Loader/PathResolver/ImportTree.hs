@@ -53,7 +53,7 @@ mkImportTree mentrypointModulePath =
           { _importNodePackageRoot = pkg ^. packageRoot,
             _importNodeFile = f
           }
-        | f <- filter isJuvixOrJuvixMdFile (toList (pkg ^. packageJuvixRelativeFiles))
+      | f <- filter isJuvixOrJuvixMdFile (toList (pkg ^. packageJuvixRelativeFiles))
       ]
 
     getNodeImports ::
@@ -142,15 +142,15 @@ checkImportTreeCycles tree = do
           find cond edges
           where
             unexpected =
-              impossibleError $
-                "Could not find edge between\n"
-                  <> prettyText fromN
-                  <> "\nand\n"
-                  <> prettyText toN
-                  <> "\n"
-                  <> "Available Edges from "
-                  <> prettyText fromN
-                  <> ":\n"
-                  <> prettyText (toList (tree ^. importTreeEdges . at fromN . _Just))
-                  <> "\n\nCycle found:\n"
-                  <> Text.unlines (prettyText <$> toList (cycl ^. graphCycleVertices))
+              impossibleError
+                $ "Could not find edge between\n"
+                <> prettyText fromN
+                <> "\nand\n"
+                <> prettyText toN
+                <> "\n"
+                <> "Available Edges from "
+                <> prettyText fromN
+                <> ":\n"
+                <> prettyText (toList (tree ^. importTreeEdges . at fromN . _Just))
+                <> "\n\nCycle found:\n"
+                <> Text.unlines (prettyText <$> toList (cycl ^. graphCycleVertices))

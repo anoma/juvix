@@ -39,8 +39,10 @@ convertNode inlineDepth nonRecSyms symOcc md = dmapL go
                     node
                   _
                     | HashSet.member _identSymbol nonRecSyms
-                        && length args >= argsNum
-                        && ( HashMap.lookup _identSymbol symOcc == Just 1
+                        && length args
+                        >= argsNum
+                        && ( HashMap.lookup _identSymbol symOcc
+                               == Just 1
                                || isInlineableLambda inlineDepth md bl def
                            ) ->
                         mkApps def args
@@ -61,8 +63,10 @@ convertNode inlineDepth nonRecSyms symOcc md = dmapL go
           Just InlineNever -> node
           _
             | HashSet.member _identSymbol nonRecSyms
-                && argsNum == 0
-                && ( HashMap.lookup _identSymbol symOcc == Just 1
+                && argsNum
+                == 0
+                && ( HashMap.lookup _identSymbol symOcc
+                       == Just 1
                        || isImmediate md def
                    ) ->
                 def

@@ -125,8 +125,8 @@ genFieldProjection kind _funDefName _funDefType _funDefBuiltin _funDefArgsInfo m
       { _funDefTerminating = False,
         _funDefIsInstanceCoercion =
           if
-              | kind == ProjectionCoercion -> Just IsInstanceCoercionCoercion
-              | otherwise -> Nothing,
+            | kind == ProjectionCoercion -> Just IsInstanceCoercionCoercion
+            | otherwise -> Nothing,
         _funDefPragmas =
           maybe
             (mempty {_pragmasInline = Just InlineAlways})
@@ -154,8 +154,9 @@ genFieldProjection kind _funDefName _funDefType _funDefBuiltin _funDefArgsInfo m
               { _lambdaPatterns = pure pat,
                 _lambdaBody = body
               }
-      return . ExpressionLambda $
-        Lambda
+      return
+        . ExpressionLambda
+        $ Lambda
           { _lambdaType = Nothing,
             _lambdaClauses = pure cl
           }
@@ -201,16 +202,16 @@ genPatternDefs valueName pat =
                   _caseExpressionType = Nothing,
                   _caseExpressionWholeType = Nothing,
                   _caseBranches =
-                    pure $
-                      CaseBranch
+                    pure
+                      $ CaseBranch
                         { _caseBranchPattern = pat,
                           _caseBranchRhs =
                             CaseBranchRhsExpression (ExpressionIden (IdenVar var'))
                         }
                 }
       body' <- clone body
-      output $
-        FunctionDef
+      output
+        $ FunctionDef
           { _funDefTerminating = False,
             _funDefIsInstanceCoercion = Nothing,
             _funDefPragmas = mempty,

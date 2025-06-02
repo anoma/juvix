@@ -158,9 +158,9 @@ mkComments cs = Comments {..}
     _commentsByFile =
       HashMap.fromList
         [ (_fileCommentsFile, FileComments {..})
-          | filecomments :: NonEmpty SpaceSpan <- groupSortOn spSpanFile cs,
-            let _fileCommentsFile = spSpanFile (head filecomments),
-            let _fileCommentsSorted = sortRmDuplicates (toList filecomments)
+        | filecomments :: NonEmpty SpaceSpan <- groupSortOn spSpanFile cs,
+          let _fileCommentsFile = spSpanFile (head filecomments),
+          let _fileCommentsSorted = sortRmDuplicates (toList filecomments)
         ]
       where
         sortRmDuplicates :: [SpaceSpan] -> [SpaceSpan]

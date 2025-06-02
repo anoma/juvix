@@ -34,8 +34,7 @@ allTests :: TestTree
 allTests =
   testGroup
     "Path resolver negative tests"
-    ( map (mkTest . testDescr) resolverErrorTests
-    )
+    (map (mkTest . testDescr) resolverErrorTests)
 
 wrongError :: Maybe FailMsg
 wrongError = Just "Incorrect error"

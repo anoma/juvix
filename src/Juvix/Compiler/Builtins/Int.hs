@@ -20,15 +20,15 @@ checkIntCtor _ctor d@ConstructorDef {..} = do
       loc = getLoc d
   int <- getBuiltinNameScoper loc BuiltinInt
   nat <- getBuiltinNameScoper loc BuiltinNat
-  unless (ty === (nat --> int)) $
-    builtinsErrorText (getLoc d) (ctorName ^. nameText <> " has the wrong type")
+  unless (ty === (nat --> int))
+    $ builtinsErrorText (getLoc d) (ctorName ^. nameText <> " has the wrong type")
 
 checkIntToString :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkIntToString f = do
   string_ <- getBuiltinNameScoper (getLoc f) BuiltinString
   int <- getBuiltinNameScoper (getLoc f) BuiltinInt
-  unless (f ^. axiomType === (int --> string_)) $
-    builtinsErrorText (getLoc f) "intToString has the wrong type signature"
+  unless (f ^. axiomType === (int --> string_))
+    $ builtinsErrorText (getLoc f) "intToString has the wrong type signature"
 
 checkIntEq :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkIntEq f = do
@@ -72,8 +72,8 @@ checkIntSubNat f = do
   let loc = getLoc f
   int <- getBuiltinNameScoper loc BuiltinInt
   nat <- getBuiltinNameScoper loc BuiltinNat
-  unless (f ^. funDefType === (nat --> nat --> int)) $
-    builtinsErrorText (getLoc f) "int-sub-nat has the wrong type signature"
+  unless (f ^. funDefType === (nat --> nat --> int))
+    $ builtinsErrorText (getLoc f) "int-sub-nat has the wrong type signature"
 
 checkIntPlus :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkIntPlus f = do
@@ -334,8 +334,8 @@ checkIntPrint :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => Axiom
 checkIntPrint f = do
   int <- getBuiltinNameScoper (getLoc f) BuiltinInt
   io <- getBuiltinNameScoper (getLoc f) BuiltinIO
-  unless (f ^. axiomType === (int --> io)) $
-    builtinsErrorText (getLoc f) "Int print has the wrong type signature"
+  unless (f ^. axiomType === (int --> io))
+    $ builtinsErrorText (getLoc f) "Int print has the wrong type signature"
 
 checkIntLe :: forall r. (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkIntLe f = do

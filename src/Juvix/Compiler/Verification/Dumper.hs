@@ -56,7 +56,8 @@ ppDumps dumps = Text.unlines imports <> "\n" <> go 0 dumps
         "lemma step_"
           <> show n
           <> "_"
-          <> d2 ^. dumpInfoPhase
+          <> d2
+          ^. dumpInfoPhase
           <> " : "
           <> ppEquiv d1 d2
           <> " := by\n  sorry\n\n"
@@ -70,19 +71,19 @@ writeLeanProjectFiles dirPath name = do
   writeFileEnsureLn'
     lakeFile
     $ "name = \""
-      <> name
-      <> "_lean\"\n"
-      <> "defaultTargets = [\""
-      <> name
-      <> "\"]\n\n"
-      <> "[[require]]\n"
-      <> "name = \"juvix-lean\"\n"
-      <> "git = \"https://github.com/anoma/juvix-lean.git\"\n"
-      <> "rev = \"main\"\n\n"
-      <> "[[lean_lib]]\n"
-      <> "name = \""
-      <> name
-      <> "\"\n"
+    <> name
+    <> "_lean\"\n"
+    <> "defaultTargets = [\""
+    <> name
+    <> "\"]\n\n"
+    <> "[[require]]\n"
+    <> "name = \"juvix-lean\"\n"
+    <> "git = \"https://github.com/anoma/juvix-lean.git\"\n"
+    <> "rev = \"main\"\n\n"
+    <> "[[lean_lib]]\n"
+    <> "name = \""
+    <> name
+    <> "\"\n"
   writeFileEnsureLn' toolchainFile "leanprover/lean4:v4.18.0-rc1\n"
   writeFileEnsureLn' gitignoreFile ".lake\n"
 
@@ -106,8 +107,8 @@ runDumper a = do
 runDumper' :: forall r a. (Member Files r) => Path Abs File -> Sem (Dumper ': r) a -> Sem r a
 runDumper' path a = do
   (st, res) <- reinterpret (runState (DumperState [])) interp a
-  when (not . null $ st ^. dumperStateDumps) $
-    writeFileEnsureLn' path (ppDumps (reverse (st ^. dumperStateDumps)))
+  when (not . null $ st ^. dumperStateDumps)
+    $ writeFileEnsureLn' path (ppDumps (reverse (st ^. dumperStateDumps)))
   return res
   where
     interp :: forall m b. Dumper m b -> Sem (State DumperState ': r) b

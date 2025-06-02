@@ -44,7 +44,9 @@ runIOEitherModular mcheckId entry f = do
             over Core.moduleTable (HashMap.insert (md ^. Core.moduleId) md)
               . Store.toCoreModuleTable (res ^. Pipeline.pipelineResultImportTables)
               . HashMap.elems
-              $ res ^. Pipeline.pipelineResultImports . Store.moduleTable
+              $ res
+              ^. Pipeline.pipelineResultImports
+              . Store.moduleTable
       merror <- case mcheckId of
         Nothing -> return $ Right ()
         Just checkId -> runIOEitherPipeline entry (Core.checkModule checkId md)

@@ -68,10 +68,10 @@ testsToIgnore = testsUnsupported ++ testsNegativeInteger
 convertTest :: Tree.PosTest -> Maybe (Tree.PosTest)
 convertTest p = do
   guard (testNum `notElem` map to3DigitString testsToIgnore)
-  return $
-    if
-        | testNum `elem` map to3DigitString testsConstr -> over Tree.expectedFile go p
-        | otherwise -> p
+  return
+    $ if
+      | testNum `elem` map to3DigitString testsConstr -> over Tree.expectedFile go p
+      | otherwise -> p
   where
     go :: Base.Path Rel File -> Base.Path Rel File
     go = replaceExtensions' [".nockma", ".out"]

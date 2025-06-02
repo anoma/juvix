@@ -12,8 +12,8 @@ data NockmaIdeCommand
 
 parseNockmaIdeCommand :: Parser NockmaIdeCommand
 parseNockmaIdeCommand =
-  hsubparser $
-    mconcat
+  hsubparser
+    $ mconcat
       [ commandHighlight,
         commandCheck,
         commandRules

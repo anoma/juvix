@@ -83,8 +83,8 @@ unrollRecursion md = do
                   ii' = ii {_identifierSymbol = sym', _identifierName = name'}
               registerIdent name' ii'
               let failNode =
-                    setNodeType (ii ^. identifierType) $
-                      mkBuiltinApp' OpFail [mkConstant' (ConstString "recursion limit reached")]
+                    setNodeType (ii ^. identifierType)
+                      $ mkBuiltinApp' OpFail [mkConstant' (ConstString "recursion limit reached")]
                   node
                     | limit == 0 =
                         etaExpand (typeArgs (ii ^. identifierType)) failNode

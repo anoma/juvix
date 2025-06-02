@@ -32,9 +32,9 @@ setq varName val = App [Symbol "setq", Symbol varName, val]
 
 mkHashTable :: Text -> [(SExp, SExp)] -> SExp
 mkHashTable tblName items =
-  progn $
-    setq tblName makeHashTable
-      : [putHash tblName key val | (key, val) <- items]
+  progn
+    $ setq tblName makeHashTable
+    : [putHash tblName key val | (key, val) <- items]
 
 withLocalHashTable :: Text -> [(SExp, SExp)] -> SExp -> SExp
 withLocalHashTable tblName items body =
@@ -42,7 +42,7 @@ withLocalHashTable tblName items body =
     (tblName, makeHashTable)
     . progn
     $ [putHash tblName key val | (key, val) <- items]
-      ++ [body]
+    ++ [body]
 
 let_ :: [(Text, SExp)] -> SExp -> SExp
 let_ items body =

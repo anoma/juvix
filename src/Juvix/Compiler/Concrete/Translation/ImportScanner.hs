@@ -54,8 +54,8 @@ scanBSImports fp inputBS = do
     ImportScanStrategyFlatParse -> case FlatParse.scanBSImports fp inputBS of
       Just r -> return r
       Nothing ->
-        throw $
-          ErrFlatParseError
+        throw
+          $ ErrFlatParseError
             FlatParseError
               { _flatParseErrorLoc = fileLoc
               }

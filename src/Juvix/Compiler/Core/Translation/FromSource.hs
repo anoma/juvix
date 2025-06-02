@@ -31,10 +31,10 @@ import Text.Megaparsec qualified as P
 -- generated during parsing
 runParser :: Path Abs File -> ModuleId -> InfoTable -> Text -> Either JuvixError (InfoTable, Maybe Node)
 runParser fileName mid tab input_ =
-  case run $
-    runError @CoreError $
-      runInfoTableBuilder (Module mid tab mempty mempty Nothing) $
-        P.runParserT parseToplevel (fromAbsFile fileName) input_ of
+  case run
+    $ runError @CoreError
+    $ runInfoTableBuilder (Module mid tab mempty mempty Nothing)
+    $ P.runParserT parseToplevel (fromAbsFile fileName) input_ of
     Left err -> Left (JuvixError err)
     Right (_, Left err) -> Left (JuvixError (MegaparsecError err))
     Right (md, Right r) -> Right (md ^. moduleInfoTable, r)
@@ -75,7 +75,7 @@ throwCoreError ::
   Doc Ann ->
   ParsecS r a
 throwCoreError i msg =
-  lift $ throwError (CoreError (ppOutput msg) Nothing i)
+  lift $ throw (CoreError (ppOutput msg) Nothing i)
 
 guardSymbolNotDefined ::
   (Members '[Error CoreError, InfoTableBuilder] r) =>
@@ -114,25 +114,25 @@ statementBuiltin = do
   sym <- statementDef
   ii <- lift $ getIdentifierInfo sym
   if
-      | ii ^. identifierName == Str.natPlus ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatPlus}
-      | ii ^. identifierName == Str.natSub ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatSub}
-      | ii ^. identifierName == Str.natMul ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatMul}
-      | ii ^. identifierName == Str.natDiv ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatDiv}
-      | ii ^. identifierName == Str.natMod ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatMod}
-      | ii ^. identifierName == Str.natUDiv ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatUDiv}
-      | ii ^. identifierName == Str.natLe ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatLe}
-      | ii ^. identifierName == Str.natLt ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatLt}
-      | ii ^. identifierName == Str.natEq ->
-          lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatEq}
-      | otherwise -> throwCoreError i "unrecorgnized builtin definition"
+    | ii ^. identifierName == Str.natPlus ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatPlus}
+    | ii ^. identifierName == Str.natSub ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatSub}
+    | ii ^. identifierName == Str.natMul ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatMul}
+    | ii ^. identifierName == Str.natDiv ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatDiv}
+    | ii ^. identifierName == Str.natMod ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatMod}
+    | ii ^. identifierName == Str.natUDiv ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatUDiv}
+    | ii ^. identifierName == Str.natLe ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatLe}
+    | ii ^. identifierName == Str.natLt ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatLt}
+    | ii ^. identifierName == Str.natEq ->
+        lift $ registerIdent (ii ^. identifierName) ii {_identifierBuiltin = Just BuiltinNatEq}
+    | otherwise -> throwCoreError i "unrecorgnized builtin definition"
 
 statementDef ::
   (Members '[Error CoreError, InfoTableBuilder] r) =>
@@ -150,8 +150,8 @@ statementDef = do
       mty <- optional typeAnnotation
       let fi = fromMaybe impossible $ HashMap.lookup sym (tab ^. infoIdentifiers)
           ty = fromMaybe (fi ^. identifierType) mty
-      unless (isDynamic (fi ^. identifierType) || ty == fi ^. identifierType) $
-        throwCoreError i "type signature doesn't match earlier definition"
+      unless (isDynamic (fi ^. identifierType) || ty == fi ^. identifierType)
+        $ throwCoreError i "type signature doesn't match earlier definition"
       parseDefinition sym ty
       return sym
     Just IdentInd {} ->
@@ -189,7 +189,8 @@ parseDefinition sym ty = do
   lift $ registerIdentNode sym node
   let (is, _) = unfoldLambdas node
   when
-    ( length is > length (typeArgs ty)
+    ( length is
+        > length (typeArgs ty)
         && not (isDynamic (typeTarget ty))
     )
     $ throwCoreError i "type mismatch: too many lambdas"
@@ -202,8 +203,8 @@ statementInductive = do
   kw kwInductive
   (txt, i) <- identifierL
   idt <- lift $ getIdent txt
-  when (isJust idt) $
-    throwCoreError i ("duplicate identifier: " <> fromText txt)
+  when (isJust idt)
+    $ throwCoreError i ("duplicate identifier: " <> fromText txt)
   mty <- optional typeAnnotation
   sym <- lift freshSymbol
   let ii =
@@ -229,8 +230,8 @@ constrDecl ::
 constrDecl symInd = do
   (txt, i) <- identifierL
   idt <- lift $ getIdent txt
-  when (isJust idt) $
-    throwCoreError i ("duplicate identifier: " <> fromText txt)
+  when (isJust idt)
+    $ throwCoreError i ("duplicate identifier: " <> fromText txt)
   tag <- lift freshTag
   ty <- typeAnnotation
   let argsNum = length (typeArgs ty)
@@ -376,8 +377,8 @@ seqExpr' ::
 seqExpr' varsNum vars node = do
   ((), i) <- interval (kw kwSeq)
   node' <- cmpExpr (varsNum + 1) vars
-  ioExpr' varsNum vars $
-    mkConstr
+  ioExpr' varsNum vars
+    $ mkConstr
       Info.empty
       (BuiltinTag TagBind)
       [node, mkLambda mempty (Binder "_" (Just i) mkDynamic') node']
@@ -753,7 +754,8 @@ exprLambda varsNum vars = do
             ty <- typeAnnot varsNum vars
             return (n, Just ty)
         )
-        <|> (\n -> (n, Nothing)) <$> parseLocalName
+        <|> (\n -> (n, Nothing))
+        <$> parseLocalName
 
 exprLetrecOne ::
   (Members '[Error CoreError, InfoTableBuilder] r) =>
@@ -780,8 +782,8 @@ exprLetrecMany ::
   ParsecS r Node
 exprLetrecMany varsNum vars = do
   (defNames, i) <- P.try (kw kwLetRec >> interval letrecNames)
-  when (null defNames) $
-    throwCoreError i "expected at least one identifier name in letrec signature"
+  when (null defNames)
+    $ throwCoreError i "expected at least one identifier name in letrec signature"
   let (vars', varsNum') = foldl' (\(vs, k) txt -> (HashMap.insert txt k vs, k + 1)) (vars, varsNum) defNames
   defs <- letrecDefs defNames varsNum vars varsNum' vars'
   kw kwIn
@@ -806,8 +808,8 @@ letrecDefs names varsNum0 vars0 varsNum vars = forM names letrecItem
     letrecItem n = do
       (txt, i) <- identifierL
       mty <- optional (typeAnnot varsNum0 vars0)
-      when (n /= txt) $
-        throwCoreError i "identifier name doesn't match letrec signature"
+      when (n /= txt)
+        $ throwCoreError i "identifier name doesn't match letrec signature"
       kw kwAssign
       v <- bracedExpr varsNum vars
       kw delimSemicolon
@@ -929,8 +931,8 @@ caseMatchingBranch varsNum vars = do
         (throwCoreError i "wrong number of constructor arguments")
       kw kwAssign
       let vars' =
-            fst $
-              foldl'
+            fst
+              $ foldl'
                 ( \(vs, k) ((name, _), _) ->
                     (HashMap.insert name k vs, k + 1)
                 )
@@ -1058,8 +1060,8 @@ branchRhsExpr ::
   ParsecS r MatchBranchRhs
 branchRhsExpr i pats patsNum varsNum vars = do
   kw kwAssign
-  unless (length pats == patsNum) $
-    throwCoreError i "wrong number of patterns"
+  unless (length pats == patsNum)
+    $ throwCoreError i "wrong number of patterns"
   let (varsNum', vars') = updateVarsByPatternBinders pats varsNum vars
   br <- bracedExpr varsNum' vars'
   return $ MatchBranchRhsExpression br
@@ -1088,8 +1090,8 @@ sideIfs i pats patsNum varsNum vars = do
   let (varsNum', vars') = updateVarsByPatternBinders pats varsNum vars
   cond <- branchCond varsNum' vars'
   kw kwAssign
-  unless (length pats == patsNum) $
-    throwCoreError i "wrong number of patterns"
+  unless (length pats == patsNum)
+    $ throwCoreError i "wrong number of patterns"
   br <- bracedExpr varsNum' vars'
   conds <- optional (sideIfs i pats patsNum varsNum vars)
   return $ SideIfBranch Info.empty cond br :| maybe [] toList conds
@@ -1231,8 +1233,8 @@ exprNamed varsNum vars = do
             Just (IdentConstr tag) -> do
               return $ mkConstr (Info.insert (LocationInfo i) (Info.singleton (NameInfo txt))) tag []
             Nothing ->
-              lift $
-                throw
+              lift
+                $ throw
                   CoreError
                     { _coreErrorMsg = ppOutput $ "undeclared identifier: " <> fromText txt,
                       _coreErrorNode = Nothing,

@@ -25,15 +25,15 @@ newtype instance StaticRep (Input i) = Input
 
 input :: (Member (Input i) r) => Sem r (Maybe i)
 input =
-  stateStaticRep $
-    \case
+  stateStaticRep
+    $ \case
       Input [] -> (Nothing, Input [])
       Input (i : is) -> (Just i, Input is)
 
 inputWhile :: forall i r. (Member (Input i) r) => (i -> Bool) -> Sem r [i]
 inputWhile c =
-  stateStaticRep $
-    \case
+  stateStaticRep
+    $ \case
       Input l ->
         let (sat, rest) = span c l
          in (sat, Input rest)

@@ -131,10 +131,10 @@ clangNativeCompile o = do
   outputFile' <- outputFile o
   buildDir <- askBuildDir
   if
-      | o ^. compileCOutput ->
-          copyFile inputFile outputFile'
-      | otherwise ->
-          runClang (native64Args buildDir o outputFile' inputFile)
+    | o ^. compileCOutput ->
+        copyFile inputFile outputFile'
+    | otherwise ->
+        runClang (native64Args buildDir o outputFile' inputFile)
 
 clangWasmWasiCompile ::
   forall r.
@@ -146,11 +146,11 @@ clangWasmWasiCompile o = do
   outputFile' <- outputFile o
   buildDir <- askBuildDir
   if
-      | o ^. compileCOutput ->
-          copyFile inputFile outputFile'
-      | otherwise -> do
-          clangArgs <- wasiArgs buildDir o outputFile' inputFile <$> sysrootEnvVar
-          runClang clangArgs
+    | o ^. compileCOutput ->
+        copyFile inputFile outputFile'
+    | otherwise -> do
+        clangArgs <- wasiArgs buildDir o outputFile' inputFile <$> sysrootEnvVar
+        runClang clangArgs
   where
     sysrootEnvVar :: Sem r (Path Abs Dir)
     sysrootEnvVar =
@@ -177,11 +177,11 @@ commonArgs buildDir o outfile =
          toFilePath outfile
        ]
     <> ( if
-             | not (o ^. compilePreprocess || o ^. compileAssembly) ->
-                 [ "-L",
-                   toFilePath buildDir
-                 ]
-             | otherwise -> []
+           | not (o ^. compilePreprocess || o ^. compileAssembly) ->
+               [ "-L",
+                 toFilePath buildDir
+               ]
+           | otherwise -> []
        )
 
 optimizationOption :: CompileOptions -> String
@@ -203,9 +203,9 @@ native64Args buildDir o outfile inputFile =
          toFilePath inputFile
        ]
     <> ( if
-             | not (o ^. compilePreprocess || o ^. compileAssembly) ->
-                 ["-ljuvix"]
-             | otherwise -> []
+           | not (o ^. compilePreprocess || o ^. compileAssembly) ->
+               ["-ljuvix"]
+           | otherwise -> []
        )
 
 wasiArgs :: Path Abs Dir -> CompileOptions -> Path Abs File -> Path Abs File -> Path Abs Dir -> [String]
@@ -221,9 +221,9 @@ wasiArgs buildDir o outfile inputFile sysrootPath =
          toFilePath inputFile
        ]
     <> ( if
-             | not (o ^. compilePreprocess || o ^. compileAssembly) ->
-                 ["-ljuvix"]
-             | otherwise -> []
+           | not (o ^. compilePreprocess || o ^. compileAssembly) ->
+               ["-ljuvix"]
+           | otherwise -> []
        )
 
 runClang ::

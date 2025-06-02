@@ -317,8 +317,8 @@ mkScryDecode :: (Member (Reader CompilerCtx) r) => [Term Natural] -> Sem r (Term
 mkScryDecode key = do
   bNoDecode <- asks (^. compilerNoImportDecoding)
   if
-      | bNoDecode -> return $ mkScry key
-      | otherwise -> callStdlib StdlibDecode [mkScry [remakeList ((OpQuote # nockNilTagged "scry-id") : (OpQuote # anomaId) : (OpQuote # blobId) : key)]]
+    | bNoDecode -> return $ mkScry key
+    | otherwise -> callStdlib StdlibDecode [mkScry [remakeList ((OpQuote # nockNilTagged "scry-id") : (OpQuote # anomaId) : (OpQuote # blobId) : key)]]
   where
     anomaId :: Term Natural = TAtom 418447847009
     blobId :: Term Natural = TAtom 1651469410
@@ -625,43 +625,43 @@ compile = \case
             path :: Sem r Path
             path = do
               fr <- directRefPath _fieldRef
-              return $
-                fr
-                  ++ case memrep of
-                    NockmaMemRepConstr ->
-                      constructorArgPath argIx
-                    NockmaMemRepTuple ->
+              return
+                $ fr
+                ++ case memrep of
+                  NockmaMemRepConstr ->
+                    constructorArgPath argIx
+                  NockmaMemRepTuple ->
+                    indexTuple
+                      IndexTupleArgs
+                        { _indexTupleArgsLength = arity,
+                          _indexTupleArgsIndex = argIx
+                        }
+                  NockmaMemRepList constr -> case constr of
+                    NockmaMemRepListConstrNil -> impossible
+                    NockmaMemRepListConstrCons ->
+                      indexTuple
+                        IndexTupleArgs
+                          { _indexTupleArgsLength = 2,
+                            _indexTupleArgsIndex = argIx
+                          }
+                  NockmaMemRepNoun n -> case n of
+                    NockmaMemRepAtom -> emptyPath
+                    NockmaMemRepCell ->
                       indexTuple
                         IndexTupleArgs
                           { _indexTupleArgsLength = arity,
                             _indexTupleArgsIndex = argIx
                           }
-                    NockmaMemRepList constr -> case constr of
-                      NockmaMemRepListConstrNil -> impossible
-                      NockmaMemRepListConstrCons ->
-                        indexTuple
-                          IndexTupleArgs
-                            { _indexTupleArgsLength = 2,
-                              _indexTupleArgsIndex = argIx
-                            }
-                    NockmaMemRepNoun n -> case n of
-                      NockmaMemRepAtom -> emptyPath
-                      NockmaMemRepCell ->
-                        indexTuple
-                          IndexTupleArgs
-                            { _indexTupleArgsLength = arity,
-                              _indexTupleArgsIndex = argIx
-                            }
-                    NockmaMemRepMaybe constr -> case constr of
-                      NockmaMemRepMaybeConstrNothing -> impossible
-                      -- just x is represented as [nil x] so argument index is offset by 1.
-                      -- argIx will always be 0 because just has one argument
-                      NockmaMemRepMaybeConstrJust ->
-                        indexTuple
-                          IndexTupleArgs
-                            { _indexTupleArgsLength = 2,
-                              _indexTupleArgsIndex = argIx + 1
-                            }
+                  NockmaMemRepMaybe constr -> case constr of
+                    NockmaMemRepMaybeConstrNothing -> impossible
+                    -- just x is represented as [nil x] so argument index is offset by 1.
+                    -- argIx will always be 0 because just has one argument
+                    NockmaMemRepMaybeConstrJust ->
+                      indexTuple
+                        IndexTupleArgs
+                          { _indexTupleArgsLength = 2,
+                            _indexTupleArgsIndex = argIx + 1
+                          }
         (opAddress "constrRef") <$> path
       where
         goDirectRef :: Tree.DirectRef -> Sem r (Term Natural)
@@ -856,8 +856,8 @@ compile = \case
             [ enc,
               byteArrayPayload "privKeyByteArrayTail" privKeyByteArray
             ]
-        return $
-          mkByteArray
+        return
+          $ mkByteArray
             (nockNatLiteral (integerToNatural (toInteger E.signatureLength)))
             stdcall
       _ -> impossible
@@ -940,15 +940,15 @@ compile = \case
         goDecodeResult ref = do
           decJust <- goDecodeResultJust ref
           res <- addressTempRef ref
-          return $
-            branch "is-cell" (OpIsCell # res) decJust res
+          return
+            $ branch "is-cell" (OpIsCell # res) decJust res
 
         goDecodeResultJust :: TempRef -> Sem r (Term Natural)
         goDecodeResultJust ref = do
           refPath <- tempRefPath ref
           stdcall <- callStdlib StdlibDecode [opAddress "verify-result-just" (refPath ++ justPayloadPath)]
-          return $
-            opReplace
+          return
+            $ opReplace
               "putDecodeResultInJust"
               justPayloadPath
               stdcall
@@ -1018,36 +1018,36 @@ compile = \case
       args <- mapM compile _nodeAllocClosureArgs
       closure <-
         if
-            | batch || mid == finfo ^. functionInfoModuleId ->
-                return
-                  $ opReplace
-                    "putAnomaLib"
-                    (closurePath AnomaLibrary)
-                    (opAddress "anomaLibrary" (base <> closurePath AnomaLibrary))
-                  $ opReplace
-                    "putModulesLib"
-                    (closurePath ModulesLibrary)
-                    (opAddress "modulesLibrary" (base <> closurePath ModulesLibrary))
-                  $ opAddress
-                    "goAllocClosure-getFunction"
-                    (base <> closurePath ModulesLibrary <> [L] <> finfo ^. functionInfoPath)
-            | otherwise -> do
-                fetchModule <- mkScryDecode [opAddress "modulesLibrary" (base <> closurePath ModulesLibrary <> minfo ^. moduleInfoPath)]
-                return $
-                  OpPush
-                    # fetchModule
-                    # ( opReplace
-                          "putAnomaLib"
-                          (closurePath AnomaLibrary)
-                          (opAddress "anomaLibrary" ([R] <> base <> closurePath AnomaLibrary))
-                          $ opReplace
-                            "putModulesLib"
-                            (closurePath ModulesLibrary)
-                            (opAddress "getModulesLibrary" [L])
-                          $ opAddress
-                            "goAllocClosure-getFunction"
-                            ([L, L] <> finfo ^. functionInfoPath)
-                      )
+          | batch || mid == finfo ^. functionInfoModuleId ->
+              return
+                $ opReplace
+                  "putAnomaLib"
+                  (closurePath AnomaLibrary)
+                  (opAddress "anomaLibrary" (base <> closurePath AnomaLibrary))
+                $ opReplace
+                  "putModulesLib"
+                  (closurePath ModulesLibrary)
+                  (opAddress "modulesLibrary" (base <> closurePath ModulesLibrary))
+                $ opAddress
+                  "goAllocClosure-getFunction"
+                  (base <> closurePath ModulesLibrary <> [L] <> finfo ^. functionInfoPath)
+          | otherwise -> do
+              fetchModule <- mkScryDecode [opAddress "modulesLibrary" (base <> closurePath ModulesLibrary <> minfo ^. moduleInfoPath)]
+              return
+                $ OpPush
+                # fetchModule
+                # ( opReplace
+                      "putAnomaLib"
+                      (closurePath AnomaLibrary)
+                      (opAddress "anomaLibrary" ([R] <> base <> closurePath AnomaLibrary))
+                      $ opReplace
+                        "putModulesLib"
+                        (closurePath ModulesLibrary)
+                        (opAddress "getModulesLibrary" [L])
+                      $ opAddress
+                        "goAllocClosure-getFunction"
+                        ([L, L] <> finfo ^. functionInfoPath)
+                  )
       let newArity = farity - fromIntegral (length args)
       massert (newArity > 0)
       curryClosure closure args (nockNatLiteral newArity)
@@ -1183,8 +1183,8 @@ nockmaBuiltinTag = \case
 -- | Generic constructors are encoded as [tag args], where args is a
 -- nil terminated list.
 goConstructor :: NockmaMemRep -> Tree.Tag -> [Term Natural] -> Term Natural
-goConstructor mr t args = assert (all isCell args) $
-  case t of
+goConstructor mr t args = assert (all isCell args)
+  $ case t of
     Tree.BuiltinTag b -> case nockmaBuiltinTag b of
       Just (NockmaBuiltinBool v) -> nockBoolLiteral v
       Just (NockmaBuiltinJson s) -> foldTerms (nockStringLiteral s :| args)
@@ -1261,15 +1261,15 @@ callFunWithArgs fun args = do
   mid <- asks (^. compilerModuleId)
   batch <- asks (^. compilerBatch)
   if
-      | batch || mid == finfo ^. functionInfoModuleId -> do
-          return (opCall ("callFun-" <> fname) (fpath ++ closurePath FunCode) newSubject)
-      | otherwise -> do
-          -- The function is in a different module. We need to call the function
-          -- with its module's module library.
-          base <- getSubjectBasePath
-          modLib <- mkScryDecode [opAddress "callFun-modLib" (base ++ closurePath ModulesLibrary ++ minfo ^. moduleInfoPath)]
-          let newSubject' = opReplace "callFun-modLib" (closurePath ModulesLibrary) modLib newSubject
-          return (opCall ("callFun-" <> fname) (fpath ++ closurePath FunCode) newSubject')
+    | batch || mid == finfo ^. functionInfoModuleId -> do
+        return (opCall ("callFun-" <> fname) (fpath ++ closurePath FunCode) newSubject)
+    | otherwise -> do
+        -- The function is in a different module. We need to call the function
+        -- with its module's module library.
+        base <- getSubjectBasePath
+        modLib <- mkScryDecode [opAddress "callFun-modLib" (base ++ closurePath ModulesLibrary ++ minfo ^. moduleInfoPath)]
+        let newSubject' = opReplace "callFun-modLib" (closurePath ModulesLibrary) modLib newSubject
+        return (opCall ("callFun-" <> fname) (fpath ++ closurePath FunCode) newSubject')
 
 callClosure :: (Member (Reader CompilerCtx) r) => TempRef -> [Term Natural] -> Sem r (Term Natural)
 callClosure ref args = do
@@ -1409,10 +1409,10 @@ caseCmd ref defaultBranch = \case
     goBoolTag v b bs = do
       arg <- addressTempRef ref
       let otherBranch = fromMaybe crash (firstJust f bs <|> defaultBranch)
-      return $
-        if
-            | v -> branch "bool-true" arg b otherBranch
-            | otherwise -> branch "bool-false" arg otherBranch b
+      return
+        $ if
+          | v -> branch "bool-true" arg b otherBranch
+          | otherwise -> branch "bool-false" arg otherBranch b
       where
         f :: (Tree.Tag, Term Natural) -> Maybe (Term Natural)
         f (tag', br) = case tag' of

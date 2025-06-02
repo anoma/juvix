@@ -125,7 +125,7 @@ csvRules s =
       header :| rows <- nonEmpty' . Text.lines <$> readFile csv
       let rows' =
             [ showColour (v ^. variantColor) <> "," <> r
-              | (v, r) <- zipExact (s ^. suiteVariants) rows
+            | (v, r) <- zipExact (s ^. suiteVariants) rows
             ]
           header' = "Color," <> header
       writeFileEnsureLn csv (Text.unlines (header' : rows'))

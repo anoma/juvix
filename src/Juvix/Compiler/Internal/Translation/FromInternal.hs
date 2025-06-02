@@ -33,7 +33,10 @@ typeCheckingNew a = do
         stable :: Scoped.InfoTable
         stable =
           Scoped.computeCombinedInfoTable stab
-            <> res ^. Internal.resultScoper . resultScopedModule . scopedModuleInfoTable
+            <> res
+            ^. Internal.resultScoper
+            . resultScopedModule
+            . scopedModuleInfoTable
         importCtx = ImportContext (computeTypeCheckingTables itab)
     fmap (res,)
       . runReader table

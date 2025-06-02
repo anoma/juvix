@@ -63,8 +63,8 @@ genericErrorHeader g =
   pretty (g ^. genericErrorLoc)
     <> colon
     <+> "error"
-      <> colon
-      <> line
+    <> colon
+    <> line
 
 class ToGenericError a where
   genericError :: (Member (Reader GenericOptions) r) => a -> Sem r GenericError
@@ -83,8 +83,8 @@ render renderType endChar err = do
   let gMsg = g ^. genericErrorMessage
       header = genericErrorHeader g
       helper f x = f (header <> x <> lastChar)
-  return $
-    case renderType of
+  return
+    $ case renderType of
       RenderAnsi -> helper (Ansi.renderStrict . layoutPretty defaultLayoutOptions) (toAnsiDoc gMsg)
       RenderText -> helper (renderStrict . layoutPretty defaultLayoutOptions) (toTextDoc gMsg)
       RenderVSCode -> Text.replace "\n" " " $ helper (renderStrict . layoutCompact) (toTextDoc gMsg)

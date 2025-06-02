@@ -97,8 +97,8 @@ setSubTerm :: forall a r. (Members '[Error (NockEvalError a), Reader EvalCtx] r)
 setSubTerm term pos repTerm =
   let (old, new) = setAndRemember (subTermT' pos) repTerm term
    in if
-          | isNothing (getFirst old) -> throwInvalidPath term pos
-          | otherwise -> return new
+        | isNothing (getFirst old) -> throwInvalidPath term pos
+        | otherwise -> return new
 
 parseCell ::
   forall r a.
@@ -140,7 +140,7 @@ programAssignments :: Maybe (Program a) -> HashMap Text (Term a)
 programAssignments mprog =
   hashMap
     [ (as ^. assignmentName, as ^. assignmentBody)
-      | StatementAssignment as <- mprog ^. _Just . programStatements
+    | StatementAssignment as <- mprog ^. _Just . programStatements
     ]
 
 -- | The stack provided in the replExpression has priority
@@ -194,8 +194,8 @@ evalProfile ::
   Term a ->
   Sem s (Term a)
 evalProfile inistack initerm =
-  topEvalCtx $
-    recEval inistack initerm
+  topEvalCtx
+    $ recEval inistack initerm
   where
     recEval ::
       forall r.
@@ -215,8 +215,8 @@ evalProfile inistack initerm =
             -- Pass the raw call to goAnomaLibCall so that stdlib intercepts
             -- can choose to use the raw call instead.
             if
-                | intercept' -> goAnomaLibCall nonInterceptCall (o ^. anomaLibCallCell)
-                | otherwise -> nonInterceptCall
+              | intercept' -> goAnomaLibCall nonInterceptCall (o ^. anomaLibCallCell)
+              | otherwise -> nonInterceptCall
       where
         loc :: Maybe Interval
         loc = term ^. termLoc
@@ -339,8 +339,8 @@ evalProfile inistack initerm =
               numBytes <- case numBits `quotRem` 8 of
                 (b, 0) -> return b
                 _ ->
-                  throw $
-                    ErrCantGenerateRandomBits
+                  throw
+                    $ ErrCantGenerateRandomBits
                       CantGenerateRandomBits
                         { _cantGenerateRandomBitsAtom = n,
                           _cantGenerateRandomBitsNumBits = numBits
@@ -420,8 +420,8 @@ evalProfile inistack initerm =
               pubKey <- PublicKey <$> atomToByteStringLen publicKeyLength pubKeyT
               signedMessage <- atomToByteString signedMessageT
               if
-                  | verify pubKey signedMessage -> mkMaybeJust . TermAtom <$> byteStringToAtom (removeSignature signedMessage)
-                  | otherwise -> return mkMaybeNothing
+                | verify pubKey signedMessage -> mkMaybeJust . TermAtom <$> byteStringToAtom (removeSignature signedMessage)
+                | otherwise -> return mkMaybeNothing
 
         mkMaybeNothing :: Term a
         mkMaybeNothing = TermAtom nockNil
@@ -460,8 +460,8 @@ evalProfile inistack initerm =
             OpScry -> goOpScry
           where
             crumb crumbTag =
-              EvalCrumbOperator $
-                CrumbOperator
+              EvalCrumbOperator
+                $ CrumbOperator
                   { _crumbOperatorOp = c ^. operatorCellOp,
                     _crumbOperatorCellTag = c ^. operatorCellTag,
                     _crumbOperatorTag = crumbTag,
@@ -532,14 +532,16 @@ evalProfile inistack initerm =
               Cell' t1 t2 _ <- withCrumb (crumb crumbDecodeSecond) (asCell (cellTerm ^. cellRight))
               cond <- evalArg crumbEvalFirst stack t0 >>= asBool
               if
-                  | cond -> evalArg crumbTrueBranch stack t1
-                  | otherwise -> evalArg crumbFalseBranch stack t2
+                | cond -> evalArg crumbTrueBranch stack t1
+                | otherwise -> evalArg crumbFalseBranch stack t2
 
             goOpInc :: Sem r (Term a)
             goOpInc =
-              TermAtom . nockSucc
+              TermAtom
+                . nockSucc
                 <$> ( evalArg crumbEvalFirst stack (c ^. operatorCellTerm)
-                        >>= withCrumb (crumb crumbDecodeFirst) . asAtom
+                        >>= withCrumb (crumb crumbDecodeFirst)
+                        . asAtom
                     )
 
             goOpEq :: Sem r (Term a)
@@ -547,10 +549,11 @@ evalProfile inistack initerm =
               cellTerm <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
               l <- evalArg crumbEvalFirst stack (cellTerm ^. cellLeft)
               r <- evalArg crumbEvalSecond stack (cellTerm ^. cellRight)
-              return . TermAtom $
-                if
-                    | nockmaEq l r -> nockTrue
-                    | otherwise -> nockFalse
+              return
+                . TermAtom
+                $ if
+                  | nockmaEq l r -> nockTrue
+                  | otherwise -> nockFalse
 
             goOpCall :: Sem r (Term a)
             goOpCall = do

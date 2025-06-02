@@ -48,10 +48,10 @@ toValue tab = \case
       let (lams, body) = unfoldLambdas (NLam lam)
           n = length $ takeWhile (Info.member kExpansionInfo . (^. lambdaLhsInfo)) lams
        in if
-              | n < length lams ->
-                  ValueFun
-              | otherwise ->
-                  case body of
-                    NCtr c ->
-                      toValue tab (NCtr (over constrArgs (dropEnd n) c))
-                    _ -> ValueFun
+            | n < length lams ->
+                ValueFun
+            | otherwise ->
+                case body of
+                  NCtr c ->
+                    toValue tab (NCtr (over constrArgs (dropEnd n) c))
+                  _ -> ValueFun

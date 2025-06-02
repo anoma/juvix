@@ -25,11 +25,11 @@ allRules =
     ppRule op =
       ppCodeAnn op
         <+> "("
-          <> show op
-          <> ")"
+        <> show op
+        <> ")"
         <+> "evaluation rules:"
-          <> hardline
-          <> nockOpDoc op
+        <> hardline
+        <> nockOpDoc op
 
 nockOpDoc :: NockOp -> Doc CodeAnn
 nockOpDoc n = ppCodeAnn $ case n of

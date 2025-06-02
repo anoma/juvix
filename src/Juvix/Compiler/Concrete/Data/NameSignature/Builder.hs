@@ -1,6 +1,5 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# OPTIONS_GHC -Wno-unused-type-patterns #-}
 
 {-# HLINT ignore "Avoid restricted flags" #-}
 
@@ -248,13 +247,13 @@ addArgument' ::
 addArgument' impl mdef msym ty = do
   curImpl <- gets @(BuilderState s) (^. stateCurrentImplicit)
   if
-      | Just impl == curImpl -> addToCurrentBlock
-      | otherwise -> startNewBlock
+    | Just impl == curImpl -> addToCurrentBlock
+    | otherwise -> startNewBlock
   where
     errDuplicateName :: SymbolType s -> Symbol -> Sem (Re s r) ()
     errDuplicateName sym _dupNameFirst =
-      throw $
-        ErrDuplicateName
+      throw
+        $ ErrDuplicateName
           DuplicateName
             { _dupNameSecond = symbolParsed sym,
               ..
@@ -300,8 +299,8 @@ endBuild' = get @(BuilderState s) >>= throw
 
 mkRecordNameSignature :: forall s. (SingI s) => RhsRecord s -> RecordNameSignature s
 mkRecordNameSignature rhs =
-  RecordNameSignature $
-    hashMap
+  RecordNameSignature
+    $ hashMap
       [ ( symbolParsed sym,
           NameItem
             { _nameItemSymbol = Just sym,
@@ -311,6 +310,6 @@ mkRecordNameSignature rhs =
               _nameItemDefault = Nothing
             }
         )
-        | (Indexed _nameItemIndex field) <- indexFrom 0 (toList (rhs ^.. rhsRecordStatements . each . _RecordStatementField)),
-          let sym :: SymbolType s = field ^. fieldName
+      | (Indexed _nameItemIndex field) <- indexFrom 0 (toList (rhs ^.. rhsRecordStatements . each . _RecordStatementField)),
+        let sym :: SymbolType s = field ^. fieldName
       ]

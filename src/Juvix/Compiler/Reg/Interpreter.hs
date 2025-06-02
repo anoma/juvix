@@ -340,8 +340,8 @@ runIO hin hout md = \case
         x'' <- runFunction hout md (args ++ [x']) fi
         runIO hin hout md x''
       _ ->
-        throw $
-          RegError
+        throw
+          $ RegError
             { _regErrorMsg = "expected a closure",
               _regErrorLoc = Nothing
             }

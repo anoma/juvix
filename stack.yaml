@@ -1,15 +1,17 @@
 ghc-options:
   "$locals": -optP-Wno-nonportable-include-path
-resolver: nightly-2024-05-31
+resolver: nightly-2025-05-28
+compiler: ghc-9.12.2
+compiler-check: match-exact
 extra-deps:
-  - git: https://github.com/haskell-effectful/effectful.git
-    commit: 2037be9a4f4e8f8fd280d9359b1bc7feff9b29b9
-    subdirs:
-      - effectful-th
   - git: https://github.com/Vekhir/aeson-better-errors.git
     commit: 1ec49ab7d1472046b680b5a64ae2930515b47714
-  - megaparsec-9.7.0@sha256:77e331b4240385974e68d1f8d5ca9014274983cc9ccb8caced743d360c3a409f,3407
+  - singletons-base-3.5@sha256:e9aa6f9eb84d6590bb8aebb038226b9dfd743d4ab288e6f5a844138da472859b,7581
+  - singletons-th-3.5@sha256:db41d7bab9e14dcf949d4d0db115f68f0aeb64c8c93a39784f12c8463d9c0452,4707
+  - th-desugar-1.18
 allow-newer: true
 allow-newer-deps:
   - aeson-better-errors
-  - effectful-th
+  - singletons-base
+  - singletons-th
+  - newtype-generics # needed for ormolu

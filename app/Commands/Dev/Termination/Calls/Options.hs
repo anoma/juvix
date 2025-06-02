@@ -17,15 +17,17 @@ makeLenses ''CallsOptions
 parseCalls :: Parser CallsOptions
 parseCalls = do
   _callsFunctionNameFilter <-
-    fmap msum . optional $
-      nonEmpty . Text.words
-        <$> option
-          str
-          ( long "function"
-              <> short 'f'
-              <> metavar "fun1 fun2 ..."
-              <> help "Only shows the specified functions"
-          )
+    fmap msum
+      . optional
+      $ nonEmpty
+      . Text.words
+      <$> option
+        str
+        ( long "function"
+            <> short 'f'
+            <> metavar "fun1 fun2 ..."
+            <> help "Only shows the specified functions"
+        )
   _callsShowDecreasingArgs <-
     option
       decrArgsParser

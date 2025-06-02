@@ -18,8 +18,8 @@ runCommand CallGraphOptions {..} = do
       infotable =
         Internal.computeCombinedInfoTable (Stored.getInternalModuleTable _pipelineResultImports)
           <> _pipelineResult
-            ^. Internal.resultInternalModule
-              . Internal.internalModuleInfoTable
+          ^. Internal.resultInternalModule
+          . Internal.internalModuleInfoTable
       callMap = Termination.buildCallMap mainModule
       completeGraph = Termination.completeCallGraph callMap
       filteredGraph =
@@ -43,11 +43,11 @@ runCommand CallGraphOptions {..} = do
     renderStdOut (Internal.ppOut globalOpts r)
     newline
     if
-        | markedTerminating ->
-            printSuccessExit (n <> " Terminates by assumption")
-        | otherwise ->
-            case Termination.findOrder r of
-              Nothing ->
-                exitFailMsg (n <> " Fails the termination checking")
-              Just (Termination.LexOrder k) ->
-                printSuccessExit (n <> " Terminates with order " <> show (toList k))
+      | markedTerminating ->
+          printSuccessExit (n <> " Terminates by assumption")
+      | otherwise ->
+          case Termination.findOrder r of
+            Nothing ->
+              exitFailMsg (n <> " Fails the termination checking")
+            Just (Termination.LexOrder k) ->
+              printSuccessExit (n <> " Terminates with order " <> show (toList k))

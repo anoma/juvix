@@ -111,7 +111,7 @@ parseAnomaCommand =
 
     commandIndexer :: Mod CommandFields AnomaCommand
     commandIndexer =
-      command "indexer" $
-        info
+      command "indexer"
+        $ info
           (AnomaCommandIndexer <$> parseAnomaIndexerCommand)
           (progDesc "Subcommands related to the Anoma indexer")

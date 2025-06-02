@@ -32,8 +32,8 @@ stripMeta = \case
           _atomInfo = emptyAtomInfo
         }
   TermCell c ->
-    TermCell $
-      mkCell (stripMeta (c ^. cellLeft)) (stripMeta (c ^. cellRight))
+    TermCell
+      $ mkCell (stripMeta (c ^. cellLeft)) (stripMeta (c ^. cellRight))
 
 instance (Hashable a, NockmaEq a) => NockmaEq (StorageKey a) where
   nockmaEq (StorageKey s1) (StorageKey s2) = nockmaEq s1 s2

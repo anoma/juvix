@@ -186,9 +186,9 @@ mkProjectionType i indTy =
         univ =
           ExpressionAtoms
             { _expressionAtoms =
-                NonEmpty.singleton $
-                  AtomUniverse $
-                    mkUniverse (Just smallLevel) (getLoc (i ^. inductiveName)),
+                NonEmpty.singleton
+                  $ AtomUniverse
+                  $ mkUniverse (Just smallLevel) (getLoc (i ^. inductiveName)),
               _expressionAtomsLoc = Irrelevant $ getLoc (i ^. inductiveName)
             }
 
@@ -256,23 +256,22 @@ mkWildcardParsed loc =
     . AtomHole
     $ mkWildcardKw loc
 
-mkTypeSigType :: forall s r. (SingI s, Member NameIdGen r) => TypeSig s -> Sem r (ExpressionType s)
-mkTypeSigType ts = do
-  wildcard <-
-    case sing :: SStage s of
-      SParsed ->
-        return $ mkWildcardParsed defaultLoc
-      SScoped -> do
-        ExpressionHole
-          . mkHole defaultLoc
-          <$> freshNameId
-  return $ mkTypeSigType' wildcard ts
+mkWildcardExpression :: forall (s :: Stage) r. (SingI s, Members '[NameIdGen] r) => Sem r (ExpressionType s)
+mkWildcardExpression =
+  case sing :: SStage s of
+    SParsed -> return $ mkWildcardParsed defaultLoc
+    SScoped -> ExpressionHole . mkHole defaultLoc <$> freshNameId
   where
     defaultLoc :: Interval
     defaultLoc = singletonInterval (mkInitialLoc sourcePath)
 
     sourcePath :: Path Abs File
     sourcePath = $(mkAbsFile "/<source>")
+
+mkTypeSigType :: forall s r. (SingI s, Member NameIdGen r) => TypeSig s -> Sem r (ExpressionType s)
+mkTypeSigType ts = do
+  wildcard :: ExpressionType s <- mkWildcardExpression
+  return $ mkTypeSigType' wildcard ts
 
 mkTypeSigType' :: forall s. (SingI s) => ExpressionType s -> TypeSig s -> (ExpressionType s)
 mkTypeSigType' wildcard TypeSig {..} =

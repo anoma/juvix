@@ -105,8 +105,8 @@ builtinNaturalFromApp topApp = subsume (failAlts [fromLit, fromSuc])
       matchBuiltinName BuiltinNat natTy
       ApplicationArg Explicit (ExpressionLiteral (WithLoc loc (LitNatural num))) <- return arg_
       zero <- runErrorWith @TypeCheckerError (const impossible) (getBuiltinNameTypeChecker loc BuiltinNatZero)
-      return $
-        BuiltinNatural
+      return
+        $ BuiltinNatural
           { _builtinNaturalSuc = num,
             _builtinNaturalLoc = loc,
             _builtinNaturalArg = toExpression zero
@@ -136,8 +136,8 @@ checkBuiltinFunctionInfo fi = do
       clauses :: [(Expression, Expression)]
       clauses =
         [ (clauseLhsAsExpression op (toList pats), body)
-          | Just cls <- [unfoldLambdaClauses (fi ^. funInfoDef . funDefBody)],
-            (pats, body) <- toList cls
+        | Just cls <- [unfoldLambdaClauses (fi ^. funInfoDef . funDefBody)],
+          (pats, body) <- toList cls
         ]
   case zipExactMay (fi ^. funInfoClauses) clauses of
     Nothing -> err "builtin has the wrong number of clauses"

@@ -105,8 +105,8 @@ evalNode node = do
   case et of
     Left e -> error (show e)
     Right v ->
-      liftIO $
-        putStrLn (ppPrint md v)
+      liftIO
+        $ putStrLn (ppPrint md v)
 
 replCommand :: String -> Repl ()
 replCommand input_ = Repline.dontCrash $ do

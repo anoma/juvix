@@ -15,8 +15,7 @@ parseTypecheck = do
   _typecheckInputFile <-
     optional
       ( parseInputFiles
-          ( FileExtJuvix :| [FileExtJuvixMarkdown]
-          )
+          (FileExtJuvix :| [FileExtJuvixMarkdown])
       )
   pure TypecheckOptions {..}
 

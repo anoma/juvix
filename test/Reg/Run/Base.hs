@@ -54,8 +54,8 @@ regRunAssertionParam interpretFun mainFile expectedFile trans testTrans step = d
   case r of
     Left err -> assertFailure (renderStringDefault err)
     Right md -> do
-      unless (null trans) $
-        step "Transform"
+      unless (null trans)
+        $ step "Transform"
       case run $ runError @JuvixError $ runReader Reg.defaultOptions $ applyTransformations trans md of
         Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right md' -> do

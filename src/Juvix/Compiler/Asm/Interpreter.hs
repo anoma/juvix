@@ -66,10 +66,10 @@ runCodeR md funInfo = goCode (funInfo ^. functionCode) >> popLastValueStack
         v <- popValueStack
         pushTempStack v
         if
-            | _cmdSaveIsTail ->
-                goCode _cmdSaveCode
-            | otherwise ->
-                goCode _cmdSaveCode >> popTempStack >> goCode cont
+          | _cmdSaveIsTail ->
+              goCode _cmdSaveCode
+          | otherwise ->
+              goCode _cmdSaveCode >> popTempStack >> goCode cont
 
     goInstr :: (Member Runtime r) => Maybe Location -> Instruction -> Code -> Sem r ()
     goInstr loc instr cont = case instr of
@@ -84,8 +84,8 @@ runCodeR md funInfo = goCode (funInfo ^. functionCode) >> popLastValueStack
         popValueStack >> goCode cont
       Assert -> do
         v <- topValueStack
-        unless (v == ValBool True) $
-          runtimeError "assertion failed"
+        unless (v == ValBool True)
+          $ runtimeError "assertion failed"
         goCode cont
       Trace -> do
         v <- topValueStack
@@ -112,8 +112,8 @@ runCodeR md funInfo = goCode (funInfo ^. functionCode) >> popLastValueStack
         v <- popValueStack
         case v of
           ValClosure cl -> do
-            unless (_extendClosureArgsNum > 0) $
-              runtimeError "invalid closure extension: the number of supplied arguments must be greater than 0"
+            unless (_extendClosureArgsNum > 0)
+              $ runtimeError "invalid closure extension: the number of supplied arguments must be greater than 0"
             extendClosure cl _extendClosureArgsNum
             goCode cont
           _ -> runtimeError "invalid closure extension: expected closure on top of value stack"
@@ -135,13 +135,13 @@ runCodeR md funInfo = goCode (funInfo ^. functionCode) >> popLastValueStack
         unless (null cont) (runtimeError "invalid return")
         isToplevel <- fmap not hasCaller
         if
-            | isToplevel -> return ()
-            | otherwise -> do
-                v <- popLastValueStack
-                cont' <- popCallStack
-                replaceFrame (cont' ^. contFrame)
-                pushValueStack v
-                goCode (cont' ^. contCode)
+          | isToplevel -> return ()
+          | otherwise -> do
+              v <- popLastValueStack
+              cont' <- popCallStack
+              replaceFrame (cont' ^. contFrame)
+              pushValueStack v
+              goCode (cont' ^. contCode)
 
     goBinOp' :: (Member Runtime r) => (Val -> Val -> Sem r Val) -> Sem r ()
     goBinOp' op = do
@@ -173,10 +173,10 @@ runCodeR md funInfo = goCode (funInfo ^. functionCode) >> popLastValueStack
       ConstrRef cr -> do
         ctr <- getDirectRef (cr ^. fieldRef) >>= getConstr
         if
-            | cr ^. fieldOffset < length (ctr ^. constrArgs) ->
-                return $ (ctr ^. constrArgs) !! (cr ^. fieldOffset)
-            | otherwise ->
-                runtimeError "invalid constructor field access"
+          | cr ^. fieldOffset < length (ctr ^. constrArgs) ->
+              return $ (ctr ^. constrArgs) !! (cr ^. fieldOffset)
+          | otherwise ->
+              runtimeError "invalid constructor field access"
         where
           getConstr :: Val -> Sem r Constr
           getConstr = \case
@@ -251,28 +251,28 @@ runCodeR md funInfo = goCode (funInfo ^. functionCode) >> popLastValueStack
             (n < 0)
             (runtimeError "invalid closure: too many arguments")
           if
-              | n > argsNum -> do
-                  extendClosure cl argsNum
-                  if
-                      | isTail -> goInstr loc Return cont
-                      | otherwise -> goCode cont
-              | n == argsNum -> do
-                  frm <- getCallFrame loc cl fi n
-                  if
-                      | isTail -> do
-                          unless (null cont) $
-                            runtimeError "invalid tail call"
-                          replaceTailFrame frm
-                      | otherwise -> do
-                          pushCallStack cont
-                          replaceFrame frm
-                  goCode (fi ^. functionCode)
-              | otherwise -> do
-                  let instr = mkInstr ((if isTail then TailCallClosures else CallClosures) (InstrCallClosures (argsNum - n)))
-                  frm <- getCallFrame loc cl fi n
-                  pushCallStack (instr : cont)
-                  replaceFrame frm
-                  goCode (fi ^. functionCode)
+            | n > argsNum -> do
+                extendClosure cl argsNum
+                if
+                  | isTail -> goInstr loc Return cont
+                  | otherwise -> goCode cont
+            | n == argsNum -> do
+                frm <- getCallFrame loc cl fi n
+                if
+                  | isTail -> do
+                      unless (null cont)
+                        $ runtimeError "invalid tail call"
+                      replaceTailFrame frm
+                  | otherwise -> do
+                      pushCallStack cont
+                      replaceFrame frm
+                goCode (fi ^. functionCode)
+            | otherwise -> do
+                let instr = mkInstr ((if isTail then TailCallClosures else CallClosures) (InstrCallClosures (argsNum - n)))
+                frm <- getCallFrame loc cl fi n
+                pushCallStack (instr : cont)
+                replaceFrame frm
+                goCode (fi ^. functionCode)
         _ -> runtimeError "invalid indirect call: expected closure on top of value stack"
 
     eitherToError :: (Member Runtime r) => Either Text Val -> Sem r Val

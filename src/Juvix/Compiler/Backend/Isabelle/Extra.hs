@@ -16,16 +16,20 @@ subsumesPattern pat1 pat2 = case (pat1, pat2) of
   (PatConstrApp (ConstrApp c1 p1), PatConstrApp (ConstrApp c2 p2)) ->
     c1 == c2 && all (uncurry subsumesPattern) (zipExact p1 p2)
   (PatTuple (Tuple p1), PatTuple (Tuple p2)) ->
-    length p1 == length p2
+    length p1
+      == length p2
       && all (uncurry subsumesPattern) (NonEmpty.zip p1 p2)
   (PatList (List _ p1), PatList (List _ p2)) ->
-    length p1 == length p2
+    length p1
+      == length p2
       && all (uncurry subsumesPattern) (zipExact p1 p2)
   (PatCons (Cons c1 p1), PatCons (Cons c2 p2)) ->
     subsumesPattern c1 c2 && subsumesPattern p1 p2
   (PatRecord (Record n1 r1), PatRecord (Record n2 r2)) ->
-    n1 == n2
-      && map ((^. nameText) . fst) r1' == map ((^. nameText) . fst) r2'
+    n1
+      == n2
+      && map ((^. nameText) . fst) r1'
+      == map ((^. nameText) . fst) r2'
       && all (uncurry subsumesPattern) (zipExact (map snd r1') (map snd r2'))
     where
       r1' = sortOn ((^. nameText) . fst) r1

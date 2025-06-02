@@ -114,36 +114,36 @@ instance PrettyCode InstrAlloc where
     res <- ppCode _instrAllocResult
     tag <- Tree.ppConstrName _instrAllocTag
     args <- mapM ppCode _instrAllocArgs
-    return $
-      res
-        <+> primitive Str.equal
-        <+> primitive Str.alloc
-        <+> tag
-        <+> arglist args
+    return
+      $ res
+      <+> primitive Str.equal
+      <+> primitive Str.alloc
+      <+> tag
+      <+> arglist args
 
 instance PrettyCode InstrAllocClosure where
   ppCode InstrAllocClosure {..} = do
     res <- ppCode _instrAllocClosureResult
     fn <- Tree.ppFunName _instrAllocClosureSymbol
     args <- mapM ppCode _instrAllocClosureArgs
-    return $
-      res
-        <+> primitive Str.equal
-        <+> primitive Str.calloc
-        <+> fn
-        <+> arglist args
+    return
+      $ res
+      <+> primitive Str.equal
+      <+> primitive Str.calloc
+      <+> fn
+      <+> arglist args
 
 instance PrettyCode InstrExtendClosure where
   ppCode InstrExtendClosure {..} = do
     res <- ppCode _instrExtendClosureResult
     fn <- ppCode _instrExtendClosureValue
     args <- mapM ppCode _instrExtendClosureArgs
-    return $
-      res
-        <+> primitive Str.equal
-        <+> primitive Str.cextend
-        <+> fn
-        <+> arglist args
+    return
+      $ res
+      <+> primitive Str.equal
+      <+> primitive Str.cextend
+      <+> fn
+      <+> arglist args
 
 instance PrettyCode CallType where
   ppCode = \case
@@ -156,22 +156,22 @@ instance PrettyCode InstrCall where
     fn <- ppCode _instrCallType
     args <- mapM ppCode _instrCallArgs
     vars <- ppLiveVars _instrCallLiveVars
-    return $
-      res
-        <+> primitive Str.equal
-        <+> primitive Str.call
-        <+> fn
-        <+> arglist args
-          <> vars
+    return
+      $ res
+      <+> primitive Str.equal
+      <+> primitive Str.call
+      <+> fn
+      <+> arglist args
+      <> vars
 
 instance PrettyCode InstrTailCall where
   ppCode InstrTailCall {..} = do
     fn <- ppCode _instrTailCallType
     args <- mapM ppCode _instrTailCallArgs
-    return $
-      primitive Str.tcall
-        <+> fn
-        <+> arglist args
+    return
+      $ primitive Str.tcall
+      <+> fn
+      <+> arglist args
 
 instance PrettyCode InstrCallClosures where
   ppCode InstrCallClosures {..} = do
@@ -179,22 +179,22 @@ instance PrettyCode InstrCallClosures where
     fn <- ppCode _instrCallClosuresValue
     args <- mapM ppCode _instrCallClosuresArgs
     vars <- ppLiveVars _instrCallClosuresLiveVars
-    return $
-      res
-        <+> primitive Str.equal
-        <+> primitive Str.ccall
-        <+> fn
-        <+> arglist args
-          <> vars
+    return
+      $ res
+      <+> primitive Str.equal
+      <+> primitive Str.ccall
+      <+> fn
+      <+> arglist args
+      <> vars
 
 instance PrettyCode InstrTailCallClosures where
   ppCode InstrTailCallClosures {..} = do
     fn <- ppCode _instrTailCallClosuresValue
     args <- mapM ppCode _instrTailCallClosuresArgs
-    return $
-      primitive Str.instrTccall
-        <+> fn
-        <+> arglist args
+    return
+      $ primitive Str.instrTccall
+      <+> fn
+      <+> arglist args
 
 instance PrettyCode InstrReturn where
   ppCode InstrReturn {..} = do
@@ -209,21 +209,23 @@ instance PrettyCode InstrIf where
     br1 <- ppCodeCode _instrIfTrue
     br2 <- ppCodeCode _instrIfFalse
     var <- ppOutVar _instrIfOutVar
-    return $
-      primitive Str.if_
-        <+> op
-        <+> arg1
-        <+> arg2
-          <> var
-        <+> braces'
-          ( constr Str.true_ <> colon
-              <+> braces' br1
-                <> semi
-                <> line
-                <> constr Str.false_
-                <> colon
-              <+> braces' br2 <> semi
-          )
+    return
+      $ primitive Str.if_
+      <+> op
+      <+> arg1
+      <+> arg2
+      <> var
+      <+> braces'
+        ( constr Str.true_
+            <> colon
+            <+> braces' br1
+            <> semi
+            <> line
+            <> constr Str.false_
+            <> colon
+            <+> braces' br2
+            <> semi
+        )
 
 instance PrettyCode InstrBranch where
   ppCode InstrBranch {..} = do
@@ -231,19 +233,21 @@ instance PrettyCode InstrBranch where
     br1 <- ppCodeCode _instrBranchTrue
     br2 <- ppCodeCode _instrBranchFalse
     var <- ppOutVar _instrBranchOutVar
-    return $
-      primitive Str.br
-        <+> val
-          <> var
-        <+> braces'
-          ( constr Str.true_ <> colon
-              <+> braces' br1
-                <> semi
-                <> line
-                <> constr Str.false_
-                <> colon
-              <+> braces' br2 <> semi
-          )
+    return
+      $ primitive Str.br
+      <+> val
+      <> var
+      <+> braces'
+        ( constr Str.true_
+            <> colon
+            <+> braces' br1
+            <> semi
+            <> line
+            <> constr Str.false_
+            <> colon
+            <+> braces' br2
+            <> semi
+        )
 
 instance PrettyCode CaseBranch where
   ppCode CaseBranch {..} = do

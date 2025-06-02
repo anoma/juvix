@@ -55,8 +55,10 @@ checkPackageNameConflicts pkgs = do
       diffVers :: NonEmpty (SemVer, NonEmpty PackageInfo) <- failMaybe (nonEmpty (HashMap.toList indexedByVer))
       let diffVers' :: NonEmpty (SemVer, NonEmpty (Path Abs Dir)) =
             over (each . _2 . each) (^. packageRoot) diffVers
-      throw . JuvixError . ErrPackageNameConflict $
-        PackageNameConflict
+      throw
+        . JuvixError
+        . ErrPackageNameConflict
+        $ PackageNameConflict
           { _packageNameConflictPackage = pkg,
             _packageNameConflictVersions = NonEmpty.cons (ver, pure (pkg ^. packageRoot)) diffVers'
           }
@@ -132,11 +134,11 @@ mkPackageInfo mpackageEntry _packageRoot pkg = do
   globalPackageBaseAbsDir <- globalPackageBaseRoot
   let _packageJuvixRelativeFiles = keepJuvixFiles (hashSet files)
       _packageAvailableRoots =
-        hashSet $
-          globalPackageDescriptionAbsDir
-            : globalPackageBaseAbsDir
-            : _packageRoot
-            : depsPaths
+        hashSet
+          $ globalPackageDescriptionAbsDir
+          : globalPackageBaseAbsDir
+          : _packageRoot
+          : depsPaths
   _packageInfoPackageId <- mkPackageInfoPackageId _packageRoot (toList _packageJuvixRelativeFiles) _packagePackage
   return PackageInfo {..}
   where
@@ -389,23 +391,23 @@ resolvePath' scan = do
       packagesWithExt :: [(PackageInfo, FileExt)]
       packagesWithExt =
         [ (pkg, ext)
-          | ext <- possibleExtensions,
-            let file = addFileExt ext (topModulePathKeyToRelativePathNoExt (scan ^. importScanKey)),
-            pkg <- maybe [] toList (HashMap.lookup file filesToPackage),
-            visible pkg
+        | ext <- possibleExtensions,
+          let file = addFileExt ext (topModulePathKeyToRelativePathNoExt (scan ^. importScanKey)),
+          pkg <- maybe [] toList (HashMap.lookup file filesToPackage),
+          visible pkg
         ]
   case packagesWithExt of
     [(r, relPath)] -> return (r, relPath)
     [] ->
-      throw $
-        ErrMissingModule
+      throw
+        $ ErrMissingModule
           MissingModule
             { _missingInfo = curPkg,
               _missingModule = scan
             }
     (r, _) : rs ->
-      throw $
-        ErrDependencyConflict
+      throw
+        $ ErrDependencyConflict
           DependencyConflict
             { _conflictPackages = r :| map fst rs,
               _conflictPath = scan

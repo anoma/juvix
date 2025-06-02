@@ -20,23 +20,26 @@ checkZero :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => Construct
 checkZero d@ConstructorDef {..} = do
   let ty = _inductiveConstructorType
   nat <- getBuiltinNameScoper (getLoc d) BuiltinNat
-  unless (ty === nat) $
-    builtinsErrorMsg (getLoc d) $
-      "zero has the wrong type " <> ppOutDefault ty <> " | " <> ppOutDefault nat
+  unless (ty === nat)
+    $ builtinsErrorMsg (getLoc d)
+    $ "zero has the wrong type "
+    <> ppOutDefault ty
+    <> " | "
+    <> ppOutDefault nat
 
 checkSuc :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => ConstructorDef -> Sem r ()
 checkSuc d@ConstructorDef {..} = do
   let ty = _inductiveConstructorType
   nat <- getBuiltinNameScoper (getLoc d) BuiltinNat
-  unless (ty === (nat --> nat)) $
-    builtinsErrorText (getLoc d) "suc has the wrong type"
+  unless (ty === (nat --> nat))
+    $ builtinsErrorText (getLoc d) "suc has the wrong type"
 
 checkNatPrint :: (Members '[Reader BuiltinsTable, Error ScoperError] r) => AxiomDef -> Sem r ()
 checkNatPrint f = do
   nat <- getBuiltinNameScoper (getLoc f) BuiltinNat
   io <- getBuiltinNameScoper (getLoc f) BuiltinIO
-  unless (f ^. axiomType === (nat --> io)) $
-    builtinsErrorText (getLoc f) "Nat print has the wrong type signature"
+  unless (f ^. axiomType === (nat --> io))
+    $ builtinsErrorText (getLoc f) "Nat print has the wrong type signature"
 
 checkNatPlus :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => FunctionDef -> Sem r ()
 checkNatPlus f = do

@@ -17,8 +17,8 @@ asmSupportedTargets =
          AppTargetCasm,
          AppTargetCairo
        ]
-      <> [AppTargetWasm32Wasi | Config.config ^. Config.configWasm]
-      <> [AppTargetRiscZeroRust | Config.config ^. Config.configRust]
+    <> [AppTargetWasm32Wasi | Config.config ^. Config.configWasm]
+    <> [AppTargetRiscZeroRust | Config.config ^. Config.configRust]
 
 parseAsmCompileOptions :: Parser AsmCompileOptions
 parseAsmCompileOptions =
