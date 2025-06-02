@@ -13,12 +13,12 @@ runCommand ::
 runCommand opts = do
   let inputFile = opts ^. isabelleInputFile
   (r, rs) <- runPipelineUpTo (opts ^. isabelleNonRecursive) opts inputFile upToIsabelle
-  let pkg = r ^. resultModuleId . moduleIdPackage
+  let pkg = r ^. resultModuleId . moduleIdPackageId
   mapM_ (translateTyped opts pkg) (r : rs)
 
-translateTyped :: (Members AppEffects r) => IsabelleOptions -> Text -> Result -> Sem r ()
+translateTyped :: (Members AppEffects r) => IsabelleOptions -> PackageId -> Result -> Sem r ()
 translateTyped opts pkg res
-  | res ^. resultModuleId . moduleIdPackage == pkg = do
+  | res ^. resultModuleId . moduleIdPackageId == pkg = do
       let thy = res ^. resultTheory
           comments = res ^. resultComments
       outputDir <- fromAppPathDir (opts ^. isabelleOutputDir)

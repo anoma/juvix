@@ -505,7 +505,7 @@ processRecursivelyUpToTyped ::
        ]
       r
   ) =>
-  Sem r (InternalTypedResult, [InternalTypedResult])
+  Sem r (InternalTyped.InternalTypedResult, [InternalTyped.InternalTypedResult])
 processRecursivelyUpToTyped = processRecursivelyUpTo (const True) upToInternalTyped
 
 processImport ::
