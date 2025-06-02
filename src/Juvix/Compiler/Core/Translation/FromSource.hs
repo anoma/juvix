@@ -76,7 +76,7 @@ throwCoreError ::
   Doc Ann ->
   ParsecS r a
 throwCoreError i msg =
-  lift $ throwError (CoreError (ppOutput msg) Nothing i)
+  lift $ throw (CoreError (ppOutput msg) Nothing i)
 
 guardSymbolNotDefined ::
   (Members '[Error CoreError, InfoTableBuilder] r) =>
