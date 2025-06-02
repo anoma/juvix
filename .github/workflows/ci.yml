@@ -45,7 +45,8 @@ jobs:
   ormolu:
     runs-on: ubuntu-latest
     env:
-      STACK_RESOLVER: nightly-2025-05-28 # used for the cache id only
+      # used for the cache id only. It should coincide with juvix/stack.yaml
+      STACK_RESOLVER: nightly-2025-05-28
     steps:
       - uses: extractions/setup-just@v2
 
@@ -71,6 +72,7 @@ jobs:
       - name: Install ormolu
         if: steps.ormolu-cache.outputs.cache-hit != 'true'
         run: |
+          # we install ormolu using the cofiguration in juvix/stack.yaml
           stack install ormolu
 
       - name: Run ormolu
