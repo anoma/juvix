@@ -45,10 +45,14 @@ jobs:
   ormolu:
     runs-on: ubuntu-latest
     env:
-      STACK_RESOLVER: lts-21.25
+      STACK_RESOLVER: nightly-2025-05-28 # used for the cache id only
     steps:
-      - uses: actions/checkout@v3
       - uses: extractions/setup-just@v2
+
+      - name: Checkout juvix repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
 
       - name: Install hpack
         run: sudo apt install -y hpack
@@ -66,7 +70,8 @@ jobs:
 
       - name: Install ormolu
         if: steps.ormolu-cache.outputs.cache-hit != 'true'
-        run: stack install ormolu --resolver=${{ env.STACK_RESOLVER }}
+        run: |
+          stack install ormolu
 
       - name: Run ormolu
         run: just format check
