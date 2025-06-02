@@ -7,8 +7,8 @@ where
 
 import Control.Monad.Trans.Class (lift)
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Tree.Data.InfoTable
 import Juvix.Compiler.Tree.Data.InfoTableBuilder
+import Juvix.Compiler.Tree.Data.Module
 import Juvix.Compiler.Tree.Extra.Base
 import Juvix.Compiler.Tree.Language
 import Juvix.Compiler.Tree.Translation.FromSource.Base
@@ -32,23 +32,23 @@ parseTreeSig =
       _parserSigEmptyExtra = ()
     }
 
-parseText :: Text -> Either MegaparsecError InfoTable
+parseText :: Text -> Either ParserError Module
 parseText = runParser noFile
 
-parseText' :: BuilderState -> Text -> Either MegaparsecError BuilderState
+parseText' :: BuilderState -> Text -> Either ParserError BuilderState
 parseText' bs = runParser' bs noFile
 
-runParser :: Path Abs File -> Text -> Either MegaparsecError InfoTable
+runParser :: Path Abs File -> Text -> Either ParserError Module
 runParser = runParserS parseTreeSig
 
-runParser' :: BuilderState -> Path Abs File -> Text -> Either MegaparsecError BuilderState
+runParser' :: BuilderState -> Path Abs File -> Text -> Either ParserError BuilderState
 runParser' = runParserS' parseTreeSig
 
-parseNodeText' :: BuilderState -> Path Abs File -> Text -> Either MegaparsecError (BuilderState, Node)
+parseNodeText' :: BuilderState -> Path Abs File -> Text -> Either ParserError (BuilderState, Node)
 parseNodeText' bs file txt = runParserS'' parseNode parseTreeSig bs file txt
 
 parseNode ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Node
 parseNode =
   (Binop <$> parseBinop)
@@ -68,7 +68,7 @@ parseNode =
     <|> (MemRef <$> parseMemRef)
 
 parseBinop ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeBinop
 parseBinop =
   parseBinaryOp kwAdd_ (PrimBinop OpIntAdd)
@@ -87,7 +87,7 @@ parseBinop =
     <|> parseBinaryOp kwSeq_ OpSeq
 
 parseBinaryOp ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   Keyword ->
   BinaryOpcode ->
   ParsecS r NodeBinop
@@ -101,7 +101,7 @@ parseBinaryOp kwd op = do
   return $ NodeBinop (NodeInfo (Just loc)) op arg1 arg2
 
 parseUnop ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeUnop
 parseUnop =
   parseUnaryOp kwShow (PrimUnop OpShow)
@@ -116,7 +116,7 @@ parseUnop =
     <|> parseUnaryOp kwFieldToInt (PrimUnop OpFieldToInt)
 
 parseUnaryOp ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   Keyword ->
   UnaryOpcode ->
   ParsecS r NodeUnop
@@ -126,14 +126,14 @@ parseUnaryOp kwd op = do
   return $ NodeUnop (NodeInfo (Just loc)) op arg
 
 parseByteArray ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeByteArray
 parseByteArray =
   parseByteArrayOp kwByteArrayFromListUInt8 OpByteArrayFromListUInt8
     <|> parseByteArrayOp kwByteArrayLength OpByteArrayLength
 
 parseByteArrayOp ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   Keyword ->
   ByteArrayOp ->
   ParsecS r NodeByteArray
@@ -143,7 +143,7 @@ parseByteArrayOp kwd op = do
   return $ NodeByteArray (NodeInfo (Just loc)) op args
 
 parseAnoma ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeAnoma
 parseAnoma =
   parseAnoma' kwAnomaGet OpAnomaGet
@@ -162,17 +162,22 @@ parseAnoma =
     <|> parseAnoma' kwAnomaResourceDelta OpAnomaResourceDelta
     <|> parseAnoma' kwAnomaActionDelta OpAnomaActionDelta
     <|> parseAnoma' kwAnomaActionsDelta OpAnomaActionsDelta
-    <|> parseAnoma' kwAnomaProveAction OpAnomaProveAction
-    <|> parseAnoma' kwAnomaProveDelta OpAnomaProveDelta
     <|> parseAnoma' kwAnomaZeroDelta OpAnomaZeroDelta
     <|> parseAnoma' kwAnomaAddDelta OpAnomaAddDelta
     <|> parseAnoma' kwAnomaSubDelta OpAnomaSubDelta
     <|> parseAnoma' kwAnomaRandomGeneratorInit OpAnomaRandomGeneratorInit
     <|> parseAnoma' kwAnomaRandomNextBytes OpAnomaRandomNextBytes
     <|> parseAnoma' kwAnomaRandomSplit OpAnomaRandomSplit
+    <|> parseAnoma' kwAnomaIsCommitment OpAnomaIsCommitment
+    <|> parseAnoma' kwAnomaIsNullifier OpAnomaIsNullifier
+    <|> parseAnoma' kwAnomaCreateFromComplianceInputs OpAnomaCreateFromComplianceInputs
+    <|> parseAnoma' kwAnomaActionCreate OpAnomaActionCreate
+    <|> parseAnoma' kwAnomaTransactionCompose OpAnomaTransactionCompose
+    <|> parseAnoma' kwAnomaSetToList OpAnomaSetToList
+    <|> parseAnoma' kwAnomaSetFromList OpAnomaSetFromList
 
 parseAnoma' ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   Keyword ->
   AnomaOp ->
   ParsecS r NodeAnoma
@@ -182,15 +187,16 @@ parseAnoma' kwd op = do
   return $ NodeAnoma (NodeInfo (Just loc)) op args
 
 parseCairo ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeCairo
 parseCairo =
   parseCairo' kwPoseidon OpCairoPoseidon
     <|> parseCairo' kwEcOp OpCairoEc
     <|> parseCairo' kwRandomEcPoint OpCairoRandomEcPoint
+    <|> parseCairo' kwRangeCheck OpCairoRangeCheck
 
 parseCairo' ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   Keyword ->
   CairoOp ->
   ParsecS r NodeCairo
@@ -205,19 +211,19 @@ parseConst = do
   return $ NodeConstant (NodeInfo (Just loc)) c
 
 parseMemRef ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeMemRef
 parseMemRef = do
   (r, loc) <- interval (memRef @Node @())
   return $ NodeMemRef (NodeInfo (Just loc)) r
 
 parseArgs ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r [Node]
 parseArgs = parens (P.sepBy parseNode comma)
 
 parseAlloc ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeAllocConstr
 parseAlloc = do
   loc <- onlyInterval (kw kwAlloc)
@@ -231,7 +237,7 @@ parseAlloc = do
       }
 
 parseCAlloc ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeAllocClosure
 parseCAlloc = do
   loc <- onlyInterval (kw kwCAlloc)
@@ -245,11 +251,10 @@ parseCAlloc = do
       }
 
 parseCExtend ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeExtendClosure
 parseCExtend = do
   loc <- onlyInterval (kw kwCExtend)
-  off <- P.getOffset
   args <- parseArgs
   case args of
     arg1 : arg2 : args' ->
@@ -260,11 +265,11 @@ parseCExtend = do
             _nodeExtendClosureArgs = arg2 :| args'
           }
     _ ->
-      parseFailure off "expected at least two arguments"
+      parsingError' loc "expected at least two arguments"
 
 parseCall ::
   forall r.
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeCall
 parseCall = do
   loc <- onlyInterval (kw kwCall)
@@ -285,7 +290,6 @@ parseCall = do
 
     callClosure :: Location -> ParsecS r NodeCall
     callClosure loc = do
-      off <- P.getOffset
       args <- parseArgs
       case args of
         arg : args' ->
@@ -296,19 +300,18 @@ parseCall = do
                 _nodeCallArgs = args'
               }
         [] ->
-          parseFailure off "expected at least one argument"
+          parsingError' loc "expected at least one argument"
 
 parseCCall ::
   forall r.
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeCallClosures
 parseCCall = do
   loc <- onlyInterval (kw kwCCall)
-  off <- P.getOffset
   args <- parseArgs
   case args of
     [_] ->
-      parseFailure off "expected at least two arguments"
+      parsingError' loc "expected at least two arguments"
     arg : args' ->
       return
         NodeCallClosures
@@ -317,10 +320,10 @@ parseCCall = do
             _nodeCallClosuresArgs = nonEmpty' args'
           }
     [] ->
-      parseFailure off "expected at least two arguments"
+      parsingError' loc "expected at least two arguments"
 
 parseBranch ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeBranch
 parseBranch = do
   loc <- onlyInterval (kw kwBr)
@@ -338,12 +341,12 @@ parseBranch = do
       }
 
 branchNode ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Node
 branchNode = braces parseNode <|> parseNode
 
 trueBranch ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Node
 trueBranch = do
   symbol "true:"
@@ -352,7 +355,7 @@ trueBranch = do
   return c
 
 falseBranch ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Node
 falseBranch = do
   symbol "false:"
@@ -361,7 +364,7 @@ falseBranch = do
   return c
 
 parseCase ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeCase
 parseCase = do
   loc <- onlyInterval (kw kwCase)
@@ -382,7 +385,7 @@ parseCase = do
 
 caseBranch ::
   forall r.
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r CaseBranch
 caseBranch = do
   (tag, loc) <- P.try $ interval (constrTag @Node @() @DirectRef)
@@ -407,7 +410,7 @@ caseBranch = do
       (False,) <$> branchNode
 
 defaultBranch ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Node
 defaultBranch = do
   symbol "default:"
@@ -416,7 +419,7 @@ defaultBranch = do
   return c
 
 parseSave ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r NodeSave
 parseSave = do
   loc' <- onlyInterval (kw kwSave)
@@ -428,7 +431,12 @@ parseSave = do
       { _nodeSaveInfo = NodeInfo (Just loc'),
         _nodeSaveArg = arg,
         _nodeSaveBody = body,
-        _nodeSaveTempVar = TempVar mname (Just loc)
+        _nodeSaveTempVar =
+          TempVar
+            { _tempVarName = mname,
+              _tempVarLocation = Just loc,
+              _tempVarType = TyDynamic
+            }
       }
 
 withSave ::

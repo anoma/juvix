@@ -20,6 +20,7 @@ getNodeInfo = \case
   Unop NodeUnop {..} -> _nodeUnopInfo
   ByteArray NodeByteArray {..} -> _nodeByteArrayInfo
   Cairo NodeCairo {..} -> _nodeCairoInfo
+  Nockma NodeNockma {..} -> _nodeNockmaInfo
   Anoma NodeAnoma {..} -> _nodeAnomaInfo
   Constant NodeConstant {..} -> _nodeConstantInfo
   MemRef NodeMemRef {..} -> _nodeMemRefInfo
@@ -165,6 +166,17 @@ destruct = \case
                 _nodeCairoInfo
               }
       }
+  Nockma NodeNockma {..} ->
+    NodeDetails
+      { _nodeChildren = map noTempVar _nodeNockmaArgs,
+        _nodeReassemble = manyChildren $ \args ->
+          Nockma
+            NodeNockma
+              { _nodeNockmaArgs = args,
+                _nodeNockmaOpcode,
+                _nodeNockmaInfo
+              }
+      }
   Anoma NodeAnoma {..} ->
     NodeDetails
       { _nodeChildren = map noTempVar _nodeAnomaArgs,
@@ -298,7 +310,9 @@ destruct = \case
 
       mkBranchChild :: CaseBranch -> NodeChild
       mkBranchChild CaseBranch {..} =
-        (if _caseBranchSave then oneTempVar (TempVar Nothing Nothing) else noTempVar) _caseBranchBody
+        (if _caseBranchSave then oneTempVar (TempVar Nothing Nothing indTy) else noTempVar) _caseBranchBody
+        where
+          indTy = TyInductive (TypeInductive _nodeCaseInductive)
 
       mkBranches :: [CaseBranch] -> [Node] -> [CaseBranch]
       mkBranches = zipWithExact (flip (set caseBranchBody))

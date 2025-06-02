@@ -3,7 +3,7 @@ module Commands.Markdown.Options where
 import CommonOptions
 
 data MarkdownOptions = MarkdownOptions
-  { _markdownInputFile :: Maybe (AppPath File),
+  { _markdownInputFile :: Maybe (AppPath FileOrDir),
     _markdownOutputDir :: AppPath Dir,
     _markdownUrlPrefix :: Text,
     _markdownIdPrefix :: Text,
@@ -33,7 +33,16 @@ parseJuvixMarkdown = do
           <> showDefault
           <> help "Prefix used for HTML element IDs"
       )
-  _markdownInputFile <- optional (parseInputFile FileExtJuvixMarkdown)
+  _markdownInputFile <-
+    optional
+      ( argument
+          someInputPreFileOrDirOpt
+          ( metavar "JUVIX_MD_FILE_OR_PROJECT"
+              <> help ("Path to a " <> show FileExtJuvixMarkdown <> " file or to a directory containing a Juvix project.")
+              <> completer (extCompleter FileExtJuvixMarkdown)
+              <> action "directory"
+          )
+      )
   _markdownOutputDir <-
     parseGenericOutputDir
       ( value "markdown"
@@ -57,7 +66,7 @@ parseJuvixMarkdown = do
   _markdownFolderStructure <-
     switch
       ( long "folder-structure"
-          <> help "Generate HTML following the module's folder structure"
+          <> help "Generate Markdown following the module's folder structure"
       )
   _markdownStripPrefix <-
     strOption

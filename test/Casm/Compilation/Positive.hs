@@ -565,5 +565,21 @@ tests =
         $(mkRelDir ".")
         $(mkRelFile "test078.juvix")
         Nothing
-        $(mkRelFile "out/test078.out")
+        $(mkRelFile "out/test078.out"),
+      posTest
+        "Test079: Trivial resource logic"
+        False
+        True
+        $(mkRelDir ".")
+        $(mkRelFile "test079.juvix")
+        (Just $(mkRelFile "in/test079.json"))
+        $(mkRelFile "out/test079.out"),
+      posTest
+        "Test080: Range check"
+        False
+        True
+        $(mkRelDir ".")
+        $(mkRelFile "test080.juvix")
+        Nothing
+        $(mkRelFile "out/test080.out")
     ]

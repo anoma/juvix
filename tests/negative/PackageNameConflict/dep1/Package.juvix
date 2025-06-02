@@ -1,0 +1,10 @@
+module Package;
+
+import PackageDescription.V2 open;
+
+package : Package :=
+  defaultPackage@{
+    name := "dep";
+    version := mkVersion 1 0 0;
+    dependencies := [];
+  };

@@ -10,23 +10,31 @@ module Base
   )
 where
 
+import Anoma.Effect.Base
 import Control.Exception qualified as E
 import Control.Monad.Extra as Monad
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
 import GHC.Generics qualified as GHC
+import Juvix.Compiler.Backend (Target (TargetAnoma))
+import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Termination
+import Juvix.Compiler.Nockma.Data.Module qualified as Nockma
+import Juvix.Compiler.Nockma.Language hiding (Path)
 import Juvix.Compiler.Pipeline.EntryPoint.IO
 import Juvix.Compiler.Pipeline.Loader.PathResolver
+import Juvix.Compiler.Pipeline.Modular
+import Juvix.Compiler.Pipeline.Modular.Run qualified as Pipeline.Modular
 import Juvix.Compiler.Pipeline.Run
 import Juvix.Data.Effect.TaggedLock
+import Juvix.Data.SHA256 qualified as SHA256
 import Juvix.Extra.Paths hiding (rootBuildDir)
 import Juvix.Prelude hiding (assert, readProcess)
 import Juvix.Prelude.Env
 import Juvix.Prelude.Pretty
 import System.Process qualified as P
 import Test.Tasty
-import Test.Tasty.HUnit hiding (assertFailure, testCase)
+import Test.Tasty.HUnit hiding (assertFailure, testCase, testCaseSteps)
 import Test.Tasty.HUnit qualified as HUnit
 
 data AssertionDescr
@@ -58,7 +66,7 @@ data CompileMode
 mkTest :: TestDescr -> TestTree
 mkTest TestDescr {..} = case _testAssertion of
   Single assertion -> testCase _testName (withCurrentDir _testRoot assertion)
-  Steps steps -> testCaseSteps _testName (withCurrentDir _testRoot . steps)
+  Steps steps -> HUnit.testCaseSteps _testName (withCurrentDir _testRoot . steps)
 
 withPrecondition :: Assertion -> IO TestTree -> IO TestTree
 withPrecondition assertion ifSuccess = do
@@ -76,8 +84,8 @@ assertEqDiff show_ msg a b
       putStrLn "End diff"
       Monad.fail msg
   where
-    pa = lines $ show_ a
-    pb = lines $ show_ b
+    pa = lines (show_ a)
+    pb = lines (show_ b)
 
 assertEqDiffShow :: (Eq a, Show a) => String -> a -> a -> Assertion
 assertEqDiffShow = assertEqDiff show
@@ -105,13 +113,37 @@ testRunIO e =
   testTaggedLockedToIO
     . runIO defaultGenericOptions e
 
+testRunIOModular ::
+  forall a m.
+  (MonadIO m) =>
+  Maybe Core.TransformationId ->
+  EntryPoint ->
+  (forall r. Core.ModuleTable -> Sem (ModularEff r) a) ->
+  m (Either JuvixError (ModuleId, a))
+testRunIOModular checkId entry f = do
+  entry' <- setEntryPointSHA256 entry
+  testTaggedLockedToIO $
+    Pipeline.Modular.runIOEitherModular checkId entry' f
+
+setEntryPointSHA256 :: (MonadIO m) => EntryPoint -> m EntryPoint
+setEntryPointSHA256 entry =
+  case entry ^. entryPointModulePath of
+    Nothing -> return entry
+    Just sourceFile -> do
+      sha256 <-
+        runM
+          . runFilesIO
+          . SHA256.digestFile
+          $ sourceFile
+      return $ set entryPointSHA256 (Just sha256) entry
+
 testDefaultEntryPointIO :: (MonadIO m) => Path Abs Dir -> Path Abs File -> m EntryPoint
 testDefaultEntryPointIO cwd mainFile =
   testTaggedLockedToIO $
-    defaultEntryPointIO cwd (Just mainFile)
+    defaultEntryPointIO' cwd (Just mainFile)
 
 testDefaultEntryPointNoFileIO :: Path Abs Dir -> IO EntryPoint
-testDefaultEntryPointNoFileIO cwd = testTaggedLockedToIO (defaultEntryPointIO cwd Nothing)
+testDefaultEntryPointNoFileIO cwd = testTaggedLockedToIO (defaultEntryPointIO' cwd Nothing)
 
 testRunIOEither ::
   EntryPoint ->
@@ -129,10 +161,10 @@ testRunIOEitherTermination entry =
   testRunIOEither entry
     . evalTermination iniTerminationState
 
-assertFailure :: (MonadIO m) => String -> m a
+assertFailure :: (HasCallStack, MonadIO m) => String -> m a
 assertFailure = liftIO . HUnit.assertFailure
 
-runSimpleErrorHUnit :: (Members '[EmbedIO] r) => Sem (Error SimpleError ': r) a -> Sem r a
+runSimpleErrorHUnit :: (HasCallStack, Members '[EmbedIO] r) => Sem (Error SimpleError ': r) a -> Sem r a
 runSimpleErrorHUnit m = do
   res <- runError m
   case res of
@@ -198,6 +230,20 @@ readProcessCwd' menv mcwd cmd args stdinText =
         return r
     )
 
+readProcessExitCodeCwd :: FilePath -> FilePath -> [String] -> Text -> IO ExitCode
+readProcessExitCodeCwd cwd = readProcessExitCodeCwd' Nothing (Just cwd)
+
+-- | Runs the process and returns the exit code. stdout and stderr are suppressed and ignored.
+readProcessExitCodeCwd' :: Maybe [(String, String)] -> Maybe FilePath -> FilePath -> [String] -> Text -> IO ExitCode
+readProcessExitCodeCwd' menv mcwd cmd args stdinText = do
+  let cp =
+        (P.proc cmd args)
+          { P.cwd = mcwd,
+            P.env = menv
+          }
+  (code, _, _) <- P.readCreateProcessWithExitCode cp (unpack stdinText)
+  return code
+
 to3DigitString :: Int -> Text
 to3DigitString n
   | n < 10 = "00" <> show n
@@ -211,3 +257,56 @@ numberedTestName i str = "Test" <> to3DigitString i <> ": " <> str
 
 testCase :: (HasTextBackend str) => str -> Assertion -> TestTree
 testCase name = HUnit.testCase (toPlainString name)
+
+testCaseSteps :: (HasTextBackend str) => str -> ((Text -> IO ()) -> Assertion) -> TestTree
+testCaseSteps name f = HUnit.testCaseSteps (toPlainString name) (\sf -> f (sf . unpack))
+
+withRootTmpCopy :: Path Abs Dir -> (Path Abs Dir -> IO a) -> IO a
+withRootTmpCopy root action = withSystemTempDir "test" $ \tmpRootDir -> do
+  copyDirRecur root tmpRootDir
+  action tmpRootDir
+
+compileAnomaMain :: Bool -> Path Rel Dir -> Path Rel File -> Path Abs Dir -> IO (Term Natural)
+compileAnomaMain enableDebug relRoot mainFile rootCopyDir = do
+  let testRootDir = rootCopyDir <//> relRoot
+  entryPoint <-
+    set entryPointPipeline (Just PipelineExec)
+      . set entryPointTarget (Just TargetAnoma)
+      . set entryPointDebug enableDebug
+      <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
+  removeInfoUnlessDebug
+    . Nockma.getModuleCode
+    . (^. pipelineResult)
+    . snd
+    <$> testRunIO entryPoint upToAnoma
+  where
+    removeInfoUnlessDebug :: Term Natural -> Term Natural
+    removeInfoUnlessDebug
+      | enableDebug = id
+      | otherwise = removeInfoRec
+
+compileAnomaModular :: Bool -> Path Rel Dir -> Path Rel File -> Path Abs Dir -> IO (ModuleId, Nockma.ModuleTable)
+compileAnomaModular enableDebug relRoot mainFile rootCopyDir = do
+  let testRootDir = rootCopyDir <//> relRoot
+  entryPoint <-
+    set entryPointPipeline (Just PipelineExec)
+      . set entryPointTarget (Just TargetAnoma)
+      . set entryPointNoNockImportDecoding True
+      . set entryPointDebug enableDebug
+      <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
+  r <- testRunIOModular (Just Core.CheckAnoma) entryPoint modularCoreToAnoma
+  case r of
+    Left err -> assertFailure (renderStringDefault err)
+    Right (mid, mtab) -> do
+      return (mid, removeInfoUnlessDebug mtab)
+      where
+        removeInfoUnlessDebug :: Nockma.ModuleTable -> Nockma.ModuleTable
+        removeInfoUnlessDebug = over Nockma.moduleTable (fmap (over Nockma.moduleInfoTable (over Nockma.infoCode (fmap removeInfoUnlessDebug'))))
+
+        removeInfoUnlessDebug' :: Term Natural -> Term Natural
+        removeInfoUnlessDebug'
+          | enableDebug = id
+          | otherwise = removeInfoRec
+
+envAnomaPath :: (MonadIO m) => m AnomaPath
+envAnomaPath = AnomaPath <$> getAnomaPathAbs

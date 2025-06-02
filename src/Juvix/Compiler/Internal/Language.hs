@@ -210,7 +210,7 @@ data Literal
   | -- | `LitInteger` represents a literal with trait `Integral`
     LitInteger Integer
   | -- | `LitNatural` represents a literal with trait `FromNatural`
-    LitNatural Integer
+    LitNatural Natural
   deriving stock (Show, Eq, Ord, Generic, Data)
 
 instance Hashable Literal
@@ -219,11 +219,25 @@ instance Serialize Literal
 
 instance NFData Literal
 
+data BuiltinNatural = BuiltinNatural
+  { _builtinNaturalSuc :: Natural,
+    _builtinNaturalArg :: Expression,
+    _builtinNaturalLoc :: Interval
+  }
+  deriving stock (Eq, Generic, Data)
+
+instance Hashable BuiltinNatural
+
+instance Serialize BuiltinNatural
+
+instance NFData BuiltinNatural
+
 data Expression
   = ExpressionIden Iden
   | ExpressionApplication Application
   | ExpressionFunction Function
   | ExpressionLiteral LiteralLoc
+  | ExpressionNatural BuiltinNatural
   | ExpressionHole Hole
   | ExpressionInstanceHole InstanceHole
   | ExpressionLet Let
@@ -434,6 +448,7 @@ instance NFData InductiveParameter
 data InductiveDef = InductiveDef
   { _inductiveName :: InductiveName,
     _inductiveBuiltin :: Maybe BuiltinInductive,
+    -- The universe of the inductive type, not the full kind
     _inductiveType :: Expression,
     _inductiveParameters :: [InductiveParameter],
     _inductiveConstructors :: [ConstructorDef],
@@ -447,6 +462,8 @@ data InductiveDef = InductiveDef
 data ConstructorDef = ConstructorDef
   { _inductiveConstructorName :: ConstrName,
     _inductiveConstructorType :: Expression,
+    -- | Filled by the typechecker. Used in positivity
+    _inductiveConstructorNormalizedType :: Maybe NormalizedExpression,
     _inductiveConstructorIsRecord :: Bool,
     _inductiveConstructorPragmas :: Pragmas,
     _inductiveConstructorDocComment :: Maybe Text
@@ -507,11 +524,13 @@ data NormalizedExpression = NormalizedExpression
   { _normalizedExpression :: Expression,
     _normalizedExpressionOriginal :: Expression
   }
+  deriving stock (Data)
 
 makePrisms ''Expression
 makePrisms ''Iden
 makePrisms ''MutualStatement
 
+makeLenses ''BuiltinNatural
 makeLenses ''SideIfBranch
 makeLenses ''SideIfs
 makeLenses ''CaseBranchRhs
@@ -578,6 +597,7 @@ instance HasAtomicity Lambda where
 instance HasAtomicity Expression where
   atomicity e = case e of
     ExpressionIden {} -> Atom
+    ExpressionNatural {} -> Atom
     ExpressionApplication a -> atomicity a
     ExpressionLiteral l -> atomicity l
     ExpressionLet l -> atomicity l
@@ -699,9 +719,13 @@ instance HasLoc CaseBranch where
 instance HasLoc Case where
   getLoc c = getLocSpan (c ^. caseBranches)
 
+instance HasLoc BuiltinNatural where
+  getLoc = (^. builtinNaturalLoc)
+
 instance HasLoc Expression where
   getLoc = \case
     ExpressionIden i -> getLoc i
+    ExpressionNatural i -> getLoc i
     ExpressionApplication a -> getLoc a
     ExpressionLiteral l -> getLoc l
     ExpressionHole h -> getLoc h
@@ -746,3 +770,18 @@ idenName f = \case
   IdenVar v -> IdenVar <$> f v
   IdenInductive i -> IdenInductive <$> f i
   IdenAxiom a -> IdenAxiom <$> f a
+
+simpleBinderToFunctionParameter :: SimpleBinder -> FunctionParameter
+simpleBinderToFunctionParameter SimpleBinder {..} =
+  FunctionParameter
+    { _paramImplicit = Explicit,
+      _paramName = Just _sbinderVar,
+      _paramType = _sbinderType
+    }
+
+simpleLambdaToFunction :: SimpleLambda -> Function
+simpleLambdaToFunction SimpleLambda {..} =
+  Function
+    { _functionLeft = simpleBinderToFunctionParameter _slambdaBinder,
+      _functionRight = _slambdaBody
+    }

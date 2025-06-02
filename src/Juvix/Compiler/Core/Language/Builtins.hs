@@ -6,7 +6,83 @@ import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Prettyprinter
 
--- Builtin operations which the evaluator and the code generator treat
+data BuiltinCategory
+  = BuiltinCategoryString
+  | BuiltinCategoryCairo
+  | BuiltinCategoryAnoma
+  | BuiltinCategoryUInt8
+  | BuiltinCategoryByteArray
+  | BuiltinCategoryNone
+  deriving stock (Eq, Enum, Ord, Bounded, Show, Data, Generic)
+
+builtinCategory :: BuiltinOp -> BuiltinCategory
+builtinCategory = \case
+  OpIntAdd -> BuiltinCategoryNone
+  OpIntSub -> BuiltinCategoryNone
+  OpIntMul -> BuiltinCategoryNone
+  OpIntDiv -> BuiltinCategoryNone
+  OpIntMod -> BuiltinCategoryNone
+  OpIntLt -> BuiltinCategoryNone
+  OpIntLe -> BuiltinCategoryNone
+  OpFieldAdd -> BuiltinCategoryNone
+  OpFieldSub -> BuiltinCategoryNone
+  OpFieldMul -> BuiltinCategoryNone
+  OpFieldDiv -> BuiltinCategoryNone
+  OpFieldFromInt -> BuiltinCategoryNone
+  OpFieldToInt -> BuiltinCategoryNone
+  OpEq -> BuiltinCategoryNone
+  OpShow -> BuiltinCategoryString
+  OpStrConcat -> BuiltinCategoryString
+  OpStrToInt -> BuiltinCategoryString
+  OpSeq -> BuiltinCategoryNone
+  OpAssert -> BuiltinCategoryNone
+  OpTrace -> BuiltinCategoryNone
+  OpFail -> BuiltinCategoryNone
+  OpAnomaGet -> BuiltinCategoryAnoma
+  OpAnomaEncode -> BuiltinCategoryAnoma
+  OpAnomaDecode -> BuiltinCategoryAnoma
+  OpAnomaVerifyDetached -> BuiltinCategoryAnoma
+  OpAnomaSign -> BuiltinCategoryAnoma
+  OpAnomaSignDetached -> BuiltinCategoryAnoma
+  OpAnomaVerifyWithMessage -> BuiltinCategoryAnoma
+  OpAnomaByteArrayToAnomaContents -> BuiltinCategoryAnoma
+  OpAnomaByteArrayFromAnomaContents -> BuiltinCategoryAnoma
+  OpAnomaSha256 -> BuiltinCategoryAnoma
+  OpAnomaResourceCommitment -> BuiltinCategoryAnoma
+  OpAnomaResourceNullifier -> BuiltinCategoryAnoma
+  OpAnomaResourceKind -> BuiltinCategoryAnoma
+  OpAnomaResourceDelta -> BuiltinCategoryAnoma
+  OpAnomaActionDelta -> BuiltinCategoryAnoma
+  OpAnomaActionsDelta -> BuiltinCategoryAnoma
+  OpAnomaZeroDelta -> BuiltinCategoryAnoma
+  OpAnomaAddDelta -> BuiltinCategoryAnoma
+  OpAnomaSubDelta -> BuiltinCategoryAnoma
+  OpAnomaRandomGeneratorInit -> BuiltinCategoryAnoma
+  OpAnomaRandomNextBytes -> BuiltinCategoryAnoma
+  OpAnomaRandomSplit -> BuiltinCategoryAnoma
+  OpAnomaIsCommitment -> BuiltinCategoryAnoma
+  OpAnomaIsNullifier -> BuiltinCategoryAnoma
+  OpAnomaCreateFromComplianceInputs -> BuiltinCategoryAnoma
+  OpAnomaProveDelta -> BuiltinCategoryAnoma
+  OpAnomaTransactionCompose -> BuiltinCategoryAnoma
+  OpAnomaActionCreate -> BuiltinCategoryAnoma
+  OpAnomaSetToList -> BuiltinCategoryAnoma
+  OpAnomaSetFromList -> BuiltinCategoryAnoma
+  OpNockmaReify -> BuiltinCategoryAnoma
+  OpPoseidonHash -> BuiltinCategoryCairo
+  OpEc -> BuiltinCategoryCairo
+  OpRandomEcPoint -> BuiltinCategoryCairo
+  OpRangeCheck -> BuiltinCategoryCairo
+  OpUInt8ToInt -> BuiltinCategoryUInt8
+  OpUInt8FromInt -> BuiltinCategoryUInt8
+  OpByteArrayFromListByte -> BuiltinCategoryByteArray
+  OpByteArrayLength -> BuiltinCategoryByteArray
+  OpAnomaKeccak256 -> BuiltinCategoryAnoma
+  OpAnomaSecp256k1SignCompact -> BuiltinCategoryAnoma
+  OpAnomaSecp256k1Verify -> BuiltinCategoryAnoma
+  OpAnomaSecp256k1PubKey -> BuiltinCategoryAnoma
+
+-- | Builtin operations which the evaluator and the code generator treat
 -- specially and non-uniformly.
 data BuiltinOp
   = OpIntAdd
@@ -28,6 +104,7 @@ data BuiltinOp
   | OpStrToInt
   | OpSeq
   | OpAssert
+  | OpRangeCheck
   | OpTrace
   | OpFail
   | OpAnomaGet
@@ -46,14 +123,25 @@ data BuiltinOp
   | OpAnomaResourceDelta
   | OpAnomaActionDelta
   | OpAnomaActionsDelta
-  | OpAnomaProveAction
-  | OpAnomaProveDelta
   | OpAnomaZeroDelta
   | OpAnomaAddDelta
   | OpAnomaSubDelta
   | OpAnomaRandomGeneratorInit
   | OpAnomaRandomNextBytes
   | OpAnomaRandomSplit
+  | OpAnomaIsCommitment
+  | OpAnomaIsNullifier
+  | OpAnomaCreateFromComplianceInputs
+  | OpAnomaProveDelta
+  | OpAnomaTransactionCompose
+  | OpAnomaActionCreate
+  | OpAnomaSetToList
+  | OpAnomaSetFromList
+  | OpAnomaKeccak256
+  | OpAnomaSecp256k1SignCompact
+  | OpAnomaSecp256k1Verify
+  | OpAnomaSecp256k1PubKey
+  | OpNockmaReify
   | OpPoseidonHash
   | OpEc
   | OpRandomEcPoint
@@ -61,13 +149,13 @@ data BuiltinOp
   | OpUInt8FromInt
   | OpByteArrayFromListByte
   | OpByteArrayLength
-  deriving stock (Eq, Generic, Show)
+  deriving stock (Eq, Generic, Show, Enum, Bounded)
 
 instance Serialize BuiltinOp
 
 instance NFData BuiltinOp
 
--- Builtin data tags
+-- | Builtin data tags
 data BuiltinDataTag
   = TagTrue
   | TagFalse
@@ -75,6 +163,11 @@ data BuiltinDataTag
   | TagBind
   | TagWrite
   | TagReadLn
+  | TagJsonArray
+  | TagJsonBool
+  | TagJsonObject
+  | TagJsonNumber
+  | TagJsonString
   deriving stock (Eq, Generic, Ord)
 
 instance Hashable BuiltinDataTag
@@ -91,6 +184,11 @@ instance Pretty BuiltinDataTag where
     TagBind -> Str.bind
     TagWrite -> Str.write
     TagReadLn -> Str.readLn
+    TagJsonArray -> Str.jsonArray
+    TagJsonBool -> Str.jsonBool
+    TagJsonObject -> Str.jsonObject
+    TagJsonNumber -> Str.jsonNumber
+    TagJsonString -> Str.jsonString
 
 instance Show BuiltinDataTag where
   show = show . pretty
@@ -116,6 +214,7 @@ builtinOpArgsNum = \case
   OpStrToInt -> 1
   OpSeq -> 2
   OpAssert -> 1
+  OpRangeCheck -> 2
   OpTrace -> 1
   OpFail -> 1
   OpAnomaGet -> 1
@@ -129,19 +228,29 @@ builtinOpArgsNum = \case
   OpAnomaByteArrayFromAnomaContents -> 2
   OpAnomaSha256 -> 1
   OpAnomaResourceCommitment -> 1
-  OpAnomaResourceNullifier -> 1
+  OpAnomaResourceNullifier -> 2
   OpAnomaResourceKind -> 1
   OpAnomaResourceDelta -> 1
   OpAnomaActionDelta -> 1
   OpAnomaActionsDelta -> 1
-  OpAnomaProveAction -> 1
-  OpAnomaProveDelta -> 1
   OpAnomaZeroDelta -> 0
   OpAnomaAddDelta -> 2
   OpAnomaSubDelta -> 2
+  OpAnomaActionCreate -> 3
+  OpAnomaTransactionCompose -> 2
   OpAnomaRandomGeneratorInit -> 1
   OpAnomaRandomNextBytes -> 2
   OpAnomaRandomSplit -> 1
+  OpAnomaIsCommitment -> 1
+  OpAnomaIsNullifier -> 1
+  OpAnomaCreateFromComplianceInputs -> 5
+  OpAnomaProveDelta -> 1
+  OpAnomaSetToList -> 1
+  OpAnomaSetFromList -> 1
+  OpAnomaKeccak256 -> 1
+  OpAnomaSecp256k1PubKey -> 1
+  OpAnomaSecp256k1SignCompact -> 2
+  OpAnomaSecp256k1Verify -> 3
   OpPoseidonHash -> 1
   OpEc -> 3
   OpRandomEcPoint -> 0
@@ -149,6 +258,7 @@ builtinOpArgsNum = \case
   OpUInt8FromInt -> 1
   OpByteArrayFromListByte -> 1
   OpByteArrayLength -> 1
+  OpNockmaReify -> 1
 
 builtinConstrArgsNum :: BuiltinDataTag -> Int
 builtinConstrArgsNum = \case
@@ -158,6 +268,11 @@ builtinConstrArgsNum = \case
   TagBind -> 2
   TagWrite -> 1
   TagReadLn -> 0
+  TagJsonArray -> 1
+  TagJsonBool -> 1
+  TagJsonObject -> 1
+  TagJsonNumber -> 1
+  TagJsonString -> 1
 
 -- | True if the builtin can be evaluated away during constant folding
 builtinIsFoldable :: BuiltinOp -> Bool
@@ -198,8 +313,6 @@ builtinIsFoldable = \case
   OpAnomaResourceDelta -> False
   OpAnomaActionDelta -> False
   OpAnomaActionsDelta -> False
-  OpAnomaProveAction -> False
-  OpAnomaProveDelta -> False
   OpAnomaZeroDelta -> False
   OpAnomaAddDelta -> False
   OpAnomaSubDelta -> False
@@ -207,50 +320,42 @@ builtinIsFoldable = \case
   OpAnomaRandomGeneratorInit -> False
   OpAnomaRandomNextBytes -> False
   OpAnomaRandomSplit -> False
+  OpAnomaIsCommitment -> False
+  OpAnomaIsNullifier -> False
+  OpAnomaCreateFromComplianceInputs -> False
+  OpAnomaProveDelta -> False
+  OpAnomaTransactionCompose -> False
+  OpAnomaActionCreate -> False
+  OpAnomaSetToList -> False
+  OpAnomaSetFromList -> False
+  OpNockmaReify -> False
   OpPoseidonHash -> False
   OpEc -> False
   OpRandomEcPoint -> False
+  OpRangeCheck -> False
   OpUInt8ToInt -> True
   OpUInt8FromInt -> True
   OpByteArrayFromListByte -> False
   OpByteArrayLength -> False
+  OpAnomaKeccak256 -> False
+  OpAnomaSecp256k1SignCompact -> False
+  OpAnomaSecp256k1Verify -> False
+  OpAnomaSecp256k1PubKey -> False
+
+builtinsInCategory :: BuiltinCategory -> [BuiltinOp]
+builtinsInCategory c = filter ((== c) . builtinCategory) allElements
 
 builtinsString :: [BuiltinOp]
-builtinsString = [OpStrConcat, OpStrToInt, OpShow]
+builtinsString = builtinsInCategory BuiltinCategoryString
 
 builtinsCairo :: [BuiltinOp]
-builtinsCairo = [OpPoseidonHash, OpEc, OpRandomEcPoint]
+builtinsCairo = builtinsInCategory BuiltinCategoryCairo
 
 builtinsAnoma :: [BuiltinOp]
-builtinsAnoma =
-  [ OpAnomaGet,
-    OpAnomaEncode,
-    OpAnomaDecode,
-    OpAnomaVerifyDetached,
-    OpAnomaSign,
-    OpAnomaVerifyWithMessage,
-    OpAnomaSignDetached,
-    OpAnomaByteArrayToAnomaContents,
-    OpAnomaByteArrayFromAnomaContents,
-    OpAnomaSha256,
-    OpAnomaResourceCommitment,
-    OpAnomaResourceNullifier,
-    OpAnomaResourceKind,
-    OpAnomaResourceDelta,
-    OpAnomaActionDelta,
-    OpAnomaActionsDelta,
-    OpAnomaProveAction,
-    OpAnomaProveDelta,
-    OpAnomaZeroDelta,
-    OpAnomaAddDelta,
-    OpAnomaSubDelta,
-    OpAnomaRandomGeneratorInit,
-    OpAnomaRandomNextBytes,
-    OpAnomaRandomSplit
-  ]
+builtinsAnoma = builtinsInCategory BuiltinCategoryAnoma
 
 builtinsUInt8 :: [BuiltinOp]
-builtinsUInt8 = [OpUInt8FromInt, OpUInt8ToInt]
+builtinsUInt8 = builtinsInCategory BuiltinCategoryUInt8
 
 builtinsByteArray :: [BuiltinOp]
-builtinsByteArray = [OpByteArrayFromListByte, OpByteArrayLength]
+builtinsByteArray = builtinsInCategory BuiltinCategoryByteArray

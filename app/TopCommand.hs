@@ -35,7 +35,7 @@ runTopCommand = \case
   DisplayVersion -> runDisplayVersion
   DisplayNumericVersion -> runDisplayNumericVersion
   DisplayHelp -> showHelpText
-  Doctor opts -> runLogIO (Doctor.runCommand opts)
+  Doctor opts -> Doctor.runCommand opts
   Isabelle opts -> Isabelle.runCommand opts
   Init opts -> Init.init opts
   Dev opts -> Dev.runCommand opts

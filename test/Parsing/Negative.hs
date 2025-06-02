@@ -55,32 +55,25 @@ negTestAbsDir _name _dir f _checkErr =
 parserErrorTests :: [NegTest]
 parserErrorTests =
   [ negTest
-      "Tab character"
-      $(mkRelDir ".")
-      $(mkRelFile "Tab.juvix")
-      $ \case
-        ErrMegaparsec {} -> Nothing
-        _ -> wrongError,
-    negTest
       "Pragmas YAML error"
       $(mkRelDir ".")
       $(mkRelFile "PragmasYAML.juvix")
       $ \case
-        ErrMegaparsec {} -> Nothing
+        ErrYamlParseError {} -> Nothing
         _ -> wrongError,
     negTest
       "Pragmas format error"
       $(mkRelDir ".")
       $(mkRelFile "PragmasFormat.juvix")
       $ \case
-        ErrMegaparsec {} -> Nothing
+        ErrYamlParseError {} -> Nothing
         _ -> wrongError,
     negTest
       "Pragmas duplicate keys error"
       $(mkRelDir ".")
       $(mkRelFile "PragmasDuplicateKeys.juvix")
       $ \case
-        ErrMegaparsec {} -> Nothing
+        ErrYamlParseError {} -> Nothing
         _ -> wrongError,
     negTest
       "Missing @ in named application"
@@ -94,7 +87,7 @@ parserErrorTests =
       $(mkRelDir ".")
       $(mkRelFile "ErrorOnLocalInstances.juvix")
       $ \case
-        ErrMegaparsec {} -> Nothing
+        ErrInstanceNotAllowed {} -> Nothing
         _ -> wrongError
   ]
 
@@ -104,6 +97,13 @@ filesErrorTests =
       "Incorrect top module path"
       $(mkRelDir ".")
       $(mkRelFile "WrongModuleName.juvix")
+      $ \case
+        ErrWrongTopModuleName {} -> Nothing
+        _ -> wrongError,
+    negTest
+      "Incorrect top module path (markdown)"
+      $(mkRelDir "issue2674")
+      $(mkRelFile "Main.juvix.md")
       $ \case
         ErrWrongTopModuleName {} -> Nothing
         _ -> wrongError,

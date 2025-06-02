@@ -3,8 +3,8 @@ module Package;
 import PackageDescription.V2 open;
 
 package : Package :=
-  defaultPackage@?{
+  defaultPackage@{
     name := "PascalsTriangle";
     version := mkVersion 0 1 0;
-    main := just "PascalsTriangle.juvix"
+    main := just "PascalsTriangle.juvix";
   };

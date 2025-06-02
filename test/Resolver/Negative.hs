@@ -63,6 +63,14 @@ resolverErrorTests =
           DependencyConflict {} -> Nothing
         _ -> wrongError,
     negTest
+      "Same package name different version"
+      $(mkRelDir "PackageNameConflict")
+      $(mkRelFile "Main.juvix")
+      $ \case
+        ErrPackageNameConflict
+          PackageNameConflict {} -> Nothing
+        _ -> wrongError,
+    negTest
       "Import a module that doesn't exist"
       $(mkRelDir "NoDependencies")
       $(mkRelFile "InvalidImport.juvix")

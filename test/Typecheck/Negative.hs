@@ -218,6 +218,13 @@ tests =
         ErrTraitNotTerminating {} -> Nothing
         _ -> wrongError,
     negTest
+      "Instance search termination"
+      $(mkRelDir "Internal")
+      $(mkRelFile "InstanceSearchTermination.juvix")
+      $ \case
+        ErrUnsolvedMeta {} -> Nothing
+        _ -> wrongError,
+    negTest
       "Default value wrong type"
       $(mkRelDir "Internal")
       $(mkRelFile "DefaultTypeError.juvix")
@@ -243,7 +250,7 @@ tests =
       $(mkRelDir "Internal")
       $(mkRelFile "WrongCoercionArgument.juvix")
       $ \case
-        ErrWrongCoercionArgument {} -> Nothing
+        ErrTraitNotTerminating {} -> Nothing
         _ -> wrongError,
     negTest
       "Ambiguous coercions"

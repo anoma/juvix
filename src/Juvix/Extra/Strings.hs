@@ -134,6 +134,9 @@ open = "open"
 syntax :: (IsString s) => s
 syntax = "syntax"
 
+precedence :: (IsString s) => s
+precedence = "precedence"
+
 below :: (IsString s) => s
 below = "below"
 
@@ -190,6 +193,18 @@ byteFromNat = "byte-from-nat"
 
 byteArray :: (IsString s) => s
 byteArray = "bytearray"
+
+keccak256 :: (IsString s) => s
+keccak256 = "keccak256"
+
+secp256k1SignCompact :: (IsString s) => s
+secp256k1SignCompact = "secp256k1-sign-compact"
+
+secp256k1Verify :: (IsString s) => s
+secp256k1Verify = "secp256k1-verify"
+
+secp256k1PubKey :: (IsString s) => s
+secp256k1PubKey = "secp256k1-public-key"
 
 byteArrayFromListByte :: (IsString s) => s
 byteArrayFromListByte = "bytearray-from-list-byte"
@@ -265,6 +280,9 @@ ioReadline = "IO-readline"
 
 assert :: (IsString s) => s
 assert = "assert"
+
+rangeCheck :: (IsString s) => s
+rangeCheck = "range-check"
 
 natPrint :: (IsString s) => s
 natPrint = "nat-print"
@@ -377,6 +395,9 @@ anomaVerifyDetached = "anoma-verify-detached"
 anomaSign :: (IsString s) => s
 anomaSign = "anoma-sign"
 
+nockmaReify :: (IsString s) => s
+nockmaReify = "nockma-reify"
+
 builtinMonadBind :: (IsString s) => s
 builtinMonadBind = "monad-bind"
 
@@ -428,12 +449,6 @@ anomaAddDelta = "anoma-add-delta"
 anomaSubDelta :: (IsString s) => s
 anomaSubDelta = "anoma-sub-delta"
 
-anomaProveDelta :: (IsString s) => s
-anomaProveDelta = "anoma-prove-delta"
-
-anomaProveAction :: (IsString s) => s
-anomaProveAction = "anoma-prove-action"
-
 anomaRandomGenerator :: (IsString s) => s
 anomaRandomGenerator = "anoma-random-generator"
 
@@ -445,6 +460,33 @@ anomaRandomNextBytes = "anoma-random-next-bytes"
 
 anomaRandomSplit :: (IsString s) => s
 anomaRandomSplit = "anoma-random-generator-split"
+
+anomaIsCommitment :: (IsString s) => s
+anomaIsCommitment = "anoma-is-commitment"
+
+anomaIsNullifier :: (IsString s) => s
+anomaIsNullifier = "anoma-is-nullifier"
+
+anomaCreateFromComplianceInputs :: (IsString s) => s
+anomaCreateFromComplianceInputs = "anoma-create-from-compliance-inputs"
+
+anomaProveDelta :: (IsString s) => s
+anomaProveDelta = "anoma-prove-delta"
+
+anomaSet :: (IsString s) => s
+anomaSet = "anoma-set"
+
+anomaSetToList :: (IsString s) => s
+anomaSetToList = "anoma-set-to-list"
+
+anomaTransactionCompose :: (IsString s) => s
+anomaTransactionCompose = "anoma-transaction-compose"
+
+anomaActionCreate :: (IsString s) => s
+anomaActionCreate = "anoma-action-create"
+
+anomaSetFromList :: (IsString s) => s
+anomaSetFromList = "anoma-set-from-list"
 
 builtinSeq :: (IsString s) => s
 builtinSeq = "seq"
@@ -652,9 +694,6 @@ underscore = "_"
 
 at_ :: (IsString s) => s
 at_ = "@"
-
-atQuestion :: (IsString s) => s
-atQuestion = "@?"
 
 dot :: (IsString s) => s
 dot = "."
@@ -965,6 +1004,9 @@ instrPoseidon = "poseidon"
 instrEcOp :: (IsString s) => s
 instrEcOp = "ec_op"
 
+instrRangeCheck :: (IsString s) => s
+instrRangeCheck = "range_check"
+
 instrPrealloc :: (IsString s) => s
 instrPrealloc = "prealloc"
 
@@ -997,45 +1039,6 @@ instrBr = "br"
 
 juvixDotOrg :: (IsString s) => s
 juvixDotOrg = "https://juvix.org"
-
-vampirDef :: (IsString s) => s
-vampirDef = "def"
-
-vampirEq :: (IsString s) => s
-vampirEq = "="
-
-vampirNumber :: (IsString s) => s
-vampirNumber = "number"
-
-vampirFail :: (IsString s) => s
-vampirFail = "fail"
-
-vampirAdd :: (IsString s) => s
-vampirAdd = "add"
-
-vampirSub :: (IsString s) => s
-vampirSub = "sub"
-
-vampirMul :: (IsString s) => s
-vampirMul = "mul"
-
-vampirDiv :: (IsString s) => s
-vampirDiv = "div"
-
-vampirMod :: (IsString s) => s
-vampirMod = "rem"
-
-vampirEqual :: (IsString s) => s
-vampirEqual = "equal"
-
-vampirLessThan :: (IsString s) => s
-vampirLessThan = "lessThan"
-
-vampirLessOrEqual :: (IsString s) => s
-vampirLessOrEqual = "lessOrEqual"
-
-vampirIf :: (IsString s) => s
-vampirIf = "if"
 
 zero :: (IsString s) => s
 zero = "zero"
@@ -1078,6 +1081,24 @@ monad = "monad"
 
 pair :: (IsString s) => s
 pair = "pair"
+
+json :: (IsString s) => s
+json = "json"
+
+jsonArray :: (IsString s) => s
+jsonArray = "jsonArray"
+
+jsonObject :: (IsString s) => s
+jsonObject = "jsonObject"
+
+jsonString :: (IsString s) => s
+jsonString = "jsonString"
+
+jsonNumber :: (IsString s) => s
+jsonNumber = "jsonNumber"
+
+jsonBool :: (IsString s) => s
+jsonBool = "jsonBool"
 
 unary :: (IsString s) => s
 unary = "unary"
@@ -1154,17 +1175,44 @@ cairoEcPoint = "ec_point"
 cairoMkEcPoint :: (IsString s) => s
 cairoMkEcPoint = "mkEcPoint"
 
+nockmaNoun :: (IsString s) => s
+nockmaNoun = "nockma-noun"
+
+nockmaAtom :: (IsString s) => s
+nockmaAtom = "nockma-atom"
+
+nockmaCell :: (IsString s) => s
+nockmaCell = "nockma-cell"
+
 anomaResource :: (IsString s) => s
 anomaResource = "anoma-resource"
+
+anomaNullifierKey :: (IsString s) => s
+anomaNullifierKey = "anoma-nullifier-key"
 
 anomaAction :: (IsString s) => s
 anomaAction = "anoma-action"
 
+anomaComplianceInputs :: (IsString s) => s
+anomaComplianceInputs = "anoma-compliance-inputs"
+
+anomaShieldedTransaction :: (IsString s) => s
+anomaShieldedTransaction = "anoma-transaction"
+
 anomaMkResource :: (IsString s) => s
 anomaMkResource = "mkResource"
 
+anomaMkNullifierKey :: (IsString s) => s
+anomaMkNullifierKey = "mkNullifierKey"
+
 anomaMkAction :: (IsString s) => s
 anomaMkAction = "mkAction"
+
+anomaMkComplianceInputs :: (IsString s) => s
+anomaMkComplianceInputs = "mkComplianceInputs"
+
+anomaMkShieldedTransaction :: (IsString s) => s
+anomaMkShieldedTransaction = "mkShieldedTransaction"
 
 mkEq :: (IsString s) => s
 mkEq = "mkEq"

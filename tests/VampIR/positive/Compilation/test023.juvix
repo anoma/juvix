@@ -1,8 +1,0 @@
--- permutative conversions
-module test023;
-
-import Stdlib.Prelude open;
-
-main (x y : Nat) : Nat :=
-    case λ {z := ite (x == z) (x, 0) (x, z)} (y + x) of
-      a, b := a + b;

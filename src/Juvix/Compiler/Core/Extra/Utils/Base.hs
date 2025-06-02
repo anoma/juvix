@@ -4,7 +4,8 @@
 module Juvix.Compiler.Core.Extra.Utils.Base where
 
 import Juvix.Compiler.Core.Extra.Base
-import Juvix.Compiler.Core.Extra.Recursors
+import Juvix.Compiler.Core.Extra.Recursors.Fold.Named
+import Juvix.Compiler.Core.Extra.Recursors.Map.Named
 import Juvix.Compiler.Core.Extra.Recursors.Utils
 
 -- | substitution of all free variables for values in an environment

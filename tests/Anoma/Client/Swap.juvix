@@ -1,0 +1,68 @@
+--- translated from https://github.com/anoma/anoma/blob/61413dfc6460b7bf96e9207ce3b9d22b9c678f09/apps/anoma_node/lib/examples/e_transaction.ex#L309
+module Swap;
+
+import Encode open;
+import Stdlib.Prelude open;
+import ResourceMachine open;
+import TransactionRequest open;
+import Stdlib.Debug.Trace open;
+import ByteArray open;
+
+trivial_true_resource_eph : Resource :=
+  Resource.mk@{
+    label := Label.mk 0;
+    logic := Encoded.encode (Logic.mk \{_ := true});
+    ephemeral := true;
+    quantity := 1;
+    value := AnomaAtom.fromNat 0;
+    nullifierKeyCommitment := NullifierKeyCommitment.zero;
+    unusedRandSeed := 0;
+    nonce := Nonce.fromNat 0;
+  };
+
+trivial_true_eph_nullifier_action : Action :=
+  Action.create@{
+    created := [];
+    consumed :=
+      [
+        RootedNullifiableResource.Transparent.mkEphemeral
+          trivial_true_resource_eph;
+      ];
+    appData := AppData.empty;
+  };
+
+nullify_intent_eph : Transaction :=
+  Transaction.mk@{
+    roots := AnomaSet.empty;
+    actions := AnomaSet.fromList [trivial_true_eph_nullifier_action];
+  };
+
+trivial_true_resource : Resource :=
+  Resource.mk@{
+    label := Label.mk 0;
+    logic := Encoded.encode (Logic.mk \{_ := true});
+    ephemeral := true;
+    quantity := 1;
+    value := AnomaAtom.fromNat 0;
+    nullifierKeyCommitment := NullifierKeyCommitment.zero;
+    unusedRandSeed := 0;
+    nonce := Nonce.fromNat 2;
+  };
+
+trivial_true_commit_action : Action :=
+  Action.create@{
+    created := [trivial_true_resource];
+    consumed := [];
+    appData := AppData.empty;
+  };
+
+commit_intent : Transaction :=
+  Transaction.mk@{
+    roots := AnomaSet.empty;
+    actions := AnomaSet.fromList [trivial_true_commit_action];
+  };
+
+main : TransactionRequest :=
+  trace (commitment trivial_true_resource)
+    >-> TransactionRequest.fromTransaction
+      (Transaction.compose nullify_intent_eph commit_intent);

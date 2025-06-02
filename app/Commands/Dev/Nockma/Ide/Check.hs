@@ -10,6 +10,6 @@ runCommand opts = do
   afile <- fromAppPathFile (opts ^. nockmaCheckFile)
   void
     . runAppError @JuvixError
-    . ignoreHighlightBuilder
+    . evalHighlightBuilder
     $ Nockma.parseTermFile afile
   renderStdOutLn ("Ok" :: Text)

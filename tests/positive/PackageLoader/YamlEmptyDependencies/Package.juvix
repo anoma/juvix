@@ -3,7 +3,7 @@ module Package;
 import PackageDescription.V1 open;
 
 package : Package :=
-  defaultPackage@?{
+  defaultPackage@{
     name := "abc";
-    dependencies := []
+    dependencies := [];
   };

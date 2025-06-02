@@ -24,9 +24,11 @@ concurrency:
 
 env:
   SKIP: ormolu,format-juvix-files,typecheck-juvix-examples
-  CAIRO_VM_VERSION: 06e8ddbfa14eef85f56c4d7b7631c17c9b0a248e
+  CAIRO_VM_VERSION: 6c324e0d761013f38b8b743e515a65ac1a380206
   RISC0_VM_VERSION: v1.0.1
-  ANOMA_VERSION: f52cd44235f35a907c22c428ce1fdf3237c97927
+  # This is the top commit hash in the branch lukasz/juvix-ci-stable
+  # of the anoma repository.
+  ANOMA_VERSION: c8c2a385dd916a28982918fdc22da90c409e347a
   JUST_ARGS: runtimeCcArg=$CC runtimeLibtoolArg=$LIBTOOL
   STACK_BUILD_ARGS: --pedantic -j4 --ghc-options=-j --stack-yaml=stack.yaml
 
@@ -120,6 +122,13 @@ jobs:
           path: main
           submodules: true
 
+      - name: Checkout Anoma repo
+        uses: actions/checkout@v4
+        with:
+          repository: anoma/anoma
+          ref: ${{ env.ANOMA_VERSION }}
+          path: anoma
+
       - name: Add ~/.local/bin to PATH
         run: |
           mkdir -p "$HOME/.local/bin"
@@ -142,27 +151,26 @@ jobs:
         id: cache-anoma
         uses: actions/cache@v3
         with:
-          path: |
-            ${{ env.HOME }}/anoma
-          key: "${{ runner.os }}-anoma"
+          path: ${{ github.workspace }}/anoma
+          key: "${{ runner.os }}-${{ env.ANOMA_VERSION }}-anoma"
+
+      - name: Install Protobuf Elixir dependencies
+        shell: bash
+        working-directory: ${{ github.workspace }}/anoma
+        run: |
+          version=$(echo -n $(elixir -e "$(<mix.lock) |> Map.get(:protobuf) |> elem(2) |> IO.puts"))
+          echo "version: ${version}"
+          mix escript.install hex protobuf "$version" --force
 
       - name: Build anoma
         if: steps.cache-anoma.outputs.cache-hit != 'true'
+        working-directory: ${{ github.workspace }}/anoma
         run: |
-          cd $HOME
-          git clone https://github.com/anoma/anoma.git
-          cd anoma
-          git checkout ${{ env.ANOMA_VERSION }}
           mix local.hex --force
-          mix escript.install hex protobuf --force
           echo "$HOME/.mix/escripts" >> $GITHUB_PATH
           mix deps.get
           mix compile
           mix do --app anoma_client escript.build
-
-      - name: Install grpcurl
-        run: |
-          curl -sSL "https://github.com/fullstorydev/grpcurl/releases/download/v1.9.1/grpcurl_1.9.1_linux_x86_64.tar.gz" | tar -xz -C ~/.local/bin --no-wildcards grpcurl
 
       - name: Cache LLVM and Clang
         id: cache-llvm
@@ -193,7 +201,7 @@ jobs:
 
       - name: Set ANOMA_PATH
         run: |
-          echo "ANOMA_PATH=$HOME/anoma" >> $GITHUB_ENV
+          echo "ANOMA_PATH=${{ github.workspace }}/anoma" >> $GITHUB_ENV
 
       - run: echo "HOME=$HOME" >> $GITHUB_ENV
         shell: bash
@@ -219,14 +227,15 @@ jobs:
         if: steps.cache-cairo-vm.outputs.cache-hit != 'true'
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
+          toolchain: 1.81.0
           cache-on-failure: false
 
       - name: Install RISC0 VM
         shell: bash
         run: |
-          cargo install cargo-binstall@1.6.9 --force
-          cargo binstall cargo-risczero@1.1.1 --no-confirm --force
-          cargo risczero install
+          curl -L https://risczero.com/install | bash
+          ~/.risc0/bin/rzup install
+          ~/.risc0/bin/rzup install r0vm 1.2.6
 
       - name: Checkout CairoVM
         uses: actions/checkout@v4
@@ -281,12 +290,28 @@ jobs:
           stack-build-arguments: ${{ env.STACK_BUILD_ARGS }}
           test: false
 
-      - name: Install and test Juvix
+      - name: Install Juvix
         id: test
         if: ${{ success() }}
         run: |
           cd main
           just ${{ env.JUST_ARGS }} install
+
+      - name: Get short SHA
+        run: echo "JUVIX_SHORT_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_ENV
+
+      - name: Set juvix binary path
+        run: echo "JUVIX_BINARY_PATH=$HOME/.local/bin/juvix" >> $GITHUB_ENV
+
+      - name: store juvix binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: juvix-${{ env.JUVIX_SHORT_SHA }}
+          path: ${{ env.JUVIX_BINARY_PATH }}
+
+      - name: Test juvix
+        run: |
+          cd main
           just ${{ env.JUST_ARGS }} test
 
       - name: Typecheck and format Juvix examples

@@ -331,7 +331,7 @@ fromRegInstr info = \case
           ]
         Reg.CallClosure vr ->
           [ stmtAssign
-              "funid"
+              "(funid, args)"
               ( mkCall
                   "mem.call_closure"
                   [fromVarRef vr, mkArray ((map fromValue _instrTailCallArgs))]

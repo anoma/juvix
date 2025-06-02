@@ -1,6 +1,7 @@
 module Juvix.Emacs.Render
   ( renderEmacs,
     nameKindFace,
+    codeAnnFace,
   )
 where
 
@@ -23,23 +24,42 @@ nameKindFace = \case
   KNameAlias -> Nothing
   KNameFixity -> Just FaceFixity
 
-fromCodeAnn :: CodeAnn -> Maybe EmacsProperty
-fromCodeAnn = \case
-  AnnKind k -> do
-    f <- nameKindFace k
-    return (EPropertyFace (PropertyFace f))
-  AnnKeyword -> Just (EPropertyFace (PropertyFace FaceKeyword))
-  AnnDelimiter -> Just (EPropertyFace (PropertyFace FaceDelimiter))
-  AnnComment -> Just (EPropertyFace (PropertyFace FaceComment))
-  AnnPragma -> Just (EPropertyFace (PropertyFace FacePragma))
-  AnnJudoc -> Just (EPropertyFace (PropertyFace FaceJudoc))
-  AnnLiteralString -> Just (EPropertyFace (PropertyFace FaceString))
-  AnnLiteralInteger -> Just (EPropertyFace (PropertyFace FaceNumber))
+codeAnnFace :: CodeAnn -> Maybe Face
+codeAnnFace = \case
+  AnnKind k -> nameKindFace k
+  AnnKeyword -> Just FaceKeyword
+  AnnComment -> Just FaceComment
+  AnnPragma -> Just FacePragma
+  AnnJudoc -> Just FaceJudoc
+  AnnDelimiter -> Just FaceDelimiter
+  AnnLiteralString -> Just FaceString
+  AnnLiteralInteger -> Just FaceNumber
+  AnnError -> Just FaceError
   AnnCode -> Nothing
   AnnImportant -> Nothing
   AnnUnkindedSym -> Nothing
   AnnDef {} -> Nothing
   AnnRef {} -> Nothing
+
+fromCodeAnn :: CodeAnn -> Maybe EmacsProperty
+fromCodeAnn = \case
+  AnnKind k -> face <$> nameKindFace k
+  AnnKeyword -> Just (face FaceKeyword)
+  AnnDelimiter -> Just (face FaceDelimiter)
+  AnnComment -> Just (face FaceComment)
+  AnnPragma -> Just (face FacePragma)
+  AnnJudoc -> Just (face FaceJudoc)
+  AnnLiteralString -> Just (face FaceString)
+  AnnLiteralInteger -> Just (face FaceNumber)
+  AnnError -> Just (face FaceError)
+  AnnCode -> Nothing
+  AnnImportant -> Nothing
+  AnnUnkindedSym -> Nothing
+  AnnDef {} -> Nothing
+  AnnRef {} -> Nothing
+  where
+    face :: Face -> EmacsProperty
+    face f = EPropertyFace (PropertyFace f)
 
 data RenderState = RenderState
   { _statePoint :: Point,

@@ -15,5 +15,5 @@ runCommand opts = do
     runArgs =
       RunCommandArgs
         { _runCommandProgramFile = opts ^. nockmaRunEphemeralFile,
-          _runCommandArgsFile = opts ^. nockmaRunEphemeralArgs
+          _runCommandArgs = opts ^. nockmaRunEphemeralArgs
         }

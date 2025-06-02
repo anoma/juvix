@@ -1,12 +1,14 @@
 module Juvix.Compiler.Tree.Language.Builtins where
 
-import Juvix.Prelude
+import Juvix.Compiler.Core.Language.Base
 
 data BoolOp
   = OpIntLt
   | OpIntLe
   | OpEq
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
+
+instance Serialize BoolOp
 
 data BinaryOp
   = OpBool BoolOp
@@ -20,7 +22,9 @@ data BinaryOp
   | OpFieldMul
   | OpFieldDiv
   | OpStrConcat
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
+
+instance Serialize BinaryOp
 
 isCommutative :: BinaryOp -> Bool
 isCommutative = \case
@@ -54,7 +58,9 @@ data UnaryOp
   | -- | Compute the number of expected arguments for the given closure. JV*
     -- opcode: `argsnum`.
     OpArgsNum
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
+
+instance Serialize UnaryOp
 
 -- | Builtin Cairo operations. Implemented only in the Cairo backend.
 data CairoOp
@@ -62,9 +68,19 @@ data CairoOp
     OpCairoPoseidon
   | -- | Cairo Elliptic Curve operation.
     OpCairoEc
+  | -- | Cairo range check builtin.
+    OpCairoRangeCheck
   | -- | Cairo random elliptic curve point generation.
     OpCairoRandomEcPoint
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
+
+instance Serialize CairoOp
+
+-- | Builtin Nockma operations
+data NockmaOp = NockmaOpReify
+  deriving stock (Eq, Generic)
+
+instance Serialize NockmaOp
 
 -- | Builtin ByteArray operations
 data ByteArrayOp
@@ -72,12 +88,15 @@ data ByteArrayOp
     OpByteArrayFromListUInt8
   | -- | Get the size of a ByteArray
     OpByteArrayLength
-  deriving stock (Eq)
+  deriving stock (Eq, Generic)
+
+instance Serialize ByteArrayOp
 
 cairoOpArgsNum :: CairoOp -> Int
 cairoOpArgsNum = \case
   OpCairoPoseidon -> 1
   OpCairoEc -> 3
+  OpCairoRangeCheck -> 2
   OpCairoRandomEcPoint -> 0
 
 -- | Builtin Anoma operations. Implemented only in the Anoma backend.
@@ -114,10 +133,6 @@ data AnomaOp
     OpAnomaActionDelta
   | -- | Compute the delta of a list of Actions
     OpAnomaActionsDelta
-  | -- | Compute the proof of an Action
-    OpAnomaProveAction
-  | -- | Compute the proof of a Delta
-    OpAnomaProveDelta
   | -- | The zero Delta
     OpAnomaZeroDelta
   | -- | Add Deltas
@@ -126,8 +141,27 @@ data AnomaOp
     OpAnomaSubDelta
   | -- | Initialize a pseudorandom number generator
     OpAnomaRandomGeneratorInit
-  | -- | Generate the n random bytes using the pseudorandom number generator
+  | -- | Generate n random bytes using the pseudorandom number generator
     OpAnomaRandomNextBytes
   | -- | Split a pseudorandom number generator into two uncorrelated generators
     OpAnomaRandomSplit
-  deriving stock (Eq, Show)
+  | -- | Returns true if its argument is a commitment
+    OpAnomaIsCommitment
+  | -- | Returns true if its argument is a nullifier
+    OpAnomaIsNullifier
+  | OpAnomaCreateFromComplianceInputs
+  | OpAnomaProveDelta
+  | OpAnomaSetToList
+  | OpAnomaSetFromList
+  | OpAnomaTransactionCompose
+  | OpAnomaActionCreate
+  | OpAnomaKeccak256
+  | -- | See https://hexdocs.pm/ex_secp256k1/ExSecp256k1.html#sign_compact/2
+    OpAnomaSecp256k1SignCompact
+  | -- | See https://hexdocs.pm/ex_secp256k1/ExSecp256k1.html#verify/3
+    OpAnomaSecp256k1Verify
+  | -- | See https://hexdocs.pm/ex_secp256k1/ExSecp256k1.html#create_public_key/1
+    OpAnomaSecp256k1PubKey
+  deriving stock (Eq, Show, Generic)
+
+instance Serialize AnomaOp

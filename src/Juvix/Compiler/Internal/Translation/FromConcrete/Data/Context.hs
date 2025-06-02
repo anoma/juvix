@@ -16,5 +16,8 @@ data InternalResult = InternalResult
 
 makeLenses ''InternalResult
 
+getInternalResultIsMainFile :: InternalResult -> Bool
+getInternalResultIsMainFile = Concrete.getScoperResultIsMainFile . (^. resultScoper)
+
 getInternalResultComments :: InternalResult -> Comments
 getInternalResultComments = Concrete.getScoperResultComments . (^. resultScoper)

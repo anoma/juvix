@@ -18,13 +18,14 @@ import Juvix.Compiler.Concrete.Keywords
 import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language.Base
 import Juvix.Compiler.Concrete.Pretty.Options
-import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
-import Juvix.Compiler.Store.Scoped.Language (Alias, ModuleSymbolEntry, PreSymbolEntry (..), ScopedModule, SymbolEntry, aliasName, moduleEntry, scopedModuleName, symbolEntry)
+import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
+import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Data.Ape.Base
 import Juvix.Data.Ape.Print
-import Juvix.Data.CodeAnn (Ann, CodeAnn (..), CodeAnnReference (..), ppStringLit)
+import Juvix.Data.CodeAnn (Ann, CodeAnn (..), ppCodeAnn, ppStringLit)
 import Juvix.Data.CodeAnn qualified as C
+import Juvix.Data.CodeReference
 import Juvix.Data.Effect.ExactPrint
 import Juvix.Data.Keyword.All qualified as Kw
 import Juvix.Data.NameKind
@@ -173,8 +174,8 @@ ppAnyStage (s :&: p) = case s of
   SParsed -> ppCode p
   SScoped -> ppCode p
 
-instance PrettyPrint S.AbsModulePath where
-  ppCode S.AbsModulePath {..} = do
+instance PrettyPrint AbsModulePath where
+  ppCode AbsModulePath {..} = do
     let absLocalPath' = ppCode <$> _absLocalPath
         absTopModulePath' = ppCode _absTopModulePath
     dotted (absTopModulePath' : absLocalPath')
@@ -310,13 +311,13 @@ ppIterator _isTop Iterator {..} = do
   let n = ppIdentifierType _iteratorName
       is = ppCode <$> _iteratorInitializers
       rngs = ppCode <$> _iteratorRanges
-      is' = parens . hsepSemicolon <$> nonEmpty is
-      rngs' = parens . hsepSemicolon <$> nonEmpty rngs
+      is' = parens . oneLineOrNextNoIndent . hsepSemicolon <$> nonEmpty is
+      rngs' = parens . oneLineOrNextNoIndent . hsepSemicolon <$> nonEmpty rngs
       b
         | _iteratorBodyBraces = space <> braces (blockIndent (ppTopExpressionType _iteratorBody))
         | otherwise = parens (oneLineOrNextNoIndent (ppTopExpressionType _iteratorBody))
   parensIf _iteratorParens $
-    n <+?> is' <+?> rngs' <> b
+    n <>? is' <>? rngs' <> b
 
 instance PrettyPrint S.AName where
   ppCode n = annotated (AnnKind (S.getNameKind n)) (noLoc (pretty (n ^. S.anameVerbatim)))
@@ -347,18 +348,15 @@ instance (SingI s) => PrettyPrint (ArgumentBlock s) where
     where
       Irrelevant d = _argBlockDelims
 
-instance PrettyPrint IsExhaustive where
-  ppCode IsExhaustive {..} = ppCode _isExhaustiveKw
-
-instance (SingI s) => PrettyPrint (NamedApplicationNew s) where
-  ppCode NamedApplicationNew {..} = do
+instance (SingI s) => PrettyPrint (NamedApplication s) where
+  ppCode NamedApplication {..} = do
     let args'
-          | null _namedApplicationNewArguments = mempty
-          | otherwise = ppBlock _namedApplicationNewArguments
+          | null _namedApplicationArguments = mempty
+          | otherwise = ppBlock _namedApplicationArguments
     grouped
       ( align
-          ( ppIdentifierType _namedApplicationNewName
-              <> ppCode _namedApplicationNewExhaustive
+          ( ppIdentifierType _namedApplicationName
+              <> ppCode _namedApplicationAtKw
               <> braces args'
           )
       )
@@ -372,12 +370,12 @@ instance PrettyPrint (RecordUpdatePun s) where
 instance PrettyPrint (NamedArgumentPun s) where
   ppCode = ppCode . (^. namedArgumentPunSymbol)
 
-instance (SingI s) => PrettyPrint (NamedArgumentNew s) where
+instance (SingI s) => PrettyPrint (NamedArgument s) where
   ppCode = \case
-    NamedArgumentNewFunction f -> ppCode f
+    NamedArgumentFunction f -> ppCode f
     NamedArgumentItemPun f -> ppCode f
 
-instance PrettyPrint (RecordSyntaxDef s) where
+instance (SingI s) => PrettyPrint (RecordSyntaxDef s) where
   ppCode = \case
     RecordSyntaxOperator d -> ppCode d
     RecordSyntaxIterator d -> ppCode d
@@ -472,7 +470,7 @@ instance (SingI s) => PrettyPrint (ExpressionAtom s) where
     AtomHole w -> ppHoleType w
     AtomInstanceHole w -> ppHoleType w
     AtomIterator i -> ppIterator NotTop i
-    AtomNamedApplicationNew i -> ppCode i
+    AtomNamedApplication i -> ppCode i
 
 instance PrettyPrint PatternScopedIden where
   ppCode = \case
@@ -587,6 +585,9 @@ instance PrettyPrint QualifiedName where
     let symbols = _qualifiedPath ^. pathParts NonEmpty.|> _qualifiedSymbol
     dotted (ppSymbolType <$> symbols)
 
+instance PrettyPrint ReservedModule where
+  ppCode m = ppCode (m ^. reservedModuleName)
+
 instance PrettyPrint ScopedModule where
   ppCode m = ppCode (m ^. scopedModuleName)
 
@@ -594,8 +595,10 @@ instance PrettyPrint ScopedIden where
   ppCode = ppCode . (^. scopedIdenSrcName)
 
 instance (SingI s) => PrettyPrint (AliasDef s) where
-  ppCode AliasDef {..} =
-    ppCode _aliasDefSyntaxKw
+  ppCode AliasDef {..} = do
+    let doc' = ppCode <$> _aliasDefDoc
+    doc'
+      ?<> ppCode _aliasDefSyntaxKw
       <+> ppCode _aliasDefAliasKw
       <+> ppSymbolType _aliasDefName
       <+> ppCode Kw.kwAssign
@@ -764,13 +767,27 @@ annDef nm = case sing :: SStage s of
   SScoped -> annSDef nm
   SParsed -> id
 
-nameReference :: S.Name' n -> CodeAnnReference
+nameReference :: S.Name' n -> CodeReference
 nameReference n@S.Name' {..} =
-  CodeAnnReference
-    { _codeAnnReferenceNameId = _nameId,
-      _codeAnnReferenceModule = _nameDefinedIn ^. S.absTopModulePath,
-      _codeAnnReferenceNameKindPretty = getNameKindPretty n
+  CodeReference
+    { _codeReferenceNameKindPretty = getNameKindPretty n,
+      _codeReferenceLoc = loc
     }
+  where
+    loc :: CodeReferenceLoc
+    loc
+      | _nameTop =
+          CodeReferenceLocTop
+            TopCodeReference
+              { _topCodeReferenceAbsModule = _nameDefinedIn,
+                _topCodeReferenceVerbatimSymbol = _nameVerbatim
+              }
+      | otherwise =
+          CodeReferenceLocLocal
+            LocalCodeReference
+              { _localCodeReferenceModule = _nameDefinedIn ^. absTopModulePath,
+                _localCodeReferenceNameId = _nameId
+              }
 
 annSDef :: (Members '[ExactPrint] r) => S.Name' n -> Sem r () -> Sem r ()
 annSDef = annotated . AnnDef . nameReference
@@ -899,11 +916,16 @@ instance PrettyPrint BinaryAssoc where
     AssocLeft -> Str.left
     AssocRight -> Str.right
 
-ppSymbolList :: (SingI s) => PrettyPrinting [SymbolType s]
-ppSymbolList items = do
+ppIdentifierList :: (SingI s) => PrettyPrinting [IdentifierType s]
+ppIdentifierList items = do
   ppCode Kw.delimBracketL
-  hsepSemicolon (map ppSymbolType items)
+  hsepSemicolon (map ppIdentifierType items)
   ppCode Kw.delimBracketR
+
+instance PrettyPrint PrecNum where
+  ppCode = \case
+    PrecNumWildcard w -> ppCode w
+    PrecNumExplicit e -> morphemeWithLoc (pretty <$> e)
 
 instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
   ppCode ParsedFixityInfo {..} = do
@@ -914,29 +936,51 @@ instance (SingI s) => PrettyPrint (ParsedFixityInfo s) where
                 return (ppCode Kw.kwAssoc <+> ppCode Kw.kwAssign <+> ppCode a)
               sameItem = do
                 a <- _fixityFieldsPrecSame
-                return (ppCode Kw.kwSame <+> ppCode Kw.kwAssign <+> ppSymbolType a)
+                return (ppCode Kw.kwSame <+> ppCode Kw.kwAssign <+> ppIdentifierType a)
               aboveItem = do
                 a <- _fixityFieldsPrecAbove
-                return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppSymbolList a)
+                return (ppCode Kw.kwAbove <+> ppCode Kw.kwAssign <+> ppIdentifierList a)
               belowItem = do
                 a <- _fixityFieldsPrecBelow
-                return (ppCode Kw.kwBelow <+> ppCode Kw.kwAssign <+> ppSymbolList a)
-              items = ppBlockOrList' (catMaybes [assocItem, sameItem, aboveItem, belowItem])
+                return (ppCode Kw.kwBelow <+> ppCode Kw.kwAssign <+> ppIdentifierList a)
+              precNumItem = do
+                a <- _fixityFieldsPrecNum
+                return (ppCode Kw.kwPrecedence <+> ppCode Kw.kwAssign <+> ppCode a)
+              items = ppBlockOrList' (catMaybes [precNumItem, assocItem, sameItem, aboveItem, belowItem])
               (l, r) = _fixityFieldsBraces ^. unIrrelevant
           return (grouped (ppCode l <> items <> ppCode r))
     ppCode _fixityParsedArity <+?> rhs
 
 instance (SingI s) => PrettyPrint (FixitySyntaxDef s) where
   ppCode f@FixitySyntaxDef {..} = do
-    let header' = ppFixityDefHeader f
+    let doc' = ppCode <$> _fixityDoc
+        header' = ppFixityDefHeader f
         body' = ppCode _fixityInfo
-    header' <+> ppCode _fixityAssignKw <+> body'
+    doc' ?<> header' <+> ppCode _fixityAssignKw <+> body'
 
-instance PrettyPrint OperatorSyntaxDef where
+instance PrettyPrint VisibilityAnn where
+  ppCode = noLoc . ppCodeAnn
+
+instance PrettyPrint ExportInfo where
+  ppCode ExportInfo {..} = do
+    header "Export Info"
+    indent $ do
+      itemize
+        [ header "Symbols:"
+            >> ppCode _exportSymbols,
+          header "Module Symbols:"
+            >> ppCode _exportModuleSymbols,
+          header "Fixity Symbols:"
+            >> ppCode _exportFixitySymbols
+        ]
+      hardline
+
+instance (SingI s) => PrettyPrint (OperatorSyntaxDef s) where
   ppCode OperatorSyntaxDef {..} = do
-    let opSymbol' = ppUnkindedSymbol _opSymbol
-        p = ppUnkindedSymbol _opFixity
-    ppCode _opSyntaxKw <+> ppCode _opKw <+> opSymbol' <+> p
+    let doc' = ppCode <$> _opDoc
+        opSymbol' = ppIdentifierType _opSymbol
+        p = ppIdentifierType _opFixity
+    doc' ?<> ppCode _opSyntaxKw <+> ppCode _opKw <+> opSymbol' <+> p
 
 instance PrettyPrint PatternApp where
   ppCode = apeHelper
@@ -965,10 +1009,12 @@ instance PrettyPrint ParsedIteratorInfo where
         items = ppBlockOrList' (catMaybes [iniItem, rangeItem])
     grouped (ppCode l <> items <> ppCode r)
 
-instance PrettyPrint IteratorSyntaxDef where
+instance (SingI s) => PrettyPrint (IteratorSyntaxDef s) where
   ppCode IteratorSyntaxDef {..} = do
-    let iterSymbol' = ppUnkindedSymbol _iterSymbol
-    ppCode _iterSyntaxKw
+    let doc' = ppCode <$> _iterDoc
+        iterSymbol' = ppIdentifierType _iterSymbol
+    doc'
+      ?<> ppCode _iterSyntaxKw
       <+> ppCode _iterIteratorKw
       <+> iterSymbol'
       <+?> fmap ppCode _iterInfo
@@ -1000,7 +1046,7 @@ instance PrettyPrint Expression where
     ExpressionCase c -> ppCase NotTop c
     ExpressionIf c -> ppIf NotTop c
     ExpressionIterator i -> ppIterator NotTop i
-    ExpressionNamedApplicationNew i -> ppCode i
+    ExpressionNamedApplication i -> ppCode i
     ExpressionRecordUpdate i -> ppCode i
     ExpressionParensRecordUpdate i -> ppCode i
 
@@ -1205,10 +1251,10 @@ ppPipeBranches allowSameLine isTop ppBranch = \case
 instance (SingI s) => PrettyPrint (FunctionDef s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => FunctionDef s -> Sem r ()
   ppCode fun@FunctionDef {..} = do
-    let doc' :: Maybe (Sem r ()) = ppCode <$> _signDoc
-        pragmas' :: Maybe (Sem r ()) = ppCode <$> _signPragmas
-        sig' = ppCode (functionDefLhs fun)
-        body' = case _signBody of
+    let doc' :: Maybe (Sem r ()) = ppCode <$> _functionDefDoc
+        pragmas' :: Maybe (Sem r ()) = ppCode <$> _functionDefPragmas
+        sig' = ppCode (fun ^. functionDefLhs)
+        body' = case _functionDefBody of
           SigBodyExpression e -> space <> ppCode Kw.kwAssign <> oneLineOrNext (ppTopExpressionType e)
           SigBodyClauses k -> ppPipeBranches False Top ppFunctionClause k
     doc'
@@ -1311,6 +1357,19 @@ instance (SingI s) => PrettyPrint (UsingItem s) where
         kwmodule = ppCode <$> (ui ^. usingModuleKw)
     kwmodule <?+> (sym' <+?> kwAs' <+?> alias')
 
+instance PrettyPrint PackageInfo where
+  ppCode PackageInfo {..} = do
+    header ("Package name: " <> (_packagePackage ^. packageLikeName))
+    noLoc ("root:" P.<+> pretty _packageRoot)
+    let roots = case nonEmpty _packageAvailableRoots of
+          Nothing -> return ()
+          Just roots1 -> hardline <> indent (itemize (fmap (noLoc . pretty) roots1))
+    hardline
+    noLoc ("available roots:") <> roots
+    hardline
+    noLoc ("package id:" P.<+> ppCodeAnn _packageInfoPackageId)
+    hardline
+
 instance PrettyPrint ImportTreeStats where
   ppCode ImportTreeStats {..} = do
     header "Import Tree Statistics:"
@@ -1328,19 +1387,35 @@ instance PrettyPrint ImportTree where
     header "============"
     hardline
 
+    header ("Packages (" <> show (length importsTable) <> "):")
+    header "========="
+    itemize . map (noLoc . pretty) $ Map.keys importsTable
+    hardline
+
+    hardline
     forM_ (Map.toList importsTable) $ \(pkgRoot, tbl :: Map (Path Rel File) (Set ImportNode)) -> do
       annotated AnnImportant (noLoc ("* Package at " <> pretty pkgRoot))
       hardline
       let pkgNodes :: HashSet ImportNode = fromJust (nodesByRoot ^. at pkgRoot)
-      header ("Nodes (" <> show (length pkgNodes) <> ")")
+      header ("Nodes Relative paths (" <> show (length pkgNodes) <> ")")
       forM_ pkgNodes $ \node -> do
         noLoc (pMod (node ^. importNodeFile))
         hardline
       hardline
+      header ("Nodes Absolute paths (" <> show (length pkgNodes) <> ")")
+      forM_ pkgNodes $ \node -> do
+        noLoc (pMod (node ^. importNodeAbsFile))
+        hardline
+      hardline
       let numEdges = sum (map length (toList tbl))
       header ("Edges (" <> show numEdges <> ")")
-      forM_ (Map.toList tbl) $ \(fromFile, toFiles) -> do
-        noLoc (pMod fromFile P.<+> annotate AnnKeyword "imports" P.<+> "(" <> pretty (length toFiles) <> "):")
+      forM_ (Map.toList tbl) $ \(fromFile, toFiles :: Set ImportNode) -> do
+        let fromNode :: ImportNode =
+              ImportNode
+                { _importNodePackageRoot = pkgRoot,
+                  _importNodeFile = fromFile
+                }
+        noLoc (pMod fromFile P.<+> "at" P.<+> pMod (fromNode ^. importNodeAbsFile) P.<+> annotate AnnKeyword "imports" P.<+> "(" <> pretty (length toFiles) <> "):")
         hardline
         indent . itemize . (`map` (toList toFiles)) $ \toFile -> do
           let toMod
@@ -1379,7 +1454,7 @@ instance PrettyPrint ImportTree where
           ]
 
 instance PrettyPrint (ImportScan' a) where
-  ppCode = noLoc . importScanPretty
+  ppCode = noLoc . ppCodeAnn
 
 instance (SingI s) => PrettyPrint (Import s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => Import s -> Sem r ()
@@ -1390,9 +1465,9 @@ instance (SingI s) => PrettyPrint (Import s) where
     ppCode (i ^. importKw)
       <+> ppModulePathType (i ^. importModulePath)
       <+?> ppAlias
-      <+?> open'
       <+?> usingHiding'
       <+?> public'
+      <+?> open'
     where
       ppAlias :: Maybe (Sem r ())
       ppAlias = case i ^. importAsName of
@@ -1529,6 +1604,17 @@ ppInductiveSignature InductiveDef {..} = do
     <+?> params'
     <+?> ty'
 
+instance (SingI s) => PrettyPrint (WithModule s) where
+  ppCode :: (Members '[ExactPrint, Reader Options] r) => WithModule s -> Sem r ()
+  ppCode WithModule {..} = do
+    let moduleBody' = unless (null _withModuleBody) $ do
+          indent (ppStatements _withModuleBody)
+          hardline
+    ppCode _withModuleWithKw
+      <> hardline
+      <> moduleBody'
+      <> ppCode _withModuleEndKw
+
 instance (SingI s) => PrettyPrint (InductiveDef s) where
   ppCode :: forall r. (Members '[ExactPrint, Reader Options] r) => InductiveDef s -> Sem r ()
   ppCode d@InductiveDef {..} = do
@@ -1536,11 +1622,13 @@ instance (SingI s) => PrettyPrint (InductiveDef s) where
         pragmas' = ppCode <$> _inductivePragmas
         constrs' = ppConstructorBlock (insertFirstPipe1 (constructorPipe . unIrrelevant) _inductiveConstructors)
         sig' = ppInductiveSignature d
+        withModule' = ppCode <$> _inductiveWithModule
     doc'
       ?<> pragmas'
       ?<> sig'
       <+> ppCode _inductiveAssignKw
         <> constrs'
+        <>? ((line <>) <$> withModule')
     where
       ppConstructorBlock :: NonEmpty (ConstructorDef s) -> Sem r ()
       ppConstructorBlock = \case
@@ -1555,11 +1643,21 @@ instance (SingI s) => PrettyPrint (ProjectionDef s) where
       <+> noLoc ":= projection"
       <+> noLoc (pretty _projectionFieldIx)
       <+> noLoc "for"
-      <+> ppCode _projectionConstructor
+      <+> ppSymbolType _projectionConstructor
+
+ppReservedInductiveDefType :: forall s. (SingI s) => PrettyPrinting (ReservedInductiveDefType s)
+ppReservedInductiveDefType x = case sing :: SStage s of
+  SParsed -> ppCode x
+  SScoped -> absurd x
+
+instance PrettyPrint ReservedInductiveDef where
+  ppCode ReservedInductiveDef {..} = do
+    ppStatements [StatementInductive _reservedInductiveDef, StatementModule _reservedInductiveDefModule]
 
 instance (SingI s) => PrettyPrint (Statement s) where
   ppCode = \case
     StatementSyntax s -> ppCode s
+    StatementReservedInductive s -> ppReservedInductiveDefType s
     StatementFunctionDef f -> ppCode f
     StatementDeriving f -> ppCode f
     StatementImport i -> ppCode i
@@ -1590,6 +1688,21 @@ instance PrettyPrint SymbolEntry where
     noLoc
       ( kindWord
           P.<+> C.code (kindAnn (pretty (ent ^. symbolEntry . S.nameVerbatim)))
+          P.<+> "defined at"
+          P.<+> pretty (getLoc ent)
+      )
+    where
+      pretty' :: Text -> Doc a
+      pretty' = pretty
+      (kindAnn :: Doc Ann -> Doc Ann, kindWord :: Doc Ann) =
+        let k = getNameKind ent
+         in (annotate (AnnKind k), pretty' (nameKindText k))
+
+instance PrettyPrint FixitySymbolEntry where
+  ppCode ent =
+    noLoc
+      ( kindWord
+          P.<+> C.code (kindAnn (pretty (ent ^. fixityEntry . S.nameVerbatim)))
           P.<+> "defined at"
           P.<+> pretty (getLoc ent)
       )

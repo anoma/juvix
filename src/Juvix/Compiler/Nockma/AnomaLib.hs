@@ -23,43 +23,48 @@ anomaLib =
 anomaLibPath :: AnomaLib -> Term Natural
 anomaLibPath = \case
   AnomaLibFunction (AnomaStdlibFunction f) -> case f of
-    StdlibDec -> [nock| [9 342 0 511] |]
-    StdlibAdd -> [nock| [9 20 0 511] |]
-    StdlibSub -> [nock| [9 47 0 511] |]
-    StdlibMul -> [nock| [9 4 0 511] |]
-    StdlibDiv -> [nock| [9 170 0 511] |]
-    StdlibMod -> [nock| [9 46 0 511] |]
-    StdlibLe -> [nock| [9 84 0 511] |]
-    StdlibLt -> [nock| [9 343 0 511] |]
+    -- [callOp numWithinLayer @ layerNum]
+    StdlibDec -> [nock| [9 342 0 8191] |]
+    StdlibAdd -> [nock| [9 20 0 8191] |]
+    StdlibSub -> [nock| [9 47 0 8191] |]
+    StdlibMul -> [nock| [9 4 0 8191] |]
+    StdlibDiv -> [nock| [9 170 0 8191] |]
+    StdlibMod -> [nock| [9 46 0 8191] |]
+    StdlibLe -> [nock| [9 84 0 8191] |]
+    StdlibLt -> [nock| [9 343 0 8191] |]
     -- pow2 is called bex in hoon
-    StdlibPow2 -> [nock| [9 4 0 63] |]
+    StdlibPow2 -> [nock| [9 4 0 1023] |]
     -- encode is called jam in hoon
-    StdlibEncode -> [nock| [9 22 0 31] |]
+    StdlibEncode -> [nock| [9 22 0 511] |]
     -- decode is called cue in hoon
-    StdlibDecode -> [nock| [9 94 0 31] |]
+    StdlibDecode -> [nock| [9 94 0 511] |]
     -- verifyDetached is called verify-detatched in hoon
-    StdlibVerifyDetached -> [nock| [9 22 0 15] |]
-    StdlibSign -> [nock| [9 10 0 15] |]
-    StdlibSignDetached -> [nock| [9 23 0 15] |]
-    StdlibVerify -> [nock| [9 4 0 15] |]
-    StdlibLengthList -> [nock| [9 1.406 0 255] |]
-    StdlibCurry -> [nock| [9 4 0 255] |]
+    StdlibVerifyDetached -> [nock| [9 22 0 255] |]
+    StdlibSign -> [nock| [9 10 0 255] |]
+    StdlibSignDetached -> [nock| [9 23 0 255] |]
+    StdlibVerify -> [nock| [9 4 0 255] |]
+    StdlibLengthList -> [nock| [9 1.406 0 4095] |]
+    StdlibCurry -> [nock| [9 4 0 4095] |]
+    StdlibSecp256k1SignCompact -> [nock| [9 23 0 3] |]
+    StdlibSecp256k1Verify -> [nock| [9 10 0 3] |]
+    StdlibSecp256k1PubKey -> [nock| [9 4 0 3] |]
+    StdlibKeccak256 -> [nock| [9 22 0 3] |]
     -- sha256 is called shax in hoon
-    StdlibSha256 -> [nock| [9 22 0 7] |]
+    StdlibSha256 -> [nock| [9 22 0 127] |]
     -- Obtained from the urbit dojo using:
     --
     -- =>  rm  !=(~(met block 3))
     --
     -- The `3` here is because we want to treat each atom as sequences of 2^3
     -- bits, i.e bytes.
-    StdlibLengthBytes -> [nock| [8 [9 10 0 63] 9 190 10 [6 7 [0 3] 1 3] 0 2] |]
+    StdlibLengthBytes -> [nock| [8 [9 10 0 1023] 9 190 10 [6 7 [0 3] 1 3] 0 2] |]
     -- Obtained from the urbit dojo using:
     --
     -- =>  rm  !=(~(cat block 3))
     --
     -- The `3` here is because we want to treat each atom as sequences of 2^3
     -- bits, i.e bytes.
-    StdlibCatBytes -> [nock| [8 [9 10 0 63] 9 4 10 [6 7 [0 3] 1 3] 0 2] |]
+    StdlibCatBytes -> [nock| [8 [9 10 0 1023] 9 4 10 [6 7 [0 3] 1 3] 0 2] |]
     -- Obtained from the urbit dojo using:
     --
     -- =>(rm !=(|=([l=(list @)] (foldr l |=([fst=@ snd=@] (add (~(lsh block 3) 1 snd) fst))))))
@@ -67,54 +72,92 @@ anomaLibPath = \case
     -- The `3` here is because we want to shift left in byte = 2^3 bit steps.
     StdlibFoldBytes ->
       [nock|
-              [ 8
-                [1 0]
-                [ 1
-                  8
-                  [9 46 0 1.023]
-                  9
-                  2
-                  10
-                  [ 6
-                    [0 14]
+        [
+          8
+          [1 0]
+          [
+            1
+            8
+            [9 46 0 16383]
+            9
+            2
+            10
+            [
+              6
+              [0 14]
+              7
+              [0 3]
+              8
+              [1 0 0]
+              [
+                1
+                8
+                [9 20 0 131071]
+                9
+                2
+                10
+                [
+                  6
+                  [
                     7
                     [0 3]
                     8
-                    [1 0 0]
-                    [1 8 [9 20 0 8.191] 9 2 10 [6 [7 [0 3] 8 [8 [9 10 0 1.023] 9 90 10 [6 7 [0 3] 1 3] 0 2] 9 2 10 [6 [7 [0 3] 1 1] 0 29] 0 2] 0 28] 0 2]
+                    [8 [9 10 0 16383] 9 90 10 [6 7 [0 3] 1 3] 0 2]
+                    9
+                    2
+                    10
+                    [6 [7 [0 3] 1 1] 0 29]
                     0
-                    1
+                    2
                   ]
                   0
-                  2
+                  28
                 ]
                 0
-                1
+                2
               ]
+              0
+              1
+            ]
+            0
+            2
+          ]
+          0
+          1
+        ]
       |]
     -- Obtained from the urbit dojo using:
     --
     -- =>  rm  !=  |=  [seed=@]  ~(. og seed)
-    StdlibRandomInitGen -> [nock| [8 [1 0] [1 8 [9 47 0 31] 10 [6 0 14] 0 2] 0 1] |]
+    StdlibRandomInitGen -> [nock| [8 [1 0] [1 8 [9 47 0 511] 10 [6 0 14] 0 2] 0 1] |]
     -- obtained from the urbit dojo using:
     --
     -- =>  rm  !=  |=  [rng=* width=@]   (raws:`_og`rng width)
-    StdlibRandomNextBytes -> [nock| [8 [1 0 0] [1 8 [7 [0 12] 9 4 0 1] 9 2 10 [6 0 29] 0 2] 0 1] |]
+    StdlibRandomNextBits -> [nock| [8 [1 0 0] [1 8 [7 [0 12] 9 4 0 1] 9 2 10 [6 0 29] 0 2] 0 1] |]
     -- obtained from the urbit dojo using:
     --
     -- =>  rm  !=  |=  [rng=*]  split:`_og`rng
     StdlibRandomSplit -> [nock| [8 [1 0] [1 7 [0 6] 9 21 0 1] 0 1] |]
+    -- obtained from the urbit dojo using:
+    --
+    -- =>  rm  !=  |=  a=(set)  ~(tap in a)
+    StdlibAnomaSetToList -> [nock| [8 [1 0] [1 8 [9 21 0 63] 9 186 10 [6 0 14] 0 2] 0 1] |]
+    -- called silt in hoon
+    StdlibAnomaSetFromList -> [nock| [9 22 0 15] |]
   AnomaLibFunction (AnomaRmFunction f) -> case f of
-    RmCommit -> [nock| [9 94 0 1] |]
-    RmNullify -> [nock| [9 350 0 1] |]
-    RmKind -> [nock| [9 1.492 0 1] |]
-    RmProveLogic -> [nock| [9 342 0 1] |]
-    RmProveAction -> [nock| [9 22 0 1] |]
-    RmDeltaAdd -> [nock| [9 92 0 1] |]
-    RmDeltaSub -> [nock| [9 763 0 1] |]
-    RmResourceDelta -> [nock| [9 343 0 1] |]
+    RmCommit -> [nock| [9 3002 0 1] |]
+    RmNullify -> [nock| [9 2815 0 1] |]
+    RmKind -> [nock| [9 5972 0 1] |]
+    RmDeltaAdd -> [nock| [9 372 0 1] |]
+    RmDeltaSub -> [nock| [9 12013 0 1] |]
+    RmResourceDelta -> [nock| [9 701 0 1] |]
     RmActionDelta -> [nock| [9 4 0 1] |]
-    RmMakeDelta -> [nock| [9 372 0 1] |]
-    RmProveDelta -> [nock| [9 1.535 0 1] |]
+    RmMakeDelta -> [nock| [9 11951 0 1] |]
+    RmIsCommitment -> [nock| [9 12012 0 1] |]
+    RmIsNullifier -> [nock| [9 5974 0 1] |]
+    RmActionCreate -> [nock| [9 382 0 1] |]
+    RmTransactionCompose -> [nock| [9 383 0 1] |]
+    RmCreateFromComplianceInputs -> [nock| [9 1406 0 1] |]
+    RmCairoProveDelta -> [nock| [9 1503 0 1] |]
   AnomaLibValue (AnomaRmValue v) -> case v of
-    RmZeroDelta -> [nock| [9 20 0 1] |]
+    RmZeroDelta -> [nock| [9 174 0 1] |]

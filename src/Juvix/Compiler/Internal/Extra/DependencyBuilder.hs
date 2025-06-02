@@ -1,7 +1,13 @@
 module Juvix.Compiler.Internal.Extra.DependencyBuilder
-  ( buildDependencyInfoPreModule,
+  ( NameDependencyInfo,
+    buildDependencyInfoPreModule,
     buildDependencyInfoLet,
-    ExportsTable,
+    instanceDependencyParams,
+    letDependencyParams,
+    positivityNameDependencyInfo,
+    DependencyParams (..),
+    dependencyParamsIsStartNode,
+    dependencyParamsInstance,
   )
 where
 
@@ -34,31 +40,67 @@ emptyBuilderState =
       _builderStateFromInt = Nothing
     }
 
-type ExportsTable = HashSet NameId
+letDependencyParams :: DependencyParams
+letDependencyParams =
+  DependencyParams
+    { _dependencyParamsIsStartNode = const False,
+      _dependencyParamsInstance = False
+    }
 
-buildDependencyInfoPreModule :: PreModule -> ExportsTable -> NameDependencyInfo
-buildDependencyInfoPreModule ms tab =
-  buildDependencyInfoHelper tab (goPreModule ms >> addCastEdges)
+instanceDependencyParams :: HashSet NameId -> DependencyParams
+instanceDependencyParams s =
+  DependencyParams
+    { _dependencyParamsIsStartNode = (`HashSet.member` s),
+      _dependencyParamsInstance = True
+    }
+
+data DependencyParams = DependencyParams
+  { _dependencyParamsIsStartNode :: NameId -> Bool,
+    -- | When set to True, each declaration depends on the previous declaration.
+    -- Necessary for instance resolution
+    _dependencyParamsInstance :: Bool
+  }
+
+makeLenses ''DependencyParams
+
+buildDependencyInfoPreModule :: forall r. (Members '[Reader DependencyParams] r) => PreModule -> Sem r NameDependencyInfo
+buildDependencyInfoPreModule ms =
+  buildDependencyInfoHelper (goPreModule ms >> addCastEdges)
+
+-- | Compute dependency info with `_dependencyParamsInstance` set to `False`.
+-- Used for positivity checking
+positivityNameDependencyInfo :: [PreStatement] -> NameDependencyInfo
+positivityNameDependencyInfo m =
+  run
+    . runReader dependencyParams
+    . buildDependencyInfoHelper
+    $ goPreStatements impossibleParent m
+  where
+    impossibleParent :: Name
+    impossibleParent = impossibleError "This name should never be used because `_dependencyParamsInstance` is set to False"
+
+    dependencyParams :: DependencyParams
+    dependencyParams =
+      DependencyParams
+        { _dependencyParamsInstance = False,
+          _dependencyParamsIsStartNode = const True
+        }
 
 buildDependencyInfoLet :: NonEmpty PreLetStatement -> NameDependencyInfo
 buildDependencyInfoLet ls =
-  buildDependencyInfoHelper mempty (goPreLetStatements Nothing (toList ls) >> addCastEdges)
+  run . runReader letDependencyParams $
+    buildDependencyInfoHelper (goPreLetStatements Nothing (toList ls) >> addCastEdges)
 
 buildDependencyInfoHelper ::
-  ExportsTable ->
-  Sem '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] () ->
-  NameDependencyInfo
-buildDependencyInfoHelper tbl m = createDependencyInfo graph startNodes
-  where
-    startNodes :: StartNodes
-    graph :: DependencyGraph
-    (startNodes, graph) =
-      run
-        . evalState emptyBuilderState
-        . runState HashSet.empty
-        . execState HashMap.empty
-        . runReader tbl
-        $ m
+  Sem (State DependencyGraph ': State StartNodes ': State BuilderState ': r) () ->
+  Sem r NameDependencyInfo
+buildDependencyInfoHelper m = do
+  (startNodes :: StartNodes, graph :: DependencyGraph) <-
+    evalState emptyBuilderState
+      . runState HashSet.empty
+      . execState HashMap.empty
+      $ m
+  return (createDependencyInfo graph startNodes)
 
 addCastEdges :: (Members '[State DependencyGraph, State BuilderState] r) => Sem r ()
 addCastEdges = do
@@ -75,6 +117,11 @@ addCastEdges = do
 
 addStartNode :: (Member (State StartNodes) r) => Name -> Sem r ()
 addStartNode n = modify (HashSet.insert n)
+
+addEdgeParent :: (Members '[Reader DependencyParams, State DependencyGraph] r) => Name -> Name -> Sem r ()
+addEdgeParent a b = do
+  inst <- asks (^. dependencyParamsInstance)
+  when inst (addEdge a b)
 
 addEdgeMay :: (Members '[State DependencyGraph, Reader (Maybe Name)] r) => Name -> Sem r ()
 addEdgeMay n2 = whenJustM ask $ \n1 -> addEdge n1 n2
@@ -95,14 +142,12 @@ addEdge n1 n2 =
     Just ns -> Just (HashSet.insert n2 ns)
     Nothing -> Just (HashSet.singleton n2)
 
-checkStartNode :: (Members '[Reader ExportsTable, State StartNodes, State BuilderState] r) => Name -> Sem r ()
+checkStartNode :: (Members '[Reader DependencyParams, State StartNodes, State BuilderState] r) => Name -> Sem r ()
 checkStartNode n = do
-  tab <- ask
-  when
-    (HashSet.member (n ^. nameId) tab)
-    (addStartNode n)
+  isStart <- asks (^. dependencyParamsIsStartNode)
+  when (isStart (n ^. nameId)) (addStartNode n)
 
-goPreModule :: (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => PreModule -> Sem r ()
+goPreModule :: (Members '[Reader DependencyParams, State DependencyGraph, State StartNodes, State BuilderState] r) => PreModule -> Sem r ()
 goPreModule m = do
   checkStartNode (m ^. moduleName)
   let b = m ^. moduleBody
@@ -112,7 +157,7 @@ goPreModule m = do
 
 goPreLetStatements ::
   forall r.
-  (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) =>
+  (Members '[Reader DependencyParams, State DependencyGraph, State StartNodes, State BuilderState] r) =>
   Maybe Name ->
   [PreLetStatement] ->
   Sem r ()
@@ -128,7 +173,7 @@ goPreLetStatements mp = \case
 
 goPreLetStatement ::
   forall r.
-  (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState, Reader (Maybe Name)] r) =>
+  (Members '[Reader DependencyParams, State DependencyGraph, State StartNodes, State BuilderState, Reader (Maybe Name)] r) =>
   PreLetStatement ->
   Sem r ()
 goPreLetStatement = \case
@@ -141,7 +186,7 @@ goPreLetStatement = \case
 -- if it exists) in order to guarantee that instance declarations are always
 -- processed before their uses. For an instance to be taken into account in
 -- instance resolution, it needs to be declared textually earlier.
-goPreStatements :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> [PreStatement] -> Sem r ()
+goPreStatements :: forall r. (Members '[Reader DependencyParams, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> [PreStatement] -> Sem r ()
 goPreStatements p = \case
   stmt : stmts -> do
     goPreStatement p stmt
@@ -155,24 +200,24 @@ goPreStatements p = \case
       PreInductiveDef i -> i ^. inductiveName
 
 -- | `p` is the parent -- the previous declaration or the enclosing module
-goPreStatement :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> PreStatement -> Sem r ()
+goPreStatement :: forall r. (Members '[Reader DependencyParams, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> PreStatement -> Sem r ()
 goPreStatement p = \case
   PreAxiomDef ax -> goAxiom p ax
   PreFunctionDef f -> goTopFunctionDef p f
   PreInductiveDef i -> goInductive p i
 
-goAxiom :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> AxiomDef -> Sem r ()
+goAxiom :: forall r. (Members '[Reader DependencyParams, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> AxiomDef -> Sem r ()
 goAxiom p ax = do
   checkStartNode (ax ^. axiomName)
-  addEdge (ax ^. axiomName) p
+  addEdgeParent (ax ^. axiomName) p
   runReader (Just (ax ^. axiomName)) (goExpression (ax ^. axiomType))
 
-goInductive :: forall r. (Members '[Reader ExportsTable, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> InductiveDef -> Sem r ()
+goInductive :: forall r. (Members '[Reader DependencyParams, State DependencyGraph, State StartNodes, State BuilderState] r) => Name -> InductiveDef -> Sem r ()
 goInductive p i = do
   let indName = i ^. inductiveName
   checkStartNode indName
   checkBuiltinInductiveStartNode i
-  addEdge indName p
+  addEdgeParent indName p
   mapM_ (goConstructorDef indName) (i ^. inductiveConstructors)
   runReader (Just indName) $ do
     mapM_ goInductiveParameter (i ^. inductiveParameters)
@@ -195,20 +240,25 @@ checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
       BuiltinList -> return ()
       BuiltinMaybe -> return ()
       BuiltinPair -> return ()
+      BuiltinJson -> return ()
       BuiltinPoseidonState -> return ()
       BuiltinEcPoint -> return ()
       BuiltinAnomaResource -> return ()
+      BuiltinAnomaNullifierKey -> return ()
       BuiltinAnomaAction -> return ()
+      BuiltinAnomaComplianceInputs -> return ()
+      BuiltinAnomaShieldedTransaction -> return ()
       BuiltinEq -> return ()
       BuiltinOrd -> return ()
       BuiltinOrdering -> return ()
+      BuiltinNockmaNoun -> return ()
 
     addInductiveStartNode :: Sem r ()
     addInductiveStartNode = addStartNode (i ^. inductiveName)
 
-goTopFunctionDef :: (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) => Name -> FunctionDef -> Sem r ()
+goTopFunctionDef :: (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader DependencyParams] r) => Name -> FunctionDef -> Sem r ()
 goTopFunctionDef p f = do
-  addEdge (f ^. funDefName) p
+  addEdgeParent (f ^. funDefName) p
   goFunctionDefHelper f
 
 checkCast ::
@@ -221,7 +271,7 @@ checkCast f = case f ^. funDefBuiltin of
   _ -> return ()
 
 goFunctionDefHelper ::
-  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) =>
+  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader DependencyParams] r) =>
   FunctionDef ->
   Sem r ()
 goFunctionDefHelper f = do
@@ -235,7 +285,7 @@ goFunctionDefHelper f = do
 
 -- | constructors of an inductive type depend on the inductive type, not the other
 -- way round; an inductive type depends on the types of its constructors
-goConstructorDef :: (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable] r) => Name -> ConstructorDef -> Sem r ()
+goConstructorDef :: (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader DependencyParams] r) => Name -> ConstructorDef -> Sem r ()
 goConstructorDef indName c = do
   addEdge (c ^. inductiveConstructorName) indName
   runReader (Just indName) (goExpression (c ^. inductiveConstructorType))
@@ -256,7 +306,7 @@ goPattern p = case p ^. patternArgPattern of
 
 goExpression ::
   forall r.
-  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable, Reader (Maybe Name)] r) =>
+  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader DependencyParams, Reader (Maybe Name)] r) =>
   Expression ->
   Sem r ()
 goExpression e = case e of
@@ -274,8 +324,12 @@ goExpression e = case e of
   ExpressionInstanceHole {} -> return ()
   ExpressionLambda l -> goLambda l
   ExpressionLet l -> goLet l
+  ExpressionNatural l -> goNatural l
   ExpressionSimpleLambda l -> goSimpleLambda l
   where
+    goNatural :: BuiltinNatural -> Sem r ()
+    goNatural b = goExpression (b ^. builtinNaturalArg)
+
     goSimpleLambda :: SimpleLambda -> Sem r ()
     goSimpleLambda l = do
       addEdgeMay (l ^. slambdaBinder . sbinderVar)
@@ -326,7 +380,7 @@ goExpression e = case e of
       LetMutualBlock MutualBlockLet {..} -> mapM_ goFunctionDefHelper _mutualLet
 
 goInductiveParameter ::
-  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable, Reader (Maybe Name)] r) =>
+  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader DependencyParams, Reader (Maybe Name)] r) =>
   InductiveParameter ->
   Sem r ()
 goInductiveParameter param = do
@@ -334,7 +388,7 @@ goInductiveParameter param = do
   goExpression (param ^. inductiveParamType)
 
 goFunctionParameter ::
-  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader ExportsTable, Reader (Maybe Name)] r) =>
+  (Members '[State DependencyGraph, State StartNodes, State BuilderState, Reader DependencyParams, Reader (Maybe Name)] r) =>
   FunctionParameter ->
   Sem r ()
 goFunctionParameter param = do

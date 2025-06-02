@@ -16,10 +16,10 @@ import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.NoDisplayInfo
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Nockma.Encoding qualified as Encoding
-import Juvix.Compiler.Nockma.Encoding.ByteString (byteStringToIntegerLE, naturalToByteStringLELen)
 import Juvix.Compiler.Nockma.Encoding.Ed25519 qualified as E
 import Juvix.Compiler.Store.Core.Extra qualified as Store
 import Juvix.Data.Field
+import Juvix.Prelude.Bytes
 import Text.Read qualified as T
 
 data EvalOptions = EvalOptions
@@ -218,6 +218,7 @@ geval opts herr tab env0 = eval' env0
       OpFail -> failOp
       OpTrace -> traceOp
       OpAssert -> assertOp
+      OpRangeCheck -> rangeCheckOp
       OpAnomaGet -> anomaGetOp
       OpAnomaEncode -> anomaEncodeOp
       OpAnomaDecode -> anomaDecodeOp
@@ -228,20 +229,27 @@ geval opts herr tab env0 = eval' env0
       OpAnomaByteArrayToAnomaContents -> anomaByteArrayToAnomaContents
       OpAnomaByteArrayFromAnomaContents -> anomaByteArrayFromAnomaContents
       OpAnomaSha256 -> anomaSha256
+      OpNockmaReify -> normalizeOrUnsupported opcode
       OpAnomaResourceCommitment -> normalizeOrUnsupported opcode
       OpAnomaResourceNullifier -> normalizeOrUnsupported opcode
       OpAnomaResourceKind -> normalizeOrUnsupported opcode
       OpAnomaResourceDelta -> normalizeOrUnsupported opcode
       OpAnomaActionDelta -> normalizeOrUnsupported opcode
       OpAnomaActionsDelta -> normalizeOrUnsupported opcode
-      OpAnomaProveAction -> normalizeOrUnsupported opcode
-      OpAnomaProveDelta -> normalizeOrUnsupported opcode
       OpAnomaZeroDelta -> normalizeOrUnsupported opcode
       OpAnomaAddDelta -> normalizeOrUnsupported opcode
       OpAnomaSubDelta -> normalizeOrUnsupported opcode
       OpAnomaRandomGeneratorInit -> normalizeOrUnsupported opcode
       OpAnomaRandomNextBytes -> normalizeOrUnsupported opcode
       OpAnomaRandomSplit -> normalizeOrUnsupported opcode
+      OpAnomaIsCommitment -> normalizeOrUnsupported opcode
+      OpAnomaIsNullifier -> normalizeOrUnsupported opcode
+      OpAnomaCreateFromComplianceInputs -> normalizeOrUnsupported opcode
+      OpAnomaProveDelta -> normalizeOrUnsupported opcode
+      OpAnomaActionCreate -> normalizeOrUnsupported opcode
+      OpAnomaTransactionCompose -> normalizeOrUnsupported opcode
+      OpAnomaSetToList -> normalizeOrUnsupported opcode
+      OpAnomaSetFromList -> normalizeOrUnsupported opcode
       OpPoseidonHash -> poseidonHashOp
       OpEc -> ecOp
       OpRandomEcPoint -> randomEcPointOp
@@ -249,6 +257,10 @@ geval opts herr tab env0 = eval' env0
       OpUInt8FromInt -> uint8FromIntOp
       OpByteArrayFromListByte -> byteArrayFromListByteOp
       OpByteArrayLength -> byteArrayLengthOp
+      OpAnomaKeccak256 -> normalizeOrUnsupported opcode
+      OpAnomaSecp256k1SignCompact -> normalizeOrUnsupported opcode
+      OpAnomaSecp256k1Verify -> normalizeOrUnsupported opcode
+      OpAnomaSecp256k1PubKey -> normalizeOrUnsupported opcode
       where
         err :: Text -> a
         err msg = evalError msg n
@@ -397,6 +409,31 @@ geval opts herr tab env0 = eval' env0
                         _ ->
                           Exception.throw (EvalError ("assertion failed: " <> printNode val) Nothing)
         {-# INLINE assertOp #-}
+
+        rangeCheckOp :: [Node] -> Node
+        rangeCheckOp = binary $ \val1 val2 ->
+          let !v1 = eval' env val1
+              !v2 = eval' env val2
+           in case (v1, v2) of
+                (NCst c1, NCst c2) ->
+                  case (c1, c2) of
+                    (Constant _ (ConstInteger i1), Constant _ (ConstInteger i2))
+                      | i1 >= 0 && i1 <= i2 ->
+                          nodeFromBool True
+                    (Constant _ (ConstField i1), Constant _ (ConstField i2))
+                      | fieldToInteger i1 >= 0 && fieldToInteger i1 <= fieldToInteger i2 ->
+                          nodeFromBool True
+                    _
+                      | opts ^. evalOptionsSilent ->
+                          nodeFromBool False
+                      | otherwise ->
+                          err "range check failed"
+                _
+                  | opts ^. evalOptionsSilent ->
+                      nodeFromBool False
+                  | otherwise ->
+                      err "range check failed"
+        {-# INLINE rangeCheckOp #-}
 
         normalizeOrUnsupported :: BuiltinOp -> [Node] -> Node
         normalizeOrUnsupported op args =

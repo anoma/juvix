@@ -9,6 +9,7 @@ data TransformationId
   | LetRecLifting
   | TopEtaExpand
   | RemoveTypeArgs
+  | RemoveInductiveParams
   | MoveApps
   | NatToPrimInt
   | IntToPrimInt
@@ -16,7 +17,6 @@ data TransformationId
   | IdentityTrans
   | UnrollRecursion
   | ComputeTypeInfo
-  | ComputeCaseANF
   | DetectConstantSideConditions
   | DetectRedundantPatterns
   | MatchToCase
@@ -25,17 +25,14 @@ data TransformationId
   | CombineInfoTables
   | CheckExec
   | CheckRust
-  | CheckVampIR
   | CheckAnoma
   | CheckCairo
   | Normalize
   | LetFolding
   | LambdaFolding
-  | LetHoisting
+  | LoopHoisting
   | Inlining
   | MandatoryInlining
-  | FoldTypeSynonyms
-  | CaseCallLifting
   | SimplifyIfs
   | SimplifyComparisons
   | SpecializeArgs
@@ -45,39 +42,64 @@ data TransformationId
   | FilterUnreachable
   | OptPhaseEval
   | OptPhaseExec
-  | OptPhaseVampIR
   | OptPhaseMain
+  | OptPhasePreLifting
+  | Trace
   deriving stock (Data, Bounded, Enum, Show)
 
 data PipelineId
-  = PipelineStored
-  | PipelineNormalize
-  | PipelineVampIR
-  | PipelineStripped
+  = PipelineEval
   | PipelineExec
+  | PipelineTypecheck
+  | PipelineNormalize
+  | PipelineStripped
   deriving stock (Data, Bounded, Enum)
 
 type TransformationLikeId = TransformationLikeId' TransformationId PipelineId
 
 toTypecheckTransformations :: [TransformationId]
-toTypecheckTransformations = [DetectConstantSideConditions, DetectRedundantPatterns, MatchToCase]
+toTypecheckTransformations =
+  [DetectConstantSideConditions, DetectRedundantPatterns, MatchToCase]
 
-toStoredTransformations :: [TransformationId]
-toStoredTransformations = [EtaExpandApps, DetectConstantSideConditions, DetectRedundantPatterns, MatchToCase, NatToPrimInt, IntToPrimInt, ConvertBuiltinTypes, OptPhaseEval, DisambiguateNames]
+toEvalTransformations :: [TransformationId]
+toEvalTransformations =
+  [ EtaExpandApps,
+    DetectConstantSideConditions,
+    DetectRedundantPatterns,
+    MatchToCase,
+    NatToPrimInt,
+    IntToPrimInt,
+    ConvertBuiltinTypes,
+    OptPhaseEval,
+    DisambiguateNames
+  ]
 
-combineInfoTablesTransformations :: [TransformationId]
-combineInfoTablesTransformations = [CombineInfoTables, FilterUnreachable]
+toExecTransformations :: [TransformationId]
+toExecTransformations =
+  toEvalTransformations ++ [OptPhasePreLifting, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps]
 
 toNormalizeTransformations :: [TransformationId]
-toNormalizeTransformations = [CombineInfoTables, LetRecLifting, LetFolding, UnrollRecursion]
+toNormalizeTransformations =
+  toEvalTransformations ++ [CombineInfoTables, LetRecLifting, LetFolding, UnrollRecursion]
 
-toVampIRTransformations :: [TransformationId]
-toVampIRTransformations =
-  combineInfoTablesTransformations ++ [CheckVampIR, LetRecLifting, OptPhaseVampIR, UnrollRecursion, Normalize, LetHoisting]
+toStrippedTransformations0 :: TransformationId -> [TransformationId]
+toStrippedTransformations0 checkId =
+  [FilterUnreachable, checkId, RemoveTypeArgs]
+
+-- | The `toStrippedTransformations` need to be broken into two parts for the
+-- modular pipeline. The probelm is that `RemoveTypeArgs` modifies the types of
+-- inductives, changing their arity. The `RemoveInductiveParams` would query old
+-- inductive arities if they are from a different module. Breaking the stripped
+-- transformation pipeline after `RemoveTypeArgs` ensures that all modules are
+-- processed up to that point and `RemoveInductiveParams` uses new inductive
+-- arities.
+toStrippedTransformations1 :: [TransformationId]
+toStrippedTransformations1 =
+  [RemoveInductiveParams, DisambiguateNames]
 
 toStrippedTransformations :: TransformationId -> [TransformationId]
 toStrippedTransformations checkId =
-  combineInfoTablesTransformations ++ [checkId, LambdaLetRecLifting, TopEtaExpand, OptPhaseExec, MoveApps, RemoveTypeArgs, DisambiguateNames]
+  toStrippedTransformations0 checkId ++ toStrippedTransformations1
 
 instance TransformationId' TransformationId where
   transformationText :: TransformationId -> Text
@@ -91,28 +113,25 @@ instance TransformationId' TransformationId where
     EtaExpandApps -> strEtaExpandApps
     IdentityTrans -> strIdentity
     RemoveTypeArgs -> strRemoveTypeArgs
+    RemoveInductiveParams -> strRemoveInductiveParams
     MoveApps -> strMoveApps
     NatToPrimInt -> strNatToPrimInt
     IntToPrimInt -> strIntToPrimInt
     ConvertBuiltinTypes -> strConvertBuiltinTypes
     ComputeTypeInfo -> strComputeTypeInfo
-    ComputeCaseANF -> strComputeCaseANF
     UnrollRecursion -> strUnrollRecursion
     DisambiguateNames -> strDisambiguateNames
     CombineInfoTables -> strCombineInfoTables
     CheckExec -> strCheckExec
     CheckRust -> strCheckRust
-    CheckVampIR -> strCheckVampIR
     CheckAnoma -> strCheckAnoma
     CheckCairo -> strCheckCairo
     Normalize -> strNormalize
     LetFolding -> strLetFolding
     LambdaFolding -> strLambdaFolding
-    LetHoisting -> strLetHoisting
+    LoopHoisting -> strLoopHoisting
     Inlining -> strInlining
     MandatoryInlining -> strMandatoryInlining
-    FoldTypeSynonyms -> strFoldTypeSynonyms
-    CaseCallLifting -> strCaseCallLifting
     SimplifyIfs -> strSimplifyIfs
     SimplifyComparisons -> strSimplifyComparisons
     SpecializeArgs -> strSpecializeArgs
@@ -122,22 +141,23 @@ instance TransformationId' TransformationId where
     FilterUnreachable -> strFilterUnreachable
     OptPhaseEval -> strOptPhaseEval
     OptPhaseExec -> strOptPhaseExec
-    OptPhaseVampIR -> strOptPhaseVampIR
     OptPhaseMain -> strOptPhaseMain
+    OptPhasePreLifting -> strOptPhasePreLifting
+    Trace -> strTrace
 
 instance PipelineId' TransformationId PipelineId where
   pipelineText :: PipelineId -> Text
   pipelineText = \case
-    PipelineStored -> strStoredPipeline
-    PipelineNormalize -> strNormalizePipeline
-    PipelineVampIR -> strVampIRPipeline
-    PipelineStripped -> strStrippedPipeline
+    PipelineEval -> strEvalPipeline
     PipelineExec -> strExecPipeline
+    PipelineTypecheck -> strTypecheckPipeline
+    PipelineNormalize -> strNormalizePipeline
+    PipelineStripped -> strStrippedPipeline
 
   pipeline :: PipelineId -> [TransformationId]
   pipeline = \case
-    PipelineStored -> toStoredTransformations
+    PipelineEval -> toEvalTransformations
+    PipelineExec -> toExecTransformations
+    PipelineTypecheck -> toTypecheckTransformations
     PipelineNormalize -> toNormalizeTransformations
-    PipelineVampIR -> toVampIRTransformations
     PipelineStripped -> toStrippedTransformations IdentityTrans
-    PipelineExec -> toStrippedTransformations CheckExec

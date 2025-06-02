@@ -1,8 +1,12 @@
 module Juvix.Compiler.Concrete.Data.Name where
 
 import Data.List.NonEmpty.Extra qualified as NonEmpty
+import Juvix.Data.Fixity
+import Juvix.Data.Loc
+import Juvix.Data.TopModulePathKey
+import Juvix.Data.WithLoc
 import Juvix.Extra.Serialize
-import Juvix.Prelude
+import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty as Pretty
 
 type Symbol = WithLoc Text
@@ -73,6 +77,7 @@ instance HasLoc SymbolPath where
 
 deriving newtype instance Hashable SymbolPath
 
+makePrisms ''Name
 makeLenses ''QualifiedName
 makeLenses ''SymbolPath
 
@@ -89,7 +94,46 @@ instance NFData TopModulePath
 
 instance Hashable TopModulePath
 
+data AbsModulePath = AbsModulePath
+  { _absTopModulePath :: TopModulePath,
+    -- | List of local module names
+    _absLocalPath :: [Symbol]
+  }
+  deriving stock (Show, Eq, Generic)
+
+instance Serialize AbsModulePath
+
+instance NFData AbsModulePath
+
 makeLenses ''TopModulePath
+
+makeLenses ''AbsModulePath
+
+instance HasLoc AbsModulePath where
+  getLoc a = getLoc (a ^. absTopModulePath)
+
+topModulePathToAbsPath :: TopModulePath -> AbsModulePath
+topModulePathToAbsPath p =
+  AbsModulePath
+    { _absTopModulePath = p,
+      _absLocalPath = []
+    }
+
+instance Hashable AbsModulePath
+
+-- | Tells whether the first argument is an immediate child of the second argument.
+-- In other words, tells whether the first argument is a local module of the second.
+isChildOf :: AbsModulePath -> AbsModulePath -> Bool
+isChildOf child parentMod
+  | null (child ^. absLocalPath) = False
+  | otherwise =
+      init (child ^. absLocalPath) == parentMod ^. absLocalPath
+        && child ^. absTopModulePath == parentMod ^. absTopModulePath
+
+-- | Appends a local path to the absolute path
+-- e.g. TopMod.Local <.> Inner == TopMod.Local.Inner
+appendModulePath :: AbsModulePath -> Symbol -> AbsModulePath
+appendModulePath absP localMod = absP {_absLocalPath = absP ^. absLocalPath ++ [localMod]}
 
 topModulePathKey :: TopModulePath -> TopModulePathKey
 topModulePathKey TopModulePath {..} =

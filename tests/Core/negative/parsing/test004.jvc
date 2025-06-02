@@ -1,0 +1,5 @@
+type Unit {
+  unit : Unit;
+};
+
+def unit := 0;

@@ -33,6 +33,7 @@ data OperatorArity
 data Fixity = Fixity
   { _fixityPrecedence :: Precedence,
     _fixityArity :: OperatorArity,
+    -- TODO refactor Maybe
     _fixityId :: Maybe NameId
   }
   deriving stock (Show, Eq, Ord, Data, Generic)

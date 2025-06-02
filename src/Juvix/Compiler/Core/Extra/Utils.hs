@@ -50,12 +50,6 @@ isTypeConstr md ty = case typeTarget ty of
     isTypeConstr md (lookupIdentifierNode md _identSymbol)
   _ -> False
 
-getTypeParams :: Module -> Type -> [Type]
-getTypeParams md ty = filter (isTypeConstr md) (typeArgs ty)
-
-getTypeParamsNum :: Module -> Type -> Int
-getTypeParamsNum md ty = length $ getTypeParams md ty
-
 filterOutTypeSynonyms :: Module -> Module
 filterOutTypeSynonyms md = pruneInfoTable md'
   where
@@ -139,7 +133,7 @@ isImmediate md = \case
   NCst {} -> True
   NCtr Constr {..}
     | Just ci <- lookupConstructorInfo' md _constrTag ->
-        let paramsNum = length (takeWhile (isTypeConstr md) (typeArgs (ci ^. constructorType)))
+        let paramsNum = lookupParamsNum md (ci ^. constructorInductive)
          in length _constrArgs <= paramsNum
     | otherwise -> all (isType md mempty) _constrArgs
   node@(NApp {}) ->
@@ -147,13 +141,16 @@ isImmediate md = \case
      in case h of
           NIdt Ident {..}
             | Just ii <- lookupIdentifierInfo' md _identSymbol ->
-                let paramsNum = length (takeWhile (isTypeConstr md) (typeArgs (ii ^. identifierType)))
-                 in length args <= paramsNum
+                let typeParamsNum = length (takeWhile (isTypeConstr md) (typeArgs (ii ^. identifierType)))
+                 in length args <= typeParamsNum
           _ -> all (isType md mempty) args
   node -> isType md mempty node
 
 isImmediate' :: Node -> Bool
-isImmediate' = isImmediate emptyModule
+isImmediate' = isImmediate (emptyModule defaultModuleId)
+
+isImmediateOrLambda :: Module -> Node -> Bool
+isImmediateOrLambda md node = isImmediate md node || isLambda node
 
 -- | True if the argument is fully evaluated first-order data
 isDataValue :: Node -> Bool
@@ -162,9 +159,30 @@ isDataValue = \case
   NCtr Constr {..} -> all isDataValue _constrArgs
   _ -> False
 
+isFullyApplied :: Module -> BinderList Binder -> Node -> Bool
+isFullyApplied md bl node = case h of
+  NIdt Ident {..}
+    | Just ii <- lookupIdentifierInfo' md _identSymbol ->
+        length args == ii ^. identifierArgsNum
+  NVar Var {..} ->
+    case BL.lookupMay _varIndex bl of
+      Just Binder {..} ->
+        length args == length (typeArgs _binderType)
+      Nothing ->
+        False
+  _ ->
+    False
+  where
+    (h, args) = unfoldApps' node
+
 isFailNode :: Node -> Bool
 isFailNode = \case
   NBlt (BuiltinApp {..}) | _builtinAppOp == OpFail -> True
+  _ -> False
+
+isLambda :: Node -> Bool
+isLambda = \case
+  NLam {} -> True
   _ -> False
 
 isTrueConstr :: Node -> Bool
@@ -185,6 +203,7 @@ isDebugOp = \case
       OpFail -> True
       OpSeq -> True
       OpAssert -> True
+      OpRangeCheck -> False
       OpAnomaSha256 -> False
       OpAnomaByteArrayFromAnomaContents -> False
       OpAnomaByteArrayToAnomaContents -> False
@@ -201,14 +220,21 @@ isDebugOp = \case
       OpAnomaResourceDelta -> False
       OpAnomaActionDelta -> False
       OpAnomaActionsDelta -> False
-      OpAnomaProveAction -> False
-      OpAnomaProveDelta -> False
       OpAnomaZeroDelta -> False
       OpAnomaAddDelta -> False
       OpAnomaSubDelta -> False
       OpAnomaRandomGeneratorInit -> False
       OpAnomaRandomNextBytes -> False
       OpAnomaRandomSplit -> False
+      OpAnomaIsCommitment -> False
+      OpAnomaIsNullifier -> False
+      OpAnomaCreateFromComplianceInputs -> False
+      OpAnomaProveDelta -> False
+      OpAnomaTransactionCompose -> False
+      OpAnomaActionCreate -> False
+      OpAnomaSetToList -> False
+      OpAnomaSetFromList -> False
+      OpNockmaReify -> False
       OpEc -> False
       OpFieldAdd -> False
       OpFieldDiv -> False
@@ -233,6 +259,10 @@ isDebugOp = \case
       OpIntSub -> False
       OpFieldToInt -> False
       OpShow -> False
+      OpAnomaKeccak256 -> False
+      OpAnomaSecp256k1SignCompact -> False
+      OpAnomaSecp256k1Verify -> False
+      OpAnomaSecp256k1PubKey -> False
   _ -> False
 
 -- | Check if the node contains `trace`, `fail` or `seq` (`>->`).
@@ -282,7 +312,7 @@ getSymbols md = gather go mempty
       _ -> acc
 
 getSymbols' :: InfoTable -> Node -> HashSet Symbol
-getSymbols' tab = getSymbols emptyModule {_moduleInfoTable = tab}
+getSymbols' tab = getSymbols (emptyModule defaultModuleId) {_moduleInfoTable = tab}
 
 -- | Prism for NRec
 _NRec :: SimpleFold Node LetRec
@@ -483,6 +513,7 @@ builtinOpArgTypes = \case
   OpStrConcat -> [mkTypeString', mkTypeString']
   OpStrToInt -> [mkTypeString']
   OpAssert -> [mkTypeBool']
+  OpRangeCheck -> [mkTypeField', mkTypeField']
   OpSeq -> [mkDynamic', mkDynamic']
   OpTrace -> [mkDynamic']
   OpFail -> [mkTypeString']
@@ -497,19 +528,26 @@ builtinOpArgTypes = \case
   OpAnomaByteArrayFromAnomaContents -> [mkTypeInteger', mkTypeInteger']
   OpAnomaSha256 -> [mkTypeInteger']
   OpAnomaResourceCommitment -> [mkDynamic']
-  OpAnomaResourceNullifier -> [mkDynamic']
+  OpAnomaResourceNullifier -> [mkDynamic', mkDynamic']
   OpAnomaResourceKind -> [mkDynamic']
   OpAnomaResourceDelta -> [mkDynamic']
   OpAnomaActionDelta -> [mkDynamic']
   OpAnomaActionsDelta -> [mkDynamic']
-  OpAnomaProveAction -> [mkDynamic']
-  OpAnomaProveDelta -> [mkDynamic']
   OpAnomaZeroDelta -> []
   OpAnomaAddDelta -> [mkDynamic', mkDynamic']
   OpAnomaSubDelta -> [mkDynamic', mkDynamic']
   OpAnomaRandomGeneratorInit -> [mkTypeInteger']
   OpAnomaRandomNextBytes -> [mkTypeInteger', mkTypeRandomGenerator']
   OpAnomaRandomSplit -> [mkTypeRandomGenerator']
+  OpAnomaActionCreate -> [mkDynamic', mkDynamic', mkDynamic']
+  OpAnomaTransactionCompose -> [mkDynamic', mkDynamic']
+  OpAnomaIsCommitment -> [mkTypeInteger']
+  OpAnomaIsNullifier -> [mkTypeInteger']
+  OpAnomaCreateFromComplianceInputs -> [mkDynamic', mkDynamic', mkDynamic', mkDynamic', mkDynamic']
+  OpAnomaProveDelta -> [mkDynamic']
+  OpAnomaSetToList -> [mkDynamic']
+  OpAnomaSetFromList -> [mkDynamic']
+  OpNockmaReify -> [mkDynamic']
   OpPoseidonHash -> [mkDynamic']
   OpEc -> [mkDynamic', mkTypeField', mkDynamic']
   OpRandomEcPoint -> []
@@ -517,6 +555,10 @@ builtinOpArgTypes = \case
   OpUInt8FromInt -> [mkTypeInteger']
   OpByteArrayFromListByte -> [mkDynamic']
   OpByteArrayLength -> [mkTypeByteArray']
+  OpAnomaKeccak256 -> [mkTypeInteger']
+  OpAnomaSecp256k1PubKey -> [mkTypeInteger']
+  OpAnomaSecp256k1SignCompact -> [mkTypeInteger', mkTypeInteger']
+  OpAnomaSecp256k1Verify -> [mkTypeInteger', mkTypeInteger', mkTypeInteger']
 
 translateCase :: (Node -> Node -> Node -> a) -> a -> Case -> a
 translateCase translateIfFun dflt Case {..} = case _caseBranches of
@@ -576,3 +618,72 @@ checkInfoTable tab =
   all isClosed (tab ^. identContext)
     && all (isClosed . (^. identifierType)) (tab ^. infoIdentifiers)
     && all (isClosed . (^. constructorType)) (tab ^. infoConstructors)
+
+-- | Checks if the `n`th argument (zero-based) is passed without modification to
+-- direct recursive calls.
+isArgRecursiveInvariant :: Module -> Symbol -> Int -> Bool
+isArgRecursiveInvariant md sym argNum = run $ execState True $ dmapNRM go body
+  where
+    nodeSym = lookupIdentifierNode md sym
+    (lams, body) = unfoldLambdas nodeSym
+    n = length lams
+
+    go :: (Member (State Bool) r) => Level -> Node -> Sem r Recur
+    go lvl node = case node of
+      NApp {} ->
+        let (h, args) = unfoldApps' node
+         in case h of
+              NIdt Ident {..}
+                | _identSymbol == sym ->
+                    let b =
+                          argNum < length args
+                            && case args !! argNum of
+                              NVar Var {..} | _varIndex == lvl + n - argNum - 1 -> True
+                              _ -> False
+                     in do
+                          modify' (&& b)
+                          mapM_ (dmapNRM' (lvl, go)) args
+                          return $ End node
+              _ -> return $ Recur node
+      NIdt Ident {..}
+        | _identSymbol == sym -> do
+            put False
+            return $ End node
+      _ -> return $ Recur node
+
+isDirectlyRecursive :: Module -> Symbol -> Bool
+isDirectlyRecursive md sym = ufold (\x xs -> or (x : xs)) go (lookupIdentifierNode md sym)
+  where
+    go :: Node -> Bool
+    go = \case
+      NIdt Ident {..} -> _identSymbol == sym
+      _ -> False
+
+-- Returns a map from symbols to their number of occurrences in the given node.
+getSymbolsMap :: Module -> Node -> HashMap Symbol Int
+getSymbolsMap md = gather go mempty
+  where
+    go :: HashMap Symbol Int -> Node -> HashMap Symbol Int
+    go acc = \case
+      NTyp TypeConstr {..} -> mapInc _typeConstrSymbol acc
+      NIdt Ident {..} -> mapInc _identSymbol acc
+      NCase Case {..} -> mapInc _caseInductive acc
+      NCtr Constr {..}
+        | Just ci <- lookupConstructorInfo' md _constrTag ->
+            mapInc (ci ^. constructorInductive) acc
+      _ -> acc
+
+    mapInc :: Symbol -> HashMap Symbol Int -> HashMap Symbol Int
+    mapInc k = HashMap.insertWith (+) k 1
+
+getTableSymbolsMap :: InfoTable -> HashMap Symbol Int
+getTableSymbolsMap tab =
+  foldr
+    (HashMap.unionWith (+))
+    mempty
+    (map (getSymbolsMap md) (HashMap.elems $ tab ^. identContext))
+  where
+    md = (emptyModule defaultModuleId) {_moduleInfoTable = tab}
+
+getModuleSymbolsMap :: Module -> HashMap Symbol Int
+getModuleSymbolsMap = getTableSymbolsMap . computeCombinedInfoTable

@@ -12,6 +12,7 @@ import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.InfoTable
 import Juvix.Compiler.Core.Data.InfoTableBuilder
 import Juvix.Compiler.Core.Data.Module
+import Juvix.Compiler.Core.Extra.Base
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Options
 
@@ -24,16 +25,12 @@ mapInductivesM = overM (moduleInfoTable . infoInductives) . mapM
 mapConstructorsM :: (Monad m) => (ConstructorInfo -> m ConstructorInfo) -> Module -> m Module
 mapConstructorsM = overM (moduleInfoTable . infoConstructors) . mapM
 
-mapAxiomsM :: (Monad m) => (AxiomInfo -> m AxiomInfo) -> Module -> m Module
-mapAxiomsM = overM (moduleInfoTable . infoAxioms) . mapM
-
 mapNodesM :: (Monad m) => (Node -> m Node) -> Module -> m Module
 mapNodesM = overM (moduleInfoTable . identContext) . mapM
 
 mapAllNodesM :: (Monad m) => (Node -> m Node) -> Module -> m Module
 mapAllNodesM f tab =
   mapNodesM f tab
-    >>= mapAxiomsM (overM axiomType f)
     >>= mapConstructorsM (overM constructorType f)
     >>= mapInductivesM (overM inductiveKind f)
     >>= mapIdentsM (overM identifierType f)
@@ -46,9 +43,6 @@ mapInductives = over (moduleInfoTable . infoInductives) . fmap
 
 mapConstructors :: (ConstructorInfo -> ConstructorInfo) -> Module -> Module
 mapConstructors = over (moduleInfoTable . infoConstructors) . fmap
-
-mapAxioms :: (AxiomInfo -> AxiomInfo) -> Module -> Module
-mapAxioms = over (moduleInfoTable . infoAxioms) . fmap
 
 mapT :: (Symbol -> Node -> Node) -> Module -> Module
 mapT f = over (moduleInfoTable . identContext) (HashMap.mapWithKey f)
@@ -66,8 +60,7 @@ walkT f tab = for_ (HashMap.toList (tab ^. identContext)) (uncurry f)
 
 mapAllNodes :: (Node -> Node) -> Module -> Module
 mapAllNodes f md =
-  mapAxioms convertAxiom
-    . mapInductives convertInductive
+  mapInductives convertInductive
     . mapConstructors convertConstructor
     . mapIdents convertIdent
     $ mapT (const f) md
@@ -84,12 +77,13 @@ mapAllNodes f md =
     convertInductive :: InductiveInfo -> InductiveInfo
     convertInductive ii =
       ii
-        { _inductiveKind = f (ii ^. inductiveKind),
-          _inductiveParams = map (over paramKind f) (ii ^. inductiveParams)
+        { _inductiveKind = kind',
+          _inductiveParams = zipWithExact (set paramKind) params' (ii ^. inductiveParams)
         }
-
-    convertAxiom :: AxiomInfo -> AxiomInfo
-    convertAxiom = over axiomType f
+      where
+        nParams = length (ii ^. inductiveParams)
+        kind' = f (ii ^. inductiveKind)
+        params' = take nParams (typeArgs kind')
 
 withOptimizationLevel :: (Member (Reader CoreOptions) r) => Int -> (Module -> Sem r Module) -> Module -> Sem r Module
 withOptimizationLevel n f tab = do

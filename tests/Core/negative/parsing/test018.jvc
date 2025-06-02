@@ -1,0 +1,8 @@
+type Unit {
+  unit : Unit;
+};
+
+case unit of {
+  _ := 1;
+  _ := 2;
+}

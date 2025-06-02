@@ -36,6 +36,32 @@ type family NameSpaceEntryType s = res | res -> s where
   NameSpaceEntryType 'NameSpaceModules = ModuleSymbolEntry
   NameSpaceEntryType 'NameSpaceFixities = FixitySymbolEntry
 
+nameSpaceElemName :: (IsString str) => NameSpace -> str
+nameSpaceElemName = \case
+  NameSpaceSymbols -> "symbol"
+  NameSpaceModules -> "module"
+  NameSpaceFixities -> "fixity"
+
+nsEntry :: forall ns. (SingI ns) => Lens' (NameSpaceEntryType ns) S.Name
+nsEntry = case sing :: SNameSpace ns of
+  SNameSpaceModules -> moduleEntry
+  SNameSpaceSymbols -> preSymbolName
+  SNameSpaceFixities -> fixityEntry
+
+shouldExport :: (SingI ns) => NameSpaceEntryType ns -> Bool
+shouldExport ent = ent ^. nsEntry . S.nameVisibilityAnn == VisPublic
+
+forEachNameSpace :: (Monad m) => (forall (ns :: NameSpace). Sing ns -> m ()) -> m ()
+forEachNameSpace f = sequence_ [withSomeSing ns f | ns <- allElements]
+
+entryName :: forall ns. (SingI ns) => Lens' (NameSpaceEntryType ns) S.Name
+entryName = case sing :: SNameSpace ns of
+  SNameSpaceSymbols -> \f -> \case
+    PreSymbolAlias (Alias n) -> PreSymbolAlias . Alias <$> f n
+    PreSymbolFinal (SymbolEntry n) -> PreSymbolFinal . SymbolEntry <$> f n
+  SNameSpaceModules -> moduleEntry
+  SNameSpaceFixities -> fixityEntry
+
 exportNameSpace :: forall ns. (SingI ns) => Lens' ExportInfo (HashMap C.Symbol (NameSpaceEntryType ns))
 exportNameSpace = case sing :: SNameSpace ns of
   SNameSpaceSymbols -> exportSymbols

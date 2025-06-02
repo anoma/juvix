@@ -3,6 +3,6 @@ module Package;
 import PackageDescription.V2 open;
 
 package : Package :=
-  defaultPackage@?{
-    name := "test073"
+  defaultPackage@{
+    name := "test073";
   };

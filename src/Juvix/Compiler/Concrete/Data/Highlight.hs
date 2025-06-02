@@ -11,6 +11,7 @@ import Data.Text.Encoding qualified as Text
 import Juvix.Compiler.Concrete.Data.Highlight.Builder
 import Juvix.Compiler.Concrete.Data.Highlight.PrettyJudoc
 import Juvix.Compiler.Concrete.Data.ScopedName
+import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Internal.Language qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as Internal
 import Juvix.Compiler.Store.Scoped.Data.InfoTable qualified as Scoped
@@ -44,30 +45,27 @@ buildProperties HighlightInput {..} =
           <> mapMaybe goFaceName _highlightNames
           <> map goFaceError _highlightErrors,
       _propertiesGoto = map goGotoProperty _highlightNames,
-      _propertiesInfo = mapMaybe (goDocProperty _highlightDocTable _highlightTypes) _highlightNames
+      _propertiesTopDef = nubHashable (mapMaybe goDefProperty _highlightNames),
+      _propertiesInfo =
+        mapMaybe (goDocProperty _highlightDocTable _highlightTypes) _highlightNames
+          <> map goPrecNumProperty _highlightPrecItems
     }
 
 goFaceError :: Interval -> WithLoc PropertyFace
 goFaceError i = WithLoc i (PropertyFace FaceError)
 
+goDefProperty :: AName -> Maybe (WithLoc PropertyTopDef)
+goDefProperty n = do
+  guard (n ^. anameIsTop)
+  guard ((n ^. anameLoc) == (n ^. anameDefinedLoc))
+  return
+    WithLoc
+      { _withLocInt = n ^. anameLoc,
+        _withLocParam = PropertyTopDef (n ^. anameVerbatim)
+      }
+
 goFaceSemanticItem :: SemanticItem -> Maybe (WithLoc PropertyFace)
-goFaceSemanticItem i = WithLoc (getLoc i) . PropertyFace <$> f
-  where
-    f :: Maybe Face
-    f = case i ^. withLocParam of
-      AnnKind k -> nameKindFace k
-      AnnKeyword -> Just FaceKeyword
-      AnnComment -> Just FaceComment
-      AnnPragma -> Just FacePragma
-      AnnJudoc -> Just FaceJudoc
-      AnnDelimiter -> Just FaceDelimiter
-      AnnLiteralString -> Just FaceString
-      AnnLiteralInteger -> Just FaceNumber
-      AnnCode -> Nothing
-      AnnImportant -> Nothing
-      AnnUnkindedSym -> Nothing
-      AnnDef {} -> Nothing
-      AnnRef {} -> Nothing
+goFaceSemanticItem i = fmap PropertyFace <$> mapM codeAnnFace i
 
 goFaceParsedItem :: ParsedItem -> WithLoc PropertyFace
 goFaceParsedItem i = WithLoc (i ^. parsedLoc) (PropertyFace f)
@@ -99,3 +97,17 @@ goDocProperty doctbl tbl a = do
   let (txt, _infoInit) = renderEmacs d
       _infoInfo = String txt
   return (WithLoc (getLoc a) PropertyInfo {..})
+
+goPrecNumProperty :: WithLoc Int -> WithLoc PropertyInfo
+goPrecNumProperty (WithLoc loc i) =
+  let doc :: Doc CodeAnn =
+        ppCodeAnn Kw.kwPrecedence
+          <+> ppCodeAnn Kw.kwAssign
+          <+> pretty i
+      (txt, _infoInit) = renderEmacs doc
+   in WithLoc
+        loc
+        PropertyInfo
+          { _infoInit,
+            _infoInfo = String txt
+          }

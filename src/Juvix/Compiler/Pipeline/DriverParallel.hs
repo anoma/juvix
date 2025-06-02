@@ -17,7 +17,9 @@ import Juvix.Compiler.Pipeline.Driver qualified as Driver
 import Juvix.Compiler.Pipeline.JvoCache
 import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.ModuleInfoCache
+import Juvix.Compiler.Pipeline.SHA256Cache
 import Juvix.Compiler.Store.Language qualified as Store
+import Juvix.Compiler.Verification.Dumper
 import Juvix.Prelude
 import Parallel.ParallelTemplate
 import Parallel.ProgressLog
@@ -33,7 +35,7 @@ type Node = EntryIndex
 
 mkNodesIndex ::
   forall r.
-  (Members '[Reader EntryPoint] r) =>
+  (Members '[SHA256Cache, PathResolver, Reader EntryPoint] r) =>
   ImportTree ->
   Sem r (NodesIndex ImportNode Node)
 mkNodesIndex tree =
@@ -68,6 +70,7 @@ compileInParallel ::
   ( Members
       '[ Concurrent,
          IOE,
+         SHA256Cache,
          ModuleInfoCache,
          JvoCache,
          TaggedLock,
@@ -93,6 +96,8 @@ compileInParallel = do
         CompileArgs
           { _compileArgsNodesIndex = idx,
             _compileArgsNodeName = getNodeName,
+            -- We should not compile the main file as a module to avoid double compliation
+            _compileArgsNodeIsIgnored = entryPointIsMainFile . (^. entryIxEntry),
             _compileArgsPreProcess = Just preLoadFromJvoFile,
             _compileArgsDependencies = mkDependencies t,
             _compileArgsNumWorkers = numWorkers,
@@ -139,10 +144,11 @@ evalModuleInfoCacheParallel ::
          Reader NumThreads,
          Reader PipelineOptions,
          Logger,
-         Files
+         Files,
+         Dumper
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
+  Sem (ModuleInfoCache ': SHA256Cache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheParallel = Driver.evalModuleInfoCacheSetup (const (void compileInParallel))

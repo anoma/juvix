@@ -6,6 +6,7 @@ import Juvix.Data.Effect.Git.Process.Error
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Prelude
+import Juvix.Prelude.Pretty
 
 newtype CloneEnv = CloneEnv
   {_cloneEnvDir :: Path Abs Dir}
@@ -24,13 +25,12 @@ runGitCmd args = do
         ExitFailure {} ->
           throw
             ( GitCmdError
-                ( GitCmdErrorDetails
-                    { _gitCmdErrorDetailsCmdPath = cmd,
-                      _gitCmdErrorDetailsArgs = args,
-                      _gitCmdErrorDetailsExitCode = res ^. processResultExitCode,
-                      _gitCmdErrorDetailsMessage = res ^. processResultStderr
-                    }
-                )
+                GitCmdErrorDetails
+                  { _gitCmdErrorDetailsCmdPath = cmd,
+                    _gitCmdErrorDetailsArgs = args,
+                    _gitCmdErrorDetailsExitCode = res ^. processResultExitCode,
+                    _gitCmdErrorDetailsMessage = res ^. processResultStderr
+                  }
             )
         ExitSuccess -> return (res ^. processResultStdout)
 
@@ -72,16 +72,16 @@ gitFetch = whenHasInternet gitFetchOnline
 gitFetchOnline :: (Members '[TaggedLock, Reader CloneEnv, Error GitProcessError, ProcessE, Online] r) => Sem r ()
 gitFetchOnline = withTaggedLockDir' (void (runGitCmdInDir ["fetch"]))
 
-gitCloneOnline :: (Members '[Log, Error GitProcessError, ProcessE, Online, Reader CloneEnv] r) => Text -> Sem r ()
+gitCloneOnline :: (Members '[Logger, Error GitProcessError, ProcessE, Online, Reader CloneEnv] r) => Text -> Sem r ()
 gitCloneOnline url = do
   p <- asks (^. cloneEnvDir)
-  log ("Cloning " <> url <> " to " <> pack (toFilePath p))
+  logInfo (mkAnsiText ("Cloning " <> url <> " to " <> pack (toFilePath p)))
   void (runGitCmd ["clone", url, T.pack (toFilePath p)])
 
-cloneGitRepo :: (Members '[Log, Files, ProcessE, Error GitProcessError, Reader CloneEnv, Internet] r) => Text -> Sem r ()
+cloneGitRepo :: (Members '[Logger, Files, ProcessE, Error GitProcessError, Reader CloneEnv, Internet] r) => Text -> Sem r ()
 cloneGitRepo = whenHasInternet . gitCloneOnline
 
-initGitRepo :: (Members '[TaggedLock, Log, Files, ProcessE, Error GitProcessError, Reader CloneEnv, Internet] r) => Text -> Sem r (Path Abs Dir)
+initGitRepo :: (Members '[TaggedLock, Logger, Files, ProcessE, Error GitProcessError, Reader CloneEnv, Internet] r) => Text -> Sem r (Path Abs Dir)
 initGitRepo url = do
   p <- asks (^. cloneEnvDir)
   withTaggedLockDir' (unlessM (directoryExists' p) (cloneGitRepo url))
@@ -112,7 +112,7 @@ withTaggedLockDir' ma = do
 
 runGitProcess ::
   forall r a.
-  (Members '[TaggedLock, Log, Files, ProcessE, Error GitProcessError, Internet] r) =>
+  (Members '[TaggedLock, Logger, Files, ProcessE, Error GitProcessError, Internet] r) =>
   Sem (GitClone ': r) a ->
   Sem r a
 runGitProcess = runProvider_ helper

@@ -5,13 +5,14 @@ import Base
 import Core.Eval.Base
 import Core.Eval.Positive qualified as Eval
 import Juvix.Compiler.Asm.Translation.FromTree qualified as Asm
-import Juvix.Compiler.Core.Data.Module (computeCombinedInfoTable, moduleFromInfoTable)
+import Juvix.Compiler.Core.Data.Module (moduleFromInfoTable)
 import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Translation.FromSource
 import Juvix.Compiler.Core.Translation.Stripped.FromCore qualified as Stripped
+import Juvix.Compiler.Pipeline.EntryPoint qualified as EntryPoint
 import Juvix.Compiler.Tree.Translation.FromCore qualified as Tree
-import Juvix.Data.Field
+import Juvix.Compiler.Verification.Dumper
 import Juvix.Data.PPOutput
 
 newtype Test = Test
@@ -46,25 +47,27 @@ coreAsmAssertion root' mainFile expectedFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (prettyString err)
+    Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right (_, Nothing) -> do
       step "Empty program: compare expected and actual program output"
       expected <- readFile expectedFile
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) -> do
       step "Translate"
-      entryPoint <- testDefaultEntryPointIO root' mainFile
+      entryPoint <-
+        set entryPointPipeline (Just EntryPoint.PipelineExec)
+          <$> testDefaultEntryPointIO root' mainFile
       case run
         . runReader entryPoint
         . runError
+        . ignoreDumper
         . (toStored >=> toStripped IdentityTrans)
         . moduleFromInfoTable
         $ setupMainFunction defaultModuleId tabIni node of
         Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right m -> do
-          let tab =
+          let md =
                 Asm.fromTree
                   . Tree.fromCore
-                  . Stripped.fromCore (maximum allowedFieldSizes)
-                  $ computeCombinedInfoTable m
-          Asm.asmRunAssertion' tab expectedFile step
+                  $ Stripped.fromCore m
+          Asm.asmRunAssertion' md expectedFile step

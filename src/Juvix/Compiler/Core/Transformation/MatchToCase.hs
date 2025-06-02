@@ -217,17 +217,17 @@ goMatchToCase recur node = case node of
     -- new matrix.
     compileDefault :: Maybe Tag -> ([Value] -> [Value]) -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Sem r Node
     compileDefault mtag err bindersNum vs col matrix = do
-      tab <- ask
-      compile (err' tab) bindersNum vs matrix'
+      md <- ask
+      compile (err' md) bindersNum vs matrix'
       where
         matrix' = [row | (pat, row) <- zipExact col matrix, PatWildcard {} <- [pat]]
-        err' tab args =
+        err' md args =
           case mtag of
             Just tag ->
               err (ctr : args)
               where
-                ci = lookupConstructorInfo tab tag
-                paramsNum = getTypeParamsNum tab (ci ^. constructorType)
+                ci = lookupConstructorInfo md tag
+                paramsNum = lookupParamsNum md (ci ^. constructorInductive)
                 argsNum = ci ^. constructorArgsNum - paramsNum
                 ctr =
                   ValueConstrApp
@@ -244,11 +244,9 @@ goMatchToCase recur node = case node of
     -- continues compilation with the new matrix.
     compileBranch :: ([Value] -> [Value]) -> Level -> [Level] -> [Pattern] -> PatternMatrix -> Tag -> Sem r CaseBranch
     compileBranch err bindersNum vs col matrix tag = do
-      tab <- ask
-      let ci = lookupConstructorInfo tab tag
-          -- TODO: this might not work if the constructor has additional type
-          -- arguments which are not at the front
-          paramsNum = getTypeParamsNum tab (ci ^. constructorType)
+      md <- ask
+      let ci = lookupConstructorInfo md tag
+          paramsNum = lookupParamsNum md (ci ^. constructorInductive)
           argsNum = length (typeArgs (ci ^. constructorType))
           bindersNum' = bindersNum + argsNum
           vs' = [bindersNum .. bindersNum + argsNum - 1]

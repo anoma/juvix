@@ -5,6 +5,7 @@ module Juvix.Compiler.Internal.Extra.Base where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.LocalVars
+import Juvix.Compiler.Internal.Data.TypedInstanceHole
 import Juvix.Compiler.Internal.Language
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Prelude
@@ -33,11 +34,20 @@ data ApplicationArg = ApplicationArg
 
 makeLenses ''ApplicationArg
 
+instance PrettyCode ApplicationArg where
+  ppCode a = ppApplicationArg (a ^. appArgIsImplicit) (a ^. appArg)
+
 instance HasLoc ApplicationArg where
   getLoc = getLoc . (^. appArg)
 
 class IsExpression a where
   toExpression :: a -> Expression
+
+instance IsExpression BuiltinNatural where
+  toExpression = ExpressionNatural
+
+instance HasExpressions BuiltinNatural where
+  directExpressions = builtinNaturalArg
 
 instance Plated Expression where
   plate :: Traversal' Expression Expression
@@ -48,6 +58,7 @@ instance Plated Expression where
     ExpressionLambda l -> ExpressionLambda <$> directExpressions f l
     ExpressionLet l -> ExpressionLet <$> directExpressions f l
     ExpressionCase c -> ExpressionCase <$> directExpressions f c
+    ExpressionNatural c -> ExpressionNatural <$> directExpressions f c
     ExpressionIden {} -> pure e
     ExpressionLiteral {} -> pure e
     ExpressionUniverse {} -> pure e
@@ -60,6 +71,9 @@ class HasExpressions a where
 
 directExpressions_ :: forall f a. (HasExpressions a, Applicative f) => (Expression -> f ()) -> a -> f ()
 directExpressions_ f = void . directExpressions (\e -> e <$ f e)
+
+instance HasExpressions TypedInstanceHole where
+  directExpressions = typedInstanceHoleType
 
 instance HasExpressions Expression where
   directExpressions = id
@@ -285,6 +299,7 @@ instance HasExpressions ConstructorDef where
     pure
       ConstructorDef
         { _inductiveConstructorType = ty',
+          _inductiveConstructorNormalizedType,
           _inductiveConstructorName,
           _inductiveConstructorIsRecord,
           _inductiveConstructorPragmas,
@@ -607,6 +622,16 @@ infix 4 ===
 (===) :: (IsExpression a, IsExpression b) => a -> b -> Bool
 a === b = (toExpression a ==% toExpression b) mempty
 
+(===*) :: (IsExpression a, IsExpression b) => [a] -> [b] -> Bool
+a ===* b =
+  length a == length b && and (zipWith (\x y -> (x ==% y) mempty) (map toExpression a) (map toExpression b))
+
+-- E.g. ty `hasArguments` [nat, bool]
+hasArguments :: (IsExpression a, IsExpression b) => a -> [b] -> Bool
+hasArguments ty expectedArgsTy =
+  let tyArgs = map (^. paramType) (fst (unfoldFunType (toExpression ty)))
+   in tyArgs ===* expectedArgsTy
+
 leftEq :: (IsExpression a, IsExpression b) => a -> b -> HashSet Name -> Bool
 leftEq a b free =
   isRight
@@ -700,6 +725,25 @@ freshHole l = mkHole l <$> freshNameId
 mkFreshHole :: (Members '[NameIdGen] r) => Interval -> Sem r Expression
 mkFreshHole l = ExpressionHole <$> freshHole l
 
+squashBuiltinNatural' :: BuiltinNatural -> Expression
+squashBuiltinNatural' = either ExpressionNatural id . squashBuiltinNatural
+
+squashBuiltinNatural :: BuiltinNatural -> Either BuiltinNatural Expression
+squashBuiltinNatural n
+  | n ^. builtinNaturalSuc == 0 = case n ^. builtinNaturalArg of
+      ExpressionNatural n' -> squashBuiltinNatural n'
+      m -> Right m
+  | otherwise = Left $ case n ^. builtinNaturalArg of
+      ExpressionNatural n' -> case squashBuiltinNatural n' of
+        Right s -> set builtinNaturalArg s n
+        Left s ->
+          BuiltinNatural
+            { _builtinNaturalSuc = n ^. builtinNaturalSuc + s ^. builtinNaturalSuc,
+              _builtinNaturalArg = s ^. builtinNaturalArg,
+              _builtinNaturalLoc = n ^. builtinNaturalLoc <> s ^. builtinNaturalLoc
+            }
+      _ -> n
+
 matchExpressions ::
   forall r.
   (Members '[State (HashMap Name Name), Reader (HashSet VarName), Error Text] r) =>
@@ -711,6 +755,7 @@ matchExpressions = go
     -- Soft free vars are allowed to be matched
     isSoftFreeVar :: VarName -> Sem r Bool
     isSoftFreeVar = asks . HashSet.member
+
     go :: Expression -> Expression -> Sem r ()
     go a b = case (a, b) of
       (ExpressionIden ia, ExpressionIden ib) -> case (ia, ib) of
@@ -721,6 +766,9 @@ matchExpressions = go
         (_, _) -> unless (ia == ib) err
       (ExpressionIden (IdenVar va), ExpressionHole h) -> goHole va h
       (ExpressionHole h, ExpressionIden (IdenVar vb)) -> goHole vb h
+      (ExpressionNatural na, ExpressionNatural nb) -> goNatural na nb
+      (ExpressionNatural {}, _) -> err
+      (_, ExpressionNatural {}) -> err
       (ExpressionIden {}, _) -> err
       (_, ExpressionIden {}) -> err
       (ExpressionApplication ia, ExpressionApplication ib) ->
@@ -766,6 +814,14 @@ matchExpressions = go
       uni <- (== Just vb) <$> gets @(HashMap Name Name) (^. at va)
       return (uni || eq)
 
+    goNatural :: BuiltinNatural -> BuiltinNatural -> Sem r ()
+    goNatural n m
+      | n ^. builtinNaturalSuc == m ^. builtinNaturalSuc =
+          matchExpressions
+            (n ^. builtinNaturalArg)
+            (m ^. builtinNaturalArg)
+      | otherwise = err
+
     goHole :: Name -> Hole -> Sem r ()
     goHole var h = do
       whenM (gets @(HashMap Name Name) (HashMap.member var)) err
@@ -805,8 +861,10 @@ matchFunctionParameter pa pb = do
   where
     goParamType :: Expression -> Expression -> Sem r ()
     goParamType ua ub = matchExpressions ua ub
+
     goParamImplicit :: IsImplicit -> IsImplicit -> Sem r ()
     goParamImplicit ua ub = unless (ua == ub) (throw @Text "implicit mismatch")
+
     goParamName :: Maybe VarName -> Maybe VarName -> Sem r ()
     goParamName (Just va) (Just vb) = addName va vb
     goParamName _ _ = return ()

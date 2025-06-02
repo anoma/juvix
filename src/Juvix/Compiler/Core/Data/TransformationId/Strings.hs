@@ -5,20 +5,23 @@ import Juvix.Prelude
 strLetHoisting :: Text
 strLetHoisting = "let-hoisting"
 
-strStoredPipeline :: Text
-strStoredPipeline = "pipeline-stored"
+strLoopHoisting :: Text
+strLoopHoisting = "loop-hoisting"
 
 strNormalizePipeline :: Text
 strNormalizePipeline = "pipeline-normalize"
 
-strVampIRPipeline :: Text
-strVampIRPipeline = "pipeline-vampir"
-
 strStrippedPipeline :: Text
 strStrippedPipeline = "pipeline-stripped"
 
+strEvalPipeline :: Text
+strEvalPipeline = "pipeline-eval"
+
 strExecPipeline :: Text
 strExecPipeline = "pipeline-exec"
+
+strTypecheckPipeline :: Text
+strTypecheckPipeline = "pipeline-typecheck"
 
 strLifting :: Text
 strLifting = "lifting"
@@ -46,6 +49,9 @@ strIdentity = "identity"
 
 strRemoveTypeArgs :: Text
 strRemoveTypeArgs = "remove-type-args"
+
+strRemoveInductiveParams :: Text
+strRemoveInductiveParams = "remove-inductive-params"
 
 strMoveApps :: Text
 strMoveApps = "move-apps"
@@ -79,9 +85,6 @@ strCheckExec = "check-exec"
 
 strCheckRust :: Text
 strCheckRust = "check-rust"
-
-strCheckVampIR :: Text
-strCheckVampIR = "check-vampir"
 
 strCheckAnoma :: Text
 strCheckAnoma = "check-anoma"
@@ -137,8 +140,11 @@ strOptPhaseEval = "opt-phase-eval"
 strOptPhaseExec :: Text
 strOptPhaseExec = "opt-phase-exec"
 
-strOptPhaseVampIR :: Text
-strOptPhaseVampIR = "opt-phase-vampir"
-
 strOptPhaseMain :: Text
 strOptPhaseMain = "opt-phase-main"
+
+strOptPhasePreLifting :: Text
+strOptPhasePreLifting = "opt-phase-pre-lifting"
+
+strTrace :: Text
+strTrace = "trace"

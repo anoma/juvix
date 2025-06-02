@@ -15,7 +15,6 @@ coreSupportedTargets :: NonEmpty CompileTarget
 coreSupportedTargets =
   NonEmpty.fromList $
     [ AppTargetNative64,
-      AppTargetVampIR,
       AppTargetTree,
       AppTargetAsm,
       AppTargetReg,

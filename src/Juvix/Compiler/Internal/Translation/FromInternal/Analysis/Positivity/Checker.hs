@@ -7,10 +7,10 @@ import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Internal.Data.InfoTable
 import Juvix.Compiler.Internal.Extra
+import Juvix.Compiler.Internal.Extra.DependencyBuilder
 import Juvix.Compiler.Internal.Pretty
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.ConstructorArg
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.Positivity.Occurrences
-import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Inference
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.ResultBuilder
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Prelude hiding (fromEither)
@@ -43,20 +43,44 @@ functionSidePolarity = \case
   FunctionLeft -> PolarityNonStrictlyPositive
   FunctionRight -> PolarityStrictlyPositive
 
+mkPositivityMutualBlocks :: [MutualBlock] -> [MutualBlock]
+mkPositivityMutualBlocks m =
+  run
+    . runReader depInfo
+    $ buildMutualBlocks ss
+  where
+    ss = flattenMutualBlocks m
+    depInfo :: NameDependencyInfo = positivityNameDependencyInfo ss
+
 checkPositivity ::
   forall r.
   ( Members
       '[ Reader InfoTable,
          Error TypeCheckerError,
-         ResultBuilder,
-         Inference
+         ResultBuilder
+       ]
+      r
+  ) =>
+  Bool ->
+  [MutualBlock] ->
+  Sem r ()
+checkPositivity noPositivityFlag mut = do
+  let mut' = mkPositivityMutualBlocks mut
+  forM_ mut' (checkMutualBlockPositivity noPositivityFlag)
+
+checkMutualBlockPositivity ::
+  forall r.
+  ( Members
+      '[ Reader InfoTable,
+         Error TypeCheckerError,
+         ResultBuilder
        ]
       r
   ) =>
   Bool ->
   MutualBlock ->
   Sem r ()
-checkPositivity noPositivityFlag mut = do
+checkMutualBlockPositivity noPositivityFlag mut = do
   let ldefs :: [InductiveDef] =
         mut
           ^.. mutualStatements
@@ -66,12 +90,13 @@ checkPositivity noPositivityFlag mut = do
   whenJust (nonEmpty ldefs) $ \defs -> do
     args :: [ConstructorArg] <-
       concatMapM
-        (strongNormalize >=> mkConstructorArg)
+        mkConstructorArg
         ( defs
             ^.. each
               . inductiveConstructors
               . each
-              . inductiveConstructorType
+              . inductiveConstructorNormalizedType
+              . to fromJust
         )
     poltab <- (^. typeCheckingTablesPolarityTable) <$> getCombinedTables
     let occ :: Occurrences = mkOccurrences args

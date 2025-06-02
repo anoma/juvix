@@ -12,30 +12,25 @@ import Juvix.Compiler.Core.Data.Module
 import Juvix.Compiler.Core.Data.TransformationId
 import Juvix.Compiler.Core.Error
 import Juvix.Compiler.Core.Options
+import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation.Base
 import Juvix.Compiler.Core.Transformation.Check.Anoma
 import Juvix.Compiler.Core.Transformation.Check.Cairo
 import Juvix.Compiler.Core.Transformation.Check.Exec
 import Juvix.Compiler.Core.Transformation.Check.Rust
-import Juvix.Compiler.Core.Transformation.Check.VampIR
-import Juvix.Compiler.Core.Transformation.CombineInfoTables (combineInfoTables)
-import Juvix.Compiler.Core.Transformation.ComputeCaseANF
 import Juvix.Compiler.Core.Transformation.ComputeTypeInfo
 import Juvix.Compiler.Core.Transformation.ConvertBuiltinTypes
 import Juvix.Compiler.Core.Transformation.DetectConstantSideConditions
 import Juvix.Compiler.Core.Transformation.DetectRedundantPatterns
 import Juvix.Compiler.Core.Transformation.DisambiguateNames
 import Juvix.Compiler.Core.Transformation.Eta
-import Juvix.Compiler.Core.Transformation.FoldTypeSynonyms
 import Juvix.Compiler.Core.Transformation.IdentityTrans
 import Juvix.Compiler.Core.Transformation.IntToPrimInt
 import Juvix.Compiler.Core.Transformation.LambdaLetRecLifting
-import Juvix.Compiler.Core.Transformation.LetHoisting
 import Juvix.Compiler.Core.Transformation.MatchToCase
 import Juvix.Compiler.Core.Transformation.MoveApps
 import Juvix.Compiler.Core.Transformation.NatToPrimInt
 import Juvix.Compiler.Core.Transformation.Normalize
-import Juvix.Compiler.Core.Transformation.Optimize.CaseCallLifting
 import Juvix.Compiler.Core.Transformation.Optimize.CaseFolding
 import Juvix.Compiler.Core.Transformation.Optimize.CasePermutation (casePermutation)
 import Juvix.Compiler.Core.Transformation.Optimize.ConstantFolding
@@ -43,25 +38,37 @@ import Juvix.Compiler.Core.Transformation.Optimize.FilterUnreachable (filterUnre
 import Juvix.Compiler.Core.Transformation.Optimize.Inlining
 import Juvix.Compiler.Core.Transformation.Optimize.LambdaFolding
 import Juvix.Compiler.Core.Transformation.Optimize.LetFolding
+import Juvix.Compiler.Core.Transformation.Optimize.LoopHoisting
 import Juvix.Compiler.Core.Transformation.Optimize.MandatoryInlining
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Eval qualified as Phase.Eval
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Exec qualified as Phase.Exec
 import Juvix.Compiler.Core.Transformation.Optimize.Phase.Main qualified as Phase.Main
-import Juvix.Compiler.Core.Transformation.Optimize.Phase.VampIR qualified as Phase.VampIR
+import Juvix.Compiler.Core.Transformation.Optimize.Phase.PreLifting qualified as Phase.PreLifting
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyComparisons (simplifyComparisons)
 import Juvix.Compiler.Core.Transformation.Optimize.SimplifyIfs
 import Juvix.Compiler.Core.Transformation.Optimize.SpecializeArgs
+import Juvix.Compiler.Core.Transformation.RemoveInductiveParams
 import Juvix.Compiler.Core.Transformation.RemoveTypeArgs
 import Juvix.Compiler.Core.Transformation.TopEtaExpand
+import Juvix.Compiler.Core.Transformation.Trace qualified as Trace
 import Juvix.Compiler.Core.Transformation.UnrollRecursion
+import Juvix.Compiler.Verification.Dumper (Dumper, ignoreDumper)
 
-applyTransformations ::
+applyTransformations' ::
   forall r.
   (Members '[Error JuvixError, Reader CoreOptions] r) =>
   [TransformationId] ->
   Module ->
   Sem r Module
-applyTransformations ts tbl = foldM (flip appTrans) tbl ts
+applyTransformations' ts md = ignoreDumper (applyTransformations ts md)
+
+applyTransformations ::
+  forall r.
+  (Members '[Error JuvixError, Dumper, Reader CoreOptions] r) =>
+  [TransformationId] ->
+  Module ->
+  Sem r Module
+applyTransformations ts = flip (foldM (flip appTrans)) ts
   where
     appTrans :: TransformationId -> Module -> Sem r Module
     appTrans = \case
@@ -70,12 +77,12 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       IdentityTrans -> return . identity
       TopEtaExpand -> return . topEtaExpand
       RemoveTypeArgs -> return . removeTypeArgs
+      RemoveInductiveParams -> return . removeInductiveParams
       MoveApps -> return . moveApps
       NatToPrimInt -> return . natToPrimInt
       IntToPrimInt -> return . intToPrimInt
       ConvertBuiltinTypes -> return . convertBuiltinTypes
       ComputeTypeInfo -> return . computeTypeInfo
-      ComputeCaseANF -> return . computeCaseANF
       UnrollRecursion -> unrollRecursion
       DetectConstantSideConditions -> mapError (JuvixError @CoreError) . detectConstantSideConditions
       DetectRedundantPatterns -> mapError (JuvixError @CoreError) . detectRedundantPatterns
@@ -85,17 +92,14 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       CombineInfoTables -> return . combineInfoTables
       CheckExec -> mapError (JuvixError @CoreError) . checkExec
       CheckRust -> mapError (JuvixError @CoreError) . checkRust
-      CheckVampIR -> mapError (JuvixError @CoreError) . checkVampIR
       CheckAnoma -> mapError (JuvixError @CoreError) . checkAnoma
       CheckCairo -> mapError (JuvixError @CoreError) . checkCairo
       Normalize -> normalize
       LetFolding -> return . letFolding
       LambdaFolding -> return . lambdaFolding
-      LetHoisting -> return . letHoisting
+      LoopHoisting -> return . loopHoisting
       Inlining -> inlining
       MandatoryInlining -> return . mandatoryInlining
-      FoldTypeSynonyms -> return . foldTypeSynonyms
-      CaseCallLifting -> return . caseCallLifting
       SimplifyIfs -> return . simplifyIfs
       SimplifyComparisons -> return . simplifyComparisons
       SpecializeArgs -> return . specializeArgs
@@ -105,5 +109,6 @@ applyTransformations ts tbl = foldM (flip appTrans) tbl ts
       FilterUnreachable -> return . filterUnreachable
       OptPhaseEval -> Phase.Eval.optimize
       OptPhaseExec -> Phase.Exec.optimize
-      OptPhaseVampIR -> Phase.VampIR.optimize
       OptPhaseMain -> Phase.Main.optimize
+      OptPhasePreLifting -> Phase.PreLifting.optimize
+      Trace -> return . Trace.trace

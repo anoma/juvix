@@ -1,4 +1,0 @@
-module UnusedOperatorDef;
-  syntax fixity add := binary;
-  syntax operator + add;
-end ;

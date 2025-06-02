@@ -1,0 +1,55 @@
+module delta;
+
+import Stdlib.Prelude open;
+import Stdlib.Debug.Trace open;
+import ResourceMachine open;
+import Encode open;
+import ByteArray open;
+
+main : _ :=
+  let
+    resource : Resource :=
+      Resource.mk@{
+        label := Label.mk 11;
+        logic := Encoded.encode (Logic.mk \{_ := true});
+        value := AnomaAtom.fromNat 0;
+        nullifierKeyCommitment := NullifierKeyCommitment.zero;
+        ephemeral := true;
+        quantity := 55;
+        nonce := Nonce.fromNat 0;
+        unusedRandSeed := 0;
+      };
+
+    action : Action :=
+      Action.create@{
+        consumed := [];
+        created := [];
+        appData := AppData.empty;
+      };
+    resCommitment : Commitment := commitment resource;
+    resNullifier : Nullifier := Resource.Transparent.nullifier resource;
+
+    t : Transaction :=
+      Transaction.mk@{
+        roots := AnomaSet.empty;
+        actions := AnomaSet.empty;
+      };
+  in -- Some of these call return large nouns that are not appropritate for testing.
+      -- This test checks that these functions do not crash.
+      trace
+      (RawTag.builtinIsCommitment (Commitment.toNat resCommitment))
+    >-> trace (RawTag.builtinIsNullifier (Nullifier.toNat resNullifier))
+    >-> trace (RawTag.builtinIsNullifier (Commitment.toNat resCommitment))
+    >-> trace (RawTag.builtinIsCommitment (Nullifier.toNat resNullifier))
+    >-> trace zeroDelta
+    >-> trace (subDelta zeroDelta zeroDelta)
+    >-> trace (addDelta zeroDelta zeroDelta)
+    >-> trace (Action.listDelta [action])
+    >-> kind resource
+    >-> resCommitment
+    >-> resNullifier
+    >-> Action.delta action
+    >-> addDelta (Action.delta action) (Action.delta action)
+    >-> subDelta (Action.delta action) (Action.delta action)
+    >-> Transaction.compose t t
+    >-> true;

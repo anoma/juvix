@@ -1,0 +1,9 @@
+type Unit {
+  unit : Unit;
+};
+
+def unit' := unit;
+
+case unit of {
+  unit' := 0;
+}

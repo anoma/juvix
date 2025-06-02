@@ -7,6 +7,7 @@ module Juvix.Compiler.Internal.Extra
 where
 
 import Data.HashMap.Strict qualified as HashMap
+import Juvix.Compiler.Internal.Data.NameDependencyInfo
 import Juvix.Compiler.Internal.Extra.Base
 import Juvix.Compiler.Internal.Extra.Clonable
 import Juvix.Compiler.Internal.Extra.DependencyBuilder
@@ -37,26 +38,23 @@ constructorReturnType info =
 
 fullInductiveType :: InductiveInfo -> Expression
 fullInductiveType info =
-  let ps = info ^. inductiveInfoParameters
-   in foldr
-        (\p k -> p ^. inductiveParamType --> k)
-        (info ^. inductiveInfoType)
-        ps
+  let ps :: [FunctionParameter] = map (inductiveToFunctionParam Explicit) (info ^. inductiveInfoParameters)
+   in foldFunType ps (info ^. inductiveInfoType)
 
 constructorType :: ConstructorInfo -> Expression
 constructorType info =
   let (inductiveParams, constrArgs) = constructorArgTypes info
       args =
-        map inductiveToFunctionParam inductiveParams
+        map (inductiveToFunctionParam Implicit) inductiveParams
           ++ constrArgs
       saturatedTy = constructorReturnType info
    in foldFunType args saturatedTy
 
-inductiveToFunctionParam :: InductiveParameter -> FunctionParameter
-inductiveToFunctionParam InductiveParameter {..} =
+inductiveToFunctionParam :: IsImplicit -> InductiveParameter -> FunctionParameter
+inductiveToFunctionParam impl InductiveParameter {..} =
   FunctionParameter
     { _paramName = Just _inductiveParamName,
-      _paramImplicit = Implicit,
+      _paramImplicit = impl,
       _paramType = _inductiveParamType
     }
 
@@ -162,6 +160,15 @@ genFieldProjection kind _funDefName _funDefType _funDefBuiltin _funDefArgsInfo m
             _lambdaClauses = pure cl
           }
 
+flattenMutualBlocks :: [MutualBlock] -> [PreStatement]
+flattenMutualBlocks = concatMap (^.. mutualStatements . each . to toPreStatement)
+  where
+    toPreStatement :: MutualStatement -> PreStatement
+    toPreStatement = \case
+      StatementInductive i -> PreInductiveDef i
+      StatementFunction i -> PreFunctionDef i
+      StatementAxiom i -> PreAxiomDef i
+
 -- | Generates definitions for each variable in a given pattern.
 genPatternDefs ::
   forall r.
@@ -170,7 +177,7 @@ genPatternDefs ::
   PatternArg ->
   Sem r [FunctionDef]
 genPatternDefs valueName pat =
-  execOutputList $ goPatternArg pat
+  execOutputList (goPatternArg pat)
   where
     goPatternArg :: PatternArg -> Sem (Output FunctionDef ': r) ()
     goPatternArg PatternArg {..} = do
@@ -186,7 +193,8 @@ genPatternDefs valueName pat =
     goPatternVariable :: VarName -> Sem (Output FunctionDef ': r) ()
     goPatternVariable var = do
       h <- freshHole (getLoc valueName)
-      let body =
+      let var' = set nameKind KNameLocal var
+          body =
             ExpressionCase
               Case
                 { _caseExpression = ExpressionIden (IdenFunction valueName),
@@ -197,7 +205,7 @@ genPatternDefs valueName pat =
                       CaseBranch
                         { _caseBranchPattern = pat,
                           _caseBranchRhs =
-                            CaseBranchRhsExpression (ExpressionIden (IdenVar var))
+                            CaseBranchRhsExpression (ExpressionIden (IdenVar var'))
                         }
                 }
       body' <- clone body
@@ -306,7 +314,9 @@ cloneFunctionDefSameName f = do
   return (set funDefName (f ^. funDefName) f')
 
 subsInstanceHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap InstanceHole Expression -> a -> Sem r a
-subsInstanceHoles s = umapM helper
+subsInstanceHoles s
+  | null s = return
+  | otherwise = umapM helper
   where
     helper :: Expression -> Sem r Expression
     helper le = case le of
@@ -318,7 +328,9 @@ subsInstanceHoles s = umapM helper
         e = toExpression le
 
 subsHoles :: forall r a. (HasExpressions a, Member NameIdGen r) => HashMap Hole Expression -> a -> Sem r a
-subsHoles s = umapM helper
+subsHoles s
+  | null s = return
+  | otherwise = umapM helper
   where
     helper :: Expression -> Sem r Expression
     helper le = case le of
@@ -352,3 +364,77 @@ substituteIndParams ::
   expr ->
   Sem r expr
 substituteIndParams = substitutionE . HashMap.fromList . map (first (^. inductiveParamName))
+
+getInductiveKind :: InductiveDef -> Expression
+getInductiveKind InductiveDef {..} =
+  foldFunType (map (inductiveToFunctionParam Explicit) _inductiveParameters) _inductiveType
+
+buildMutualBlocks ::
+  (Members '[Reader NameDependencyInfo] r) =>
+  [PreStatement] ->
+  Sem r [MutualBlock]
+buildMutualBlocks ss = do
+  depInfo <- ask
+  let scomponents :: [SCC Name] = buildSCCs depInfo
+      sccs = boolHack (mapMaybe nameToPreStatement scomponents)
+  return (map goSCC sccs)
+  where
+    goSCC :: SCC PreStatement -> MutualBlock
+    goSCC = \case
+      AcyclicSCC s -> goAcyclic s
+      CyclicSCC c -> goCyclic (nonEmpty' c)
+      where
+        goCyclic :: NonEmpty PreStatement -> MutualBlock
+        goCyclic c = MutualBlock (goMutual <$> c)
+          where
+            goMutual :: PreStatement -> MutualStatement
+            goMutual = \case
+              PreInductiveDef i -> StatementInductive i
+              PreFunctionDef i -> StatementFunction i
+              PreAxiomDef i -> StatementAxiom i
+
+        goAcyclic :: PreStatement -> MutualBlock
+        goAcyclic = \case
+          PreInductiveDef i -> one (StatementInductive i)
+          PreFunctionDef i -> one (StatementFunction i)
+          PreAxiomDef i -> one (StatementAxiom i)
+          where
+            one :: MutualStatement -> MutualBlock
+            one = MutualBlock . pure
+
+    -- If the builtin bool definition is found, it is moved at the front.
+    --
+    -- This is a hack needed to translate BuiltinStringToNat in
+    -- internal-to-core. BuiltinStringToNat is the only function that depends on
+    -- Bool implicitly (i.e. without mentioning it in its type). Eventually
+    -- BuiltinStringToNat needs to be removed and so this hack.
+    boolHack :: [SCC PreStatement] -> [SCC PreStatement]
+    boolHack s = case popFirstJust isBuiltinBool s of
+      (Nothing, _) -> s
+      (Just boolDef, rest) -> AcyclicSCC (PreInductiveDef boolDef) : rest
+      where
+        isBuiltinBool :: SCC PreStatement -> Maybe InductiveDef
+        isBuiltinBool = \case
+          CyclicSCC [PreInductiveDef b]
+            | Just BuiltinBool <- b ^. inductiveBuiltin -> Just b
+          _ -> Nothing
+
+    statementsByName :: HashMap Name PreStatement
+    statementsByName = HashMap.fromList (map mkAssoc ss)
+      where
+        mkAssoc :: PreStatement -> (Name, PreStatement)
+        mkAssoc s = case s of
+          PreInductiveDef i -> (i ^. inductiveName, s)
+          PreFunctionDef i -> (i ^. funDefName, s)
+          PreAxiomDef i -> (i ^. axiomName, s)
+
+    getStmt :: Name -> Maybe PreStatement
+    getStmt n = statementsByName ^. at n
+
+    nameToPreStatement :: SCC Name -> Maybe (SCC PreStatement)
+    nameToPreStatement = nonEmptySCC . fmap getStmt
+      where
+        nonEmptySCC :: SCC (Maybe a) -> Maybe (SCC a)
+        nonEmptySCC = \case
+          AcyclicSCC a -> AcyclicSCC <$> a
+          CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)

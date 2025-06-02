@@ -1,20 +1,25 @@
 module Juvix.Compiler.Backend where
 
 import GHC.Base (maxInt)
+import Juvix.Extra.Serialize
 import Juvix.Prelude
 
 data Target
   = TargetCWasm32Wasi
   | TargetCNative64
-  | TargetVampIR
   | TargetCore
+  | TargetStripped
+  | TargetTree
   | TargetAsm
   | TargetReg
-  | TargetTree
   | TargetRust
   | TargetAnoma
   | TargetCairo
-  deriving stock (Data, Eq, Show)
+  deriving stock (Data, Eq, Show, Generic)
+
+instance Serialize Target
+
+instance NFData Target
 
 data Limits = Limits
   { _limitsMaxConstrs :: Int,
@@ -50,7 +55,7 @@ getLimits tgt debug = case tgt of
         _limitsMaxStackDelta = 16368,
         _limitsMaxFunctionAlloc = 16368,
         _limitsDispatchStackSize = 4,
-        _limitsBuiltinUIDsNum = 8,
+        _limitsBuiltinUIDsNum = 13,
         _limitsSpecialisedApply = 3
       }
   TargetCNative64 ->
@@ -65,12 +70,14 @@ getLimits tgt debug = case tgt of
         _limitsMaxStackDelta = 8184,
         _limitsMaxFunctionAlloc = 8184,
         _limitsDispatchStackSize = 4,
-        _limitsBuiltinUIDsNum = 8,
+        _limitsBuiltinUIDsNum = 13,
         _limitsSpecialisedApply = 3
       }
-  TargetVampIR ->
-    defaultLimits
   TargetCore ->
+    defaultLimits
+  TargetStripped ->
+    defaultLimits
+  TargetTree ->
     defaultLimits
   TargetAsm ->
     defaultLimits
@@ -86,11 +93,9 @@ getLimits tgt debug = case tgt of
         _limitsMaxStackDelta = 16368,
         _limitsMaxFunctionAlloc = 16368,
         _limitsDispatchStackSize = 4,
-        _limitsBuiltinUIDsNum = 8,
+        _limitsBuiltinUIDsNum = 13,
         _limitsSpecialisedApply = 3
       }
-  TargetTree ->
-    defaultLimits
   TargetAnoma ->
     defaultLimits
   TargetCairo ->
@@ -105,7 +110,7 @@ getLimits tgt debug = case tgt of
         _limitsMaxStackDelta = 0, -- irrelevant
         _limitsMaxFunctionAlloc = 0, -- irrelevant
         _limitsDispatchStackSize = 0, -- irrelevant
-        _limitsBuiltinUIDsNum = 8,
+        _limitsBuiltinUIDsNum = 13,
         _limitsSpecialisedApply = 3
       }
   TargetRust ->
@@ -140,3 +145,34 @@ defaultLimits =
       _limitsBuiltinUIDsNum = maxInt,
       _limitsSpecialisedApply = 0
     }
+
+getTargetSubdir :: Target -> Target -> Path Rel Dir
+getTargetSubdir midTarget finalTarget = case midTarget of
+  TargetCore -> $(mkRelDir "default")
+  TargetStripped -> $(mkRelDir "default")
+  TargetTree -> $(mkRelDir "default")
+  _ ->
+    case finalTarget of
+      TargetCWasm32Wasi -> $(mkRelDir "wasm32-wasi")
+      TargetCNative64 -> $(mkRelDir "native64")
+      TargetCore -> $(mkRelDir "default")
+      TargetStripped -> $(mkRelDir "default")
+      TargetTree -> $(mkRelDir "default")
+      TargetAsm -> $(mkRelDir "default")
+      TargetReg -> $(mkRelDir "default")
+      TargetRust -> $(mkRelDir "rust")
+      TargetAnoma -> $(mkRelDir "anoma")
+      TargetCairo -> $(mkRelDir "cairo")
+
+getTargetExtension :: Target -> String
+getTargetExtension = \case
+  TargetCWasm32Wasi -> ".c.wasm.bin"
+  TargetCNative64 -> ".c.native.bin"
+  TargetCore -> ".core.bin"
+  TargetStripped -> ".stripped.bin"
+  TargetTree -> ".tree.bin"
+  TargetAsm -> ".asm.bin"
+  TargetReg -> ".reg.bin"
+  TargetRust -> ".rs.bin"
+  TargetAnoma -> ".anoma.bin"
+  TargetCairo -> ".cairo.bin"

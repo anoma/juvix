@@ -1,5 +1,6 @@
 module Juvix.Compiler.Nockma.AnomaLib.Base where
 
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude hiding (Atom, Path)
 import Juvix.Prelude.Pretty
 
@@ -11,6 +12,8 @@ data AnomaFunction
 instance Hashable AnomaFunction
 
 instance NFData AnomaFunction
+
+instance Serialize AnomaFunction
 
 data StdlibFunction
   = StdlibDec
@@ -35,32 +38,45 @@ data StdlibFunction
   | StdlibCurry
   | StdlibSha256
   | StdlibRandomInitGen
-  | StdlibRandomNextBytes
+  | StdlibRandomNextBits
   | StdlibRandomSplit
+  | StdlibAnomaSetToList
+  | StdlibAnomaSetFromList
+  | StdlibSecp256k1SignCompact
+  | StdlibSecp256k1Verify
+  | StdlibSecp256k1PubKey
+  | StdlibKeccak256
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable StdlibFunction
 
 instance NFData StdlibFunction
 
+instance Serialize StdlibFunction
+
 -- | Anoma Resource Machine client library functions
 data RmFunction
   = RmCommit
   | RmNullify
   | RmKind
-  | RmProveLogic
-  | RmProveAction
   | RmDeltaAdd
   | RmDeltaSub
   | RmResourceDelta
   | RmActionDelta
   | RmMakeDelta
-  | RmProveDelta
+  | RmIsCommitment
+  | RmIsNullifier
+  | RmCreateFromComplianceInputs
+  | RmCairoProveDelta
+  | RmActionCreate
+  | RmTransactionCompose
   deriving stock (Show, Lift, Eq, Bounded, Enum, Generic)
 
 instance Hashable RmFunction
 
 instance NFData RmFunction
+
+instance Serialize RmFunction
 
 newtype AnomaValue
   = AnomaRmValue RmValue
@@ -69,6 +85,8 @@ newtype AnomaValue
 instance Hashable AnomaValue
 
 instance NFData AnomaValue
+
+instance Serialize AnomaValue
 
 -- | Anoma Resource Machine client library values
 data RmValue
@@ -79,6 +97,8 @@ instance Hashable RmValue
 
 instance NFData RmValue
 
+instance Serialize RmValue
+
 data AnomaLib
   = AnomaLibFunction AnomaFunction
   | AnomaLibValue AnomaValue
@@ -87,6 +107,8 @@ data AnomaLib
 instance Hashable AnomaLib
 
 instance NFData AnomaLib
+
+instance Serialize AnomaLib
 
 instance Pretty StdlibFunction where
   pretty = \case
@@ -112,22 +134,31 @@ instance Pretty StdlibFunction where
     StdlibCurry -> "curry"
     StdlibSha256 -> "sha256"
     StdlibRandomInitGen -> "random-init"
-    StdlibRandomNextBytes -> "random-next-bytes"
+    StdlibRandomNextBits -> "random-next-bits"
     StdlibRandomSplit -> "random-split"
+    StdlibAnomaSetToList -> "set-to-list"
+    StdlibAnomaSetFromList -> "set-from-list"
+    StdlibSecp256k1SignCompact -> Str.secp256k1SignCompact
+    StdlibSecp256k1Verify -> Str.secp256k1Verify
+    StdlibSecp256k1PubKey -> Str.secp256k1PubKey
+    StdlibKeccak256 -> Str.keccak256
 
 instance Pretty RmFunction where
   pretty = \case
     RmCommit -> "commit"
     RmNullify -> "nullify"
     RmKind -> "kind"
-    RmProveLogic -> "prove-logic"
-    RmProveAction -> "prove-action"
     RmDeltaAdd -> "delta-add"
     RmDeltaSub -> "delta-sub"
     RmResourceDelta -> "resource-delta"
     RmActionDelta -> "action-delta"
     RmMakeDelta -> "make-delta"
-    RmProveDelta -> "prove-delta"
+    RmIsCommitment -> "is-commitment"
+    RmIsNullifier -> "is-nullifier"
+    RmActionCreate -> "action-create"
+    RmTransactionCompose -> "transaction-compose"
+    RmCreateFromComplianceInputs -> "create-from-compliance-inputs"
+    RmCairoProveDelta -> "prove-delta"
 
 instance Pretty RmValue where
   pretty = \case

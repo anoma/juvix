@@ -17,7 +17,7 @@ import Data.Text qualified as Text
 import Juvix.Compiler.Backend.Markdown.Data.Types (Mk (..))
 import Juvix.Compiler.Backend.Markdown.Data.Types qualified as MK
 import Juvix.Compiler.Backend.Markdown.Error
-import Juvix.Compiler.Concrete (HighlightBuilder, ignoreHighlightBuilder)
+import Juvix.Compiler.Concrete (HighlightBuilder, evalHighlightBuilder)
 import Juvix.Compiler.Concrete.Extra (takeWhile1P)
 import Juvix.Compiler.Concrete.Extra qualified as P
 import Juvix.Compiler.Concrete.Gen qualified as Gen
@@ -40,7 +40,8 @@ import Juvix.Prelude.Pretty
 
 data FunctionSyntaxOptions = FunctionSyntaxOptions
   { _funAllowOmitType :: Bool,
-    _funAllowInstance :: Bool
+    _funAllowInstance :: Bool,
+    _funIsTop :: FunctionIsTop
   }
 
 data SigOptions = SigOptions
@@ -70,10 +71,11 @@ type PragmasStash = State (Maybe ParsedPragmas)
 
 fromSource ::
   (Members '[HighlightBuilder, TopModuleNameChecker, Files, Error JuvixError] r) =>
+  Bool ->
   Maybe Text ->
   Maybe (Path Abs File) ->
   Sem r ParserResult
-fromSource mstdin minputfile = mapError (JuvixError @ParserError) $ do
+fromSource _resultIsMainFile mstdin minputfile = mapError (JuvixError @ParserError) $ do
   (_resultParserState, _resultModule) <- runParserResultBuilder mempty getParsedModuleTop
   return ParserResult {..}
   where
@@ -174,7 +176,7 @@ runModuleParser fileName input_
         Right r -> return $ Right r
 
 runMarkdownModuleParser ::
-  (Members '[ParserResultBuilder] r) =>
+  (Members '[TopModuleNameChecker, ParserResultBuilder] r) =>
   Path Abs File ->
   Mk ->
   Sem r (Either ParserError (Module 'Parsed 'ModuleTop))
@@ -182,12 +184,11 @@ runMarkdownModuleParser fpath mk =
   runError $ case nonEmpty (MK.extractJuvixCodeBlock mk) of
     Nothing ->
       throw
-        ( ErrMarkdownBackend $
-            ErrNoJuvixCodeBlocks
-              NoJuvixCodeBlocksError
-                { _noJuvixCodeBlocksErrorFilepath = fpath
-                }
-        )
+        . ErrMarkdownBackend
+        $ ErrNoJuvixCodeBlocks
+          NoJuvixCodeBlocksError
+            { _noJuvixCodeBlocksErrorFilepath = fpath
+            }
     Just (firstBlock :| restBlocks) -> do
       m0 <- parseFirstBlock firstBlock
       let iniBuilder =
@@ -260,10 +261,10 @@ runMarkdownModuleParser fpath mk =
         Right m -> return m
 
     parseFirstBlock ::
-      (Members '[ParserResultBuilder, Error ParserError] r') =>
+      (Members '[TopModuleNameChecker, ParserResultBuilder, Error ParserError] r') =>
       MK.JuvixCodeBlock ->
       Sem r' (Module 'Parsed 'ModuleTop)
-    parseFirstBlock x = parseHelper topMarkdownModuleDef x
+    parseFirstBlock x = parseHelper topModuleDef x
 
     parseRestBlocks ::
       forall r'.
@@ -294,7 +295,7 @@ runExpressionParser ::
   Sem r (Either ParserError (ExpressionAtoms 'Parsed))
 runExpressionParser fpath input_ = do
   m <-
-    ignoreHighlightBuilder
+    evalHighlightBuilder
       . evalParserResultBuilder mempty
       . evalState (Nothing @ParsedPragmas)
       . evalState (Nothing @(Judoc 'Parsed))
@@ -311,7 +312,10 @@ pipeSep1 :: (Member ParserResultBuilder r) => (Irrelevant (Maybe KeywordRef) -> 
 pipeSep1 e = do
   p <- Irrelevant <$> optional (kw kwPipe)
   h <- e p
-  (h :|) <$> many (kw kwPipe >>= e . Irrelevant . Just)
+  (h :|) <$> many (kwPipeLenient >>= e . Irrelevant . Just)
+
+kwPipeLenient :: (Member ParserResultBuilder r) => ParsecS r KeywordRef
+kwPipeLenient = P.try (optional semicolon >> kw kwPipe)
 
 top ::
   (Member ParserResultBuilder r) =>
@@ -377,14 +381,6 @@ juvixCodeBlockParser = do
           info
           (t ^. withLocParam)
           (Just $ t ^. withLocInt)
-
-topMarkdownModuleDef ::
-  (Members '[ParserResultBuilder, Error ParserError, PragmasStash, Error ParserError, JudocStash] r) =>
-  ParsecS r (Module 'Parsed 'ModuleTop)
-topMarkdownModuleDef = do
-  optional_ stashJudoc
-  optional_ stashPragmas
-  top moduleDef
 
 parseTopStatements ::
   forall r.
@@ -475,14 +471,16 @@ derivingInstance = do
   let opts =
         FunctionSyntaxOptions
           { _funAllowOmitType = False,
-            _funAllowInstance = True
+            _funAllowInstance = True,
+            _funIsTop = FunctionTop
           }
-  off <- P.getOffset
   _derivingFunLhs <- functionDefinitionLhs opts Nothing
   unless (isJust (_derivingFunLhs ^. funLhsInstance)) $
-    parseFailure off "Expected `deriving instance`"
+    P.lift . throw . ErrExpectedDerivingInstance . ExpectedDerivingInstanceError $
+      getLoc _derivingFunLhs
   when (has _FunctionDefNamePattern (_derivingFunLhs ^. funLhsName)) $
-    parseFailure off "Patterns not allowed for `deriving instance`"
+    P.lift . throw . ErrDerivingInstancePatterns . DerivingInstancePatternsError $
+      getLoc _derivingFunLhs
   return Deriving {..}
 
 statement :: (Members '[Error ParserError, ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (Statement 'Parsed)
@@ -492,7 +490,8 @@ statement = P.label "<top level statement>" $ do
   let funSyntax =
         FunctionSyntaxOptions
           { _funAllowInstance = True,
-            _funAllowOmitType = False
+            _funAllowOmitType = False,
+            _funIsTop = FunctionTop
           }
   ms <-
     optional
@@ -523,18 +522,17 @@ stashPragmas = do
     parsePragmas :: ParsecS r (WithSource Pragmas)
     parsePragmas = parseYaml Str.pragmasStart Str.pragmasEnd
 
-parseYaml :: (Member ParserResultBuilder r, FromJSON a) => Text -> Text -> ParsecS r (WithSource a)
+parseYaml :: (Members '[ParserResultBuilder, Error ParserError] r, FromJSON a) => Text -> Text -> ParsecS r (WithSource a)
 parseYaml l r = do
   void (P.chunk l)
-  off <- P.getOffset
-  str <- P.manyTill P.anySingle (P.chunk r)
+  (str, loc) <- interval $ P.manyTill P.anySingle (P.chunk r)
   let str'
         | '\n' `elem` str = str
         | otherwise = '{' : str ++ "}"
   space
   let bs = BS.fromString str'
   case decodeEither bs of
-    Left err -> parseFailure off (prettyPrintParseException err)
+    Left err -> P.lift . throw . ErrYamlParseError $ YamlParseError err loc
     Right yaml -> return $ WithSource (fromString str) yaml
 
 stashJudoc :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r ()
@@ -678,7 +676,8 @@ builtinFunctionDef = functionDefinition funSyntax . Just
     funSyntax =
       FunctionSyntaxOptions
         { _funAllowInstance = True,
-          _funAllowOmitType = False
+          _funAllowOmitType = False,
+          _funIsTop = FunctionTop
         }
 
 builtinStatement :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (Statement 'Parsed)
@@ -705,6 +704,7 @@ aliasDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error Parser
 aliasDef synKw = do
   let _aliasDefSyntaxKw = Irrelevant synKw
   _aliasDefAliasKw <- Irrelevant <$> kw kwAlias
+  _aliasDefDoc <- getJudoc
   _aliasDefName <- symbol
   kw kwAssign
   _aliasDefAsName <- name
@@ -716,30 +716,40 @@ parsedFixityFields ::
   ParsecS r (ParsedFixityFields 'Parsed)
 parsedFixityFields = do
   l <- kw delimBraceL
-  (_fixityFieldsAssoc, _fixityFieldsPrecBelow, _fixityFieldsPrecAbove, _fixityFieldsPrecSame) <- intercalateEffect semicolon $ do
+  (_fixityFieldsAssoc, _fixityFieldsPrecBelow, _fixityFieldsPrecAbove, _fixityFieldsPrecSame, _fixityFieldsPrecNum) <- intercalateEffect semicolon $ do
     as <- toPermutationWithDefault Nothing (Just <$> assoc)
     bel <- toPermutationWithDefault Nothing (Just <$> belowAbove kwBelow)
     abov <- toPermutationWithDefault Nothing (Just <$> belowAbove kwAbove)
     sam <- toPermutationWithDefault Nothing (Just <$> same)
+    num <- toPermutationWithDefault Nothing (Just <$> precNum)
     -- This is needed to allow an optional semicolon at the end
     toPermutationWithDefault Nothing (return (Just ()))
-    pure (as, bel, abov, sam)
+    pure (as, bel, abov, sam, num)
   r <- kw delimBraceR
   let _fixityFieldsBraces = Irrelevant (l, r)
   return ParsedFixityFields {..}
   where
-    same :: ParsecS r Symbol
+    same :: ParsecS r Name
     same = do
       kw kwSame
       kw kwAssign
-      symbol
+      name
 
-    belowAbove :: Keyword -> ParsecS r [Symbol]
+    precNum :: ParsecS r PrecNum
+    precNum = do
+      kw kwPrecedence
+      kw kwAssign
+      P.choice
+        [ PrecNumWildcard . Irrelevant <$> kw kwWildcard,
+          PrecNumExplicit <$> integerWithBase
+        ]
+
+    belowAbove :: Keyword -> ParsecS r [Name]
     belowAbove aboveOrBelow = do
       kw aboveOrBelow
       kw kwAssign
       kw delimBracketL
-      r <- P.sepEndBy symbol semicolon
+      r <- P.sepEndBy name semicolon
       kw delimBracketR
       return r
 
@@ -770,18 +780,19 @@ parsedFixityInfo = do
 
 fixitySyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => KeywordRef -> ParsecS r (FixitySyntaxDef 'Parsed)
 fixitySyntaxDef _fixitySyntaxKw = P.label "<fixity declaration>" $ do
-  _fixityDoc <- getJudoc
   _fixityKw <- kw kwFixity
+  _fixityDoc <- getJudoc
   _fixitySymbol <- symbol
   _fixityAssignKw <- kw kwAssign
   _fixityInfo <- parsedFixityInfo
   return FixitySyntaxDef {..}
 
-operatorSyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => KeywordRef -> ParsecS r OperatorSyntaxDef
-operatorSyntaxDef _opSyntaxKw = do
+operatorSyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => KeywordRef -> ParsecS r (OperatorSyntaxDef 'Parsed)
+operatorSyntaxDef _opSyntaxKw = P.label "<operator declaration>" $ do
   _opKw <- kw kwOperator
-  _opSymbol <- symbol
-  _opFixity <- symbol
+  _opDoc <- getJudoc
+  _opSymbol <- name
+  _opFixity <- name
   return OperatorSyntaxDef {..}
 
 parsedIteratorInfo ::
@@ -810,10 +821,11 @@ parsedIteratorInfo = do
       void (kw kwRange >> kw kwAssign)
       fmap fromIntegral <$> integer
 
-iteratorSyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => KeywordRef -> ParsecS r IteratorSyntaxDef
+iteratorSyntaxDef :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => KeywordRef -> ParsecS r (IteratorSyntaxDef 'Parsed)
 iteratorSyntaxDef _iterSyntaxKw = do
   _iterIteratorKw <- kw kwIterator
-  _iterSymbol <- symbol
+  _iterDoc <- getJudoc
+  _iterSymbol <- name
   _iterInfo <- optional parsedIteratorInfo
   return IteratorSyntaxDef {..}
 
@@ -879,7 +891,7 @@ expressionAtom =
   P.label "<expression>" $
     AtomLiteral <$> P.try literal
       <|> AtomIterator <$> iterator
-      <|> AtomNamedApplicationNew <$> namedApplicationNew
+      <|> AtomNamedApplication <$> namedApplication
       <|> AtomList <$> parseList
       <|> AtomIf <$> multiwayIf
       <|> AtomIdentifier <$> name
@@ -1016,7 +1028,8 @@ pnamedArgumentFunctionDef = do
   let funSyntax =
         FunctionSyntaxOptions
           { _funAllowOmitType = True,
-            _funAllowInstance = False
+            _funAllowInstance = False,
+            _funIsTop = FunctionNotTop
           }
   fun <- functionDefinition funSyntax Nothing
   return
@@ -1038,19 +1051,19 @@ pnamedArgumentItemPun = do
 
 -- | Parses zero or more named arguments. This function is necessary to avoid
 -- using excessive backtracking.
-manyNamedArgumentNewRBrace ::
+manyNamedArgumentRBrace ::
   forall r.
   (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) =>
-  ParsecS r [NamedArgumentNew 'Parsed]
-manyNamedArgumentNewRBrace = reverse <$> go []
+  ParsecS r [NamedArgument 'Parsed]
+manyNamedArgumentRBrace = reverse <$> go []
   where
-    go :: [NamedArgumentNew 'Parsed] -> ParsecS r [NamedArgumentNew 'Parsed]
+    go :: [NamedArgument 'Parsed] -> ParsecS r [NamedArgument 'Parsed]
     go acc =
       rbrace $> acc
         <|> itemHelper (P.try (withIsLast (NamedArgumentItemPun <$> pnamedArgumentItemPun)))
-        <|> itemHelper (withIsLast (NamedArgumentNewFunction <$> pnamedArgumentFunctionDef))
+        <|> itemHelper (withIsLast (NamedArgumentFunction <$> pnamedArgumentFunctionDef))
       where
-        itemHelper :: ParsecS r (Bool, NamedArgumentNew 'Parsed) -> ParsecS r [NamedArgumentNew 'Parsed]
+        itemHelper :: ParsecS r (Bool, NamedArgument 'Parsed) -> ParsecS r [NamedArgument 'Parsed]
         itemHelper p = do
           (isLast, item) <- p
           let acc' = item : acc
@@ -1069,34 +1082,20 @@ manyNamedArgumentNewRBrace = reverse <$> go []
       isLast <- pIsLast
       return (isLast, res)
 
-pisExhaustive ::
-  forall r.
-  (Members '[ParserResultBuilder] r) =>
-  ParsecS r IsExhaustive
-pisExhaustive = do
-  (keyword, exh) <-
-    (,False) <$> kw kwAtQuestion
-      <|> (,True) <$> kw kwAt
-  return
-    IsExhaustive
-      { _isExhaustiveKw = Irrelevant keyword,
-        _isExhaustive = exh
-      }
-
-namedApplicationNew ::
+namedApplication ::
   forall r.
   (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) =>
-  ParsecS r (NamedApplicationNew 'Parsed)
-namedApplicationNew = P.label "<named application>" $ do
+  ParsecS r (NamedApplication 'Parsed)
+namedApplication = P.label "<named application>" $ do
   checkNoNamedApplicationMissingAt
-  (_namedApplicationNewName, _namedApplicationNewExhaustive) <- P.try $ do
+  (_namedApplicationName, _namedApplicationAtKw) <- P.try $ do
     n <- name
-    exhaustive <- pisExhaustive
+    kwd <- Irrelevant <$> kw kwAt
     lbrace
-    return (n, exhaustive)
-  _namedApplicationNewArguments <- manyNamedArgumentNewRBrace
-  let _namedApplicationNewExtra = Irrelevant ()
-  return NamedApplicationNew {..}
+    return (n, kwd)
+  _namedApplicationArguments <- manyNamedArgumentRBrace
+  let _namedApplicationExtra = Irrelevant ()
+  return NamedApplication {..}
 
 hole :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (HoleType 'Parsed)
 hole = kw kwHole
@@ -1141,7 +1140,8 @@ letFunDef = do
     funSyntax =
       FunctionSyntaxOptions
         { _funAllowOmitType = True,
-          _funAllowInstance = False
+          _funAllowInstance = False,
+          _funIsTop = FunctionNotTop
         }
 
 letStatement :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (LetStatement 'Parsed)
@@ -1226,7 +1226,7 @@ sideIfBranch isFirst = do
     let opt
           | isFirst = optional
           | otherwise = fmap Just
-    pipe' <- Irrelevant <$> opt (kw kwPipe)
+    pipe' <- Irrelevant <$> opt kwPipeLenient
     condKw' <- ifElseKw
     return (pipe', condKw')
   _sideIfBranchCondition <- case sing :: SIfBranchKind k of
@@ -1287,8 +1287,8 @@ ifBranch = do
   where
     pipeHelper :: ParsecS r KeywordRef
     pipeHelper = case sing :: SIfBranchKind k of
-      SBranchIfBool -> P.try (kw kwPipe <* P.notFollowedBy (kw kwElse))
-      SBranchIfElse -> kw kwPipe
+      SBranchIfBool -> P.try (kwPipeLenient <* P.notFollowedBy (kw kwElse))
+      SBranchIfElse -> kwPipeLenient
 
 multiwayIf :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (If 'Parsed)
 multiwayIf = do
@@ -1347,16 +1347,17 @@ functionDefinitionLhs opts _funLhsBuiltin = P.label "<function definition>" $ do
   let allowInstance = opts ^. funAllowInstance
       allowOmitType = opts ^. funAllowOmitType
   _funLhsTerminating <- optional (kw kwTerminating)
-  off <- P.getOffset
   _funLhsCoercion <- optional (kw kwCoercion)
   unless (allowInstance || isNothing _funLhsCoercion) $
-    parseFailure off "coercion not allowed here"
-  off0 <- P.getOffset
-  _funLhsInstance <- optional (kw kwInstance)
+    P.lift . throw . ErrCoercionNotAllowed . CoercionNotAllowedError $
+      getLoc (fromJust _funLhsCoercion)
+  (_funLhsInstance, loc) <- interval $ optional (kw kwInstance)
   unless (allowInstance || isNothing _funLhsInstance) $
-    parseFailure off0 "instance not allowed here"
+    P.lift . throw . ErrInstanceNotAllowed . InstanceNotAllowedError $
+      loc
   when (isJust _funLhsCoercion && isNothing _funLhsInstance) $
-    parseFailure off0 "expected: instance"
+    P.lift . throw . ErrExpectedInstance . ExpectedInstanceError $
+      loc
   mname <- optional . P.try $ do
     n <- symbol
     P.notFollowedBy (kw kwAt)
@@ -1371,7 +1372,8 @@ functionDefinitionLhs opts _funLhsBuiltin = P.label "<function definition>" $ do
           }
   _funLhsTypeSig <- typeSig sigOpts
   when (isNothing (_funLhsName ^? _FunctionDefName) && notNull (_funLhsTypeSig ^. typeSigArgs)) $
-    parseFailure off "expected function name"
+    P.lift . throw . ErrExpectedFunctionName . ExpectedFunctionNameError $
+      getLoc _funLhsName
   return
     FunctionLhs
       { _funLhsInstance,
@@ -1379,7 +1381,8 @@ functionDefinitionLhs opts _funLhsBuiltin = P.label "<function definition>" $ do
         _funLhsCoercion,
         _funLhsName,
         _funLhsTypeSig,
-        _funLhsTerminating
+        _funLhsTerminating,
+        _funLhsIsTop = opts ^. funIsTop
       }
 
 parseArg :: forall r. (Members '[ParserResultBuilder, JudocStash, PragmasStash, Error ParserError] r) => SigOptions -> ParsecS r (SigArg 'Parsed)
@@ -1431,32 +1434,27 @@ functionDefinition ::
   FunctionSyntaxOptions ->
   Maybe (WithLoc BuiltinFunction) ->
   ParsecS r (FunctionDef 'Parsed)
-functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
-  off0 <- P.getOffset
-  FunctionLhs {..} <- functionDefinitionLhs opts _signBuiltin
-  off <- P.getOffset
-  _signDoc <- getJudoc
-  _signPragmas <- getPragmas
-  _signBody <- parseBody
+functionDefinition opts _functionDefBuiltin = P.label "<function definition>" $ do
+  lhs <- functionDefinitionLhs opts _functionDefBuiltin
+  _functionDefDoc <- getJudoc
+  _functionDefPragmas <- getPragmas
+  _functionDefBody <- parseBody
   unless
-    ( isJust (_funLhsTypeSig ^. typeSigColonKw . unIrrelevant)
-        || (P.isBodyExpression _signBody && null (_funLhsTypeSig ^. typeSigArgs))
+    ( isJust (lhs ^. funLhsTypeSig . typeSigColonKw . unIrrelevant)
+        || (P.isBodyExpression _functionDefBody && null (lhs ^. funLhsTypeSig . typeSigArgs))
     )
-    $ parseFailure off "expected result type"
+    $ P.lift . throw . ErrExpectedResultType . ExpectedResultTypeError
+    $ getLoc lhs
   let fdef =
         FunctionDef
-          { _signName = _funLhsName,
-            _signTypeSig = _funLhsTypeSig,
-            _signTerminating = _funLhsTerminating,
-            _signInstance = _funLhsInstance,
-            _signCoercion = _funLhsCoercion,
-            _signBuiltin = _funLhsBuiltin,
-            _signDoc,
-            _signPragmas,
-            _signBody
+          { _functionDefLhs = lhs,
+            _functionDefDoc,
+            _functionDefPragmas,
+            _functionDefBody
           }
-  when (isNothing (_funLhsName ^? _FunctionDefName) && P.isFunctionLike fdef) $
-    parseFailure off0 "expected function name"
+  when (isNothing (lhs ^? funLhsName . _FunctionDefName) && P.isFunctionLike fdef) $
+    P.lift . throw . ErrExpectedFunctionName . ExpectedFunctionNameError $
+      getLoc lhs
   return fdef
   where
     parseBody :: ParsecS r (FunctionDefBody 'Parsed)
@@ -1466,7 +1464,7 @@ functionDefinition opts _signBuiltin = P.label "<function definition>" $ do
       where
         bodyClause :: ParsecS r (FunctionClause 'Parsed)
         bodyClause = do
-          _clausenPipeKw <- Irrelevant <$> kw kwPipe
+          _clausenPipeKw <- Irrelevant <$> kwPipeLenient
           _clausenPatterns <- some1 patternAtom
           _clausenAssignKw <- Irrelevant <$> kw kwAssign
           _clausenBody <- parseExpressionAtoms
@@ -1587,7 +1585,15 @@ inductiveDef _inductiveBuiltin = do
   _inductiveConstructors <-
     pipeSep1 (constructorDef _inductiveName)
       P.<?> "<constructor definition>"
+  _inductiveWithModule <- optional withModule
   return InductiveDef {..}
+
+withModule :: (Members '[Error ParserError, ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (WithModule 'Parsed)
+withModule = do
+  _withModuleWithKw <- Irrelevant <$> kw kwWith
+  _withModuleBody <- P.sepEndBy statement semicolon
+  _withModuleEndKw <- Irrelevant <$> kw kwEnd
+  return WithModule {..}
 
 inductiveParamsLong :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (InductiveParameters 'Parsed)
 inductiveParamsLong = parens $ do
@@ -1690,7 +1696,8 @@ checkNoNamedApplicationMissingAt = recoverStashes $ do
   let funSyntax =
         FunctionSyntaxOptions
           { _funAllowOmitType = True,
-            _funAllowInstance = False
+            _funAllowInstance = False,
+            _funIsTop = FunctionNotTop
           }
   x <-
     P.observing
@@ -1763,23 +1770,22 @@ patternAtomRecord _recordPatternConstructor = do
 -- | A pattern that starts with an identifier
 patternAtomNamed :: forall r. (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => Bool -> ParsecS r (PatternAtom 'Parsed)
 patternAtomNamed nested = do
-  off <- P.getOffset
-  n <- name
+  (n, loc) <- interval name
   case n of
     NameQualified {} ->
       PatternAtomRecord <$> patternAtomRecord n
         <|> return (PatternAtomIden n)
     NameUnqualified s -> do
-      checkWrongEq off s
+      checkWrongEq loc s
       PatternAtomRecord <$> patternAtomRecord n
         <|> PatternAtomAt <$> patternAtomAt s
         <|> return (PatternAtomIden n)
   where
-    checkWrongEq :: Int -> WithLoc Text -> ParsecS r ()
-    checkWrongEq off t =
+    checkWrongEq :: Interval -> WithLoc Text -> ParsecS r ()
+    checkWrongEq loc t =
       when
         (not nested && t ^. withLocParam == "=")
-        (parseFailure off "expected \":=\" instead of \"=\"")
+        (P.lift . throw . ErrExpectedColonEquals . ExpectedColonEqualsError $ loc)
 
 patternAtomNested :: (Members '[ParserResultBuilder, PragmasStash, Error ParserError, JudocStash] r) => ParsecS r (PatternAtom 'Parsed)
 patternAtomNested = patternAtom' True

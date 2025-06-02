@@ -14,7 +14,6 @@ where
 
 import Juvix.Prelude.Base.Foundation
 import Juvix.Prelude.Effects.Base
-import Safe
 
 data Input (i :: GHCType) :: Effect
 
@@ -31,7 +30,7 @@ input =
       Input [] -> (Nothing, Input [])
       Input (i : is) -> (Just i, Input is)
 
-inputWhile :: (Member (Input i) r) => (i -> Bool) -> Sem r [i]
+inputWhile :: forall i r. (Member (Input i) r) => (i -> Bool) -> Sem r [i]
 inputWhile c =
   stateStaticRep $
     \case

@@ -8,17 +8,17 @@ import Commands.Dev.Nockma.Run.WithClient.Options
 runCommand :: forall r. (Members AppEffects r) => NockmaRunWithClientOptions -> Sem r ()
 runCommand opts =
   runAppError @SimpleError
-    . runAnomaWithClient grpcInfo
+    . runAnomaWithClient anomaInfo
     $ runInAnoma runArgs
   where
-    grpcInfo =
+    anomaInfo =
       AnomaClientInfo
         { _anomaClientInfoUrl = opts ^. nockmaRunWithClientUrl,
-          _anomaClientInfoPort = opts ^. nockmaRunWithClientGrpcPort,
+          _anomaClientInfoPort = opts ^. nockmaRunWithClientPort,
           _anomaClientInfoNodeId = opts ^. nockmaRunWithClientNodeId
         }
     runArgs =
       RunCommandArgs
         { _runCommandProgramFile = opts ^. nockmaRunWithClientFile,
-          _runCommandArgsFile = opts ^. nockmaRunWithClientArgs
+          _runCommandArgs = opts ^. nockmaRunWithClientArgs
         }

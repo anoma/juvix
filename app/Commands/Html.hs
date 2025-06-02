@@ -19,27 +19,26 @@ runGenOnlySourceHtml HtmlOptions {..} = do
   res <- runPipelineNoOptions _htmlInputFile upToScopingEntry
   let m = res ^. Scoper.resultModule
   outputDir <- fromAppPathDir _htmlOutputDir
-  liftIO $
-    Html.genSourceHtml
-      GenSourceHtmlArgs
-        { _genSourceHtmlArgsAssetsDir = _htmlAssetsPrefix,
-          _genSourceHtmlArgsHtmlKind = Html.HtmlOnly,
-          _genSourceHtmlArgsOnlyCode = _htmlOnlyCode,
-          _genSourceHtmlArgsParamBase = "",
-          _genSourceHtmlArgsUrlPrefix = _htmlUrlPrefix,
-          _genSourceHtmlArgsIdPrefix = _htmlIdPrefix,
-          _genSourceHtmlArgsNoPath = _htmlNoPath,
-          _genSourceHtmlArgsFolderStructure = _htmlFolderStructure,
-          _genSourceHtmlArgsExt = _htmlExt,
-          _genSourceHtmlArgsStripPrefix = _htmlStripPrefix,
-          _genSourceHtmlArgsConcreteOpts = Concrete.defaultOptions,
-          _genSourceHtmlArgsModule = m,
-          _genSourceHtmlArgsComments = Scoper.getScoperResultComments res,
-          _genSourceHtmlArgsOutputDir = outputDir,
-          _genSourceHtmlArgsNoFooter = _htmlNoFooter,
-          _genSourceHtmlArgsNonRecursive = _htmlNonRecursive,
-          _genSourceHtmlArgsTheme = _htmlTheme
-        }
+  Html.genSourceHtml
+    GenSourceHtmlArgs
+      { _genSourceHtmlArgsAssetsDir = _htmlAssetsPrefix,
+        _genSourceHtmlArgsHtmlKind = Html.HtmlOnly,
+        _genSourceHtmlArgsOnlyCode = _htmlOnlyCode,
+        _genSourceHtmlArgsParamBase = "",
+        _genSourceHtmlArgsUrlPrefix = _htmlUrlPrefix,
+        _genSourceHtmlArgsIdPrefix = _htmlIdPrefix,
+        _genSourceHtmlArgsNoPath = _htmlNoPath,
+        _genSourceHtmlArgsFolderStructure = _htmlFolderStructure,
+        _genSourceHtmlArgsExt = _htmlExt,
+        _genSourceHtmlArgsStripPrefix = _htmlStripPrefix,
+        _genSourceHtmlArgsConcreteOpts = Concrete.defaultOptions,
+        _genSourceHtmlArgsModule = m,
+        _genSourceHtmlArgsComments = Scoper.getScoperResultComments res,
+        _genSourceHtmlArgsOutputDir = outputDir,
+        _genSourceHtmlArgsNoFooter = _htmlNoFooter,
+        _genSourceHtmlArgsNonRecursive = _htmlNonRecursive,
+        _genSourceHtmlArgsTheme = _htmlTheme
+      }
 
 resultToJudocCtx :: InternalTypedResult -> Html.JudocCtx
 resultToJudocCtx res =

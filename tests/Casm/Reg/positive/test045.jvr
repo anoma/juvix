@@ -1,0 +1,20 @@
+-- Extend closure in false branch
+
+function f(x : field, y : field) : field {
+  tmp[0] = fadd x y;
+  ret tmp[0];
+}
+
+function main(val : field) : field {
+  tmp[0] = calloc f ();
+  br val, out: tmp[1] {
+    true: {
+      tmp[1] = calloc f (1);
+    };
+    false: {
+      tmp[1] = cextend tmp[0] (1);
+    };
+  };
+  tmp[2] = call tmp[1] (val);
+  ret tmp[2];
+}

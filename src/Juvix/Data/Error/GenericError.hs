@@ -30,6 +30,9 @@ newtype SimpleError = SimpleError
   { _simpleErrorMessage :: AnsiText
   }
 
+instance IsString SimpleError where
+  fromString = SimpleError . mkAnsiText
+
 makeLenses ''GenericError
 makeLenses ''GenericOptions
 makeLenses ''SimpleError
@@ -89,12 +92,30 @@ render renderType endChar err = do
     lastChar :: Doc a
     lastChar = maybe "" pretty endChar
 
+asSimpleError ::
+  forall err r a.
+  (Members '[Error SimpleError] r) =>
+  (err -> AnsiText) ->
+  Sem (Error err ': r) a ->
+  Sem r a
+asSimpleError f = mapError (SimpleError . f)
+
+asSimpleErrorShow ::
+  forall err r a.
+  (Show err, Members '[Error SimpleError] r) =>
+  Sem (Error err ': r) a ->
+  Sem r a
+asSimpleErrorShow = asSimpleError (mkAnsiText @Text . show)
+
 -- | Render the error to Text.
 renderText :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> Sem r Text
 renderText = render RenderText Nothing
 
 renderTextDefault :: (ToGenericError e) => e -> Text
 renderTextDefault = run . runReader defaultGenericOptions . renderText
+
+renderStringDefault :: (ToGenericError e) => e -> String
+renderStringDefault = unpack . renderTextDefault
 
 -- | Render the error with Ansi formatting (if any).
 renderAnsiText :: (ToGenericError e, Member (Reader GenericOptions) r) => e -> Sem r Text

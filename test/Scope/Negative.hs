@@ -65,6 +65,11 @@ scoperErrorTests =
       $(mkRelFile "QualSymNotInScope.juvix")
       $ wantsError ErrQualSymNotInScope,
     negTest
+      "Qualified not in scope (forward reference)"
+      $(mkRelDir ".")
+      $(mkRelFile "ForwardModuleRef.juvix")
+      $ wantsError ErrQualSymNotInScope,
+    negTest
       "Multiple declarations"
       $(mkRelDir ".")
       $(mkRelFile "MultipleDeclarations.juvix")
@@ -95,11 +100,6 @@ scoperErrorTests =
       $(mkRelFile "InfixErrorP.juvix")
       $ wantsError ErrInfixPattern,
     negTest
-      "Duplicate operator declaration"
-      $(mkRelDir ".")
-      $(mkRelFile "DuplicateOperator.juvix")
-      $ wantsError ErrDuplicateOperator,
-    negTest
       "Multiple export conflict"
       $(mkRelDir ".")
       $(mkRelFile "MultipleExportConflict.juvix")
@@ -109,11 +109,6 @@ scoperErrorTests =
       $(mkRelDir ".")
       $(mkRelFile "ModuleNotInScope.juvix")
       $ wantsError ErrModuleNotInScope,
-    negTest
-      "Unused operator syntax definition"
-      $(mkRelDir ".")
-      $(mkRelFile "UnusedOperatorDef.juvix")
-      $ wantsError ErrUnusedOperatorDef,
     negTest
       "Ambiguous symbol"
       $(mkRelDir ".")
@@ -195,16 +190,6 @@ scoperErrorTests =
       $(mkRelFile "Iterators3.juvix")
       $ wantsError ErrIteratorUndefined,
     negTest
-      "Duplicate iterator declaration"
-      $(mkRelDir ".")
-      $(mkRelFile "Iterators4.juvix")
-      $ wantsError ErrDuplicateIterator,
-    negTest
-      "Unused iterator declaration"
-      $(mkRelDir ".")
-      $(mkRelFile "Iterators5.juvix")
-      $ wantsError ErrUnusedIteratorDef,
-    negTest
       "Repeated name in named application"
       $(mkRelDir ".")
       $(mkRelFile "DuplicateArgument.juvix")
@@ -223,7 +208,7 @@ scoperErrorTests =
       "Missing argument"
       $(mkRelDir ".")
       $(mkRelFile "MissingArgument.juvix")
-      $ wantsError ErrNamedArgumentsError,
+      $ wantsError ErrMissingArgs,
     negTest
       "Repeated name in name signature"
       $(mkRelDir ".")
@@ -263,7 +248,7 @@ scoperErrorTests =
       "Incomparable precedences"
       $(mkRelDir ".")
       $(mkRelFile "IncomparablePrecedences.juvix")
-      $ wantsError ErrIncomparablePrecedences,
+      $ wantsError ErrInfixParser,
     negTest
       "Precedence inconsistency"
       $(mkRelDir ".")
@@ -298,5 +283,15 @@ scoperErrorTests =
       "Deriving statement wrong form"
       $(mkRelDir ".")
       $(mkRelFile "WrongDeriving.juvix")
-      $ wantsError ErrDerivingTypeWrongForm
+      $ wantsError ErrDerivingTypeWrongForm,
+    negTest
+      "Arg name not in scope in default value"
+      $(mkRelDir ".")
+      $(mkRelFile "ArgNameDefaultValue.juvix")
+      $ wantsError ErrSymNotInScope,
+    negTest
+      "Repeeated named arguments with puns"
+      $(mkRelDir ".")
+      $(mkRelFile "RepeatedNamedArgumentsPuns.juvix")
+      $ wantsError ErrMultipleDeclarations
   ]

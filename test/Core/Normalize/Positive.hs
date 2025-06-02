@@ -19,7 +19,7 @@ fromTest :: PosTest -> TestTree
 fromTest = mkTest . toTestDescr
 
 root :: Path Abs Dir
-root = relToProject $(mkRelDir "tests/VampIR/positive")
+root = relToProject $(mkRelDir "tests/Normalize/positive")
 
 toTestDescr' ::
   ( Path Abs Dir ->

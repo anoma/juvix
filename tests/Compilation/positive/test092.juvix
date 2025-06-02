@@ -1,0 +1,135 @@
+-- Type level naturals
+module test092;
+
+import Stdlib.Prelude as Prelude open;
+
+module Parity;
+  trait
+  type Even (n : Nat) := proof;
+
+  trait
+  type Odd (n : Nat) := proof;
+
+  instance
+  Even-zero : Even zero := Even.proof;
+
+  instance
+  Even-suc {n : Nat} {{Even n}} : Even (suc (suc n)) := Even.proof;
+
+  instance
+  Odd-suc {n : Nat} {{Even n}} : Odd (suc n) := Odd.proof;
+
+  checkEven (n : Nat) {{Even n}} : Unit := unit;
+
+  checkOdd (n : Nat) {{Odd n}} : Unit := unit;
+
+  test : _ :=
+    let
+      one : Nat := 1;
+      two : Nat := suc one;
+      e1 : uint 20 := uint.mk 87;
+      e2 : uint zero := uint.mk 87;
+      e3 : uint (suc 0) := uint.mk 87;
+      e4 : uint (suc two) := uint.mk 87;
+      p1 : Unit := checkEven zero;
+      p3 : Unit := checkOdd (suc 0);
+      p2 : Unit := checkEven 2;
+      p4 : Unit := checkEven two;
+      p5 : Unit := checkEven 4;
+      p6 : Unit := checkOdd 3;
+    in unit;
+end;
+
+type uint (bytes : Nat) := mk Nat
+with
+  instance
+  Show-uint-zero : Show (uint 0) :=
+    Show.mk@{
+      show (_ : uint zero) : String := "0";
+    };
+
+  instance
+  Show-uint {bytes : Nat} : Show (uint (suc bytes)) :=
+    Show.mk@{
+      show : uint (suc bytes) -> String
+        | (uint.mk val) := Show.show (suc bytes) ++str ":" ++str Show.show val;
+    };
+
+  main : _ :=
+    let
+      one : Nat := suc zero;
+      e0 : uint zero := uint.mk 3;
+      e1 : uint 20 := uint.mk 3;
+      e2 : uint (suc 9) := uint.mk 2;
+      e3 : uint (suc zero) := uint.mk 1;
+      e4 : uint (suc one) := uint.mk 1;
+    in printStringLn (Show.show e0)
+      >>> printStringLn (Show.show e1)
+      >>> printStringLn (Show.show e2)
+      >>> printStringLn (Show.show e3)
+      >>> printStringLn (Show.show e4);
+end;
+
+module Lits;
+  trait
+  type IsThree (a : Nat) := truth;
+
+  instance
+  isThreeI : IsThree 3 := IsThree.truth;
+
+  t (n : Nat) {{IsThree n}} : Unit := unit;
+
+  e1 : Unit := t 3;
+
+  e2 : Unit := t (suc (suc 1));
+end;
+
+module Le;
+  syntax operator '<= comparison;
+
+  trait
+  type '<= (a b : Nat) := truth
+  with
+    instance
+    le-zero {a : Nat} : zero '<= a := truth;
+
+    instance
+    le-suc {a b : Nat} {{a '<= b}} : suc a '<= suc b := truth;
+  end;
+
+  le (a b : Nat) {{a '<= b}} : Unit := unit;
+
+  example1 : Unit := le 1 5;
+
+  example2 : Unit := le 4 4;
+end;
+
+module EqTy;
+  syntax operator '== comparison;
+
+  trait
+  type '== (a b : Nat) := truth
+  with
+    instance
+    eq-zero : zero '== zero := truth;
+
+    instance
+    eq-suc {a b : Nat} {{a '== b}} : suc a '== suc b := truth;
+  end;
+
+  equal (a b : Nat) {{a '== b}} : Unit := unit;
+
+  example1 : Unit := equal (suc (suc (suc zero))) (suc (suc (suc zero)));
+
+  example2 : Unit := equal (suc (suc (suc zero))) 3;
+
+  example3 : Unit := equal 3 3;
+
+  example4 : Unit := equal (suc 2) 3;
+
+  two : Nat := 2;
+
+  example5 : Unit := equal (suc two) 3;
+end;
+
+open uint using {main} public;

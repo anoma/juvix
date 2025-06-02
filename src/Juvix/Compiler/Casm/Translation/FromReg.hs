@@ -11,15 +11,16 @@ import Juvix.Compiler.Casm.Extra.Base
 import Juvix.Compiler.Casm.Extra.Stdlib
 import Juvix.Compiler.Casm.Language
 import Juvix.Compiler.Casm.Translation.FromReg.CasmBuilder
-import Juvix.Compiler.Reg.Data.Blocks.InfoTable qualified as Reg
+import Juvix.Compiler.Reg.Data.Blocks.Module qualified as Reg
 import Juvix.Compiler.Reg.Extra.Blocks.Info qualified as Reg
 import Juvix.Compiler.Reg.Language.Blocks qualified as Reg
+import Juvix.Compiler.Reg.Pretty qualified as Reg
 import Juvix.Compiler.Tree.Evaluator.Builtins qualified as Reg
 import Juvix.Compiler.Tree.Extra.Rep qualified as Reg
 import Juvix.Data.Field
 
 fromReg :: Reg.InfoTable -> Result
-fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolId tab) $ do
+fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.nextSymbolId tab) $ do
   let startAddr :: Address = 2
   startSym <- freshSymbol
   endSym <- freshSymbol
@@ -30,7 +31,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
   registerLabelName startSym startName
   registerLabelAddress startSym startAddr
   let mainSym = fromJust $ tab ^. Reg.infoMainFunction
-      mainInfo = Reg.lookupFunInfo tab mainSym
+      mainInfo = Reg.lookupTabFunInfo tab mainSym
       mainName = mainInfo ^. Reg.functionName
       mainResultType = Reg.typeTarget (mainInfo ^. Reg.functionType)
       mainArgs = getInputArgs (mainInfo ^. Reg.functionArgsNum) (mainInfo ^. Reg.functionArgNames)
@@ -86,7 +87,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
       where
         goRecord :: Symbol -> [Instruction]
         goRecord sym = case indInfo ^. Reg.inductiveConstructors of
-          [tag] -> case Reg.lookupConstrInfo tab tag of
+          [tag] -> case Reg.lookupTabConstrInfo tab tag of
             Reg.ConstructorInfo {..} ->
               map mkOutInstr [0 .. toOffset _constructorArgsNum - 1]
               where
@@ -94,7 +95,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
                 mkOutInstr i = mkAssignAp (Load $ LoadValue (MemRef Ap (-off - i - 1)) i)
           _ -> impossible
           where
-            indInfo = Reg.lookupInductiveInfo tab sym
+            indInfo = Reg.lookupTabInductiveInfo tab sym
 
     mkLoadInputArg :: Text -> [Instruction]
     mkLoadInputArg arg = [Hint (HintInput arg), mkAssignAp (Val $ Ref $ MemRef Ap 0)]
@@ -110,7 +111,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
 
     mkFunCall :: Symbol -> [Instruction]
     mkFunCall sym =
-      [ mkCallRel $ Lab $ LabelRef sym (Just $ quoteName $ Reg.lookupFunInfo tab sym ^. Reg.functionName),
+      [ mkCallRel $ Lab $ LabelRef sym (Just $ quoteName $ Reg.lookupTabFunInfo tab sym ^. Reg.functionName),
         Return,
         Nop
       ]
@@ -140,6 +141,9 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
 
     argsOffset :: Int
     argsOffset = 3
+
+    ppVarComment :: Reg.VarRef -> Int -> Text
+    ppVarComment var off = Reg.ppPrint (Reg.moduleFromInfoTable tab) var <> " is [fp + " <> show off <> "]"
 
     goFun :: forall r. (Member LabelInfoBuilder r) => StdlibBuiltins -> LabelRef -> (Address, [[Instruction]]) -> Reg.FunctionInfo -> Sem r (Address, [[Instruction]])
     goFun blts failLab (addr0, acc) funInfo = do
@@ -190,7 +194,9 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           Nothing -> do
             massert (isJust mout)
             massert (HashSet.member (fromJust mout) liveVars0)
-            goCallBlock False Nothing liveVars0
+            goAssignApBuiltins
+            whenJust mout saveLiveVar
+            goCallBlock mout liveVars0
       where
         output'' :: Instruction -> Sem r ()
         output'' i = do
@@ -202,23 +208,25 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           output'' i
           incAP apOff
 
-        goCallBlock :: Bool -> Maybe Reg.VarRef -> HashSet Reg.VarRef -> Sem r ()
-        goCallBlock updatedBuiltins outVar liveVars = do
-          let liveVars' = toList (maybe liveVars (`HashSet.delete` liveVars) outVar)
+        saveLiveVar :: Reg.VarRef -> Sem r ()
+        saveLiveVar var = do
+          ref <- mkMemRef var
+          let comment = Reg.ppPrint (Reg.moduleFromInfoTable tab) var
+          goAssignAp' (Just comment) (Val (Ref ref))
+
+        -- The `goCallBlock` function is used to switch to a new basic block.
+        -- Assumes that the builtins pointer and outVar (if present) were
+        -- already saved (in this order).
+        goCallBlock :: Maybe Reg.VarRef -> HashSet Reg.VarRef -> Sem r ()
+        goCallBlock outVar liveVars = do
+          let liveVars' = sort $ toList (maybe liveVars (`HashSet.delete` liveVars) outVar)
               n = length liveVars'
-              bltOff =
-                if
-                    | updatedBuiltins ->
-                        -argsOffset - n - fromEnum (isJust outVar)
-                    | otherwise ->
-                        -argsOffset - n
+              bltOff = -argsOffset - n - fromEnum (isJust outVar)
               vars =
                 HashMap.fromList $
-                  maybe [] (\var -> [(var, -argsOffset - n - if updatedBuiltins then 0 else 1)]) outVar
+                  maybe [] (\var -> [(var, -argsOffset - n)]) outVar
                     ++ zipWithExact (\var k -> (var, -argsOffset - k)) liveVars' [0 .. n - 1]
-          unless updatedBuiltins $
-            goAssignApBuiltins
-          mapM_ (mkMemRef >=> goAssignAp . Val . Ref) (reverse liveVars')
+          mapM_ saveLiveVar (reverse liveVars')
           output'' (mkCallRel $ Imm 3)
           output'' Return
           -- we need the Nop instruction to ensure that the relative call offset
@@ -254,7 +262,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
 
         mkLoad :: Reg.ConstrField -> Sem r RValue
         mkLoad Reg.ConstrField {..} = do
-          let tagOffset = if Reg.isConstrRecord tab _constrFieldTag then 0 else 1
+          let tagOffset = if Reg.isTabConstrRecord tab _constrFieldTag then 0 else 1
           v <- mkMemRef _constrFieldRef
           return $ Load $ LoadValue v (toOffset _constrFieldIndex + tagOffset)
 
@@ -295,11 +303,15 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goAssignVar vr val = do
           off <- getAP
           insertVar vr off
-          goAssignAp val
+          let comment = ppVarComment vr off
+          goAssignAp' (Just comment) val
+
+        goAssignAp' :: Maybe Text -> RValue -> Sem r ()
+        goAssignAp' comment val = do
+          output' 1 (mkAssignAp' comment val)
 
         goAssignAp :: RValue -> Sem r ()
-        goAssignAp val = do
-          output' 1 (mkAssignAp val)
+        goAssignAp = goAssignAp' Nothing
 
         goAssignValue :: Reg.VarRef -> Reg.Value -> Sem r ()
         goAssignValue vr v = mkRValue v >>= goAssignVar vr
@@ -308,7 +320,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goAssignApValue v = mkRValue v >>= goAssignAp
 
         goAssignApBuiltins :: Sem r ()
-        goAssignApBuiltins = mkBuiltinRef >>= goAssignAp . Val . Ref
+        goAssignApBuiltins = mkBuiltinRef >>= goAssignAp' (Just "builtins pointer") . Val . Ref
 
         -- Warning: the result may depend on Ap. Use adjustAp when changing Ap
         -- afterwards.
@@ -334,7 +346,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
                   _instrExtraBinopResult = MemRef Ap 0,
                   _instrExtraBinopArg1 = arg1,
                   _instrExtraBinopArg2 = arg2,
-                  _instrExtraBinopIncAp = True
+                  _instrExtraBinopIncAp = True,
+                  _instrExtraBinopComment = Just (ppVarComment res off)
                 }
 
         goNativeBinop :: Opcode -> Reg.VarRef -> MemRef -> Value -> Sem r ()
@@ -370,7 +383,8 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
                               _binopValueArg2 = Imm 1,
                               _binopValueOpcode = FieldAdd
                             },
-                      _instrAssignIncAp = True
+                      _instrAssignIncAp = True,
+                      _instrAssignComment = Nothing
                     }
           Lab {} -> impossible
 
@@ -482,6 +496,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
               (apOff, sym, name) = case _instrCairoOpcode of
                 Reg.OpCairoPoseidon -> (blts ^. stdlibPoseidonApOffset, blts ^. stdlibPoseidon, blts ^. stdlibPoseidonName)
                 Reg.OpCairoEc -> (blts ^. stdlibEcOpApOffset, blts ^. stdlibEcOp, blts ^. stdlibEcOpName)
+                Reg.OpCairoRangeCheck -> (blts ^. stdlibRangeCheckApOffset, blts ^. stdlibRangeCheck, blts ^. stdlibRangeCheckName)
 
         goAssign :: Reg.InstrAssign -> Sem r ()
         goAssign Reg.InstrAssign {..} =
@@ -495,7 +510,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goAlloc :: Reg.InstrAlloc -> Sem r ()
         goAlloc Reg.InstrAlloc {..} = do
           goAllocCall _instrAllocResult
-          unless (Reg.isConstrRecord tab _instrAllocTag) $
+          unless (Reg.isTabConstrRecord tab _instrAllocTag) $
             goAssignAp (Val $ Imm $ fromIntegral tagId)
           mapM_ goAssignApValue _instrAllocArgs
           where
@@ -557,7 +572,11 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           val <- mkMemRef _instrExtendClosureValue
           goAssignAp (Val $ Ref val)
           output'' $ mkCallRel $ Lab $ LabelRef (blts ^. stdlibExtendClosure) (Just (blts ^. stdlibExtendClosureName))
-          goCallBlock False (Just _instrExtendClosureResult) liveVars
+          -- the `juvix_extend_closure` runtime function does not accept or
+          -- return the builtins pointer
+          goAssignApBuiltins
+          goAssignAp (Val $ Ref $ MemRef Ap (-2))
+          goCallBlock (Just _instrExtendClosureResult) liveVars
 
         goCall' :: Reg.CallType -> [Reg.Value] -> Sem r ()
         goCall' ct args = case ct of
@@ -566,7 +585,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
             mapM_ goAssignApValue (reverse args)
             output'' $ mkCallRel $ Lab $ LabelRef sym (Just funName)
             where
-              funName = quoteName (Reg.lookupFunInfo tab sym ^. Reg.functionName)
+              funName = quoteName (Reg.lookupTabFunInfo tab sym ^. Reg.functionName)
           Reg.CallClosure cl -> do
             goAssignApBuiltins
             mapM_ goAssignApValue (reverse args)
@@ -577,7 +596,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
         goCall :: HashSet Reg.VarRef -> Reg.InstrCall -> Sem r ()
         goCall liveVars Reg.InstrCall {..} = do
           goCall' _instrCallType _instrCallArgs
-          goCallBlock True (Just _instrCallResult) liveVars
+          goCallBlock (Just _instrCallResult) liveVars
 
         -- There is no way to make "proper" tail calls in Cairo, because
         -- the only way to set the `fp` register is via the `call` instruction.
@@ -647,7 +666,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
 
         goCase :: HashSet Reg.VarRef -> Reg.InstrCase -> Sem r ()
         goCase liveVars Reg.InstrCase {..} = do
-          massert (not (Reg.isInductiveRecord tab _instrCaseInductive))
+          massert (not (Reg.isTabInductiveRecord tab _instrCaseInductive))
           syms <- replicateM (length tags) freshSymbol
           symEnd <- freshSymbol
           let symMap = HashMap.fromList $ zip tags syms
@@ -675,7 +694,7 @@ fromReg tab = mkResult $ run $ runLabelInfoBuilderWithNextId (Reg.getNextSymbolI
           registerLabelAddress symEnd addrEnd
           output'' $ Label labEnd
           where
-            tags = Reg.lookupInductiveInfo tab _instrCaseInductive ^. Reg.inductiveConstructors
+            tags = Reg.lookupTabInductiveInfo tab _instrCaseInductive ^. Reg.inductiveConstructors
             ctrTags = HashSet.fromList $ map (^. Reg.caseBranchTag) _instrCaseBranches
             defaultTags = filter (not . flip HashSet.member ctrTags) tags
 

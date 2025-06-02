@@ -31,16 +31,15 @@ makeFormatTest' Scope.PosTest {..} =
             case d of
               Right (_, FormatResultOK) -> return ()
               Right (_, FormatResultNotFormatted) -> assertFailure ("File: " <> show file' <> " is not formatted")
-              Right (_, FormatResultFail) -> assertFailure ("File: " <> show file' <> " is failed to format")
               Left {} -> assertFailure ("Error: ")
         }
 
 filterOutTests :: [String] -> [Scope.PosTest] -> [Scope.PosTest]
 filterOutTests out = filter (\Scope.PosTest {..} -> _name `notElem` out)
 
--- Ignore tests that use the stdlib
+-- Ignore tests that use the stdlib or contain CRs or TABs
 ignoredTests :: [String]
-ignoredTests = ["Import embedded standard library", "Basic dependencies"]
+ignoredTests = ["Import embedded standard library", "Basic dependencies", "Whitespace", "Tabs"]
 
 allTests :: TestTree
 allTests =

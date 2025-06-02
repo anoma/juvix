@@ -10,6 +10,8 @@ module Juvix.Compiler.Concrete.Extra
     isBodyExpression,
     isFunctionLike,
     isLhsFunctionLike,
+    isFunctionRecursive,
+    isLhsFunctionRecursive,
     symbolParsed,
   )
 where
@@ -47,11 +49,13 @@ groupStatements = \case
     -- blank line
     g :: Statement s -> Statement s -> Bool
     g a b = case (a, b) of
+      (StatementReservedInductive _, _) -> False
+      (_, StatementReservedInductive _) -> False
       (StatementDeriving _, _) -> False
       (StatementSyntax _, StatementSyntax _) -> True
       (StatementSyntax (SyntaxFixity _), _) -> False
-      (StatementSyntax (SyntaxOperator o), s) -> definesSymbol (o ^. opSymbol) s
-      (StatementSyntax (SyntaxIterator i), s) -> definesSymbol (i ^. iterSymbol) s
+      (StatementSyntax (SyntaxOperator o), s) -> definesIdentifier (o ^. opSymbol) s
+      (StatementSyntax (SyntaxIterator i), s) -> definesIdentifier (i ^. iterSymbol) s
       (StatementSyntax (SyntaxAlias {}), _) -> False
       (StatementImport _, StatementImport _) -> True
       (StatementImport i, StatementOpenModule o) -> case sing :: SStage s of
@@ -68,11 +72,17 @@ groupStatements = \case
       (_, StatementFunctionDef {}) -> False
       (StatementProjectionDef {}, StatementProjectionDef {}) -> True
       (StatementProjectionDef {}, _) -> False
+
+    definesIdentifier :: IdentifierType s -> Statement s -> Bool
+    definesIdentifier i stm = maybe False (`definesSymbol` stm) $ case sing :: SStage s of
+      SParsed -> i ^? _NameUnqualified
+      SScoped -> i ^? scopedIdenSrcName . S.nameConcrete . _NameUnqualified
+
     definesSymbol :: Symbol -> Statement s -> Bool
     definesSymbol n s = case s of
       StatementInductive d -> n `elem` syms d
       StatementAxiom d -> n == symbolParsed (d ^. axiomName)
-      StatementFunctionDef d -> withFunctionSymbol False (\n' -> n == symbolParsed n') (d ^. signName)
+      StatementFunctionDef d -> withFunctionSymbol False (\n' -> n == symbolParsed n') (d ^. functionDefName)
       _ -> False
       where
         syms :: InductiveDef s -> [Symbol]
@@ -115,4 +125,16 @@ isLhsFunctionLike FunctionLhs {..} = notNull (_funLhsTypeSig ^. typeSigArgs)
 
 isFunctionLike :: FunctionDef 'Parsed -> Bool
 isFunctionLike d@FunctionDef {..} =
-  isLhsFunctionLike (functionDefLhs d) || (not . isBodyExpression) _signBody
+  isLhsFunctionLike (d ^. functionDefLhs) || (not . isBodyExpression) _functionDefBody
+
+isFunctionRecursive :: FunctionDef 'Parsed -> Bool
+isFunctionRecursive d = case d ^. functionDefLhs . funLhsIsTop of
+  FunctionTop -> isLhsFunctionRecursive (d ^. functionDefLhs)
+  FunctionNotTop -> isFunctionLike d
+
+isLhsFunctionRecursive :: FunctionLhs 'Parsed -> Bool
+isLhsFunctionRecursive d = case d ^. funLhsIsTop of
+  FunctionTop -> case d ^. funLhsName of
+    FunctionDefNamePattern {} -> False
+    FunctionDefName {} -> True
+  FunctionNotTop -> isLhsFunctionLike d

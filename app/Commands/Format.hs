@@ -3,8 +3,8 @@ module Commands.Format where
 import Commands.Base
 import Commands.Format.Options
 import Data.Text qualified as Text
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.Base
-import Juvix.Compiler.Store.Language (ModuleInfo)
 import Juvix.Formatter
 
 data FormatNoEditRenderMode
@@ -49,15 +49,28 @@ targetFromOptions opts = do
 -- | Formats the project on the root
 formatProject ::
   forall r.
-  (Members '[App, EmbedIO, TaggedLock, Logger, Files, Output FormattedFileInfo] r) =>
+  (Members (ScopeEff ': Output FormattedFileInfo ': AppEffects) r) =>
+  Migration ->
   Sem r FormatResult
-formatProject = silenceProgressLog . runPipelineOptions . runPipelineSetup $ do
-  res :: [(ImportNode, PipelineResult ModuleInfo)] <- processProject
-  res' :: [(ImportNode, SourceCode)] <- forM res $ \(node, nfo) -> do
+formatProject migr = silenceProgressLog
+  . runPipelineOptions
+  . local (set pipelineMigration migr)
+  . runPipelineSetup
+  $ do
+    mpkg <- asks (^. entryPointMainPackageId)
+    res :: [ProcessedNode ScoperResult] <- runReader mpkg processProjectUpToScoping
     pkgId :: PackageId <- (^. entryPointPackageId) <$> ask
-    src <- runReader pkgId (formatModuleInfo node nfo)
-    return (node, src)
-  formatProjectSourceCode res'
+    res' :: [(ImportNode, SourceCode)] <- runReader pkgId $ forM res $ \node -> do
+      src <- formatModuleInfo node
+      return (node ^. processedNode, src)
+    formatRes <- formatProjectSourceCode res'
+    formatPkgRes <- formatPackageDotJuvix
+    return (formatRes <> formatPkgRes)
+
+formatPackageDotJuvix :: forall r. (Members (Output FormattedFileInfo ': ScopeEff ': AppEffects) r) => Sem r FormatResult
+formatPackageDotJuvix = do
+  pkgDotJuvix <- askPackageDotJuvixPath
+  ifM (fileExists' pkgDotJuvix) (format pkgDotJuvix) (return mempty)
 
 runCommand :: forall r. (Members AppEffects r) => FormatOptions -> Sem r ()
 runCommand opts = do
@@ -65,18 +78,16 @@ runCommand opts = do
   runOutputSem (renderFormattedOutput target opts) . runScopeFileApp $ do
     res <- case target of
       TargetFile p -> format p
-      TargetProject -> formatProject
+      TargetProject -> formatProject (opts ^. formatMigration)
       TargetStdin -> do
         entry <- getEntryPointStdin
         runReader entry formatStdin
     case res of
-      FormatResultFail -> exitFailure
       FormatResultNotFormatted ->
         {- use exit code 1 for
          * unformatted files when using --check
-         * when running the formatter on a Juvix project
         -}
-        when (opts ^. formatCheck || isTargetProject target) exitFailure
+        when (opts ^. formatCheck) exitFailure
       FormatResultOK -> pure ()
 
 renderModeFromOptions :: FormatTarget -> FormatOptions -> FormattedFileInfo -> FormatRenderMode
@@ -93,7 +104,13 @@ renderModeFromOptions target opts formattedInfo
       | formattedInfo ^. formattedFileInfoContentsModified = res
       | otherwise = NoEdit Silent
 
-renderFormattedOutput :: forall r. (Members '[EmbedIO, App, Files] r) => FormatTarget -> FormatOptions -> FormattedFileInfo -> Sem r ()
+renderFormattedOutput ::
+  forall r.
+  (Members '[EmbedIO, App, Files] r) =>
+  FormatTarget ->
+  FormatOptions ->
+  FormattedFileInfo ->
+  Sem r ()
 renderFormattedOutput target opts fInfo = do
   let renderMode = renderModeFromOptions target opts fInfo
   outputResult renderMode

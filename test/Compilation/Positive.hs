@@ -515,5 +515,30 @@ tests =
         "Test088: Record update pun"
         $(mkRelDir ".")
         $(mkRelFile "test088.juvix")
-        $(mkRelFile "out/test088.out")
+        $(mkRelFile "out/test088.out"),
+      posTest
+        "Test089: Loop invariant code motion"
+        $(mkRelDir ".")
+        $(mkRelFile "test089.juvix")
+        $(mkRelFile "out/test089.out"),
+      posTest
+        "Test090: Module self-reference"
+        $(mkRelDir ".")
+        $(mkRelFile "test090.juvix")
+        $(mkRelFile "out/test090.out"),
+      posTest
+        "Test091: Instance termination"
+        $(mkRelDir ".")
+        $(mkRelFile "test091.juvix")
+        $(mkRelFile "out/test091.out"),
+      posTest
+        "Test092: Type level naturals"
+        $(mkRelDir ".")
+        $(mkRelFile "test092.juvix")
+        $(mkRelFile "out/test092.out"),
+      posTest
+        "Test093: Pattern matching with indexed types"
+        $(mkRelDir ".")
+        $(mkRelFile "test093.juvix")
+        $(mkRelFile "out/test093.out")
     ]

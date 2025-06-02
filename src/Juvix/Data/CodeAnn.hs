@@ -2,24 +2,23 @@ module Juvix.Data.CodeAnn
   ( module Juvix.Data.CodeAnn,
     module Juvix.Data.NameKind,
     module Juvix.Prelude.Pretty,
+    module Juvix.Data.CodeReference,
+    module Data.Versions,
   )
 where
 
-import Juvix.Compiler.Concrete.Data.Name
+import Data.Versions (prettySemVer)
+import Juvix.Data.CodeReference
+import Juvix.Data.Error.GenericError
+import Juvix.Data.IsImplicit
 import Juvix.Data.Keyword
 import Juvix.Data.NameKind
+import Juvix.Data.PackageId
+import Juvix.Data.WithLoc
 import Juvix.Extra.Strings qualified as Str
-import Juvix.Prelude
+import Juvix.Prelude.Base
 import Juvix.Prelude.Pretty hiding (braces, brackets, group, list, parens)
 import Prettyprinter.Render.Terminal (Color (..), bold, colorDull)
-
-data CodeAnnReference = CodeAnnReference
-  { _codeAnnReferenceModule :: TopModulePath,
-    _codeAnnReferenceNameId :: NameId,
-    _codeAnnReferenceNameKindPretty :: NameKind
-  }
-
-makeLenses ''CodeAnnReference
 
 type Ann = CodeAnn
 
@@ -32,17 +31,19 @@ data CodeAnn
   | AnnJudoc
   | AnnImportant
   | AnnDelimiter
+  | AnnError
   | AnnLiteralString
   | AnnLiteralInteger
   | AnnUnkindedSym
-  | AnnDef CodeAnnReference
-  | AnnRef CodeAnnReference
+  | AnnDef CodeReference
+  | AnnRef CodeReference
 
 type SemanticItem = WithLoc CodeAnn
 
-instance HasNameKind CodeAnnReference where
-  getNameKind = (^. codeAnnReferenceNameKindPretty)
-  getNameKindPretty = (^. codeAnnReferenceNameKindPretty)
+instance PrettyCodeAnn PackageId where
+  ppCodeAnn pid =
+    annotate AnnImportant (pretty (pid ^. packageIdName))
+      <+> pretty (prettySemVer (pid ^. packageIdVersion))
 
 instance HasNameKindAnn Ann where
   annNameKind = AnnKind
@@ -59,6 +60,7 @@ stylize a = case a of
   AnnJudoc -> colorDull Cyan
   AnnDelimiter -> colorDull White
   AnnLiteralString -> colorDull Red
+  AnnError -> colorDull Red
   AnnLiteralInteger -> colorDull Green
   AnnDef {} -> mempty
   AnnRef {} -> mempty
@@ -256,6 +258,9 @@ kwDot = delimiter "."
 
 kwAt :: Doc Ann
 kwAt = keyword Str.at_
+
+important :: Doc Ann -> Doc Ann
+important = annotate AnnImportant
 
 code :: Doc Ann -> Doc Ann
 code = annotate AnnCode

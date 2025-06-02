@@ -1,8 +1,6 @@
 module Juvix.Compiler.Pipeline.Loader.PathResolver.Paths where
 
-import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Concrete.Data.Name
-import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Prelude
 
 topModulePathToRelativePath' :: TopModulePath -> Path Rel File
@@ -11,22 +9,8 @@ topModulePathToRelativePath' m =
       ext = fileExtension' absPath
    in topModulePathToRelativePath ext "" (</>) m
 
-topModulePathKeyToRelativePathNoExt :: TopModulePathKey -> Path Rel File
-topModulePathKeyToRelativePathNoExt TopModulePathKey {..} =
-  relFile (joinFilePaths (map unpack (_modulePathKeyDir ++ [_modulePathKeyName])))
-
 topModulePathToRelativePathNoExt :: TopModulePath -> Path Rel File
 topModulePathToRelativePathNoExt = topModulePathKeyToRelativePathNoExt . topModulePathKey
-
-topModulePathKeyToImportScan :: Interval -> TopModulePathKey -> ImportScan
-topModulePathKeyToImportScan loc TopModulePathKey {..} =
-  ImportScan
-    { _importNames = unpack <$> NonEmpty.prependList _modulePathKeyDir (pure _modulePathKeyName),
-      _importLoc = loc
-    }
-
-topModulePathToImportScan :: TopModulePath -> ImportScan
-topModulePathToImportScan t = topModulePathKeyToImportScan (getLoc t) (topModulePathKey t)
 
 topModulePathToRelativePath :: String -> String -> (FilePath -> FilePath -> FilePath) -> TopModulePath -> Path Rel File
 topModulePathToRelativePath ext suffix joinpath mp = relFile relFilePath

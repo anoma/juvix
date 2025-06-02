@@ -18,6 +18,7 @@ import Juvix.Compiler.Core.Options
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.FromSource
+import Juvix.Compiler.Verification.Dumper
 
 data EvalMode
   = EvalModePlain
@@ -143,13 +144,13 @@ coreEvalAssertion mainFile expectedFile trans testTrans step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (prettyString err)
+    Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right (_, Nothing) -> do
       step "Compare expected and actual program output"
       expected <- readFile expectedFile
       assertEqDiffText ("Check: EVAL output = " <> toFilePath expectedFile) "" expected
     Right (tabIni, Just node) ->
-      case run $ runReader defaultCoreOptions $ runError $ applyTransformations trans $ moduleFromInfoTable $ setupMainFunction defaultModuleId tabIni node of
+      case run . runReader defaultCoreOptions . runError . ignoreDumper $ applyTransformations trans $ moduleFromInfoTable $ setupMainFunction defaultModuleId tabIni node of
         Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right m -> do
           let tab = computeCombinedInfoTable m
@@ -162,7 +163,7 @@ coreEvalErrorAssertion mainFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left _ -> assertBool "" True
+    Left _ -> assertFailure "error parsing file"
     Right (_, Nothing) -> assertFailure "no error"
     Right (tab, Just node) -> do
       withTempDir'
@@ -173,11 +174,11 @@ coreEvalErrorAssertion mainFile step = do
             r' <- doEval mainFile hout tab node
             hClose hout
             case r' of
-              Left _ -> assertBool "" True
+              Left _ -> return ()
               Right _ -> assertFailure "no error"
         )
 
-parseFile :: Path Abs File -> IO (Either MegaparsecError (InfoTable, Maybe Node))
+parseFile :: Path Abs File -> IO (Either JuvixError (InfoTable, Maybe Node))
 parseFile f = do
   s <- readFile f
   return (runParser f defaultModuleId mempty s)

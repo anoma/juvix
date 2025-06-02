@@ -13,6 +13,7 @@ import Data.IntMap.Strict qualified as IntMap
 import Data.List.NonEmpty qualified as NonEmpty
 import Juvix.Compiler.Builtins
 import Juvix.Compiler.Builtins.Assert
+import Juvix.Compiler.Builtins.Json
 import Juvix.Compiler.Builtins.Pair
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Extra qualified as Concrete
@@ -37,6 +38,7 @@ import Juvix.Compiler.Store.Language qualified as Store
 import Juvix.Compiler.Store.Scoped.Data.InfoTable qualified as S
 import Juvix.Compiler.Store.Scoped.Language (createExportsTable)
 import Juvix.Compiler.Store.Scoped.Language qualified as S
+import Juvix.Extra.Strings qualified as Str
 import Juvix.Prelude
 import Safe (lastMay)
 
@@ -104,7 +106,7 @@ fromConcrete _resultScoper = do
           <> mconcatMap (S.getCombinedInfoTable . (^. Store.moduleInfoScopedModule)) ms
   _resultModule <-
     runReader @Pragmas mempty
-      . runReader @ExportsTable exportTbl
+      . runReader (instanceDependencyParams exportTbl)
       . runReader tab
       . runReader internalTable
       . mapError (JuvixError @ScoperError)
@@ -127,7 +129,7 @@ fromConcreteExpression e = do
   return e'
 
 fromConcreteImport ::
-  (Members '[Reader ExportsTable, Error JuvixError, NameIdGen, Termination] r) =>
+  (Members '[Reader DependencyParams, Error JuvixError, NameIdGen, Termination] r) =>
   Scoper.Import 'Scoped ->
   Sem r Internal.Import
 fromConcreteImport i = do
@@ -136,52 +138,6 @@ fromConcreteImport i = do
     . goImport
     $ i
 
-buildMutualBlocks ::
-  (Members '[Reader Internal.NameDependencyInfo] r) =>
-  [Internal.PreStatement] ->
-  Sem r [SCC Internal.PreStatement]
-buildMutualBlocks ss = do
-  depInfo <- ask
-  let scomponents :: [SCC Internal.Name] = buildSCCs depInfo
-  return (boolHack (mapMaybe nameToPreStatement scomponents))
-  where
-    -- If the builtin bool definition is found, it is moved at the front.
-    --
-    -- This is a hack needed to translate BuiltinStringToNat in
-    -- internal-to-core. BuiltinStringToNat is the only function that depends on
-    -- Bool implicitly (i.e. without mentioning it in its type). Eventually
-    -- BuiltinStringToNat needs to be removed and so this hack.
-    boolHack :: [SCC Internal.PreStatement] -> [SCC Internal.PreStatement]
-    boolHack s = case popFirstJust isBuiltinBool s of
-      (Nothing, _) -> s
-      (Just boolDef, rest) -> AcyclicSCC (Internal.PreInductiveDef boolDef) : rest
-      where
-        isBuiltinBool :: SCC Internal.PreStatement -> Maybe Internal.InductiveDef
-        isBuiltinBool = \case
-          CyclicSCC [Internal.PreInductiveDef b]
-            | Just BuiltinBool <- b ^. Internal.inductiveBuiltin -> Just b
-          _ -> Nothing
-
-    statementsByName :: HashMap Internal.Name Internal.PreStatement
-    statementsByName = HashMap.fromList (map mkAssoc ss)
-      where
-        mkAssoc :: Internal.PreStatement -> (Internal.Name, Internal.PreStatement)
-        mkAssoc s = case s of
-          Internal.PreInductiveDef i -> (i ^. Internal.inductiveName, s)
-          Internal.PreFunctionDef i -> (i ^. Internal.funDefName, s)
-          Internal.PreAxiomDef i -> (i ^. Internal.axiomName, s)
-
-    getStmt :: Internal.Name -> Maybe Internal.PreStatement
-    getStmt n = statementsByName ^. at n
-
-    nameToPreStatement :: SCC Internal.Name -> Maybe (SCC Internal.PreStatement)
-    nameToPreStatement = nonEmptySCC . fmap getStmt
-      where
-        nonEmptySCC :: SCC (Maybe a) -> Maybe (SCC a)
-        nonEmptySCC = \case
-          AcyclicSCC a -> AcyclicSCC <$> a
-          CyclicSCC p -> CyclicSCC . toList <$> nonEmpty (catMaybes p)
-
 goLocalModule ::
   (Members '[Reader EntryPoint, State LocalTable, Reader DefaultArgsStack, Error ScoperError, NameIdGen, Reader Pragmas, Reader S.InfoTable] r) =>
   Module 'Scoped 'ModuleLocal ->
@@ -189,13 +145,12 @@ goLocalModule ::
 goLocalModule = concatMapM goAxiomInductive . (^. moduleBody)
 
 goTopModule ::
-  (Members '[Reader DefaultArgsStack, Reader EntryPoint, Reader ExportsTable, Error JuvixError, Error ScoperError, NameIdGen, Reader Pragmas, Termination, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
+  (Members '[Reader DefaultArgsStack, Reader EntryPoint, Reader DependencyParams, Error JuvixError, Error ScoperError, NameIdGen, Reader Pragmas, Termination, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
   Module 'Scoped 'ModuleTop ->
   Sem r Internal.Module
 goTopModule m = do
   p <- toPreModule m
-  tbl <- ask
-  let depInfo = buildDependencyInfoPreModule p tbl
+  depInfo <- buildDependencyInfoPreModule p
   r <- runReader depInfo (fromPreModule p)
   noTerminationOption <- asks (^. entryPointNoTermination)
   unless noTerminationOption (checkTerminationShallow r)
@@ -231,7 +186,6 @@ goSymbolPretty pp s =
       _nameFixity = s ^. S.nameFixity
     }
 
--- TODO give a better name?
 traverseM' ::
   forall r s t a b.
   (Monad r, Monad s, Traversable t) =>
@@ -242,7 +196,7 @@ traverseM' f x = sequence <$> traverse f x
 
 toPreModule ::
   forall r.
-  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, NameIdGen, Reader Pragmas, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
+  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Error ScoperError, NameIdGen, Reader Pragmas, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
   Module 'Scoped 'ModuleTop ->
   Sem r Internal.PreModule
 toPreModule Module {..} = do
@@ -273,36 +227,12 @@ fromPreModuleBody ::
   Internal.PreModuleBody ->
   Sem r Internal.ModuleBody
 fromPreModuleBody b = do
-  sccs <- buildMutualBlocks (b ^. Internal.moduleStatements)
-  let moduleStatements' = map goSCC sccs
+  moduleStatements' <- Internal.buildMutualBlocks (b ^. Internal.moduleStatements)
   return (set Internal.moduleStatements moduleStatements' b)
-  where
-    goSCC :: SCC Internal.PreStatement -> Internal.MutualBlock
-    goSCC = \case
-      AcyclicSCC s -> goAcyclic s
-      CyclicSCC c -> goCyclic (nonEmpty' c)
-      where
-        goCyclic :: NonEmpty Internal.PreStatement -> Internal.MutualBlock
-        goCyclic c = Internal.MutualBlock (goMutual <$> c)
-          where
-            goMutual :: Internal.PreStatement -> Internal.MutualStatement
-            goMutual = \case
-              Internal.PreInductiveDef i -> Internal.StatementInductive i
-              Internal.PreFunctionDef i -> Internal.StatementFunction i
-              Internal.PreAxiomDef i -> Internal.StatementAxiom i
-
-        goAcyclic :: Internal.PreStatement -> Internal.MutualBlock
-        goAcyclic = \case
-          Internal.PreInductiveDef i -> one (Internal.StatementInductive i)
-          Internal.PreFunctionDef i -> one (Internal.StatementFunction i)
-          Internal.PreAxiomDef i -> one (Internal.StatementAxiom i)
-          where
-            one :: Internal.MutualStatement -> Internal.MutualBlock
-            one = Internal.MutualBlock . pure
 
 goModuleBody ::
   forall r.
-  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Reader ExportsTable, Error ScoperError, NameIdGen, Reader Pragmas, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
+  (Members '[Reader EntryPoint, Reader DefaultArgsStack, Error ScoperError, NameIdGen, Reader Pragmas, Reader S.InfoTable, Reader Internal.InfoTable] r) =>
   [Statement 'Scoped] ->
   Sem r Internal.PreModuleBody
 goModuleBody stmts = evalState emptyLocalTable $ do
@@ -327,7 +257,7 @@ goModuleBody stmts = evalState emptyLocalTable $ do
 
     mkFunctionLike :: Statement 'Scoped -> Sem (State LocalTable ': r) [Internal.FunctionDef]
     mkFunctionLike s = case s of
-      StatementFunctionDef d -> goFunctionDef d
+      StatementFunctionDef d -> toList <$> goFunctionDef d
       StatementProjectionDef d -> pure <$> goProjectionDef d
       StatementDeriving d -> pure <$> goDeriving d
       StatementSyntax {} -> return []
@@ -336,6 +266,7 @@ goModuleBody stmts = evalState emptyLocalTable $ do
       StatementModule {} -> return []
       StatementOpenModule {} -> return []
       StatementAxiom {} -> return []
+      StatementReservedInductive x -> absurd x
 
 scanImports :: [Statement 'Scoped] -> [Import 'Scoped]
 scanImports = mconcatMap go
@@ -351,6 +282,7 @@ scanImports = mconcatMap go
       StatementFunctionDef {} -> []
       StatementDeriving {} -> []
       StatementProjectionDef {} -> []
+      StatementReservedInductive x -> absurd x
 
 goImport ::
   forall r.
@@ -379,6 +311,7 @@ goAxiomInductive = \case
   StatementSyntax {} -> return []
   StatementOpenModule {} -> return []
   StatementProjectionDef {} -> return []
+  StatementReservedInductive x -> absurd x
 
 goProjectionDef ::
   forall r.
@@ -395,7 +328,7 @@ goProjectionDef ProjectionDef {..} = do
   fun <-
     Internal.genFieldProjection
       _projectionKind
-      field
+      (over Internal.nameText quoteMain field)
       projType
       ( (^. withLocParam)
           <$> _projectionFieldBuiltin
@@ -406,6 +339,11 @@ goProjectionDef ProjectionDef {..} = do
       _projectionFieldIx
   whenJust (fun ^. Internal.funDefBuiltin) (checkBuiltinFunction fun)
   return fun
+  where
+    quoteMain :: Text -> Text
+    quoteMain txt
+      | txt == Str.main = prime txt
+      | otherwise = txt
 
 goNameSignature ::
   forall r.
@@ -433,7 +371,7 @@ goDeriving ::
   Sem r Internal.FunctionDef
 goDeriving Deriving {..} = do
   let FunctionLhs {..} = _derivingFunLhs
-      name = goSymbol (_funLhsName ^. functionDefName)
+      name = goSymbol (_funLhsName ^. functionDefNameScoped)
   (funArgs, ret) <- Internal.unfoldFunType <$> goDefType _derivingFunLhs
   let (mtrait, traitArgs) = Internal.unfoldExpressionApp ret
   (n, der) <- findDerivingTrait mtrait
@@ -891,40 +829,40 @@ goFunctionDef ::
   forall r.
   (Members '[Reader DefaultArgsStack, Reader Pragmas, Error ScoperError, NameIdGen, Reader S.InfoTable] r) =>
   FunctionDef 'Scoped ->
-  Sem r [Internal.FunctionDef]
+  Sem r (NonEmpty Internal.FunctionDef)
 goFunctionDef def@FunctionDef {..} = do
-  let _funDefName = goSymbol (_signName ^. functionDefName)
-      _funDefTerminating = isJust _signTerminating
+  let _funDefName = goSymbol (def ^. functionDefName . functionDefNameScoped)
+      _funDefTerminating = isJust (def ^. functionDefTerminating)
       _funDefIsInstanceCoercion
-        | isJust _signCoercion = Just Internal.IsInstanceCoercionCoercion
-        | isJust _signInstance = Just Internal.IsInstanceCoercionInstance
+        | isJust (def ^. functionDefCoercion) = Just Internal.IsInstanceCoercionCoercion
+        | isJust (def ^. functionDefInstance) = Just Internal.IsInstanceCoercionInstance
         | otherwise = Nothing
-      _funDefCoercion = isJust _signCoercion
-      _funDefBuiltin = (^. withLocParam) <$> _signBuiltin
-  _funDefType <- goDefType (functionDefLhs def)
-  _funDefPragmas <- goPragmas _signPragmas
+      _funDefCoercion = isJust (def ^. functionDefCoercion)
+      _funDefBuiltin = (^. withLocParam) <$> (def ^. functionDefBuiltin)
+  _funDefType <- goDefType (def ^. functionDefLhs)
+  _funDefPragmas <- goPragmas _functionDefPragmas
   _funDefBody <- goBody
   _funDefArgsInfo <- goArgsInfo _funDefName
-  let _funDefDocComment = fmap ppPrintJudoc _signDoc
+  let _funDefDocComment = fmap ppPrintJudoc _functionDefDoc
       fun = Internal.FunctionDef {..}
-  whenJust _signBuiltin (checkBuiltinFunction fun . (^. withLocParam))
-  case _signName ^. functionDefNamePattern of
+  whenJust (def ^. functionDefBuiltin) (checkBuiltinFunction fun . (^. withLocParam))
+  case def ^. functionDefName . functionDefNamePattern of
     Just pat -> do
       pat' <- goPatternArg pat
-      (fun :) <$> Internal.genPatternDefs _funDefName pat'
+      (fun :|) <$> Internal.genPatternDefs _funDefName pat'
     Nothing ->
-      return [fun]
+      return (pure fun)
   where
     goBody :: Sem r Internal.Expression
     goBody = do
-      commonPatterns <- concatMapM (fmap toList . argToPattern) (_signTypeSig ^. typeSigArgs)
+      commonPatterns <- concatMapM (fmap toList . argToPattern) (def ^. functionDefTypeSig . typeSigArgs)
       let goClause :: FunctionClause 'Scoped -> Sem r Internal.LambdaClause
           goClause FunctionClause {..} = do
             _lambdaBody <- goExpression _clausenBody
             extraPatterns <- mapM goPatternArg _clausenPatterns
             let _lambdaPatterns = prependList commonPatterns extraPatterns
             return Internal.LambdaClause {..}
-      case _signBody of
+      case _functionDefBody of
         SigBodyExpression body -> do
           body' <- goExpression body
           return $ case nonEmpty commonPatterns of
@@ -986,7 +924,7 @@ goDefType FunctionLhs {..} = do
         Nothing -> return (Internal.smallUniverseE (getLoc a))
         Just ty -> goExpression ty
 
-      let _paramImpligoExpressioncit = _sigArgImplicit
+      let _paramImplicit = _sigArgImplicit
           noName = Internal.FunctionParameter {_paramName = Nothing, ..}
           mk :: Concrete.Argument 'Scoped -> Internal.FunctionParameter
           mk ma =
@@ -1038,10 +976,15 @@ checkBuiltinInductive d b = localBuiltins $ case b of
   BuiltinList -> checkListDef d
   BuiltinMaybe -> checkMaybeDef d
   BuiltinPair -> checkPairDef d
+  BuiltinJson -> checkJsonDef d
   BuiltinPoseidonState -> checkPoseidonStateDef d
   BuiltinEcPoint -> checkEcPointDef d
   BuiltinAnomaResource -> checkResource d
+  BuiltinAnomaNullifierKey -> checkNullifierKey d
   BuiltinAnomaAction -> checkAction d
+  BuiltinAnomaComplianceInputs -> checkComplianceInputs d
+  BuiltinAnomaShieldedTransaction -> checkShieldedTransaction d
+  BuiltinNockmaNoun -> checkNockmaNoun d
 
 localBuiltins :: (Members '[Reader S.InfoTable] r) => Sem (Reader BuiltinsTable ': r) a -> Sem r a
 localBuiltins m = do
@@ -1136,12 +1079,19 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinAnomaZeroDelta -> checkZeroDelta d
   BuiltinAnomaAddDelta -> checkDeltaBinaryOp d
   BuiltinAnomaSubDelta -> checkDeltaBinaryOp d
-  BuiltinAnomaProveDelta -> checkProveDelta d
-  BuiltinAnomaProveAction -> checkProveAction d
   BuiltinAnomaRandomGenerator -> checkAnomaRandomGenerator d
   BuiltinAnomaRandomGeneratorInit -> checkAnomaRandomGeneratorInit d
   BuiltinAnomaRandomNextBytes -> checkAnomaRandomNextBytes d
   BuiltinAnomaRandomSplit -> checkAnomaRandomSplit d
+  BuiltinAnomaIsCommitment -> checkAnomaIsCommitment d
+  BuiltinAnomaIsNullifier -> checkAnomaIsNullifier d
+  BuiltinAnomaActionCreate -> checkAnomaActionCreate d
+  BuiltinAnomaTransactionCompose -> checkAnomaTransactionCompose d
+  BuiltinAnomaCreateFromComplianceInputs -> checkAnomaCreateFromComplianceInputs d
+  BuiltinAnomaProveDelta -> checkAnomaProveDelta d
+  BuiltinAnomaSet -> checkAnomaSet d
+  BuiltinAnomaSetToList -> checkAnomaSetToList d
+  BuiltinAnomaSetFromList -> checkAnomaSetFromList d
   BuiltinPoseidon -> checkPoseidon d
   BuiltinEcOp -> checkEcOp d
   BuiltinRandomEcPoint -> checkRandomEcPoint d
@@ -1152,6 +1102,12 @@ checkBuiltinAxiom d b = localBuiltins $ case b of
   BuiltinByteArray -> checkByteArray d
   BuiltinByteArrayFromListByte -> checkByteArrayFromListByte d
   BuiltinByteArrayLength -> checkByteArrayLength d
+  BuiltinRangeCheck -> checkRangeCheck d
+  BuiltinNockmaReify -> checkNockmaReify d
+  BuiltinAnomaKeccak256 -> checkKeccak256 d
+  BuiltinAnomaSecp256k1SignCompact -> checkSecp256k1SignCompact d
+  BuiltinAnomaSecp256k1Verify -> checkSecp256k1Verify d
+  BuiltinAnomaSecp256k1PubKey -> checkSecp256k1PubKey d
 
 goInductive ::
   ( Members
@@ -1213,6 +1169,7 @@ goConstructorDef retTy ConstructorDef {..} = do
   return
     Internal.ConstructorDef
       { _inductiveConstructorType = ty',
+        _inductiveConstructorNormalizedType = Nothing,
         _inductiveConstructorName = goSymbol _constructorName,
         _inductiveConstructorIsRecord = isRhsRecord _constructorRhs,
         _inductiveConstructorPragmas = pragmas',
@@ -1309,7 +1266,7 @@ goListPattern l = localBuiltins $ do
   where
     loc = getLoc l
 
-createArgumentBlocks :: NonEmpty (NamedArgumentNew 'Scoped) -> [NameBlock 'Scoped] -> NonEmpty (ArgumentBlock 'Scoped)
+createArgumentBlocks :: NonEmpty (NamedArgument 'Scoped) -> [NameBlock 'Scoped] -> NonEmpty (ArgumentBlock 'Scoped)
 createArgumentBlocks appargs =
   nonEmpty'
     . run
@@ -1317,9 +1274,9 @@ createArgumentBlocks appargs =
     . evalState args0
     . mapM_ goBlock
   where
-    namedArgumentRefSymbol :: NamedArgumentNew 'Scoped -> S.Symbol
+    namedArgumentRefSymbol :: NamedArgument 'Scoped -> S.Symbol
     namedArgumentRefSymbol = \case
-      NamedArgumentNewFunction p -> p ^. namedArgumentFunctionDef . signName . functionDefName
+      NamedArgumentFunction p -> p ^. namedArgumentFunctionDef . functionDefName . functionDefNameScoped
       NamedArgumentItemPun p -> over S.nameConcrete fromUnqualified' (p ^. namedArgumentReferencedSymbol . scopedIdenFinal)
     args0 :: HashSet S.Symbol = hashSet (namedArgumentRefSymbol <$> appargs)
     goBlock ::
@@ -1387,7 +1344,7 @@ goExpression = \case
   ExpressionHole h -> return (Internal.ExpressionHole h)
   ExpressionInstanceHole h -> return (Internal.ExpressionInstanceHole (fromHole h))
   ExpressionIterator i -> goIterator i
-  ExpressionNamedApplicationNew i -> goNamedApplicationNew i []
+  ExpressionNamedApplication i -> goNamedApplication i []
   ExpressionRecordUpdate i -> goRecordUpdateApp i
   ExpressionParensRecordUpdate i -> Internal.ExpressionLambda <$> goRecordUpdate (i ^. parensRecordUpdate)
   where
@@ -1396,19 +1353,19 @@ goExpression = \case
       s <- asks (^. S.infoNameSigs)
       runReader s (runNamedArguments fun blocks extraArgs) >>= goDesugaredNamedApplication
 
-    goNamedApplicationNew ::
-      Concrete.NamedApplicationNew 'Scoped ->
+    goNamedApplication ::
+      Concrete.NamedApplication 'Scoped ->
       [Internal.ApplicationArg] ->
       Sem r Internal.Expression
-    goNamedApplicationNew napp extraArgs = case nonEmpty (napp ^. namedApplicationNewArguments) of
-      Nothing -> return (goIden (napp ^. namedApplicationNewName))
+    goNamedApplication napp extraArgs = case nonEmpty (napp ^. namedApplicationArguments) of
+      Nothing -> return (goIden (napp ^. namedApplicationName))
       Just appargs -> do
-        let name = napp ^. namedApplicationNewName . scopedIdenFinal
+        let name = napp ^. namedApplicationName . scopedIdenFinal
         sig <- fromJust <$> asks (^. S.infoNameSigs . at (name ^. S.nameId))
-        let fun = napp ^. namedApplicationNewName
+        let fun = napp ^. namedApplicationName
             blocks = createArgumentBlocks appargs (sig ^. nameSignatureArgs)
         compiledNameApp <- goNamedApplication' fun blocks extraArgs
-        case nonEmpty (appargs ^.. each . _NamedArgumentNewFunction) of
+        case nonEmpty (appargs ^.. each . _NamedArgumentFunction) of
           Nothing -> return compiledNameApp
           Just funs -> do
             cls <- funDefsToClauses funs
@@ -1416,8 +1373,8 @@ goExpression = \case
                   funs
                     ^.. each
                       . namedArgumentFunctionDef
-                      . signName
                       . functionDefName
+                      . functionDefNameScoped
                       . to goSymbol
                 -- changes the kind from Variable to Function
                 updateKind :: Internal.Subs = Internal.subsKind funsNames KNameFunction
@@ -1430,10 +1387,10 @@ goExpression = \case
             Internal.clone expr
             where
               funDefsToClauses :: NonEmpty (NamedArgumentFunctionDef 'Scoped) -> Sem r (NonEmpty Internal.LetClause)
-              funDefsToClauses args = (mkLetClauses . nonEmpty') <$> concatMapM goArg (toList args)
+              funDefsToClauses args = mkLetClauses <$> sconcatMapM goArg args
                 where
-                  goArg :: NamedArgumentFunctionDef 'Scoped -> Sem r [Internal.PreLetStatement]
-                  goArg = fmap (map Internal.PreLetFunctionDef) . goFunctionDef . (^. namedArgumentFunctionDef)
+                  goArg :: NamedArgumentFunctionDef 'Scoped -> Sem r (NonEmpty Internal.PreLetStatement)
+                  goArg = fmap (fmap Internal.PreLetFunctionDef) . goFunctionDef . (^. namedArgumentFunctionDef)
 
     goDesugaredNamedApplication :: DesugaredNamedApplication -> Sem r Internal.Expression
     goDesugaredNamedApplication a = do
@@ -1650,7 +1607,7 @@ goExpression = \case
       let (f, args) = unfoldApp a
       args' <- toList <$> mapM goApplicationArg args
       case f of
-        ExpressionNamedApplicationNew n -> goNamedApplicationNew n args'
+        ExpressionNamedApplication n -> goNamedApplication n args'
         _ -> do
           f' <- goExpression f
           return (Internal.foldApplication f' args')
@@ -1716,7 +1673,7 @@ goLetFunDefs clauses = maybe [] (toList . mkLetClauses) . nonEmpty <$> preLetSta
       where
         preLetStatement :: LetStatement 'Scoped -> Sem r [Internal.PreLetStatement]
         preLetStatement = \case
-          LetFunctionDef f -> map Internal.PreLetFunctionDef <$> goFunctionDef f
+          LetFunctionDef f -> map Internal.PreLetFunctionDef . toList <$> goFunctionDef f
           LetAliasDef {} -> return []
           LetOpen {} -> return []
 

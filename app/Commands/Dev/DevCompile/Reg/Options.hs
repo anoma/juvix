@@ -24,5 +24,6 @@ parseReg = do
 
 instance EntryPointOptions (RegOptions k) where
   applyOptions opts =
-    set entryPointTarget (Just TargetReg)
+    set entryPointPipeline (Just PipelineExec)
+      . set entryPointTarget (Just TargetReg)
       . applyOptions (opts ^. regCompileCommonOptions)

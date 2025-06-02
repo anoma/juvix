@@ -14,7 +14,4 @@ instance Serialize PublicAnn
 
 instance NFData PublicAnn
 
-_Public :: Traversal' PublicAnn KeywordRef
-_Public f = \case
-  NoPublic -> pure NoPublic
-  Public (Irrelevant x) -> Public . Irrelevant <$> f x
+makePrisms ''PublicAnn

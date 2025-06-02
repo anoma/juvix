@@ -26,29 +26,34 @@ simplestFunctionDefParsed funNameTxt funBody = do
 
 simplestFunctionDef :: forall s. (SingI s) => FunctionName s -> ExpressionType s -> FunctionDef s
 simplestFunctionDef funName funBody =
-  FunctionDef
-    { _signName = name,
-      _signBody = SigBodyExpression funBody,
-      _signTypeSig =
-        TypeSig
-          { _typeSigColonKw = Irrelevant Nothing,
-            _typeSigArgs = [],
-            _typeSigRetType = Nothing
-          },
-      _signDoc = Nothing,
-      _signPragmas = Nothing,
-      _signBuiltin = Nothing,
-      _signTerminating = Nothing,
-      _signInstance = Nothing,
-      _signCoercion = Nothing
-    }
+  let lhs =
+        FunctionLhs
+          { _funLhsName = name,
+            _funLhsTypeSig =
+              TypeSig
+                { _typeSigColonKw = Irrelevant Nothing,
+                  _typeSigArgs = [],
+                  _typeSigRetType = Nothing
+                },
+            _funLhsBuiltin = Nothing,
+            _funLhsTerminating = Nothing,
+            _funLhsInstance = Nothing,
+            _funLhsCoercion = Nothing,
+            _funLhsIsTop = FunctionNotTop
+          }
+   in FunctionDef
+        { _functionDefBody = SigBodyExpression funBody,
+          _functionDefLhs = lhs,
+          _functionDefDoc = Nothing,
+          _functionDefPragmas = Nothing
+        }
   where
     name :: FunctionSymbolType s
     name = case sing :: SStage s of
       SParsed -> FunctionDefName funName
       SScoped ->
         FunctionDefNameScoped
-          { _functionDefName = funName,
+          { _functionDefNameScoped = funName,
             _functionDefNamePattern = Nothing
           }
 
@@ -62,16 +67,6 @@ smallUniverseExpression = do
         { _expressionAtomsLoc = Irrelevant loc,
           _expressionAtoms = pure (AtomUniverse (smallUniverse loc))
         }
-
-isExhaustive :: (Member (Reader Interval) r) => Bool -> Sem r IsExhaustive
-isExhaustive _isExhaustive = do
-  _isExhaustiveKw <-
-    Irrelevant
-      <$> if
-          | _isExhaustive -> kw kwAt
-          | otherwise -> kw kwAtQuestion
-
-  return IsExhaustive {..}
 
 symbol :: (Member (Reader Interval) r) => Text -> Sem r Symbol
 symbol t = do
@@ -103,25 +98,13 @@ braced a = do
   l <- ask
   AtomBraces . WithLoc l <$> expressionAtoms' a
 
-mkIsExhaustive :: (Member (Reader Interval) r) => Bool -> Sem r IsExhaustive
-mkIsExhaustive _isExhaustive = do
-  keyw <-
-    if
-        | _isExhaustive -> kw kwAt
-        | otherwise -> kw kwAtQuestion
-  return
-    IsExhaustive
-      { _isExhaustiveKw = Irrelevant keyw,
-        _isExhaustive
-      }
-
-namedApplication :: Name -> IsExhaustive -> [NamedArgumentNew 'Parsed] -> ExpressionAtom 'Parsed
-namedApplication n exh as =
-  AtomNamedApplicationNew
-    NamedApplicationNew
-      { _namedApplicationNewName = n,
-        _namedApplicationNewExhaustive = exh,
-        _namedApplicationNewArguments = as
+namedApplication :: Name -> Irrelevant KeywordRef -> [NamedArgument 'Parsed] -> ExpressionAtom 'Parsed
+namedApplication n kwd as =
+  AtomNamedApplication
+    NamedApplication
+      { _namedApplicationName = n,
+        _namedApplicationAtKw = kwd,
+        _namedApplicationArguments = as
       }
 
 literalInteger :: (Member (Reader Interval) r, Integral a) => a -> Sem r (ExpressionAtom 'Parsed)
@@ -273,23 +256,22 @@ mkWildcardParsed loc =
     . AtomHole
     $ mkWildcardKw loc
 
-mkTypeSigType :: forall s r. (SingI s, Member NameIdGen r) => TypeSig s -> Sem r (ExpressionType s)
-mkTypeSigType ts = do
-  wildcard <-
-    case sing :: SStage s of
-      SParsed ->
-        return $ mkWildcardParsed defaultLoc
-      SScoped -> do
-        ExpressionHole
-          . mkHole defaultLoc
-          <$> freshNameId
-  return $ mkTypeSigType' wildcard ts
+mkWildcardExpression :: forall (s :: Stage) r. (SingI s, Members '[NameIdGen] r) => Sem r (ExpressionType s)
+mkWildcardExpression =
+  case sing :: SStage s of
+    SParsed -> return $ mkWildcardParsed defaultLoc
+    SScoped -> ExpressionHole . mkHole defaultLoc <$> freshNameId
   where
     defaultLoc :: Interval
     defaultLoc = singletonInterval (mkInitialLoc sourcePath)
 
     sourcePath :: Path Abs File
     sourcePath = $(mkAbsFile "/<source>")
+
+mkTypeSigType :: forall s r. (SingI s, Member NameIdGen r) => TypeSig s -> Sem r (ExpressionType s)
+mkTypeSigType ts = do
+  wildcard :: ExpressionType s <- mkWildcardExpression
+  return $ mkTypeSigType' wildcard ts
 
 mkTypeSigType' :: forall s. (SingI s) => ExpressionType s -> TypeSig s -> (ExpressionType s)
 mkTypeSigType' wildcard TypeSig {..} =

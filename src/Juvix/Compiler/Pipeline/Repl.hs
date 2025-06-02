@@ -1,6 +1,6 @@
 module Juvix.Compiler.Pipeline.Repl where
 
-import Juvix.Compiler.Concrete (ignoreHighlightBuilder)
+import Juvix.Compiler.Concrete (evalHighlightBuilder)
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Translation.FromParsed qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
@@ -18,14 +18,15 @@ import Juvix.Compiler.Pipeline.Artifacts
 import Juvix.Compiler.Pipeline.Artifacts.PathResolver
 import Juvix.Compiler.Pipeline.Driver
 import Juvix.Compiler.Pipeline.EntryPoint
-import Juvix.Compiler.Pipeline.Loader.PathResolver (runDependencyResolver)
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Base
-import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
+import Juvix.Compiler.Pipeline.Loader.PathResolver
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree (withImportTree)
+import Juvix.Compiler.Pipeline.Options
 import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
-import Juvix.Compiler.Pipeline.Run (defaultPipelineOptions, evalModuleInfoCacheHelper)
+import Juvix.Compiler.Pipeline.Run (evalModuleInfoCacheHelper)
+import Juvix.Compiler.Pipeline.SHA256Cache
 import Juvix.Compiler.Store.Extra qualified as Store
+import Juvix.Compiler.Verification.Dumper
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process (runProcessIO)
 import Juvix.Prelude
@@ -38,9 +39,11 @@ upToInternalExpression p = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
   pkg <- asks (^. entryPointPackageId)
+  mpkg <- asks (^. entryPointMainPackageId)
   runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     . runReader pkg
+    . runReader mpkg
     $ runNameIdGenArtifacts (Scoper.scopeCheckExpression (Store.getScopedModuleTable mtab) scopeTable p)
       >>= runNameIdGenArtifacts
         . runReader scopeTable
@@ -64,10 +67,12 @@ expressionUpToAtomsScoped fp txt = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
   pkg <- asks (^. entryPointPackageId)
+  mpkg <- asks (^. entryPointMainPackageId)
   runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     . runNameIdGenArtifacts
     . runReader pkg
+    . runReader mpkg
     $ Parser.expressionFromTextSource fp txt
       >>= Scoper.scopeCheckExpressionAtoms (Store.getScopedModuleTable mtab) scopeTable
 
@@ -79,10 +84,12 @@ scopeCheckExpression p = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab <- gets (^. artifactModuleTable)
   pkg <- asks (^. entryPointPackageId)
+  mpkg <- asks (^. entryPointMainPackageId)
   runNameIdGenArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     . runReader pkg
+    . runReader mpkg
     $ Scoper.scopeCheckExpression (Store.getScopedModuleTable mtab) scopeTable p
 
 parseReplInput ::
@@ -91,7 +98,7 @@ parseReplInput ::
   Text ->
   Sem r Parser.ReplInput
 parseReplInput fp txt =
-  ignoreHighlightBuilder
+  evalHighlightBuilder
     . runNameIdGenArtifacts
     . runStateLikeArtifacts runParserResultBuilder artifactParsing
     $ Parser.replInputFromTextSource fp txt
@@ -120,7 +127,7 @@ compileExpression p =
     >>= fromInternalExpression
 
 registerImport ::
-  (Members '[TaggedLock, Error JuvixError, State Artifacts, Reader EntryPoint, Files, GitClone, PathResolver, ModuleInfoCache] r) =>
+  (Members '[TaggedLock, Error JuvixError, State Artifacts, Reader EntryPoint, Files, GitClone, PathResolver, ModuleInfoCache, SHA256Cache] r) =>
   Import 'Parsed ->
   Sem r ()
 registerImport i = do
@@ -130,12 +137,14 @@ registerImport i = do
   scopeTable <- gets (^. artifactScopeTable)
   mtab'' <- gets (^. artifactModuleTable)
   pkg <- asks (^. entryPointPackageId)
+  mpkg <- asks (^. entryPointMainPackageId)
   void
     . runNameIdGenArtifacts
     . runScoperScopeArtifacts
     . runStateArtifacts artifactScoperState
     . runReader pkg
-    $ Scoper.scopeCheckImport (Store.getScopedModuleTable mtab'') scopeTable i
+    . runReader mpkg
+    $ Scoper.scopeCheckReplImport (Store.getScopedModuleTable mtab'') scopeTable i
 
 fromInternalExpression :: (Members '[State Artifacts, Error JuvixError] r) => Internal.Expression -> Sem r Core.Node
 fromInternalExpression exp = do
@@ -144,6 +153,7 @@ fromInternalExpression exp = do
     . runReader typedTable
     . tmpCoreInfoTableBuilderArtifacts
     . readerFunctionsTableArtifacts
+    . readerBuiltinsTableArtifacts
     . readerTypesTableArtifacts
     . runReader Core.initIndexTable
     . mapError (JuvixError . ErrBadScope)
@@ -167,10 +177,10 @@ compileReplInputIO fp txt = do
     . runLoggerIO replLoggerOptions
     . runReader defaultNumThreads
     . evalInternet hasInternet
-    . ignoreHighlightBuilder
+    . evalHighlightBuilder
     . runTaggedLockPermissive
-    . runLogIO
     . runFilesIO
+    . ignoreDumper
     . mapError (JuvixError @GitProcessError)
     . runProcessIO
     . runGitProcess
@@ -178,7 +188,7 @@ compileReplInputIO fp txt = do
     . mapError (JuvixError @PackageLoaderError)
     . runEvalFileEffIO
     . runDependencyResolver
-    . runReader defaultDependenciesConfig
+    . mapReader (^. pipelineDependenciesConfig)
     . runPathResolverArtifacts
     . runTopModuleNameChecker
     . runReader defaultImportScanStrategy
@@ -229,7 +239,7 @@ runTransformations shouldDisambiguate ts n = runCoreInfoTableBuilderArtifacts $ 
     applyTransforms :: Bool -> [Core.TransformationId] -> Sem (Core.InfoTableBuilder ': r) ()
     applyTransforms shouldDisambiguate' ts' = do
       md <- Core.getModule
-      md' <- mapReader Core.fromEntryPoint $ Core.applyTransformations ts' md
+      md' <- ignoreDumper . mapReader Core.fromEntryPoint $ Core.applyTransformations' ts' md
       let md'' =
             if
                 | shouldDisambiguate' -> disambiguateNames md'

@@ -14,7 +14,8 @@ import Juvix.Data.Error.GenericError qualified as E
 import Juvix.Data.Field
 
 data GlobalOptions = GlobalOptions
-  { _globalNoColors :: Bool,
+  { _globalVerify :: Bool,
+    _globalNoColors :: Bool,
     _globalVSCode :: Bool,
     _globalShowNameIds :: Bool,
     _globalBuildDir :: Maybe (AppPath Dir),
@@ -24,11 +25,12 @@ data GlobalOptions = GlobalOptions
     _globalNoPositivity :: Bool,
     _globalNoCoverage :: Bool,
     _globalNoStdlib :: Bool,
-    _globalUnrollLimit :: Int,
+    _globalNoCheck :: Bool,
     _globalNumThreads :: NumThreads,
     _globalFieldSize :: Maybe Natural,
     _globalOffline :: Bool,
     _globalLogLevel :: LogLevel,
+    _globalUnsafeIgnorePackageNameConflicts :: Bool,
     _globalDevShowThreadIds :: Bool
   }
   deriving stock (Eq, Show)
@@ -51,16 +53,18 @@ instance CanonicalProjection GlobalOptions Core.CoreOptions where
   project GlobalOptions {..} =
     Core.CoreOptions
       { Core._optCheckCoverage = not _globalNoCoverage,
-        Core._optUnrollLimit = _globalUnrollLimit,
+        Core._optUnrollLimit = defaultUnrollLimit,
         Core._optFieldSize = fromMaybe defaultFieldSize _globalFieldSize,
         Core._optOptimizationLevel = defaultOptimizationLevel,
-        Core._optInliningDepth = defaultInliningDepth
+        Core._optInliningDepth = defaultInliningDepth,
+        Core._optVerify = _globalVerify
       }
 
 defaultGlobalOptions :: GlobalOptions
 defaultGlobalOptions =
   GlobalOptions
-    { _globalNoColors = False,
+    { _globalVerify = False,
+      _globalNoColors = False,
       _globalVSCode = False,
       _globalNumThreads = defaultNumThreads,
       _globalShowNameIds = False,
@@ -72,9 +76,10 @@ defaultGlobalOptions =
       _globalLogLevel = LogLevelProgress,
       _globalNoCoverage = False,
       _globalNoStdlib = False,
-      _globalUnrollLimit = defaultUnrollLimit,
+      _globalNoCheck = False,
       _globalFieldSize = Nothing,
       _globalDevShowThreadIds = False,
+      _globalUnsafeIgnorePackageNameConflicts = False,
       _globalOffline = False
     }
 
@@ -82,6 +87,11 @@ defaultGlobalOptions =
 -- the input boolean
 parseGlobalFlags :: Parser GlobalOptions
 parseGlobalFlags = do
+  _globalVerify <-
+    switch
+      ( long "verify"
+          <> help "Generate Lean verification statements"
+      )
   _globalNoColors <-
     switch
       ( long "no-colors"
@@ -138,13 +148,6 @@ parseGlobalFlags = do
           <> value Nothing
           <> help "Field type size [cairo,small,11] (default: small)"
       )
-  _globalUnrollLimit <-
-    option
-      (fromIntegral <$> naturalNumberOpt)
-      ( long "unroll"
-          <> value defaultUnrollLimit
-          <> help ("Recursion unrolling limit (default: " <> show defaultUnrollLimit <> ")")
-      )
   _globalOffline <-
     switch
       ( long "offline"
@@ -161,6 +164,17 @@ parseGlobalFlags = do
             ( "Determines how much log the compiler produces."
                 <> intercalate " < " [show l | l <- allElements @LogLevel]
             )
+      )
+  _globalUnsafeIgnorePackageNameConflicts <-
+    switch
+      ( long "unsafe-ignore-package-name-conflicts"
+          <> help "[UNSAFE] Allow the same package to be used with different versions"
+      )
+
+  _globalNoCheck <-
+    switch
+      ( long "dev-no-check"
+          <> help "[DEV] Disable input sanity check in Core"
       )
   _globalShowNameIds <-
     switch
@@ -203,42 +217,29 @@ entryPointFromGlobalOptions ::
   GlobalOptions ->
   Sem r EntryPoint
 entryPointFromGlobalOptions root mainFile opts = do
-  mabsBuildDir :: Maybe (Path Abs Dir) <- liftIO (mapM (prepathToAbsDir cwd) optBuildDir)
-  def <- defaultEntryPointIO (root ^. rootRootDir) mainFile
-  return
-    def
-      { _entryPointNoTermination = opts ^. globalNoTermination,
-        _entryPointNoPositivity = opts ^. globalNoPositivity,
-        _entryPointNoCoverage = opts ^. globalNoCoverage,
-        _entryPointNoStdlib = opts ^. globalNoStdlib,
-        _entryPointUnrollLimit = opts ^. globalUnrollLimit,
-        _entryPointGenericOptions = project opts,
-        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
-        _entryPointOffline = opts ^. globalOffline,
-        _entryPointFieldSize = fromMaybe defaultFieldSize $ opts ^. globalFieldSize
-      }
+  mabsBuildDir :: Maybe (Path Abs Dir) <- mapM (prepathToAbsDir cwd) optBuildDir
+  let def0 = updateEntryPoint mabsBuildDir $ defaultEntryPoint packageBaseId root mainFile
+  def <- runReader def0 $ defaultEntryPointIO (root ^. rootRootDir) mainFile
+  return $ updateEntryPoint mabsBuildDir def
   where
     optBuildDir :: Maybe (Prepath Dir)
     optBuildDir = fmap (^. pathPath) (opts ^. globalBuildDir)
     cwd = root ^. rootInvokeDir
 
-entryPointFromGlobalOptionsNoFile :: (Members '[EmbedIO, TaggedLock] r, MonadIO (Sem r)) => Root -> GlobalOptions -> Sem r EntryPoint
-entryPointFromGlobalOptionsNoFile root opts = do
-  mabsBuildDir :: Maybe (Path Abs Dir) <- mapM (prepathToAbsDir cwd) optBuildDir
-  def <- defaultEntryPointIO (root ^. rootRootDir) Nothing
-  return
-    def
-      { _entryPointNoTermination = opts ^. globalNoTermination,
-        _entryPointNoPositivity = opts ^. globalNoPositivity,
-        _entryPointNoCoverage = opts ^. globalNoCoverage,
-        _entryPointNoStdlib = opts ^. globalNoStdlib,
-        _entryPointUnrollLimit = opts ^. globalUnrollLimit,
-        _entryPointGenericOptions = project opts,
-        _entryPointBuildDir = maybe (def ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
-        _entryPointOffline = opts ^. globalOffline,
-        _entryPointFieldSize = fromMaybe defaultFieldSize $ opts ^. globalFieldSize
-      }
-  where
-    optBuildDir :: Maybe (Prepath Dir)
-    optBuildDir = fmap (^. pathPath) (opts ^. globalBuildDir)
-    cwd = root ^. rootInvokeDir
+    updateEntryPoint :: Maybe (Path Abs Dir) -> EntryPoint -> EntryPoint
+    updateEntryPoint mabsBuildDir e =
+      e
+        { _entryPointNoTermination = opts ^. globalNoTermination,
+          _entryPointNoPositivity = opts ^. globalNoPositivity,
+          _entryPointNoCoverage = opts ^. globalNoCoverage,
+          _entryPointNoStdlib = opts ^. globalNoStdlib,
+          _entryPointNoCheck = opts ^. globalNoCheck,
+          _entryPointGenericOptions = project opts,
+          _entryPointBuildDir = maybe (e ^. entryPointBuildDir) (CustomBuildDir . Abs) mabsBuildDir,
+          _entryPointOffline = opts ^. globalOffline,
+          _entryPointFieldSize = fromMaybe defaultFieldSize $ opts ^. globalFieldSize,
+          _entryPointVerify = opts ^. globalVerify
+        }
+
+entryPointFromGlobalOptionsNoFile :: (Members '[EmbedIO, TaggedLock] r) => Root -> GlobalOptions -> Sem r EntryPoint
+entryPointFromGlobalOptionsNoFile root opts = entryPointFromGlobalOptions root Nothing opts

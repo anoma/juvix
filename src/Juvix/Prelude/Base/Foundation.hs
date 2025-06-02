@@ -1,71 +1,78 @@
+{-# LANGUAGE MagicHash #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Juvix.Prelude.Base.Foundation
   ( module Juvix.Prelude.Base.Foundation,
     module Control.Applicative,
-    module Data.Tree,
-    module Data.Graph,
-    module Text.Show.Unicode,
-    module Data.Map.Strict,
-    module Data.Set,
-    module Data.IntMap.Strict,
-    module Data.IntSet,
     module Control.DeepSeq,
+    module System.IO.Error,
+    module Control.Lens,
+    module Control.Monad.Catch,
     module Control.Monad.Extra,
     module Control.Monad.Fix,
+    module Control.Monad.Zip,
+    module Data.Bifunctor,
     module Data.Bitraversable,
     module Data.Bool,
     module Data.Char,
     module Data.Either.Extra,
-    module Data.Bifunctor,
     module Data.Eq,
     module Data.Foldable,
     module Data.Function,
     module Data.Functor,
-    module Safe.Exact,
-    module Safe.Foldable,
+    module Data.Functor.Identity,
+    module Data.Graph,
     module Data.Hashable,
     module Data.Int,
+    module Data.IntMap.Strict,
+    module Data.IntSet,
     module Data.List.Extra,
     module Data.List.NonEmpty.Extra,
+    module Data.Map.Strict,
     module Data.Maybe,
     module Data.Monoid,
     module Data.Ord,
     module Data.Semigroup,
-    module Prelude,
+    module Data.Serialize,
+    module Data.Set,
     module Data.Singletons,
     module Data.Singletons.Sigma,
     module Data.Singletons.TH,
     module Data.Stream,
     module Data.String,
+    module Data.String.Interpolate,
     module Data.Text.Encoding,
     module Data.Text.IO,
     module Data.Text.IO.Utf8,
     module Data.Traversable,
-    module Data.Functor.Identity,
+    module Data.Tree,
     module Data.Tuple.Extra,
-    module GHC.Conc,
     module Data.Typeable,
+    module Data.Versions,
     module Data.Void,
     module Data.Word,
+    module GHC.Conc,
     module GHC.Enum,
     module GHC.Generics,
     module GHC.Num,
     module GHC.Real,
     module GHC.Utils.Misc,
-    module Control.Lens,
     module Language.Haskell.TH.Syntax,
-    module Prettyprinter,
     module Numeric,
+    module Path,
+    module Prelude,
+    module Prettyprinter,
+    module Safe,
+    module Safe.Exact,
+    module Safe.Foldable,
     module System.Exit,
     module System.FilePath,
-    module Path,
     module System.IO,
-    module Text.Show,
     module Text.Read,
-    module Control.Monad.Catch,
-    module Control.Monad.Zip,
-    module Data.String.Interpolate,
+    module Text.Show,
+    module Text.Show.Unicode,
+    module Data.Bits,
     Data,
     Text,
     pack,
@@ -118,7 +125,7 @@ import Control.Lens hiding
     (#),
     (<.>),
   )
-import Control.Monad.Catch (ExitCase (..), MonadMask, MonadThrow, generalBracket, throwM)
+import Control.Monad.Catch (ExitCase (..), MonadMask, MonadThrow, SomeException, generalBracket, throwM)
 import Control.Monad.Extra hiding (fail, forM, mconcatMapM, whileJustM)
 import Control.Monad.Extra qualified as Monad
 import Control.Monad.Fix
@@ -127,6 +134,7 @@ import Control.Monad.Zip
 import Data.Array qualified as Array
 import Data.Bifunctor hiding (first, second)
 import Data.Bitraversable
+import Data.Bits hiding (And, shift)
 import Data.Bool
 import Data.ByteString (ByteString)
 import Data.Char
@@ -173,12 +181,15 @@ import Data.Map.Strict (Map)
 import Data.Maybe
 import Data.Monoid
 import Data.Ord
+import Data.Primitive.ByteArray qualified as GHCByteArray
 import Data.Semigroup (Semigroup, sconcat, (<>))
+import Data.Serialize (Serialize)
+import Data.Serialize as Serial
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Singletons hiding ((@@))
 import Data.Singletons.Sigma
-import Data.Singletons.TH (genSingletons, promoteOrdInstances, singOrdInstances)
+import Data.Singletons.TH (genDefunSymbols, genSingletons, promoteOrdInstances, singOrdInstances)
 import Data.Stream (Stream)
 import Data.Stream qualified as Stream
 import Data.String
@@ -196,6 +207,8 @@ import Data.Tree hiding (levels)
 import Data.Tuple.Extra hiding (both)
 import Data.Type.Equality (type (~))
 import Data.Typeable hiding (TyCon)
+import Data.Versions (SemVer (..), Versioning (..))
+import Data.Versions qualified as Versions
 import Data.Void
 import Data.Word
 import GHC.Base (assert)
@@ -205,6 +218,7 @@ import GHC.Err qualified as Err
 import GHC.Generics (Generic)
 import GHC.Num
 import GHC.Real
+import GHC.Stack qualified as GHC
 import GHC.Stack.Types
 import GHC.Utils.Misc (isSingleton)
 import Language.Haskell.TH.Syntax (Exp, Lift, Q)
@@ -213,6 +227,7 @@ import Path (Abs, Dir, File, Path, Rel, SomeBase (..))
 import Path qualified as PPath
 import Path.IO qualified as Path hiding (getCurrentDir, setCurrentDir, withCurrentDir)
 import Prettyprinter (Doc, (<+>))
+import Safe (headMay)
 import Safe.Exact
 import Safe.Foldable
 import System.Exit hiding (exitFailure, exitSuccess)
@@ -253,6 +268,8 @@ type TextBuilder = LazyText.Builder
 
 type GHCType = GHC.Type
 
+type GHCByteArray = GHCByteArray.ByteArray
+
 type GHCConstraint = GHC.Constraint
 
 type LazyHashMap = LazyHashMap.HashMap
@@ -260,6 +277,9 @@ type LazyHashMap = LazyHashMap.HashMap
 type SimpleFold s a = forall r. (Monoid r) => Getting r s a
 
 type SimpleGetter s a = forall r. Getting r s a
+
+ghcCallStack :: (HasCallStack) => Text
+ghcCallStack = pack (GHC.prettyCallStack GHC.callStack)
 
 readJust :: (Read a) => String -> a
 readJust = Text.read
@@ -314,6 +334,9 @@ prime name = case Text.splitOn "'" name of
   [name', num] -> name' <> "'" <> maybe (num <> "'") (show . (+ 1)) (Text.readMaybe (unpack num) :: Maybe Word)
   _ -> name <> "'"
 
+divisibleBy :: (Integral a) => a -> a -> Bool
+divisibleBy a b = a `mod` b == 0
+
 freshName :: HashSet Text -> Text -> Text
 freshName names name | HashSet.member name names = freshName names (prime name)
 freshName _ name = name
@@ -338,18 +361,6 @@ replaceText texts txt = fromMaybe txt (HashMap.lookup txt (HashMap.fromList text
 --------------------------------------------------------------------------------
 -- Foldable
 --------------------------------------------------------------------------------
-
--- | Returns the repeated elements
-findRepeated :: forall a. (Ord a) => [a] -> [a]
-findRepeated = mapMaybe rep . groupSortOn' id
-  where
-    rep :: [a] -> Maybe a
-    rep = \case
-      a : _ : _ -> Just a
-      _ -> Nothing
-
-allDifferent :: forall a. (Ord a) => [a] -> Bool
-allDifferent = null . findRepeated
 
 allSame :: forall t a. (Eq a, Foldable t) => t a -> Bool
 allSame t = case nonEmpty t of
@@ -466,6 +477,11 @@ zip4Exact [] [] [] [] = []
 zip4Exact (x1 : t1) (x2 : t2) (x3 : t3) (x4 : t4) = (x1, x2, x3, x4) : zip4Exact t1 t2 t3 t4
 zip4Exact _ _ _ _ = error "zip4Exact"
 
+findJustM :: forall a b m. (Monad m) => (a -> m (Maybe b)) -> [a] -> m (Maybe b)
+findJustM f = \case
+  [] -> return Nothing
+  x : xs -> f x >>= maybe (findJustM f xs) (return . Just)
+
 -- | Returns the first element that returns Just and the list with the remaining elements
 findJustAndRemove :: forall a b. (a -> Maybe b) -> [a] -> Maybe (b, [a])
 findJustAndRemove p = go []
@@ -503,18 +519,16 @@ nonEmpty' = fromJust . nonEmpty
 _nonEmpty :: Lens' [a] (Maybe (NonEmpty a))
 _nonEmpty f x = maybe [] toList <$> f (nonEmpty x)
 
-groupSortOn :: (Ord b) => (a -> b) -> [a] -> [NonEmpty a]
-groupSortOn f = map nonEmpty' . List.groupSortOn f
-
-groupSortOn' :: (Ord b) => (a -> b) -> [a] -> [[a]]
-groupSortOn' = List.groupSortOn
-
 --------------------------------------------------------------------------------
 -- Errors
 --------------------------------------------------------------------------------
 
 error :: (HasCallStack) => Text -> a
 error = Err.error . unpack
+
+{-# DEPRECATED todo "todo" #-}
+todo :: (HasCallStack) => a
+todo = Err.error "TODO"
 
 {-# DEPRECATED undefined "undefined" #-}
 undefined :: (HasCallStack) => a
@@ -646,6 +660,11 @@ massert b = assert b (pure ())
 iterateN :: Int -> (a -> a) -> a -> a
 iterateN n f = (!! n) . iterate f
 
+iterateNat :: Natural -> (a -> a) -> a -> a
+iterateNat n f x
+  | n == 0 = x
+  | otherwise = f (iterateNat (n - 1) f x)
+
 nubHashableNonEmpty :: (Hashable a) => NonEmpty a -> NonEmpty a
 nubHashableNonEmpty = nonEmpty' . HashSet.toList . HashSet.fromList . toList
 
@@ -687,6 +706,8 @@ instance CanonicalProjection Void a where
 
 instance CanonicalProjection a () where
   project = const ()
+
+instance Serialize Void
 
 -- | 'project' with type arguments swapped. Useful for type application
 project' :: forall b a. (CanonicalProjection a b) => a -> b
@@ -749,6 +770,13 @@ intMap = IntMap.fromList . toList
 indexedByInt :: (Foldable f) => (a -> Int) -> f a -> IntMap a
 indexedByInt getIx l = intMap [(getIx i, i) | i <- toList l]
 
+indexedByHashList ::
+  (Foldable f, Hashable k) =>
+  (a -> k) ->
+  f a ->
+  HashMap k (NonEmpty a)
+indexedByHashList getIx l = hashMapWith (<>) [(getIx i, pure i) | i <- toList l]
+
 indexedByHash :: (Foldable f, Hashable k) => (a -> k) -> f a -> HashMap k a
 indexedByHash getIx l = hashMap [(getIx i, i) | i <- toList l]
 
@@ -771,8 +799,15 @@ hashMapFromHashSetM s fun =
 hashMapFromHashSet :: (Hashable k) => HashSet k -> (k -> v) -> HashMap k v
 hashMapFromHashSet s fun = hashMap [(x, fun x) | x <- toList s]
 
+-- | Sorts and removes duplicates
+ordNubSort :: (Foldable f, Ord k) => f k -> [k]
+ordNubSort = toList . ordSet
+
 ordMap :: (Foldable f, Ord k) => f (k, v) -> Map k v
 ordMap = Map.fromList . toList
+
+hashMapWith :: (Foldable f, Hashable k) => (v -> v -> v) -> f (k, v) -> HashMap k v
+hashMapWith aggr = HashMap.fromListWith aggr . toList
 
 hashMap :: (Foldable f, Hashable k) => f (k, v) -> HashMap k v
 hashMap = HashMap.fromList . toList
@@ -912,3 +947,16 @@ allFiniteSequences elems = build 0 []
           seq <- ofLength (n - 1)
           e <- elems
           return (pure e <> seq)
+
+instance Serialize Text where
+  put txt = Serial.put (unpack txt)
+
+  get = pack <$> Serial.get
+
+instance (Serialize a) => Serialize (NonEmpty a)
+
+instance Serialize Versions.Chunk
+
+instance Serialize Versions.Release
+
+instance Serialize SemVer

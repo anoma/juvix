@@ -25,7 +25,7 @@ instance CanonicalProjection ReplOptions Core.Options where
 
 parseRepl :: Parser ReplOptions
 parseRepl = do
-  let _replTransformations = toStoredTransformations
+  let _replTransformations = toEvalTransformations
       _replShowDeBruijn = False
       _replNoDisambiguate = False
       _replPrintValues = True

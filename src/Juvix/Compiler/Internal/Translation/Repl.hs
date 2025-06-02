@@ -24,7 +24,7 @@ typeCheckExpressionType exp = do
   stable <- gets (^. artifactScopeTable)
   runResultBuilderArtifacts
     . runNameIdGenArtifacts
-    . ignoreHighlightBuilder
+    . evalHighlightBuilder
     . runReader table
     . runReader (stable ^. infoBuiltins)
     . runReader stable
@@ -32,7 +32,7 @@ typeCheckExpressionType exp = do
     . withEmptyInsertedArgsStack
     . mapError (JuvixError @TypeCheckerError)
     . runInferenceDef
-    $ inferExpression Nothing exp
+    $ inferExpressionRepl Nothing exp
       >>= traverseOf typedType strongNormalize_
 
 typeCheckExpression ::

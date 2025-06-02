@@ -5,7 +5,6 @@ module Juvix.Compiler.Nockma.Evaluator.Error
   )
 where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Evaluator.Crumbs
 import Juvix.Compiler.Nockma.Evaluator.Storage
@@ -18,6 +17,7 @@ data NockEvalError a
   | ErrInvalidNockOp (InvalidNockOp a)
   | ErrExpectedAtom (ExpectedAtom a)
   | ErrExpectedCell (ExpectedCell a)
+  | ErrCantGenerateRandomBits (CantGenerateRandomBits a)
   | -- TODO perhaps this should be a repl error type
     ErrNoStack NoStack
   | -- TODO perhaps this should be a repl error type
@@ -64,6 +64,11 @@ data VerificationFailed a = VerificationFailed
   { _verificationFailedCtx :: EvalCtx,
     _verificationFailedMessage :: Atom a,
     _verificationFailedPublicKey :: Atom a
+  }
+
+data CantGenerateRandomBits a = CantGenerateRandomBits
+  { _cantGenerateRandomBitsAtom :: Atom a,
+    _cantGenerateRandomBitsNumBits :: Int
   }
 
 throwInvalidNockOp :: (Members '[Error (NockEvalError a), Reader EvalCtx] r) => Atom a -> Sem r x
@@ -169,18 +174,19 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (ExpectedCell a) where
     let cell = annotate AnnImportant "cell"
     return (ctx <> "Expected a" <+> cell <+> "but got:" <> line <> atm)
 
+instance PrettyCode (CantGenerateRandomBits a) where
+  ppCode CantGenerateRandomBits {..} = do
+    return
+      ( "The juvix nockma evaluator only supports generating random bytes. It was asked to generate "
+          <> show _cantGenerateRandomBitsNumBits
+          <> " bits, which is not divisible by 8"
+      )
+
 instance (PrettyCode a, NockNatural a) => PrettyCode (KeyNotInStorage a) where
   ppCode :: forall r. (Member (Reader Options) r) => KeyNotInStorage a -> Sem r (Doc Ann)
   ppCode KeyNotInStorage {..} = do
     tm <- ppCode _keyNotInStorageKey
-    hashMapKvs <- vsep <$> mapM combineKeyValue (HashMap.toList (_keyNotInStorageStorage ^. storageKeyValueData))
-    return ("The key" <+> tm <+> "is not found in the storage." <> line <> "Storage contains the following key value pairs:" <> line <> hashMapKvs)
-    where
-      combineKeyValue :: (StorageKey a, Term a) -> Sem r (Doc Ann)
-      combineKeyValue (t1, t2) = do
-        pt1 <- ppCode t1
-        pt2 <- ppCode t2
-        return (pt1 <+> ":=" <+> pt2)
+    return ("The key" <+> tm <+> "is not found in the storage.")
 
 instance (PrettyCode a, NockNatural a) => PrettyCode (DecodingFailed a) where
   ppCode DecodingFailed {..} = do
@@ -216,3 +222,4 @@ instance (PrettyCode a, NockNatural a) => PrettyCode (NockEvalError a) where
     ErrKeyNotInStorage e -> ppCode e
     ErrDecodingFailed e -> ppCode e
     ErrVerificationFailed e -> ppCode e
+    ErrCantGenerateRandomBits e -> ppCode e

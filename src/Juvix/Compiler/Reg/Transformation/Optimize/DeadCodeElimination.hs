@@ -4,7 +4,7 @@ import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Reg.Extra
 import Juvix.Compiler.Reg.Transformation.Base
 
-removeDeadAssignments :: InfoTable -> InfoTable
+removeDeadAssignments :: Module -> Module
 removeDeadAssignments = mapT (const goFun)
   where
     goFun :: Code -> Code
@@ -27,7 +27,8 @@ removeDeadAssignments = mapT (const goFun)
             (live, is')
       instr : is' -> case getResultVar instr of
         Just var
-          | not (HashSet.member var liveVars) ->
+          | not (HashSet.member var liveVars)
+              && not (isInstrVolatile instr) ->
               (liveVars, is')
         _ ->
           (liveVars', instr : is')

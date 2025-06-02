@@ -30,18 +30,21 @@ statementLabel = \case
   StatementSyntax s -> goSyntax s
   StatementOpenModule {} -> Nothing
   StatementProjectionDef {} -> Nothing
-  StatementFunctionDef f -> withFunctionSymbol Nothing (Just . (^. symbolTypeLabel)) (f ^. signName)
+  StatementFunctionDef f -> withFunctionSymbol Nothing (Just . (^. symbolTypeLabel)) (f ^. functionDefName)
   StatementDeriving f -> withFunctionSymbol Nothing (Just . (^. symbolTypeLabel)) (f ^. derivingFunLhs . funLhsName)
   StatementImport i -> Just (i ^. importModulePath . to modulePathTypeLabel)
   StatementInductive i -> Just (i ^. inductiveName . symbolTypeLabel)
+  StatementReservedInductive i -> case sing :: SStage s of
+    SParsed -> Just (i ^. reservedInductiveDef . inductiveName . symbolTypeLabel)
+    SScoped -> absurd i
   StatementModule i -> Just (i ^. modulePath . to modulePathTypeLabel)
   StatementAxiom a -> Just (a ^. axiomName . symbolTypeLabel)
   where
     goSyntax :: SyntaxDef s -> Maybe Text
     goSyntax = \case
       SyntaxFixity f -> Just (f ^. fixitySymbol . symbolTypeLabel)
-      SyntaxOperator f -> Just (f ^. opSymbol . symbolTypeLabel)
-      SyntaxIterator f -> Just (f ^. iterSymbol . symbolTypeLabel)
+      SyntaxOperator {} -> Nothing
+      SyntaxIterator {} -> Nothing
       SyntaxAlias f -> Just (f ^. aliasDefName . symbolTypeLabel)
 
 -- | Indexes top statements by label

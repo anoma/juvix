@@ -101,8 +101,8 @@ allTests =
         "Well-known terminating functions"
         (map (mkTest . testDescr) tests),
       testGroup
-        "Bypass termination checking using --non-termination flag on negative tests"
-        (map (mkTest . testDescrFlag) negTests),
+        "Bypass termination checking using --no-termination flag on negative tests"
+        (map (mkTest . testDescrFlag) (filter (\N.NegTest {..} -> _terminationCanBeSkipped) negTests)),
       testGroup
         "Terminating keyword"
         (map (mkTest . testDescr) testsWithKeyword)

@@ -20,7 +20,7 @@ tests:
         import Stdlib.Prelude open;
         main : IO := printStringLn "Hello from dep";
         EOF
-        touch juvix.yaml
+        juvix init
 
         git add -A
         git commit -m "commit1"
@@ -84,7 +84,7 @@ tests:
         import Stdlib.Prelude open;
         main : IO := printStringLn "Hello from dep";
         EOF
-        touch juvix.yaml
+        juvix init
 
         git add -A
         git commit -m "commit1"
@@ -152,7 +152,7 @@ tests:
         import Stdlib.Prelude open;
         main : IO := printStringLn "Hello from dep";
         EOF
-        touch juvix.yaml
+        juvix init
 
         git add -A
         git commit -m "commit1"
@@ -246,7 +246,7 @@ tests:
         import Stdlib.Prelude open;
         hello : String := "Hello from dep2";
         EOF
-        touch juvix.yaml
+        juvix init
 
         git add -A
         git commit -m "commit1"
@@ -352,7 +352,7 @@ tests:
         import Stdlib.Prelude open;
         hello : String := "Hello from commit2 dep2";
         EOF
-        touch juvix.yaml
+        juvix init
 
         git add -A
         git commit -m "commit2"
@@ -388,7 +388,7 @@ tests:
         import Stdlib.Prelude open;
         main : IO := printStringLn "Hello from dep";
         EOF
-        touch juvix.yaml
+        juvix init
 
         git add -A
         git commit -m "commit1"
@@ -468,7 +468,7 @@ tests:
         import Stdlib.Prelude open;
         main : IO := printStringLn "Hello from dep";
         EOF
-        touch juvix.yaml
+        juvix init
 
         git add -A
         git commit -m "commit1"
@@ -563,7 +563,7 @@ tests:
         import Stdlib.Prelude open;
         hello : String := "Hello from dep2";
         EOF
-        touch juvix.yaml
+        juvix init
 
         git add -A
         git commit -m "commit1"
@@ -576,7 +576,7 @@ tests:
         import Stdlib.Prelude open;
         hello : String := "Hello from commit 2 dep2";
         EOF
-        touch juvix.yaml
+        juvix init
 
         git add -A
         git commit -m "commit2"
@@ -677,7 +677,7 @@ tests:
         import Stdlib.Prelude open;
         main : IO := printStringLn "Hello from dep";
         EOF
-        touch juvix.yaml
+        juvix init
 
         git add -A
         git commit -m "commit1"
@@ -773,7 +773,7 @@ tests:
         import Stdlib.Prelude open;
         main : IO := printStringLn "Hello from dep";
         EOF
-        touch juvix.yaml
+        juvix init
 
         git add -A
         git commit -m "commit1"
@@ -923,7 +923,7 @@ tests:
         import Stdlib.Prelude open;
         main : IO := printStringLn "Hello from dep";
         EOF
-        touch juvix.yaml
+        juvix init
 
         git add -A
         git commit -m "commit1"
@@ -1056,7 +1056,7 @@ tests:
         cat <<-EOF > Package.juvix
         module Package;
         import PackageDescription.V2 open;
-        package : Package := defaultPackage@?{dependencies := [defaultStdlib ; git "dep1" "$temp/dep" "main"]}
+        package : Package := defaultPackage@{name := "base"; dependencies := [defaultStdlib ; git "dep1" "$temp/dep" "main"]}
         EOF
 
         cat <<-EOF > HelloWorld.juvix
@@ -1122,7 +1122,7 @@ tests:
         import Stdlib.Prelude open;
         main : IO := printStringLn "Hello from dep";
         EOF
-        touch juvix.yaml
+        juvix init
 
         git add -A
         git commit -m "commit1"
@@ -1156,13 +1156,13 @@ tests:
         EOF
 
         # compile project
-        juvix --log-level error compile native HelloWorld.juvix
+        juvix --log-level info compile native HelloWorld.juvix
 
         # delete the dependency to check that it's not required
         rm -rf $temp/dep
 
         # compile project
-        juvix --log-level error compile native HelloWorld.juvix
+        juvix --log-level info compile native HelloWorld.juvix
     stdout:
       contains: ""
     stderr:

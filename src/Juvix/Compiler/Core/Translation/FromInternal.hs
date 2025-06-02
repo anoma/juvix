@@ -1,22 +1,25 @@
+{-# LANGUAGE ImpredicativeTypes #-}
+
 module Juvix.Compiler.Core.Translation.FromInternal where
 
 import Data.HashMap.Strict qualified as HashMap
 import Data.List.NonEmpty qualified as NonEmpty
+import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Data.Context qualified as Scoped
 import Juvix.Compiler.Core.Data
 import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info qualified as Info
 import Juvix.Compiler.Core.Info.LocationInfo
 import Juvix.Compiler.Core.Info.NameInfo
 import Juvix.Compiler.Core.Info.PragmaInfo
-import Juvix.Compiler.Core.Pretty qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Int
 import Juvix.Compiler.Core.Translation.FromInternal.Builtins.Nat
 import Juvix.Compiler.Core.Translation.FromInternal.Data
+import Juvix.Compiler.Internal.Builtins (BuiltinsTable)
+import Juvix.Compiler.Internal.Builtins qualified as Builtins
 import Juvix.Compiler.Internal.Data.Name
 import Juvix.Compiler.Internal.Extra qualified as Internal
-import Juvix.Compiler.Internal.Pretty (ppPrint)
 import Juvix.Compiler.Internal.Pretty qualified as Internal
-import Juvix.Compiler.Internal.Translation.Extra qualified as Internal
+import Juvix.Compiler.Internal.Translation qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking qualified as InternalTyped
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Error
 import Juvix.Compiler.Store.Extra qualified as Store
@@ -40,6 +43,13 @@ data PreMutual = PreMutual
     _preFunctions :: [PreFunctionDef]
   }
 
+emptyPreMutual :: PreMutual
+emptyPreMutual =
+  PreMutual
+    { _preInductives = [],
+      _preFunctions = []
+    }
+
 makeLenses ''PreMutual
 
 -- | Translation of a Name into the identifier index used in the Core InfoTable
@@ -57,16 +67,21 @@ computeImplicitArgs = \case
 
 fromInternal ::
   (Members '[NameIdGen, Reader Store.ModuleTable, Error JuvixError] k) =>
+  Maybe Text ->
   InternalTyped.InternalTypedResult ->
   Sem k CoreResult
-fromInternal i = mapError (JuvixError . ErrBadScope) $ do
-  importTab <- asks Store.getInternalModuleTable
+fromInternal sha256 i = mapError (JuvixError . ErrBadScope) $ do
+  storeTab <- ask
+  let importTab = Store.getInternalModuleTable storeTab
   coreImportsTab <- asks Store.computeCombinedCoreInfoTable
-  let md =
+  let imd = i ^. InternalTyped.resultInternalModule
+      md =
         Module
-          { _moduleId = i ^. InternalTyped.resultInternalModule . Internal.internalModuleId,
+          { _moduleId = imd ^. Internal.internalModuleId,
             _moduleInfoTable = mempty,
-            _moduleImportsTable = coreImportsTab
+            _moduleImports = imd ^. Internal.internalModuleImports,
+            _moduleImportsTable = coreImportsTab,
+            _moduleSHA256 = sha256
           }
       tabs = i ^. InternalTyped.resultTypeCheckingTables
   res <-
@@ -80,15 +95,24 @@ fromInternal i = mapError (JuvixError . ErrBadScope) $ do
         when
           (isNothing (coreImportsTab ^. infoLiteralIntToInt))
           reserveLiteralIntToIntSymbol
-        let resultModule = i ^. InternalTyped.resultModule
-            resultTable =
-              Internal.computeCombinedInfoTable importTab
-                <> i ^. InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
-        runReader resultTable $
-          goModule resultModule
-        tab <- getModule
+        let resultModule :: Internal.Module = i ^. InternalTyped.resultModule
+            builtinsTable :: BuiltinsTable =
+              i ^. InternalTyped.resultInternal . Internal.resultScoper . Scoped.scoperResultBuiltinsTable
+                <> Store.computeCombinedBuiltins storeTab
+
+            resultTable :: InternalTyped.InfoTable =
+              i ^. InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
+                <> Internal.computeCombinedInfoTable importTab
+        runReader resultTable
+          . runReader builtinsTable
+          $ goModule resultModule
+        md' <- getModule
+        when (InternalTyped.getInternalTypedResultIsMainFile i) $
+          forM_ (md' ^. moduleInfoTable . infoIdentifiers) $ \f -> do
+            when (f ^. identifierName == Str.main) $
+              registerMain (f ^. identifierSymbol)
         when
-          (isNothing (lookupBuiltinInductive tab BuiltinBool))
+          (isNothing (lookupBuiltinInductive md' BuiltinBool))
           declareBoolBuiltins
         when (isNothing (coreImportsTab ^. infoLiteralIntToNat)) $
           setupLiteralIntToNat literalIntToNatNode
@@ -100,7 +124,7 @@ fromInternal i = mapError (JuvixError . ErrBadScope) $ do
         _coreResultInternalTypedResult = i
       }
 
-fromInternalExpression :: (Members '[NameIdGen, Error BadScope] r) => Internal.InternalModuleTable -> CoreResult -> Internal.Expression -> Sem r Node
+fromInternalExpression :: (Members '[Reader BuiltinsTable, NameIdGen, Error BadScope] r) => Internal.InternalModuleTable -> CoreResult -> Internal.Expression -> Sem r Node
 fromInternalExpression importTab res exp = do
   let mtab =
         res ^. coreResultInternalTypedResult . InternalTyped.resultInternalModule . Internal.internalModuleInfoTable
@@ -115,7 +139,7 @@ fromInternalExpression importTab res exp = do
 
 goModule ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, Error BadScope] r) =>
+  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, Error BadScope] r) =>
   Internal.Module ->
   Sem r ()
 goModule m = do
@@ -124,26 +148,19 @@ goModule m = do
 -- | predefine an inductive definition
 preInductiveDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, Error BadScope] r) =>
+  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, Error BadScope] r) =>
   Internal.InductiveDef ->
   Sem r PreInductiveDef
 preInductiveDef i = do
   sym <- freshSymbol
   let _inductiveName = i ^. Internal.inductiveName . nameText
-  params' <- fromTopIndex $ forM (i ^. Internal.inductiveParameters) $ \p -> do
-    ty' <- goExpression (p ^. Internal.inductiveParamType)
-    return
-      ParameterInfo
-        { _paramName = p ^. Internal.inductiveParamName . nameText,
-          _paramLocation = Just $ getLoc p,
-          _paramIsImplicit = False,
-          _paramKind = ty'
-        }
+  params' :: [ParameterInfo] <- goParams (i ^. Internal.inductiveParameters)
+  kind <- fromTopIndex $ goExpression (Internal.getInductiveKind i)
   let info =
         InductiveInfo
           { _inductiveLocation = Just $ i ^. Internal.inductiveName . nameLoc,
             _inductiveSymbol = sym,
-            _inductiveKind = mkSmallUniv,
+            _inductiveKind = kind,
             _inductiveConstructors = [],
             _inductiveParams = params',
             _inductivePositive = i ^. Internal.inductivePositive,
@@ -160,10 +177,28 @@ preInductiveDef i = do
       { _preInductiveInfo = info,
         _preInductiveInternal = i
       }
+  where
+    goParams :: [Internal.InductiveParameter] -> Sem r [ParameterInfo]
+    goParams = fromTopIndex . execOutputList . go
+      where
+        go :: [Internal.InductiveParameter] -> Sem (Output ParameterInfo ': Reader IndexTable ': r) ()
+        go = \case
+          [] -> return ()
+          p : ps -> do
+            ty' <- goExpression (p ^. Internal.inductiveParamType)
+            let pname = p ^. Internal.inductiveParamName
+            output
+              ParameterInfo
+                { _paramName = pname ^. nameText,
+                  _paramLocation = Just $ getLoc p,
+                  _paramIsImplicit = False,
+                  _paramKind = ty'
+                }
+            localAddName pname (go ps)
 
 goInductiveDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, Error BadScope] r) =>
+  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, Error BadScope] r) =>
   PreInductiveDef ->
   Sem r ()
 goInductiveDef PreInductiveDef {..} = do
@@ -177,7 +212,7 @@ goInductiveDef PreInductiveDef {..} = do
 
 goConstructor ::
   forall r.
-  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, NameIdGen, Error BadScope] r) =>
+  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, NameIdGen, Error BadScope] r) =>
   Symbol ->
   Internal.ConstructorDef ->
   Sem r ConstructorInfo
@@ -226,6 +261,11 @@ goConstructor sym ctor = do
         Internal.BuiltinIntNegSuc -> freshTag
         Internal.BuiltinListNil -> freshTag
         Internal.BuiltinListCons -> freshTag
+        Internal.BuiltinJsonArray -> return (BuiltinTag TagJsonArray)
+        Internal.BuiltinJsonBool -> return (BuiltinTag TagJsonBool)
+        Internal.BuiltinJsonObject -> return (BuiltinTag TagJsonObject)
+        Internal.BuiltinJsonNumber -> return (BuiltinTag TagJsonNumber)
+        Internal.BuiltinJsonString -> return (BuiltinTag TagJsonString)
         Internal.BuiltinMaybeNothing -> freshTag
         Internal.BuiltinMaybeJust -> freshTag
         Internal.BuiltinPairConstr -> freshTag
@@ -233,10 +273,15 @@ goConstructor sym ctor = do
         Internal.BuiltinMkEcPoint -> freshTag
         Internal.BuiltinMkAnomaAction -> freshTag
         Internal.BuiltinMkAnomaResource -> freshTag
+        Internal.BuiltinMkAnomaNullifierKey -> freshTag
+        Internal.BuiltinMkAnomaComplianceInputs -> freshTag
+        Internal.BuiltinMkAnomaShieldedTransaction -> freshTag
         Internal.BuiltinMkOrd -> freshTag
         Internal.BuiltinOrderingLT -> freshTag
         Internal.BuiltinOrderingGT -> freshTag
         Internal.BuiltinOrderingEQ -> freshTag
+        Internal.BuiltinNockmaAtom -> freshTag
+        Internal.BuiltinNockmaCell -> freshTag
 
     ctorType :: Sem r Type
     ctorType =
@@ -253,25 +298,41 @@ goConstructor sym ctor = do
 
 goMutualBlock ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, Error BadScope] r) =>
+  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, Error BadScope] r) =>
   Internal.MutualBlock ->
   Sem r ()
 goMutualBlock (Internal.MutualBlock m) = preMutual m >>= goMutual
   where
     preMutual :: NonEmpty Internal.MutualStatement -> Sem r PreMutual
     preMutual stmts = do
-      let (inds, funs) = partition isInd (toList stmts)
+      let (inds, funs) = partition isTypDef (toList stmts)
       -- types must be pre-registered first to avoid crashing on unknown types
       -- when pre-registering functions/axioms
-      execState (PreMutual [] []) $ mapM_ step (inds ++ funs)
+      execState emptyPreMutual $ mapM_ step (inds ++ funs)
       where
-        isInd :: Internal.MutualStatement -> Bool
-        isInd = \case
+        isTypDef :: Internal.MutualStatement -> Bool
+        isTypDef = \case
           Internal.StatementInductive {} -> True
           Internal.StatementFunction {} -> False
-          Internal.StatementAxiom Internal.AxiomDef {..}
-            | Internal.ExpressionUniverse {} <- _axiomType -> True
+          Internal.StatementAxiom a
+            | isJust (builtinInductive a) -> True
+            | exprIsType (a ^. Internal.axiomType) -> True
             | otherwise -> False
+            where
+              exprIsType :: Internal.Expression -> Bool
+              exprIsType = \case
+                Internal.ExpressionUniverse {} -> True
+                Internal.ExpressionFunction (Internal.Function l r) -> exprIsType (l ^. Internal.paramType) && exprIsType r
+                Internal.ExpressionIden {} -> False
+                Internal.ExpressionNatural {} -> False
+                Internal.ExpressionApplication {} -> False
+                Internal.ExpressionLiteral {} -> False
+                Internal.ExpressionHole {} -> False
+                Internal.ExpressionInstanceHole {} -> False
+                Internal.ExpressionLet {} -> False
+                Internal.ExpressionSimpleLambda {} -> False
+                Internal.ExpressionLambda {} -> False
+                Internal.ExpressionCase {} -> False
 
         step :: Internal.MutualStatement -> Sem (State PreMutual ': r) ()
         step = \case
@@ -292,7 +353,7 @@ goMutualBlock (Internal.MutualBlock m) = preMutual m >>= goMutual
 
 preFunctionDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, NameIdGen, Error BadScope] r) =>
+  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, NameIdGen, Error BadScope] r) =>
   Internal.FunctionDef ->
   Sem r PreFunctionDef
 preFunctionDef f = do
@@ -320,7 +381,6 @@ preFunctionDef f = do
       | isIgnoredBuiltin b -> return ()
     _ -> do
       registerIdent (mkIdentIndex (f ^. Internal.funDefName)) info
-      when (f ^. Internal.funDefName . Internal.nameText == Str.main) (registerMain sym)
   return
     PreFunctionDef
       { _preFunInternal = f,
@@ -355,7 +415,7 @@ preFunctionDef f = do
 
 goFunctionDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, NameIdGen, Error BadScope] r) =>
+  (HasCallStack, Members '[Reader BuiltinsTable, InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, NameIdGen, Error BadScope] r) =>
   PreFunctionDef ->
   Sem r ()
 goFunctionDef PreFunctionDef {..} = do
@@ -376,7 +436,7 @@ goFunctionDef PreFunctionDef {..} = do
 
 goType ::
   forall r.
-  (Members '[InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, NameIdGen, Reader IndexTable, Error BadScope] r) =>
+  (HasCallStack, Members '[Reader BuiltinsTable, InfoTableBuilder, Reader Internal.InfoTable, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, NameIdGen, Reader IndexTable, Error BadScope] r) =>
   Internal.Expression ->
   Sem r Type
 goType ty = do
@@ -385,20 +445,20 @@ goType ty = do
 
 mkFunBody ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  (HasCallStack, Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Type -> -- converted type of the function
   Internal.FunctionDef ->
   Sem r Node
 mkFunBody ty f =
   mkBody
-    (WithLoc (getLoc f) (ppPrint f))
+    (WithLoc (getLoc f) (Internal.ppPrint f))
     ty
     (f ^. Internal.funDefName . nameLoc)
-    (pure (Internal.unfoldLambda (f ^. Internal.funDefBody)))
+    (Internal.unfoldLambda (f ^. Internal.funDefBody) :| [])
 
 mkBody ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  (HasCallStack, Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   WithLoc Text -> -- The printed lambda for error message
   Type -> -- type of the function
   Location ->
@@ -457,7 +517,7 @@ mkBody ppLam ty loc clauses
     --
     --    A -> A$0 -> List A$1 -> A$2 -> A$3 -> A$4 -> List A$5
     --
-    -- Is translated to the following match (omitting the translation of the body):
+    -- It is translated to the following match (omitting the translation of the body):
     --
     --    λ(? : Type)
     --      λ(? : A$0)
@@ -479,19 +539,20 @@ mkBody ppLam ty loc clauses
       _ ->
         error $
           "internal-to-core: all clauses must have the same number of patterns. Offending lambda at"
-            <> ppPrint (getLoc ppLam)
+            <> Internal.ppPrint (getLoc ppLam)
             <> "\n"
             <> (ppLam ^. withLocParam)
 
     goClause :: Level -> [Internal.PatternArg] -> Internal.Expression -> Sem r MatchBranch
-    goClause lvl pats body = goPatternArgs lvl (Internal.CaseBranchRhsExpression body) pats ptys
+    goClause lvl pats body = do
+      goPatternArgs lvl (Internal.CaseBranchRhsExpression body) pats ptys
       where
         ptys :: [Type]
         ptys = take (length pats) (typeArgs ty)
 
 goCase ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.Case ->
   Sem r Node
 goCase c = do
@@ -517,7 +578,7 @@ goCase c = do
               rhs <-
                 local
                   (set indexTableVars vars')
-                  (underBinders 1 (goCaseBranchRhs _caseBranchRhs))
+                  (underBinder (goCaseBranchRhs _caseBranchRhs))
               case rhs of
                 MatchBranchRhsExpression body ->
                   return $ mkLet i (Binder (name ^. nameText) (Just $ name ^. nameLoc) ty) expr body
@@ -531,7 +592,7 @@ goCase c = do
 
 goCaseBranchRhs ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.CaseBranchRhs ->
   Sem r MatchBranchRhs
 goCaseBranchRhs = \case
@@ -565,16 +626,16 @@ goCaseBranchRhs = \case
 
 goLambda ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.Lambda ->
   Sem r Node
 goLambda l = do
   ty <- goType (fromJust (l ^. Internal.lambdaType))
-  mkBody (WithLoc (getLoc l) (ppPrint l)) ty (getLoc l) (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
+  mkBody (WithLoc (getLoc l) (Internal.ppPrint l)) ty (getLoc l) (fmap (\c -> (toList (c ^. Internal.lambdaPatterns), c ^. Internal.lambdaBody)) (l ^. Internal.lambdaClauses))
 
 goLet ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  (HasCallStack, Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.Let ->
   Sem r Node
 goLet l = goClauses (toList (l ^. Internal.letClauses))
@@ -599,6 +660,7 @@ goLet l = goClauses (toList (l ^. Internal.letClauses))
                   info = setInfoPragma pragmas mempty
                   body = modifyInfo (setInfoPragma pragmas) funBody
               return $ mkLet info (Binder name (Just loc) funTy) body rest
+
           goMutual :: Internal.MutualBlockLet -> Sem r Node
           goMutual (Internal.MutualBlockLet funs) = do
             let lfuns = toList funs
@@ -613,88 +675,99 @@ goLet l = goClauses (toList (l ^. Internal.letClauses))
               rest <- goClauses cs
               return (mkLetRec (setInfoPragmas pragmas mempty) items rest)
 
-goAxiomInductive ::
-  forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen] r) =>
-  Internal.AxiomDef ->
-  Sem r ()
-goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
+builtinInductive :: Internal.AxiomDef -> Maybe (forall r. (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader InternalTyped.InfoTable, NameIdGen, Error BadScope] r) => Sem r ())
+builtinInductive a =
+  case a ^. Internal.axiomBuiltin of
+    Nothing -> Nothing
+    Just b ->
+      case b of
+        Internal.BuiltinNatPrint -> Nothing
+        Internal.BuiltinStringPrint -> Nothing
+        Internal.BuiltinBoolPrint -> Nothing
+        Internal.BuiltinIOSequence -> Nothing
+        Internal.BuiltinIOReadline -> Nothing
+        Internal.BuiltinField -> Just (registerInductiveAxiom (Just BuiltinField) [])
+        Internal.BuiltinString -> Just (registerInductiveAxiom (Just BuiltinString) [])
+        Internal.BuiltinIO -> Just (registerInductiveAxiom (Just BuiltinIO) builtinIOConstrs)
+        Internal.BuiltinTrace -> Nothing
+        Internal.BuiltinFail -> Nothing
+        Internal.BuiltinStringConcat -> Nothing
+        Internal.BuiltinStringEq -> Nothing
+        Internal.BuiltinStringToNat -> Nothing
+        Internal.BuiltinNatToString -> Nothing
+        Internal.BuiltinIntToString -> Nothing
+        Internal.BuiltinIntPrint -> Nothing
+        Internal.BuiltinFieldEq -> Nothing
+        Internal.BuiltinFieldAdd -> Nothing
+        Internal.BuiltinFieldSub -> Nothing
+        Internal.BuiltinFieldMul -> Nothing
+        Internal.BuiltinFieldDiv -> Nothing
+        Internal.BuiltinFieldFromInt -> Nothing
+        Internal.BuiltinFieldToNat -> Nothing
+        Internal.BuiltinAnomaGet -> Nothing
+        Internal.BuiltinAnomaEncode -> Nothing
+        Internal.BuiltinAnomaDecode -> Nothing
+        Internal.BuiltinAnomaVerifyDetached -> Nothing
+        Internal.BuiltinAnomaSign -> Nothing
+        Internal.BuiltinAnomaSignDetached -> Nothing
+        Internal.BuiltinAnomaVerifyWithMessage -> Nothing
+        Internal.BuiltinAnomaByteArrayToAnomaContents -> Nothing
+        Internal.BuiltinAnomaByteArrayFromAnomaContents -> Nothing
+        Internal.BuiltinAnomaSha256 -> Nothing
+        Internal.BuiltinAnomaDelta -> Just (registerInductiveAxiom (Just BuiltinAnomaDelta) [])
+        Internal.BuiltinAnomaKind -> Just (registerInductiveAxiom (Just BuiltinAnomaKind) [])
+        Internal.BuiltinAnomaResourceCommitment -> Nothing
+        Internal.BuiltinAnomaResourceNullifier -> Nothing
+        Internal.BuiltinAnomaResourceDelta -> Nothing
+        Internal.BuiltinAnomaResourceKind -> Nothing
+        Internal.BuiltinAnomaActionDelta -> Nothing
+        Internal.BuiltinAnomaActionsDelta -> Nothing
+        Internal.BuiltinAnomaZeroDelta -> Nothing
+        Internal.BuiltinAnomaAddDelta -> Nothing
+        Internal.BuiltinAnomaSubDelta -> Nothing
+        Internal.BuiltinAnomaRandomGenerator -> Just (registerInductiveAxiom (Just BuiltinAnomaRandomGenerator) [])
+        Internal.BuiltinAnomaRandomGeneratorInit -> Nothing
+        Internal.BuiltinAnomaRandomNextBytes -> Nothing
+        Internal.BuiltinAnomaRandomSplit -> Nothing
+        Internal.BuiltinAnomaIsCommitment -> Nothing
+        Internal.BuiltinAnomaIsNullifier -> Nothing
+        Internal.BuiltinAnomaCreateFromComplianceInputs -> Nothing
+        Internal.BuiltinAnomaProveDelta -> Nothing
+        Internal.BuiltinAnomaActionCreate -> Nothing
+        Internal.BuiltinAnomaTransactionCompose -> Nothing
+        Internal.BuiltinAnomaSet -> Just (registerInductiveAxiom (Just BuiltinAnomaSet) [])
+        Internal.BuiltinAnomaSetToList -> Nothing
+        Internal.BuiltinAnomaSetFromList -> Nothing
+        Internal.BuiltinPoseidon -> Nothing
+        Internal.BuiltinEcOp -> Nothing
+        Internal.BuiltinRandomEcPoint -> Nothing
+        Internal.BuiltinByte -> Just (registerInductiveAxiom (Just BuiltinByte) [])
+        Internal.BuiltinByteEq -> Nothing
+        Internal.BuiltinByteToNat -> Nothing
+        Internal.BuiltinByteFromNat -> Nothing
+        Internal.BuiltinByteArray -> Just (registerInductiveAxiom (Just BuiltinByteArray) [])
+        Internal.BuiltinByteArrayFromListByte -> Nothing
+        Internal.BuiltinByteArrayLength -> Nothing
+        Internal.BuiltinRangeCheck -> Nothing
+        Internal.BuiltinNockmaReify -> Nothing
+        Internal.BuiltinAnomaKeccak256 -> Nothing
+        Internal.BuiltinAnomaSecp256k1SignCompact -> Nothing
+        Internal.BuiltinAnomaSecp256k1Verify -> Nothing
+        Internal.BuiltinAnomaSecp256k1PubKey -> Nothing
   where
-    builtinInductive :: Internal.BuiltinAxiom -> Sem r ()
-    builtinInductive = \case
-      Internal.BuiltinNatPrint -> return ()
-      Internal.BuiltinStringPrint -> return ()
-      Internal.BuiltinBoolPrint -> return ()
-      Internal.BuiltinIOSequence -> return ()
-      Internal.BuiltinIOReadline -> return ()
-      Internal.BuiltinField -> registerInductiveAxiom (Just BuiltinField) []
-      Internal.BuiltinString -> registerInductiveAxiom (Just BuiltinString) []
-      Internal.BuiltinIO -> registerInductiveAxiom (Just BuiltinIO) builtinIOConstrs
-      Internal.BuiltinTrace -> return ()
-      Internal.BuiltinFail -> return ()
-      Internal.BuiltinStringConcat -> return ()
-      Internal.BuiltinStringEq -> return ()
-      Internal.BuiltinStringToNat -> return ()
-      Internal.BuiltinNatToString -> return ()
-      Internal.BuiltinIntToString -> return ()
-      Internal.BuiltinIntPrint -> return ()
-      Internal.BuiltinFieldEq -> return ()
-      Internal.BuiltinFieldAdd -> return ()
-      Internal.BuiltinFieldSub -> return ()
-      Internal.BuiltinFieldMul -> return ()
-      Internal.BuiltinFieldDiv -> return ()
-      Internal.BuiltinFieldFromInt -> return ()
-      Internal.BuiltinFieldToNat -> return ()
-      Internal.BuiltinAnomaGet -> return ()
-      Internal.BuiltinAnomaEncode -> return ()
-      Internal.BuiltinAnomaDecode -> return ()
-      Internal.BuiltinAnomaVerifyDetached -> return ()
-      Internal.BuiltinAnomaSign -> return ()
-      Internal.BuiltinAnomaSignDetached -> return ()
-      Internal.BuiltinAnomaVerifyWithMessage -> return ()
-      Internal.BuiltinAnomaByteArrayToAnomaContents -> return ()
-      Internal.BuiltinAnomaByteArrayFromAnomaContents -> return ()
-      Internal.BuiltinAnomaSha256 -> return ()
-      Internal.BuiltinAnomaDelta -> registerInductiveAxiom (Just BuiltinAnomaDelta) []
-      Internal.BuiltinAnomaKind -> registerInductiveAxiom (Just BuiltinAnomaKind) []
-      Internal.BuiltinAnomaResourceCommitment -> return ()
-      Internal.BuiltinAnomaResourceNullifier -> return ()
-      Internal.BuiltinAnomaResourceDelta -> return ()
-      Internal.BuiltinAnomaResourceKind -> return ()
-      Internal.BuiltinAnomaActionDelta -> return ()
-      Internal.BuiltinAnomaActionsDelta -> return ()
-      Internal.BuiltinAnomaProveDelta -> return ()
-      Internal.BuiltinAnomaProveAction -> return ()
-      Internal.BuiltinAnomaZeroDelta -> return ()
-      Internal.BuiltinAnomaAddDelta -> return ()
-      Internal.BuiltinAnomaSubDelta -> return ()
-      Internal.BuiltinAnomaRandomGenerator -> registerInductiveAxiom (Just BuiltinAnomaRandomGenerator) []
-      Internal.BuiltinAnomaRandomGeneratorInit -> return ()
-      Internal.BuiltinAnomaRandomNextBytes -> return ()
-      Internal.BuiltinAnomaRandomSplit -> return ()
-      Internal.BuiltinPoseidon -> return ()
-      Internal.BuiltinEcOp -> return ()
-      Internal.BuiltinRandomEcPoint -> return ()
-      Internal.BuiltinByte -> registerInductiveAxiom (Just BuiltinByte) []
-      Internal.BuiltinByteEq -> return ()
-      Internal.BuiltinByteToNat -> return ()
-      Internal.BuiltinByteFromNat -> return ()
-      Internal.BuiltinByteArray -> registerInductiveAxiom (Just BuiltinByteArray) []
-      Internal.BuiltinByteArrayFromListByte -> return ()
-      Internal.BuiltinByteArrayLength -> return ()
-
-    registerInductiveAxiom :: Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
+    registerInductiveAxiom :: forall r. (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader InternalTyped.InfoTable, NameIdGen, Error BadScope] r) => Maybe BuiltinAxiom -> [(Tag, Text, Type -> Type, Maybe BuiltinConstructor)] -> Sem r ()
     registerInductiveAxiom ax ctrs = do
       sym <- freshSymbol
       let name = a ^. Internal.axiomName . nameText
           ty = mkTypeConstr (setInfoName name mempty) sym []
           ctrs' = builtinConstrs sym ty ctrs
+      kind <- fromTopIndex $ goExpression (a ^. Internal.axiomType)
       let _inductiveName = a ^. Internal.axiomName . nameText
           info =
             InductiveInfo
               { _inductiveLocation = Just $ a ^. Internal.axiomName . nameLoc,
                 _inductiveSymbol = sym,
-                _inductiveKind = mkSmallUniv,
+                _inductiveKind = kind,
                 _inductiveConstructors = map (^. constructorTag) ctrs',
                 _inductiveParams = [],
                 _inductivePositive = False,
@@ -705,12 +778,21 @@ goAxiomInductive a = whenJust (a ^. Internal.axiomBuiltin) builtinInductive
       registerInductive (mkIdentIndex (a ^. Internal.axiomName)) info
       mapM_ (\ci -> registerConstructor (ci ^. constructorName) ci) ctrs'
 
+goAxiomInductive ::
+  forall r.
+  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, Error BadScope] r) =>
+  Internal.AxiomDef ->
+  Sem r ()
+goAxiomInductive a = case builtinInductive a of
+  Nothing -> return ()
+  Just m -> m
+
 fromTopIndex :: Sem (Reader IndexTable ': r) a -> Sem r a
 fromTopIndex = runReader initIndexTable
 
 goAxiomDef ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, Error BadScope] r) =>
+  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, NameIdGen, Error BadScope] r) =>
   Internal.AxiomDef ->
   Sem r ()
 goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
@@ -779,7 +861,8 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
         registerAxiomDef (mkLambda' mkTypeField' (mkBuiltinApp' OpFieldToInt [mkVar' 0]))
       Internal.BuiltinString -> return ()
       Internal.BuiltinIO -> return ()
-      Internal.BuiltinTrace -> return ()
+      Internal.BuiltinTrace ->
+        registerAxiomDef (mkLambda' mkSmallUniv (mkLambda' (mkVar' 0) (mkBuiltinApp' OpTrace [mkVar' 0])))
       Internal.BuiltinFail ->
         registerAxiomDef (mkLambda' mkSmallUniv (mkLambda' (mkVar' 0) (mkBuiltinApp' OpFail [mkVar' 0])))
       Internal.BuiltinIntToString -> do
@@ -812,7 +895,14 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               mkSmallUniv
               (mkLambda' natType (mkBuiltinApp' OpAnomaDecode [mkVar' 0]))
           )
+      Internal.BuiltinNockmaReify -> do
+        registerAxiomDef
+          ( mkLambda'
+              mkSmallUniv
+              (mkLambda' (mkVar' 0) (mkBuiltinApp' OpNockmaReify [mkVar' 0]))
+          )
       Internal.BuiltinAnomaVerifyDetached -> do
+        -- TODO I think the type is wrong
         natType <- getNatType
         registerAxiomDef
           ( mkLambda'
@@ -886,6 +976,21 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               natType
               (mkBuiltinApp' OpAnomaSha256 [mkVar' 0])
           )
+      Internal.BuiltinAnomaSecp256k1PubKey -> do
+        natType <- getNatType
+        registerAxiomDef
+          (mkBuiltinExpanded' OpAnomaSecp256k1PubKey [natType])
+      Internal.BuiltinAnomaSecp256k1Verify -> do
+        natType <- getNatType
+        registerAxiomDef
+          (mkBuiltinExpanded' OpAnomaSecp256k1Verify [natType, natType, natType])
+      Internal.BuiltinAnomaSecp256k1SignCompact -> do
+        natType <- getNatType
+        registerAxiomDef
+          (mkBuiltinExpanded' OpAnomaSecp256k1SignCompact [natType, natType])
+      Internal.BuiltinAnomaKeccak256 -> do
+        natType <- getNatType
+        registerAxiomDef (mkBuiltinExpanded' OpAnomaKeccak256 [natType])
       Internal.BuiltinAnomaDelta -> return ()
       Internal.BuiltinAnomaKind -> return ()
       Internal.BuiltinAnomaResourceCommitment -> do
@@ -899,8 +1004,11 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
         resourceType <- getAnomaResourceType
         registerAxiomDef
           ( mkLambda'
-              resourceType
-              (mkBuiltinApp' OpAnomaResourceNullifier [mkVar' 0])
+              mkDynamic'
+              ( mkLambda'
+                  resourceType
+                  (mkBuiltinApp' OpAnomaResourceNullifier [mkVar' 1, mkVar' 0])
+              )
           )
       Internal.BuiltinAnomaResourceKind -> do
         resourceType <- getAnomaResourceType
@@ -928,19 +1036,6 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
           ( mkLambda'
               mkDynamic'
               (mkBuiltinApp' OpAnomaActionsDelta [mkVar' 0])
-          )
-      Internal.BuiltinAnomaProveAction -> do
-        actionType <- getAnomaActionType
-        registerAxiomDef
-          ( mkLambda'
-              actionType
-              (mkBuiltinApp' OpAnomaProveAction [mkVar' 0])
-          )
-      Internal.BuiltinAnomaProveDelta -> do
-        registerAxiomDef
-          ( mkLambda'
-              mkDynamic'
-              (mkBuiltinApp' OpAnomaProveDelta [mkVar' 0])
           )
       Internal.BuiltinAnomaZeroDelta -> do
         registerAxiomDef (mkBuiltinApp' OpAnomaZeroDelta [])
@@ -986,6 +1081,79 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
               mkDynamic'
               (mkBuiltinApp' OpAnomaRandomSplit [mkVar' 0])
           )
+      Internal.BuiltinAnomaIsCommitment -> do
+        natType <- getNatType
+        registerAxiomDef
+          ( mkLambda'
+              natType
+              (mkBuiltinApp' OpAnomaIsCommitment [mkVar' 0])
+          )
+      Internal.BuiltinAnomaActionCreate -> do
+        registerAxiomDef
+          . mkLambda'
+            mkDynamic'
+          . mkLambda'
+            mkDynamic'
+          . mkLambda'
+            mkDynamic'
+          $ mkBuiltinApp' OpAnomaActionCreate [mkVar' 2, mkVar' 1, mkVar' 0]
+      Internal.BuiltinAnomaTransactionCompose -> do
+        registerAxiomDef
+          . mkLambda'
+            mkDynamic'
+          . mkLambda'
+            mkDynamic'
+          $ mkBuiltinApp' OpAnomaTransactionCompose [mkVar' 1, mkVar' 0]
+      Internal.BuiltinAnomaIsNullifier -> do
+        natType <- getNatType
+        registerAxiomDef
+          ( mkLambda'
+              natType
+              (mkBuiltinApp' OpAnomaIsNullifier [mkVar' 0])
+          )
+      Internal.BuiltinAnomaCreateFromComplianceInputs -> do
+        registerAxiomDef
+          ( mkLambda'
+              mkDynamic'
+              ( mkLambda'
+                  mkDynamic'
+                  ( mkLambda'
+                      mkDynamic'
+                      ( mkLambda'
+                          mkDynamic'
+                          ( mkLambda'
+                              mkDynamic'
+                              (mkBuiltinApp' OpAnomaCreateFromComplianceInputs [mkVar' 4, mkVar' 3, mkVar' 2, mkVar' 1, mkVar' 0])
+                          )
+                      )
+                  )
+              )
+          )
+      Internal.BuiltinAnomaProveDelta -> do
+        registerAxiomDef
+          ( mkLambda'
+              mkDynamic'
+              (mkBuiltinApp' OpAnomaProveDelta [mkVar' 0])
+          )
+      Internal.BuiltinAnomaSet -> return ()
+      Internal.BuiltinAnomaSetToList -> do
+        registerAxiomDef
+          ( mkLambda'
+              mkSmallUniv
+              ( mkLambda'
+                  mkDynamic'
+                  (mkBuiltinApp' OpAnomaSetToList [mkVar' 0])
+              )
+          )
+      Internal.BuiltinAnomaSetFromList -> do
+        registerAxiomDef
+          ( mkLambda'
+              mkSmallUniv
+              ( mkLambda'
+                  mkDynamic'
+                  (mkBuiltinApp' OpAnomaSetFromList [mkVar' 0])
+              )
+          )
       Internal.BuiltinPoseidon -> do
         psName <- getPoseidonStateName
         psSym <- getPoseidonStateSymbol
@@ -1014,6 +1182,8 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
         registerAxiomDef (mkLambda' mkDynamic' (mkBuiltinApp' OpByteArrayFromListByte [mkVar' 0]))
       Internal.BuiltinByteArrayLength ->
         registerAxiomDef (mkLambda' mkTypeInteger' (mkBuiltinApp' OpByteArrayLength [mkVar' 0]))
+      Internal.BuiltinRangeCheck ->
+        registerAxiomDef (mkLambda' mkTypeField' (mkLambda' mkTypeField' (mkBuiltinApp' OpRangeCheck [mkVar' 1, mkVar' 0])))
 
     axiomType' :: Sem r Type
     axiomType' = fromTopIndex (goType (a ^. Internal.axiomType))
@@ -1082,7 +1252,7 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
 
 fromPatternArg ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, State IndexTable, NameIdGen, Error BadScope] r) =>
+  (HasCallStack, Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, State IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.PatternArg ->
   Sem r Pattern
 fromPatternArg pa = case pa ^. Internal.patternArgName of
@@ -1123,12 +1293,11 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
           Just (pan, _) -> modify (over indexTableVars (HashMap.insert (pan ^. nameId) varsNum))
           _ -> return ()
         (indParams, _) <- InternalTyped.lookupConstructorArgTypes ctrName
-        let nParams = length indParams
         -- + 1 for the as-pattern
-        modify (over indexTableVarsNum (+ (nParams + 1)))
+        modify (over indexTableVarsNum (+ 1))
+        indArgs <- Internal.clones indParams >>= mapM fromInductiveParam
         patternArgs <- mapM fromPatternArg params
-        let indArgs = replicate nParams (wildcard mkSmallUniv)
-            args = indArgs ++ patternArgs
+        let args = indArgs ++ patternArgs
         m <- getIdent identIndex
         case m of
           Just (IdentConstr tag) ->
@@ -1161,12 +1330,23 @@ fromPatternArg pa = case pa ^. Internal.patternArgName of
           txt :: Text
           txt = c ^. Internal.constrAppConstructor . Internal.nameText
 
-          wildcard :: Type -> Pattern
-          wildcard ty = PatWildcard (PatternWildcard Info.empty (Binder "_" Nothing ty))
+    fromInductiveParam :: (HasCallStack) => Internal.InductiveParameter -> Sem r Pattern
+    fromInductiveParam param = do
+      let pname = param ^. Internal.inductiveParamName
+      idt :: IndexTable <- get
+      ty <- runReader idt (goType (param ^. Internal.inductiveParamType))
+      localAddNameSt pname
+      let bi =
+            Binder
+              { _binderName = pname ^. Internal.nameText,
+                _binderLocation = Nothing,
+                _binderType = ty
+              }
+      return $ PatWildcard (PatternWildcard Info.empty bi)
 
 goPatternArgs ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  (HasCallStack, Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Level -> -- the level of the first binder for the matched value
   Internal.CaseBranchRhs ->
   [Internal.PatternArg] ->
@@ -1184,7 +1364,7 @@ goPatternArgs lvl0 body pats0 = go lvl0 [] pats0
         local
           (const itb')
           (go (lvl + 1) (pat : pats) ps' ptys')
-      (p : ps', _ : ptys') ->
+      (p : ps', _ : ptys') -> do
         -- The pattern does not have an inductive type, so is excluded from the match
         case p ^. Internal.patternArgPattern of
           Internal.PatternVariable {} -> do
@@ -1223,29 +1403,48 @@ addPatternVariableNames p lvl vars =
       Internal.PatternConstructorApp {} -> impossible
       Internal.PatternWildcardConstructor {} -> impossible
 
+goNatural ::
+  ( Members
+      '[ Reader BuiltinsTable,
+         Reader InternalTyped.TypesTable,
+         Reader InternalTyped.FunctionsTable,
+         InfoTableBuilder,
+         Reader InternalTyped.FunctionsTable,
+         Reader Internal.InfoTable,
+         Reader IndexTable,
+         Error BadScope,
+         NameIdGen
+       ]
+      r
+  ) =>
+  Internal.BuiltinNatural ->
+  Sem r Node
+goNatural b = do
+  let err :: Internal.Name = error ("builtin " <> prettyText BuiltinNatPlus <> " must be defined")
+  plusIden <- Internal.IdenFunction . fromRight err <$> runError @Builtins.BuiltinNotDefined (Builtins.getBuiltinName (getLoc b) BuiltinNatPlus)
+  plus <- goIden plusIden
+  let num :: Node = mkConstant' (ConstInteger (fromIntegral (b ^. Internal.builtinNaturalSuc)))
+  arg <- goExpression (b ^. Internal.builtinNaturalArg)
+  return (mkApps' plus [num, arg])
+
 goIden ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, Error BadScope] r) =>
+  (HasCallStack, Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, Error BadScope] r) =>
   Internal.Iden ->
   Sem r Node
 goIden i = do
-  importsTableDebug <- Core.ppTrace . (^. moduleImportsTable) <$> getModule
-  infoTableDebug <- Core.ppTrace . (^. moduleInfoTable) <$> getModule
-  let undeclared =
+  let undeclared :: (HasCallStack) => a
+      undeclared =
         error
           ( "internal to core: undeclared identifier: "
               <> txt
               <> "\nat "
               <> Internal.ppTrace (getLoc i)
-              <> "\nModule:\n-------\n\n"
-              <> infoTableDebug
-              <> "\nImports:\n--------\n\n"
-              <> importsTableDebug
           )
   case i of
     Internal.IdenVar n -> do
       let err = throw (BadScope n)
-      k <- fromMaybeM err (HashMap.lookup id_ <$> asks (^. indexTableVars))
+      k <- fromMaybeM err (asks (^. indexTableVars . at id_))
       varsNum <- asks (^. indexTableVarsNum)
       return (mkVar (setInfoLocation (n ^. nameLoc) (Info.singleton (NameInfo (n ^. nameText)))) (varsNum - k - 1))
     Internal.IdenFunction n -> do
@@ -1257,8 +1456,8 @@ goIden i = do
         Just Internal.BuiltinSeq -> error "internal to core: seq must be called with 2 arguments"
         _ -> return ()
       -- if the function was defined by a let, then in Core it is stored in a variable
-      vars <- asks (^. indexTableVars)
-      case HashMap.lookup id_ vars of
+      mvarIx <- asks (^. indexTableVars . at id_)
+      case mvarIx of
         Nothing -> do
           m <- getIdent identIndex
           return $ case m of
@@ -1284,7 +1483,6 @@ goIden i = do
       axiomInfoBuiltin <- Internal.getAxiomBuiltinInfo n
       case axiomInfoBuiltin of
         Just Internal.BuiltinIOSequence -> error "internal to core: >> must be called with 2 arguments"
-        Just Internal.BuiltinTrace -> error "internal to core: trace must be called with 1 argument"
         _ -> return ()
       m <- getIdent identIndex
       return $ case m of
@@ -1304,7 +1502,19 @@ goIden i = do
 
 goExpression ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  ( HasCallStack,
+    Members
+      '[ Reader BuiltinsTable,
+         InfoTableBuilder,
+         Reader InternalTyped.TypesTable,
+         Reader InternalTyped.FunctionsTable,
+         Reader Internal.InfoTable,
+         Reader IndexTable,
+         NameIdGen,
+         Error BadScope
+       ]
+      r
+  ) =>
   Internal.Expression ->
   Sem r Node
 goExpression = \case
@@ -1313,6 +1523,7 @@ goExpression = \case
     md <- getModule
     return (goLiteral (fromJust $ getInfoLiteralIntToNat md) (fromJust $ getInfoLiteralIntToInt md) l)
   Internal.ExpressionIden i -> goIden i
+  Internal.ExpressionNatural n -> goNatural n
   Internal.ExpressionApplication a -> goApplication a
   Internal.ExpressionSimpleLambda l -> goSimpleLambda l
   Internal.ExpressionLambda l -> goLambda l
@@ -1324,7 +1535,7 @@ goExpression = \case
 
 goFunction ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   ([Internal.FunctionParameter], Internal.Expression) ->
   Sem r Node
 goFunction (params, returnTypeExpr) = go params
@@ -1340,14 +1551,14 @@ goFunction (params, returnTypeExpr) = go params
                   _binderType = paramTy
                 }
         case param ^. Internal.paramName of
-          Nothing -> mkPi mempty paramBinder <$> underBinders 1 (go params')
+          Nothing -> mkPi mempty paramBinder <$> underBinder (go params')
           Just vn -> mkPi mempty paramBinder <$> localAddName vn (go params')
       [] ->
         goType returnTypeExpr
 
 goSimpleLambda ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.SimpleLambda ->
   Sem r Node
 goSimpleLambda l = do
@@ -1359,136 +1570,138 @@ goSimpleLambda l = do
 
 goApplication ::
   forall r.
-  (Members '[InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
+  (Members '[Reader BuiltinsTable, InfoTableBuilder, Reader InternalTyped.TypesTable, Reader InternalTyped.FunctionsTable, Reader Internal.InfoTable, Reader IndexTable, NameIdGen, Error BadScope] r) =>
   Internal.Application ->
   Sem r Node
 goApplication a = do
   let (f, args) = second toList (Internal.unfoldApplication a)
-      exprArgs :: Sem r [Node]
-      exprArgs = mapM goExpression args
-
-      app :: Sem r Node
+  exprArgs :: [Node] <- mapM goExpression args
+  let app :: Sem r Node
       app = do
         fExpr <- goExpression f
-        mkApps' fExpr <$> exprArgs
+        return (mkApps' fExpr exprArgs)
+
+      builtinWithArity b ari
+        | length exprArgs == ari = return (mkBuiltinApp' b exprArgs)
+        | otherwise = app
+
+      builtin b = builtinWithArity b (builtinOpArgsNum b)
 
   case f of
     Internal.ExpressionIden (Internal.IdenAxiom n) -> do
       axiomInfoBuiltin <- Internal.getAxiomBuiltinInfo n
       case axiomInfoBuiltin of
-        Just Internal.BuiltinNatPrint -> app
-        Just Internal.BuiltinStringPrint -> app
-        Just Internal.BuiltinBoolPrint -> app
-        Just Internal.BuiltinString -> app
-        Just Internal.BuiltinIO -> app
-        Just Internal.BuiltinIOSequence -> do
-          ioSym <- getIOSymbol
-          as <- exprArgs
-          case as of
-            (arg1 : arg2 : xs) ->
-              return $
+        Nothing -> app
+        Just b -> case b of
+          Internal.BuiltinNatPrint -> app
+          Internal.BuiltinStringPrint -> app
+          Internal.BuiltinBoolPrint -> app
+          Internal.BuiltinString -> app
+          Internal.BuiltinIO -> app
+          Internal.BuiltinIOSequence -> do
+            ioSym <- getIOSymbol
+            return $ case exprArgs of
+              (arg1 : arg2 : xs) ->
                 mkApps'
                   ( mkConstr'
                       (BuiltinTag TagBind)
                       [arg1, mkLambda' (mkTypeConstr (setInfoName Str.io mempty) ioSym []) (shift 1 arg2)]
                   )
                   xs
-            _ -> error "internal to core: >> must be called with 2 arguments"
-        Just Internal.BuiltinIOReadline -> app
-        Just Internal.BuiltinStringConcat -> app
-        Just Internal.BuiltinStringEq -> app
-        Just Internal.BuiltinStringToNat -> app
-        Just Internal.BuiltinNatToString -> app
-        Just Internal.BuiltinTrace -> do
-          as <- exprArgs
-          case as of
-            (_ : arg : xs) ->
-              return (mkApps' (mkBuiltinApp' OpTrace [arg]) xs)
-            _ -> error "internal to core: trace must be called with 1 argument"
-        Just Internal.BuiltinFail -> app
-        Just Internal.BuiltinIntToString -> app
-        Just Internal.BuiltinIntPrint -> app
-        Just Internal.BuiltinField -> app
-        Just Internal.BuiltinFieldEq -> app
-        Just Internal.BuiltinFieldAdd -> app
-        Just Internal.BuiltinFieldSub -> app
-        Just Internal.BuiltinFieldMul -> app
-        Just Internal.BuiltinFieldDiv -> app
-        Just Internal.BuiltinFieldFromInt -> do
-          as <- exprArgs
-          case as of
-            [x] -> return $ mkBuiltinApp' OpFieldFromInt [x]
-            _ -> app
-        Just Internal.BuiltinFieldToNat -> app
-        Just Internal.BuiltinAnomaGet -> app
-        Just Internal.BuiltinAnomaEncode -> app
-        Just Internal.BuiltinAnomaDecode -> app
-        Just Internal.BuiltinAnomaVerifyDetached -> app
-        Just Internal.BuiltinAnomaSign -> app
-        Just Internal.BuiltinAnomaSignDetached -> app
-        Just Internal.BuiltinAnomaVerifyWithMessage -> app
-        Just Internal.BuiltinAnomaByteArrayToAnomaContents -> app
-        Just Internal.BuiltinAnomaByteArrayFromAnomaContents -> app
-        Just Internal.BuiltinAnomaSha256 -> app
-        Just Internal.BuiltinAnomaDelta -> app
-        Just Internal.BuiltinAnomaKind -> app
-        Just Internal.BuiltinAnomaResourceCommitment -> app
-        Just Internal.BuiltinAnomaResourceNullifier -> app
-        Just Internal.BuiltinAnomaResourceDelta -> app
-        Just Internal.BuiltinAnomaResourceKind -> app
-        Just Internal.BuiltinAnomaActionDelta -> app
-        Just Internal.BuiltinAnomaActionsDelta -> app
-        Just Internal.BuiltinAnomaZeroDelta -> app
-        Just Internal.BuiltinAnomaAddDelta -> app
-        Just Internal.BuiltinAnomaSubDelta -> app
-        Just Internal.BuiltinAnomaProveAction -> app
-        Just Internal.BuiltinAnomaProveDelta -> app
-        Just Internal.BuiltinAnomaRandomGenerator -> app
-        Just Internal.BuiltinAnomaRandomGeneratorInit -> app
-        Just Internal.BuiltinAnomaRandomNextBytes -> app
-        Just Internal.BuiltinAnomaRandomSplit -> app
-        Just Internal.BuiltinPoseidon -> app
-        Just Internal.BuiltinEcOp -> app
-        Just Internal.BuiltinRandomEcPoint -> app
-        Just Internal.BuiltinByte -> app
-        Just Internal.BuiltinByteEq -> app
-        Just Internal.BuiltinByteToNat -> app
-        Just Internal.BuiltinByteFromNat -> app
-        Just Internal.BuiltinByteArray -> app
-        Just Internal.BuiltinByteArrayFromListByte -> app
-        Just Internal.BuiltinByteArrayLength -> app
-        Nothing -> app
+              _ -> error ("internal to core: " <> Str.ioSequence <> " must be called with 2 arguments")
+          Internal.BuiltinIOReadline -> app
+          Internal.BuiltinStringConcat -> app
+          Internal.BuiltinStringEq -> app
+          Internal.BuiltinStringToNat -> app
+          Internal.BuiltinNatToString -> app
+          Internal.BuiltinTrace -> app
+          Internal.BuiltinFail -> app
+          Internal.BuiltinIntToString -> app
+          Internal.BuiltinIntPrint -> app
+          Internal.BuiltinField -> app
+          Internal.BuiltinFieldEq -> app
+          Internal.BuiltinFieldAdd -> app
+          Internal.BuiltinFieldSub -> app
+          Internal.BuiltinFieldMul -> app
+          Internal.BuiltinFieldDiv -> app
+          Internal.BuiltinFieldFromInt -> builtin OpFieldFromInt
+          Internal.BuiltinNockmaReify -> builtin OpNockmaReify
+          Internal.BuiltinFieldToNat -> app
+          Internal.BuiltinAnomaGet -> app
+          Internal.BuiltinAnomaEncode -> app
+          Internal.BuiltinAnomaDecode -> app
+          Internal.BuiltinAnomaVerifyDetached -> app
+          Internal.BuiltinAnomaSign -> app
+          Internal.BuiltinAnomaSignDetached -> app
+          Internal.BuiltinAnomaVerifyWithMessage -> app
+          Internal.BuiltinAnomaByteArrayToAnomaContents -> app
+          Internal.BuiltinAnomaByteArrayFromAnomaContents -> app
+          Internal.BuiltinAnomaSha256 -> app
+          Internal.BuiltinAnomaDelta -> app
+          Internal.BuiltinAnomaKind -> app
+          Internal.BuiltinAnomaResourceCommitment -> app
+          Internal.BuiltinAnomaResourceNullifier -> app
+          Internal.BuiltinAnomaResourceDelta -> app
+          Internal.BuiltinAnomaResourceKind -> app
+          Internal.BuiltinAnomaActionDelta -> app
+          Internal.BuiltinAnomaActionsDelta -> app
+          Internal.BuiltinAnomaZeroDelta -> app
+          Internal.BuiltinAnomaAddDelta -> app
+          Internal.BuiltinAnomaSubDelta -> app
+          Internal.BuiltinAnomaRandomGenerator -> app
+          Internal.BuiltinAnomaRandomGeneratorInit -> app
+          Internal.BuiltinAnomaRandomNextBytes -> app
+          Internal.BuiltinAnomaRandomSplit -> app
+          Internal.BuiltinAnomaIsCommitment -> app
+          Internal.BuiltinAnomaIsNullifier -> app
+          Internal.BuiltinAnomaTransactionCompose -> app
+          Internal.BuiltinAnomaActionCreate -> app
+          Internal.BuiltinAnomaCreateFromComplianceInputs -> app
+          Internal.BuiltinAnomaProveDelta -> app
+          Internal.BuiltinAnomaSet -> app
+          Internal.BuiltinAnomaSetToList -> app
+          Internal.BuiltinAnomaSetFromList -> app
+          Internal.BuiltinPoseidon -> app
+          Internal.BuiltinEcOp -> app
+          Internal.BuiltinRandomEcPoint -> app
+          Internal.BuiltinRangeCheck -> app
+          Internal.BuiltinByte -> app
+          Internal.BuiltinByteEq -> app
+          Internal.BuiltinByteToNat -> app
+          Internal.BuiltinByteFromNat -> app
+          Internal.BuiltinByteArray -> app
+          Internal.BuiltinByteArrayFromListByte -> app
+          Internal.BuiltinByteArrayLength -> app
+          Internal.BuiltinAnomaKeccak256 -> app
+          Internal.BuiltinAnomaSecp256k1PubKey -> app
+          Internal.BuiltinAnomaSecp256k1SignCompact -> app
+          Internal.BuiltinAnomaSecp256k1Verify -> app
     Internal.ExpressionIden (Internal.IdenFunction n) -> do
       funInfoBuiltin <- Internal.getFunctionBuiltinInfo n
       case funInfoBuiltin of
         Just Internal.BuiltinBoolIf -> do
           sym <- getBoolSymbol
-          as <- exprArgs
-          case as of
-            (_ : v : b1 : b2 : xs) -> return (mkApps' (mkIf' sym v b1 b2) xs)
+          case exprArgs of
+            _ : v : b1 : b2 : xs -> return (mkApps' (mkIf' sym v b1 b2) xs)
             _ -> error "internal to core: if must be called with 3 arguments"
         Just Internal.BuiltinBoolOr -> do
           sym <- getBoolSymbol
-          as <- exprArgs
-          case as of
-            (x : y : xs) -> return (mkApps' (mkIf' sym x (mkConstr' (BuiltinTag TagTrue) []) y) xs)
+          case exprArgs of
+            x : y : xs -> return (mkApps' (mkIf' sym x (mkConstr' (BuiltinTag TagTrue) []) y) xs)
             _ -> error "internal to core: || must be called with 2 arguments"
         Just Internal.BuiltinBoolAnd -> do
           sym <- getBoolSymbol
-          as <- exprArgs
-          case as of
-            (x : y : xs) -> return (mkApps' (mkIf' sym x y (mkConstr' (BuiltinTag TagFalse) [])) xs)
+          case exprArgs of
+            x : y : xs -> return (mkApps' (mkIf' sym x y (mkConstr' (BuiltinTag TagFalse) [])) xs)
             _ -> error "internal to core: && must be called with 2 arguments"
         Just Internal.BuiltinSeq -> do
-          as <- exprArgs
-          case as of
-            (_ : _ : arg1 : arg2 : xs) ->
+          case exprArgs of
+            _ : _ : arg1 : arg2 : xs ->
               return (mkApps' (mkBuiltinApp' OpSeq [arg1, arg2]) xs)
             _ -> error "internal to core: seq must be called with 2 arguments"
         Just Internal.BuiltinAssert -> do
-          as <- exprArgs
-          case as of
-            (x : xs) -> return (mkApps' (mkBuiltinApp' OpAssert [x]) xs)
+          case exprArgs of
+            x : xs -> return (mkApps' (mkBuiltinApp' OpAssert [x]) xs)
             _ -> error "internal to core: assert must be called with 1 argument"
         _ -> app
     _ -> app
@@ -1498,7 +1711,7 @@ goLiteral intToNat intToInt l = case l ^. withLocParam of
   Internal.LitString s -> mkLitConst (ConstString s)
   Internal.LitNumeric i -> mkLitConst (ConstInteger i)
   Internal.LitInteger i -> mkApp' (mkIdent' intToInt) (mkLitConst (ConstInteger i))
-  Internal.LitNatural i -> mkApp' (mkIdent' intToNat) (mkLitConst (ConstInteger i))
+  Internal.LitNatural i -> mkApp' (mkIdent' intToNat) (mkLitConst (ConstInteger (fromIntegral i)))
   where
     mkLitConst :: ConstantValue -> Node
     mkLitConst = mkConstant (Info.singleton (LocationInfo (l ^. withLocInt)))

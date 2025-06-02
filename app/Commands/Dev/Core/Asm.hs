@@ -5,6 +5,7 @@ import Commands.Base
 import Commands.Dev.Core.Asm.Options
 import Juvix.Compiler.Asm qualified as Asm
 import Juvix.Compiler.Core qualified as Core
+import Juvix.Compiler.Verification.Dumper
 
 runCommand ::
   forall r a.
@@ -16,12 +17,12 @@ runCommand opts = do
   ep <- getEntryPoint (Just sinputFile)
   s' <- readFile inputFile
   tab <- getRight (Core.runParserMain inputFile defaultModuleId mempty s')
-  r <- runReader ep . runError @JuvixError $ coreToAsm (Core.moduleFromInfoTable tab)
-  tab' <- getRight r
+  r <- runReader ep . runError @JuvixError . ignoreDumper $ coreToAsm (Core.moduleFromInfoTable tab)
+  md' <- getRight r
   if
       | project opts ^. coreAsmPrint ->
-          renderStdOut (Asm.ppOutDefault tab' tab')
-      | otherwise -> runAsm True tab'
+          renderStdOut (Asm.ppOutDefault md' (Asm.computeCombinedInfoTable md'))
+      | otherwise -> runAsm True md'
   where
     sinputFile :: AppPath File
     sinputFile = project opts ^. coreAsmInputFile

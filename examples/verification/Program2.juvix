@@ -1,0 +1,11 @@
+module Program2;
+
+import Stdlib.Prelude open;
+
+f (x : Nat) : Nat := x + 7;
+
+sum : List Nat -> Nat
+  | [] := 0
+  | (x :: xs) := x + sum xs;
+
+main : Nat := sum (map f [1; 2; 3; 4; 5]);

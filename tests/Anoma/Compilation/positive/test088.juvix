@@ -1,0 +1,41 @@
+-- Noun representation
+module test088;
+
+import Juvix.Builtin.V1.Fixity open;
+import Juvix.Builtin.V1.Nat open;
+import Juvix.Builtin.V1.Bool open;
+import Juvix.Builtin.V1.List open;
+
+builtin trace
+axiom trace : {A : Type} -> A -> A;
+
+syntax operator >-> seq;
+
+builtin seq
+>-> : {A B : Type} -> A -> B -> B
+  | x y := y;
+
+builtin nockma-noun
+type Term :=
+  | atom Nat
+  | cell@{
+      left : Term;
+      right : Term;
+    };
+
+type T := mk;
+
+type FakeTerm :=
+  | atom T
+  | cell@{
+      left : FakeTerm;
+      right : FakeTerm;
+    };
+
+builtin nockma-reify
+axiom reify {A} : A -> Term;
+
+t : Term := Term.cell (Term.atom 30) (Term.cell (Term.atom 40) (Term.atom 80));
+
+main : _ :=
+  trace t >-> trace (reify t) >-> trace (Term.atom 80) >-> FakeTerm.cell;

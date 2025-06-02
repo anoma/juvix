@@ -1,42 +1,18 @@
 module Juvix.Compiler.Core.Data.Module
   ( module Juvix.Compiler.Core.Data.Module,
+    module Juvix.Compiler.Core.Data.Module.Base,
     module Juvix.Compiler.Core.Data.InfoTable,
   )
 where
 
 import Juvix.Compiler.Core.Data.InfoTable
+import Juvix.Compiler.Core.Data.Module.Base
 import Juvix.Compiler.Core.Language
+import Juvix.Compiler.Core.Pretty
 
-data Module = Module
-  { _moduleId :: ModuleId,
-    _moduleInfoTable :: InfoTable,
-    -- | The imports table contains all dependencies, transitively. E.g., if the
-    -- module M imports A but not B, but A imports B, then all identifiers from
-    -- B will be in the imports table of M nonetheless.
-    _moduleImportsTable :: InfoTable
-  }
-  deriving stock (Generic)
+type Module = Module' InfoTable
 
-instance NFData Module
-
-makeLenses ''Module
-
-withInfoTable :: (Module -> Module) -> InfoTable -> InfoTable
-withInfoTable f tab =
-  f (moduleFromInfoTable tab) ^. moduleInfoTable
-
-emptyModule :: Module
-emptyModule = Module defaultModuleId mempty mempty
-
-moduleFromInfoTable :: InfoTable -> Module
-moduleFromInfoTable tab = Module defaultModuleId tab mempty
-
-computeCombinedIdentContext :: Module -> IdentContext
-computeCombinedIdentContext Module {..} =
-  _moduleInfoTable ^. identContext <> _moduleImportsTable ^. identContext
-
-computeCombinedInfoTable :: Module -> InfoTable
-computeCombinedInfoTable Module {..} = _moduleInfoTable <> _moduleImportsTable
+type ModuleTable = ModuleTable' InfoTable
 
 lookupInductiveInfo' :: Module -> Symbol -> Maybe InductiveInfo
 lookupInductiveInfo' Module {..} sym =
@@ -64,17 +40,20 @@ lookupSpecialisationInfo Module {..} sym =
     lookupTabSpecialisationInfo' _moduleInfoTable sym
       <|> lookupTabSpecialisationInfo' _moduleImportsTable sym
 
+impossibleSymbolNotFound :: (HasCallStack) => Symbol -> a
+impossibleSymbolNotFound sym = impossibleError ("Could not find symbol " <> ppTrace sym)
+
 lookupInductiveInfo :: Module -> Symbol -> InductiveInfo
-lookupInductiveInfo m sym = fromJust $ lookupInductiveInfo' m sym
+lookupInductiveInfo m sym = fromMaybe (impossibleSymbolNotFound sym) (lookupInductiveInfo' m sym)
 
 lookupConstructorInfo :: Module -> Tag -> ConstructorInfo
-lookupConstructorInfo m tag = fromJust $ lookupConstructorInfo' m tag
+lookupConstructorInfo m tag = fromJust (lookupConstructorInfo' m tag)
 
 lookupIdentifierInfo :: Module -> Symbol -> IdentifierInfo
-lookupIdentifierInfo m sym = fromJust $ lookupIdentifierInfo' m sym
+lookupIdentifierInfo m sym = fromMaybe (impossibleSymbolNotFound sym) (lookupIdentifierInfo' m sym)
 
 lookupIdentifierNode :: Module -> Symbol -> Node
-lookupIdentifierNode m sym = fromJust $ lookupIdentifierNode' m sym
+lookupIdentifierNode m sym = fromMaybe (impossibleSymbolNotFound sym) (lookupIdentifierNode' m sym)
 
 lookupBuiltinInductive :: Module -> BuiltinInductive -> Maybe InductiveInfo
 lookupBuiltinInductive Module {..} b =
@@ -101,6 +80,9 @@ getInfoMain Module {..} =
   _moduleInfoTable ^. infoMain
     <|> _moduleImportsTable ^. infoMain
 
+lookupParamsNum :: Module -> Symbol -> Int
+lookupParamsNum m sym = length (lookupInductiveInfo m sym ^. inductiveParams)
+
 identName :: Module -> Symbol -> Text
 identName md sym = lookupIdentifierInfo md sym ^. identifierName
 
@@ -121,6 +103,3 @@ freshIdentName m = freshName (identNames m)
 
 pruneInfoTable :: Module -> Module
 pruneInfoTable = over moduleInfoTable pruneInfoTable'
-
-moduleIsFragile :: Module -> Bool
-moduleIsFragile Module {..} = tableIsFragile _moduleInfoTable

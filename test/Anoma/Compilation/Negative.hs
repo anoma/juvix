@@ -30,7 +30,8 @@ mkAnomaNegativeTest testName' relRoot mainFile testCheck =
     compileMain rootCopyDir = do
       let testRootDir = rootCopyDir <//> relRoot
       entryPoint <-
-        set entryPointTarget (Just TargetAnoma)
+        set entryPointPipeline (Just PipelineExec)
+          . set entryPointTarget (Just TargetAnoma)
           <$> testDefaultEntryPointIO testRootDir (testRootDir <//> mainFile)
       either Just (const Nothing) <$> testRunIOEither entryPoint upToAnoma
 
@@ -38,10 +39,11 @@ checkCoreError :: CheckError
 checkCoreError e =
   unless
     (isJust (fromJuvixError @CoreError e))
-    (assertFailure ("Expected core error got: " <> unpack (renderTextDefault e)))
+    (assertFailure ("Expected core error got: " <> renderStringDefault e))
 
 allTests :: TestTree
 allTests =
-  testGroup
+  sequentialTestGroup
     "Anoma negative tests"
+    AllFinish
     [mkAnomaNegativeTest "Use of Strings" $(mkRelDir ".") $(mkRelFile "String.juvix") checkCoreError]

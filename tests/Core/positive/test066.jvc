@@ -1,0 +1,17 @@
+type Unit {
+  unit : Unit;
+};
+
+type Box {
+  box : Any -> Box;
+};
+
+def f := \x
+  match box 9, x, unit with {
+    box z, box y, unit if y < z := 1;
+    box z, box y, unit if y = z + 1 := 0;
+    box z, box y, unit if y > z := 10;
+    _, _, _ := 11;
+  };
+
+3 * f (box 11) * f (box 7) - f (box 10) - 2 * f (box 9)

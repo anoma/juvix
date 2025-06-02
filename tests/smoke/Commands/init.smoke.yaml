@@ -19,7 +19,7 @@ tests:
         options:
           - dot-all
     exit-status: 0
-  - name: init-non-interactive-name
+  - name: init-name
     command:
       shell:
         - bash
@@ -28,7 +28,7 @@ tests:
         trap 'rm -rf -- "$temp"' EXIT
         mkdir "$temp/packagename"
         cd "$temp/packagename"
-        juvix init -n
+        juvix init
         juvix repl Package.juvix
     stdout:
       contains: '"packagename"'
@@ -42,13 +42,13 @@ tests:
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
         cd $temp
-        echo -e 'packagename\n\n\n' | juvix init
+        echo -e 'packagename\n\n\n' | juvix init -i
         juvix repl Package.juvix
     stdout:
       contains: '"packagename"'
     stdin: Package.name package
     exit-status: 0
-  - name: init-version
+  - name: init-version-interactive
     command:
       shell:
         - bash
@@ -56,7 +56,7 @@ tests:
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
         cd $temp
-        echo -e 'packagename\n1.2.3-prerel+meta\n\n' | juvix init
+        echo -e 'packagename\n1.2.3-prerel+meta\n\n' | juvix init -i
         juvix repl Package.juvix
     stdout:
       contains: |

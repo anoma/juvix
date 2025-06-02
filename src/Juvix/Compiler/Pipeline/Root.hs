@@ -6,13 +6,14 @@ where
 
 import Control.Exception qualified as IO
 import Control.Monad.Catch qualified as M
+import Juvix.Compiler.Pipeline.EntryPoint
 import Juvix.Compiler.Pipeline.Package.IO
 import Juvix.Compiler.Pipeline.Root.Base
 import Juvix.Data.Effect.TaggedLock
 import Juvix.Extra.Paths qualified as Paths
 import Juvix.Prelude
 
-readPackageRootIO :: (Members '[TaggedLock, EmbedIO] r) => Root -> Sem r Package
+readPackageRootIO :: (Members '[TaggedLock, Reader EntryPoint, EmbedIO] r) => Root -> Sem r Package
 readPackageRootIO root = readPackageIO (root ^. rootRootDir) (root ^. rootBuildDir)
 
 findRootAndChangeDir ::

@@ -2,7 +2,6 @@ module Nockma.Eval.Positive where
 
 import Base hiding (Path, testName)
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Core.Language.Base (defaultSymbol)
 import Juvix.Compiler.Nockma.Anoma
 import Juvix.Compiler.Nockma.AnomaLib (anomaLib)
 import Juvix.Compiler.Nockma.Evaluator
@@ -60,9 +59,9 @@ allTests =
       testGroup "Anoma stldib intercept-only" (map mkNockmaTest anomaStdlibInterceptOnlyTests),
       testGroup "Anoma serialization tests" (map mkNockmaTest serializationTests)
     ]
-  where
-    mkNockmaTest :: Test -> TestTree
-    mkNockmaTest t = testCase (unpack (t ^. testName)) (mkNockmaAssertion t)
+
+mkNockmaTest :: Test -> TestTree
+mkNockmaTest t = testCase (unpack (t ^. testName)) (mkNockmaAssertion t)
 
 eqNock :: Term Natural -> Check ()
 eqNock expected = do
@@ -96,9 +95,11 @@ compilerTest :: Text -> Term Natural -> Check () -> Bool -> Test
 compilerTest n mainFun _testCheck _evalInterceptAnomaLibCalls =
   anomaTest n mainFun [] _testCheck _evalInterceptAnomaLibCalls
 
+compileTerm :: Sem '[Reader CompilerCtx] (Term Natural) -> Term Natural
+compileTerm = run . runReader emptyCompilerCtx
+
 compilerTestM :: Text -> Sem '[Reader CompilerCtx] (Term Natural) -> Check () -> Bool -> Test
-compilerTestM n mainFun =
-  compilerTest n (run . runReader emptyCompilerCtx $ mainFun)
+compilerTestM n mainFun = compilerTest n (compileTerm mainFun)
 
 serializationTest :: Term Natural -> Term Natural -> [Test]
 serializationTest jamTerm cueTerm = run . runReader emptyCompilerCtx $ do
@@ -132,22 +133,10 @@ withAssertErrKeyNotInStorage Test {..} =
 
 anomaTest :: Text -> Term Natural -> [Term Natural] -> Check () -> Bool -> Test
 anomaTest n mainFun args _testCheck _evalInterceptAnomaLibCalls =
-  let f =
-        CompilerFunction
-          { _compilerFunctionId = UserFunction (defaultSymbol 0),
-            _compilerFunctionArity = fromIntegral (length args),
-            _compilerFunction = return mainFun,
-            _compilerFunctionName = "main"
-          }
-      _testName :: Text
+  let _testName :: Text
         | _evalInterceptAnomaLibCalls = n <> " - intercept stdlib"
         | otherwise = n
-
-      opts = CompilerOptions
-
-      res :: AnomaResult = runCompilerWith opts mempty [] f
-      _testProgramSubject = res ^. anomaClosure
-
+      _testProgramSubject = makeMainFunction True (fromIntegral (length args)) mainFun
       _testProgramFormula = anomaCall args
       _testProgramStorage :: Storage Natural = emptyStorage
       _testEvalOptions = EvalOptions {..}
@@ -401,7 +390,7 @@ juvixCallingConventionTests =
            compilerTestM "length-bytes 255 == 1" (callStdlib StdlibLengthBytes [nockNatLiteral 255]) (eqNock [nock| 1 |]),
            compilerTestM "length-bytes 1 == 1" (callStdlib StdlibLengthBytes [nockNatLiteral 1]) (eqNock [nock| 1 |]),
            compilerTestM "length-bytes 0 == 0" (callStdlib StdlibLengthBytes [nockNatLiteral 0]) (eqNock [nock| 0 |]),
-           compilerTestM "zero-delta == 0" (rmValue RmZeroDelta) (eqNock [nock| 0 |])
+           compilerTestM "zero-delta == 2" (rmValue RmZeroDelta) (eqNock [nock| 2 |])
          ]
 
 -- These tests can only be run with stdlib interception as running the raw nock code is too slow
@@ -412,8 +401,8 @@ anomaStdlibInterceptOnlyTests =
              "call next bytes in sequence"
              ( do
                  gen <- callStdlib StdlibRandomInitGen [nockNatLiteral 777]
-                 rgen1 <- callStdlib StdlibRandomNextBytes [gen, nockNatLiteral 1]
-                 rgen2 <- callStdlib StdlibRandomNextBytes [rgen1 >># OpAddress # [R], nockNatLiteral 1]
+                 rgen1 <- callStdlib StdlibRandomNextBits [gen, nockNatLiteral 8]
+                 rgen2 <- callStdlib StdlibRandomNextBits [rgen1 >># OpAddress # [R], nockNatLiteral 8]
                  return ((rgen1 >># OpAddress # [L]) # (rgen2 >># OpAddress # [L]))
              )
              (eqNock [nock| [44 251] |]),
@@ -422,8 +411,8 @@ anomaStdlibInterceptOnlyTests =
              ( do
                  gen <- callStdlib StdlibRandomInitGen [nockNatLiteral 777]
                  g1g2 <- callStdlib StdlibRandomSplit [gen]
-                 n1 <- callStdlib StdlibRandomNextBytes [g1g2 >># OpAddress # [L], nockNatLiteral 1]
-                 n2 <- callStdlib StdlibRandomNextBytes [g1g2 >># OpAddress # [R], nockNatLiteral 1]
+                 n1 <- callStdlib StdlibRandomNextBits [g1g2 >># OpAddress # [L], nockNatLiteral 8]
+                 n2 <- callStdlib StdlibRandomNextBits [g1g2 >># OpAddress # [R], nockNatLiteral 8]
                  return ((n1 >># OpAddress # [L]) # (n2 >># OpAddress # [L]))
              )
              ( eqNock

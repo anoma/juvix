@@ -26,7 +26,6 @@ where
 import Data.HashMap.Strict qualified as HashMap
 import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Pipeline.Loader.PathResolver.ImportTree.ImportNode
-import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Prelude
 
 data ImportTreeStats = ImportTreeStats
@@ -39,7 +38,7 @@ data ImportTree = ImportTree
   { -- | A ∈ importTree[B] ⇔ B imports A. Every scanned node is a key, even if
     -- it has no imports.
     _fimportTree :: HashMap ImportNode (HashSet ImportNode),
-    -- | A ∈ importTreeSym[B] ⇔ A imports B. Every scanned node is a key, even
+    -- | A ∈ importTreeReverse[B] ⇔ A imports B. Every scanned node is a key, even
     -- if it not imported by another node.
     _fimportTreeReverse :: HashMap ImportNode (HashSet ImportNode),
     -- | Useful for reporting a concrete error in case of a cycle.

@@ -2,7 +2,6 @@ module Juvix.Compiler.Core.Data.InfoTable.Base where
 
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Core.Language.Base
-import Juvix.Extra.Serialize
 
 data InfoTable' n = InfoTable
   { _identContext :: HashMap Symbol n,
@@ -11,7 +10,6 @@ data InfoTable' n = InfoTable
     _infoIdentifiers :: HashMap Symbol (IdentifierInfo' n),
     _infoInductives :: HashMap Symbol (InductiveInfo' n),
     _infoConstructors :: HashMap Tag (ConstructorInfo' n),
-    _infoAxioms :: HashMap Text (AxiomInfo' n),
     _infoSpecialisations :: HashMap Symbol [SpecialisationInfo' n],
     _infoLiteralIntToNat :: Maybe Symbol,
     _infoLiteralIntToInt :: Maybe Symbol,
@@ -74,14 +72,6 @@ data ParameterInfo' n = ParameterInfo
   }
   deriving stock (Generic)
 
-data AxiomInfo' n = AxiomInfo
-  { _axiomName :: Text,
-    _axiomLocation :: Maybe Location,
-    _axiomType :: n,
-    _axiomPragmas :: Pragmas
-  }
-  deriving stock (Generic)
-
 data SpecialisationInfo' n = SpecialisationInfo
   { _specSignature :: ([n], [Int]),
     _specSymbol :: Symbol
@@ -112,10 +102,6 @@ instance (Serialize n) => Serialize (ParameterInfo' n)
 
 instance (NFData n) => NFData (ParameterInfo' n)
 
-instance (Serialize n) => Serialize (AxiomInfo' n)
-
-instance (NFData n) => NFData (AxiomInfo' n)
-
 instance (Serialize n) => Serialize (SpecialisationInfo' n)
 
 instance (NFData n) => NFData (SpecialisationInfo' n)
@@ -125,7 +111,6 @@ makeLenses ''IdentifierInfo'
 makeLenses ''InductiveInfo'
 makeLenses ''ConstructorInfo'
 makeLenses ''ParameterInfo'
-makeLenses ''AxiomInfo'
 makeLenses ''SpecialisationInfo'
 
 instance Semigroup (InfoTable' n) where
@@ -137,7 +122,6 @@ instance Semigroup (InfoTable' n) where
         _infoIdentifiers = t1 ^. infoIdentifiers <> t2 ^. infoIdentifiers,
         _infoInductives = t1 ^. infoInductives <> t2 ^. infoInductives,
         _infoConstructors = t1 ^. infoConstructors <> t2 ^. infoConstructors,
-        _infoAxioms = t1 ^. infoAxioms <> t2 ^. infoAxioms,
         _infoSpecialisations = t1 ^. infoSpecialisations <> t2 ^. infoSpecialisations,
         _infoLiteralIntToNat = (t1 ^. infoLiteralIntToNat) <|> (t2 ^. infoLiteralIntToNat),
         _infoLiteralIntToInt = (t1 ^. infoLiteralIntToInt) <|> (t2 ^. infoLiteralIntToInt),
@@ -153,7 +137,6 @@ instance Monoid (InfoTable' n) where
         _infoIdentifiers = mempty,
         _infoInductives = mempty,
         _infoConstructors = mempty,
-        _infoAxioms = mempty,
         _infoSpecialisations = mempty,
         _infoLiteralIntToNat = Nothing,
         _infoLiteralIntToInt = Nothing,

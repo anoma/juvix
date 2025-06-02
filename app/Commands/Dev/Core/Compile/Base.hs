@@ -2,25 +2,37 @@ module Commands.Dev.Core.Compile.Base where
 
 import Commands.Base
 import Commands.Dev.Core.Compile.Options
-import Commands.Dev.Tree.CompileOld.Base (outputAnomaResult)
 import Commands.Extra.Compile qualified as Compile
 import Data.Aeson qualified as JSON
+import Juvix.Compiler.Asm.Data.Module qualified as Asm
 import Juvix.Compiler.Asm.Pretty qualified as Asm
 import Juvix.Compiler.Backend qualified as Backend
 import Juvix.Compiler.Backend.C qualified as C
 import Juvix.Compiler.Backend.Rust.Data.Result qualified as Rust
-import Juvix.Compiler.Backend.VampIR.Translation qualified as VampIR
 import Juvix.Compiler.Casm.Data.Result qualified as Casm
 import Juvix.Compiler.Casm.Pretty qualified as Casm
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Data.TransformationId qualified as Core
+import Juvix.Compiler.Nockma.Data.Module qualified as Nockma
+import Juvix.Compiler.Nockma.Pretty qualified as Nockma
+import Juvix.Compiler.Reg.Data.Module qualified as Reg
 import Juvix.Compiler.Reg.Pretty qualified as Reg
+import Juvix.Compiler.Tree.Data.Module qualified as Tree
 import Juvix.Compiler.Tree.Pretty qualified as Tree
+import Juvix.Compiler.Verification.Dumper
 
 data PipelineArg = PipelineArg
   { _pipelineArgOptions :: CompileOptions,
     _pipelineArgModule :: Core.Module
   }
+
+outputAnomaResult :: (Members '[EmbedIO, App] r) => Path Abs File -> Nockma.Module -> Sem r ()
+outputAnomaResult nockmaFile Nockma.Module {..} = do
+  let code = fromJust (_moduleInfoTable ^. Nockma.infoCode)
+      code' = Nockma.ppSerialize code
+      prettyNockmaFile = replaceExtensions' [".pretty", ".nockma"] nockmaFile
+  writeFileEnsureLn nockmaFile code'
+  writeFileEnsureLn prettyNockmaFile (Nockma.ppPrint code)
 
 getEntry :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r EntryPoint
 getEntry PipelineArg {..} = do
@@ -38,7 +50,6 @@ getEntry PipelineArg {..} = do
     getTarget = \case
       AppTargetWasm32Wasi -> Backend.TargetCWasm32Wasi
       AppTargetNative64 -> Backend.TargetCNative64
-      AppTargetVampIR -> Backend.TargetVampIR
       AppTargetCore -> Backend.TargetCore
       AppTargetAsm -> Backend.TargetAsm
       AppTargetReg -> Backend.TargetReg
@@ -65,6 +76,7 @@ runCPipeline pa@PipelineArg {..} = do
       . run
       . runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       $ coreToMiniC _pipelineArgModule
   inputfile <- getMainFile (Just (_pipelineArgOptions ^. compileInputFile))
   cFile <- inputCFile inputfile
@@ -82,22 +94,6 @@ runCPipeline pa@PipelineArg {..} = do
       ensureDir buildDir
       return (buildDir <//> replaceExtension' ".c" (filename inputFileCompile))
 
-runVampIRPipeline ::
-  forall r.
-  (Members '[EmbedIO, App, TaggedLock] r) =>
-  PipelineArg ->
-  Sem r ()
-runVampIRPipeline pa@PipelineArg {..} = do
-  entryPoint <- getEntry pa
-  vampirFile <- Compile.outputFile _pipelineArgOptions
-  VampIR.Result {..} <-
-    getRight
-      . run
-      . runReader entryPoint
-      . runError @JuvixError
-      $ coreToVampIR _pipelineArgModule
-  writeFileEnsureLn vampirFile _resultCode
-
 runAsmPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
 runAsmPipeline pa@PipelineArg {..} = do
   entryPoint <- getEntry pa
@@ -105,10 +101,11 @@ runAsmPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToAsm
       $ _pipelineArgModule
-  tab' <- getRight r
-  let code = Asm.ppPrint tab' tab'
+  md' <- getRight r
+  let code = Asm.ppPrint md' (Asm.computeCombinedInfoTable md')
   writeFileEnsureLn asmFile code
 
 runRegPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
@@ -118,10 +115,11 @@ runRegPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToReg
       $ _pipelineArgModule
-  tab' <- getRight r
-  let code = Reg.ppPrint tab' tab'
+  md' <- getRight r
+  let code = Reg.ppPrint md' (Reg.computeCombinedInfoTable md')
   writeFileEnsureLn regFile code
 
 runTreePipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
@@ -131,10 +129,11 @@ runTreePipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
-      . coreToTree Core.IdentityTrans []
+      . ignoreDumper
+      . coreToTree Core.IdentityTrans
       $ _pipelineArgModule
-  tab' <- getRight r
-  let code = Tree.ppPrint tab' tab'
+  md' <- getRight r
+  let code = Tree.ppPrint md' (Tree.computeCombinedInfoTable md')
   writeFileEnsureLn treeFile code
 
 runAnomaPipeline :: (Members '[EmbedIO, App, TaggedLock] r) => PipelineArg -> Sem r ()
@@ -144,6 +143,7 @@ runAnomaPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToAnoma
       $ _pipelineArgModule
   res <- getRight r
@@ -156,6 +156,7 @@ runCasmPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToCasm
       $ _pipelineArgModule
   Casm.Result {..} <- getRight r
@@ -168,6 +169,7 @@ runCairoPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToCairo
       $ _pipelineArgModule
   res <- getRight r
@@ -180,6 +182,7 @@ runRiscZeroRustPipeline pa@PipelineArg {..} = do
   r <-
     runReader entryPoint
       . runError @JuvixError
+      . ignoreDumper
       . coreToRiscZeroRust
       $ _pipelineArgModule
   Rust.Result {..} <- getRight r

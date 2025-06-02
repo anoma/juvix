@@ -50,6 +50,16 @@ type family RecordUpdateExtraType s = res | res -> s where
   RecordUpdateExtraType 'Parsed = ()
   RecordUpdateExtraType 'Scoped = RecordUpdateExtra
 
+type ReservedInductiveDefType :: Stage -> GHCType
+type family ReservedInductiveDefType s = res | res -> s where
+  ReservedInductiveDefType 'Parsed = ReservedInductiveDef
+  ReservedInductiveDefType 'Scoped = Void
+
+type PrecNumType :: Stage -> GHCType
+type family PrecNumType s = res | res -> s where
+  PrecNumType 'Parsed = Maybe Int
+  PrecNumType 'Scoped = Int
+
 type FieldArgIxType :: Stage -> GHCType
 type family FieldArgIxType s = res | res -> s where
   FieldArgIxType 'Parsed = ()
@@ -255,37 +265,6 @@ deriving stock instance Ord (Argument 'Parsed)
 
 deriving stock instance Ord (Argument 'Scoped)
 
--- | We group consecutive definitions and reserve symbols in advance, so that we
--- don't need extra syntax for mutually recursive definitions. Also, it allows
--- us to be more flexible with the ordering of the definitions.
-data StatementSections (s :: Stage)
-  = SectionsDefinitions (DefinitionsSection s)
-  | SectionsNonDefinitions (NonDefinitionsSection s)
-  | SectionsEmpty
-
-data DefinitionsSection (s :: Stage) = DefinitionsSection
-  { _definitionsSection :: NonEmpty (Definition s),
-    _definitionsNext :: Maybe (NonDefinitionsSection s)
-  }
-
-data NonDefinitionsSection (s :: Stage) = NonDefinitionsSection
-  { _nonDefinitionsSection :: NonEmpty (NonDefinition s),
-    _nonDefinitionsNext :: Maybe (DefinitionsSection s)
-  }
-
-data Definition (s :: Stage)
-  = DefinitionSyntax (SyntaxDef s)
-  | DefinitionFunctionDef (FunctionDef s)
-  | DefinitionDeriving (Deriving s)
-  | DefinitionInductive (InductiveDef s)
-  | DefinitionAxiom (AxiomDef s)
-  | DefinitionProjectionDef (ProjectionDef s)
-
-data NonDefinition (s :: Stage)
-  = NonDefinitionImport (Import s)
-  | NonDefinitionModule (Module s 'ModuleLocal)
-  | NonDefinitionOpenModule (OpenModule s 'OpenFull)
-
 newtype Statements (s :: Stage) = Statements
   { _statements :: [Statement s]
   }
@@ -296,10 +275,16 @@ data Statement (s :: Stage)
   | StatementDeriving (Deriving s)
   | StatementImport (Import s)
   | StatementInductive (InductiveDef s)
+  | StatementReservedInductive (ReservedInductiveDefType s)
   | StatementModule (Module s 'ModuleLocal)
   | StatementOpenModule (OpenModule s 'OpenFull)
   | StatementAxiom (AxiomDef s)
   | StatementProjectionDef (ProjectionDef s)
+  deriving stock (Generic)
+
+instance Serialize (Statement 'Scoped)
+
+instance NFData (Statement 'Scoped)
 
 deriving stock instance Show (Statement 'Parsed)
 
@@ -313,8 +298,19 @@ deriving stock instance Ord (Statement 'Parsed)
 
 deriving stock instance Ord (Statement 'Scoped)
 
+data ReservedInductiveDef = ReservedInductiveDef
+  { _reservedInductiveDef :: InductiveDef 'Parsed,
+    _reservedInductiveConstructors :: NonEmpty S.Symbol,
+    -- | Used in the scoper to indicate that the first
+    -- _reservedInductiveGenStatements of _reservedInductiveDefModule have been
+    -- automatically generated
+    _reservedInductiveGenStatements :: Int,
+    _reservedInductiveDefModule :: Module 'Parsed 'ModuleLocal
+  }
+  deriving stock (Show, Eq, Ord)
+
 data ProjectionDef s = ProjectionDef
-  { _projectionConstructor :: S.Symbol,
+  { _projectionConstructor :: SymbolType s,
     _projectionField :: SymbolType s,
     _projectionType :: ExpressionType s,
     _projectionKind :: ProjectionKind,
@@ -323,6 +319,11 @@ data ProjectionDef s = ProjectionDef
     _projectionDoc :: Maybe (Judoc s),
     _projectionPragmas :: Maybe ParsedPragmas
   }
+  deriving stock (Generic)
+
+instance Serialize (ProjectionDef 'Scoped)
+
+instance NFData (ProjectionDef 'Scoped)
 
 deriving stock instance Show (ProjectionDef 'Parsed)
 
@@ -344,6 +345,11 @@ data Import (s :: Stage) = Import
     _importPublic :: PublicAnn,
     _importOpen :: Maybe (OpenModule s 'OpenShort)
   }
+  deriving stock (Generic)
+
+instance Serialize (Import 'Scoped)
+
+instance NFData (Import 'Scoped)
 
 deriving stock instance Show (Import 'Parsed)
 
@@ -360,6 +366,7 @@ deriving stock instance Ord (Import 'Scoped)
 data AliasDef (s :: Stage) = AliasDef
   { _aliasDefSyntaxKw :: Irrelevant KeywordRef,
     _aliasDefAliasKw :: Irrelevant KeywordRef,
+    _aliasDefDoc :: Maybe (Judoc s),
     _aliasDefName :: SymbolType s,
     _aliasDefAsName :: IdentifierType s
   }
@@ -398,9 +405,14 @@ instance NFData ParsedIteratorInfo
 
 data SyntaxDef (s :: Stage)
   = SyntaxFixity (FixitySyntaxDef s)
-  | SyntaxOperator OperatorSyntaxDef
-  | SyntaxIterator IteratorSyntaxDef
+  | SyntaxOperator (OperatorSyntaxDef s)
+  | SyntaxIterator (IteratorSyntaxDef s)
   | SyntaxAlias (AliasDef s)
+  deriving stock (Generic)
+
+instance NFData (SyntaxDef 'Scoped)
+
+instance Serialize (SyntaxDef 'Scoped)
 
 deriving stock instance (Show (SyntaxDef 'Parsed))
 
@@ -414,13 +426,34 @@ deriving stock instance (Ord (SyntaxDef 'Parsed))
 
 deriving stock instance (Ord (SyntaxDef 'Scoped))
 
+data PrecNum
+  = PrecNumWildcard (Irrelevant KeywordRef)
+  | PrecNumExplicit (WithLoc IntegerWithBase)
+  deriving stock (Generic)
+
+instance NFData PrecNum
+
+instance Serialize PrecNum
+
+deriving stock instance (Show PrecNum)
+
+deriving stock instance (Eq PrecNum)
+
+deriving stock instance (Ord PrecNum)
+
 data ParsedFixityFields (s :: Stage) = ParsedFixityFields
   { _fixityFieldsAssoc :: Maybe BinaryAssoc,
-    _fixityFieldsPrecSame :: Maybe (SymbolType s),
-    _fixityFieldsPrecBelow :: Maybe [SymbolType s],
-    _fixityFieldsPrecAbove :: Maybe [SymbolType s],
+    _fixityFieldsPrecSame :: Maybe (IdentifierType s),
+    _fixityFieldsPrecNum :: Maybe PrecNum,
+    _fixityFieldsPrecBelow :: Maybe [IdentifierType s],
+    _fixityFieldsPrecAbove :: Maybe [IdentifierType s],
     _fixityFieldsBraces :: Irrelevant (KeywordRef, KeywordRef)
   }
+  deriving stock (Generic)
+
+instance NFData (ParsedFixityFields 'Scoped)
+
+instance Serialize (ParsedFixityFields 'Scoped)
 
 deriving stock instance (Show (ParsedFixityFields 'Parsed))
 
@@ -438,6 +471,11 @@ data ParsedFixityInfo (s :: Stage) = ParsedFixityInfo
   { _fixityParsedArity :: WithLoc Arity,
     _fixityFields :: Maybe (ParsedFixityFields s)
   }
+  deriving stock (Generic)
+
+instance NFData (ParsedFixityInfo 'Scoped)
+
+instance Serialize (ParsedFixityInfo 'Scoped)
 
 deriving stock instance (Show (ParsedFixityInfo 'Parsed))
 
@@ -459,6 +497,11 @@ data FixitySyntaxDef (s :: Stage) = FixitySyntaxDef
     _fixityAssignKw :: KeywordRef,
     _fixitySyntaxKw :: KeywordRef
   }
+  deriving stock (Generic)
+
+instance NFData (FixitySyntaxDef 'Scoped)
+
+instance Serialize (FixitySyntaxDef 'Scoped)
 
 deriving stock instance (Show (FixitySyntaxDef 'Parsed))
 
@@ -484,35 +527,63 @@ instance Serialize FixityDef
 
 instance NFData FixityDef
 
-data OperatorSyntaxDef = OperatorSyntaxDef
-  { _opSymbol :: Symbol,
-    _opFixity :: Symbol,
+data OperatorSyntaxDef (s :: Stage) = OperatorSyntaxDef
+  { _opSymbol :: IdentifierType s,
+    _opFixity :: IdentifierType s,
+    _opDoc :: Maybe (Judoc s),
     _opKw :: KeywordRef,
     _opSyntaxKw :: KeywordRef
   }
-  deriving stock (Show, Eq, Ord, Generic)
+  deriving stock (Generic)
 
-instance Serialize OperatorSyntaxDef
+deriving stock instance Show (OperatorSyntaxDef 'Parsed)
 
-instance NFData OperatorSyntaxDef
+deriving stock instance Show (OperatorSyntaxDef 'Scoped)
 
-instance HasLoc OperatorSyntaxDef where
-  getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLoc _opSymbol
+deriving stock instance Eq (OperatorSyntaxDef 'Parsed)
 
-data IteratorSyntaxDef = IteratorSyntaxDef
-  { _iterSymbol :: Symbol,
+deriving stock instance Eq (OperatorSyntaxDef 'Scoped)
+
+deriving stock instance Ord (OperatorSyntaxDef 'Parsed)
+
+deriving stock instance Ord (OperatorSyntaxDef 'Scoped)
+
+instance Serialize (OperatorSyntaxDef 'Parsed)
+
+instance NFData (OperatorSyntaxDef 'Parsed)
+
+instance Serialize (OperatorSyntaxDef 'Scoped)
+
+instance NFData (OperatorSyntaxDef 'Scoped)
+
+data IteratorSyntaxDef (s :: Stage) = IteratorSyntaxDef
+  { _iterSymbol :: IdentifierType s,
     _iterInfo :: Maybe ParsedIteratorInfo,
+    _iterDoc :: Maybe (Judoc s),
     _iterSyntaxKw :: KeywordRef,
     _iterIteratorKw :: KeywordRef
   }
-  deriving stock (Show, Eq, Ord, Generic)
+  deriving stock (Generic)
 
-instance Serialize IteratorSyntaxDef
+deriving stock instance Show (IteratorSyntaxDef 'Parsed)
 
-instance NFData IteratorSyntaxDef
+deriving stock instance Show (IteratorSyntaxDef 'Scoped)
 
-instance HasLoc IteratorSyntaxDef where
-  getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLoc _iterSymbol
+deriving stock instance Eq (IteratorSyntaxDef 'Parsed)
+
+deriving stock instance Eq (IteratorSyntaxDef 'Scoped)
+
+deriving stock instance Ord (IteratorSyntaxDef 'Parsed)
+
+deriving stock instance Ord (IteratorSyntaxDef 'Scoped)
+
+instance Serialize (IteratorSyntaxDef 'Parsed)
+
+instance NFData (IteratorSyntaxDef 'Parsed)
+
+instance Serialize (IteratorSyntaxDef 'Scoped)
+
+instance NFData (IteratorSyntaxDef 'Scoped)
 
 data ArgDefault (s :: Stage) = ArgDefault
   { _argDefaultAssign :: Irrelevant KeywordRef,
@@ -716,7 +787,7 @@ instance Serialize FunctionDefNameParsed
 instance NFData FunctionDefNameParsed
 
 data FunctionDefNameScoped = FunctionDefNameScoped
-  { _functionDefName :: S.Symbol,
+  { _functionDefNameScoped :: S.Symbol,
     _functionDefNamePattern :: Maybe PatternArg
   }
   deriving stock (Eq, Ord, Show, Generic)
@@ -725,16 +796,20 @@ instance Serialize FunctionDefNameScoped
 
 instance NFData FunctionDefNameScoped
 
+data FunctionIsTop
+  = FunctionTop
+  | FunctionNotTop
+  deriving stock (Eq, Ord, Show, Generic)
+
+instance Serialize FunctionIsTop
+
+instance NFData FunctionIsTop
+
 data FunctionDef (s :: Stage) = FunctionDef
-  { _signName :: FunctionSymbolType s,
-    _signTypeSig :: TypeSig s,
-    _signDoc :: Maybe (Judoc s),
-    _signPragmas :: Maybe ParsedPragmas,
-    _signBuiltin :: Maybe (WithLoc BuiltinFunction),
-    _signBody :: FunctionDefBody s,
-    _signTerminating :: Maybe KeywordRef,
-    _signInstance :: Maybe KeywordRef,
-    _signCoercion :: Maybe KeywordRef
+  { _functionDefDoc :: Maybe (Judoc s),
+    _functionDefPragmas :: Maybe ParsedPragmas,
+    _functionDefLhs :: FunctionLhs s,
+    _functionDefBody :: FunctionDefBody s
   }
   deriving stock (Generic)
 
@@ -1036,7 +1111,8 @@ data InductiveDef (s :: Stage) = InductiveDef
     _inductiveTypeApplied :: ExpressionType s,
     _inductiveConstructors :: NonEmpty (ConstructorDef s),
     _inductivePositive :: Maybe KeywordRef,
-    _inductiveTrait :: Maybe KeywordRef
+    _inductiveTrait :: Maybe KeywordRef,
+    _inductiveWithModule :: Maybe (WithModule s)
   }
   deriving stock (Generic)
 
@@ -1349,7 +1425,11 @@ data MarkdownInfo = MarkdownInfo
   { _markdownInfo :: Mk,
     _markdownInfoBlockLengths :: [Int]
   }
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Generic)
+
+instance Serialize MarkdownInfo
+
+instance NFData MarkdownInfo
 
 data Module (s :: Stage) (t :: ModuleIsTop) = Module
   { _moduleKw :: KeywordRef,
@@ -1362,6 +1442,11 @@ data Module (s :: Stage) (t :: ModuleIsTop) = Module
     _moduleId :: ModuleIdType s t,
     _moduleMarkdownInfo :: Maybe MarkdownInfo
   }
+  deriving stock (Generic)
+
+instance NFData (Module 'Scoped 'ModuleLocal)
+
+instance Serialize (Module 'Scoped 'ModuleLocal)
 
 deriving stock instance Show (Module 'Parsed 'ModuleTop)
 
@@ -1386,6 +1471,29 @@ deriving stock instance Ord (Module 'Scoped 'ModuleTop)
 deriving stock instance Ord (Module 'Parsed 'ModuleLocal)
 
 deriving stock instance Ord (Module 'Scoped 'ModuleLocal)
+
+data WithModule (s :: Stage) = WithModule
+  { _withModuleWithKw :: Irrelevant KeywordRef,
+    _withModuleEndKw :: Irrelevant KeywordRef,
+    _withModuleBody :: [Statement s]
+  }
+  deriving stock (Generic)
+
+instance Serialize (WithModule 'Scoped)
+
+instance NFData (WithModule 'Scoped)
+
+deriving stock instance Show (WithModule 'Parsed)
+
+deriving stock instance Show (WithModule 'Scoped)
+
+deriving stock instance Eq (WithModule 'Parsed)
+
+deriving stock instance Eq (WithModule 'Scoped)
+
+deriving stock instance Ord (WithModule 'Parsed)
+
+deriving stock instance Ord (WithModule 'Scoped)
 
 data HidingItem (s :: Stage) = HidingItem
   { _hidingSymbol :: SymbolType s,
@@ -1605,7 +1713,7 @@ data Expression
   | ExpressionBraces (WithLoc Expression)
   | ExpressionDoubleBraces (DoubleBracesExpression 'Scoped)
   | ExpressionIterator (Iterator 'Scoped)
-  | ExpressionNamedApplicationNew (NamedApplicationNew 'Scoped)
+  | ExpressionNamedApplication (NamedApplication 'Scoped)
   deriving stock (Show, Eq, Ord, Generic)
 
 instance Serialize Expression
@@ -2507,71 +2615,61 @@ deriving stock instance Ord (NamedArgumentPun 'Parsed)
 
 deriving stock instance Ord (NamedArgumentPun 'Scoped)
 
-data NamedArgumentNew (s :: Stage)
-  = NamedArgumentNewFunction (NamedArgumentFunctionDef s)
+data NamedArgument (s :: Stage)
+  = NamedArgumentFunction (NamedArgumentFunctionDef s)
   | NamedArgumentItemPun (NamedArgumentPun s)
   deriving stock (Generic)
 
-instance Serialize (NamedArgumentNew 'Scoped)
+instance Serialize (NamedArgument 'Scoped)
 
-instance NFData (NamedArgumentNew 'Scoped)
+instance NFData (NamedArgument 'Scoped)
 
-instance Serialize (NamedArgumentNew 'Parsed)
+instance Serialize (NamedArgument 'Parsed)
 
-instance NFData (NamedArgumentNew 'Parsed)
+instance NFData (NamedArgument 'Parsed)
 
-deriving stock instance Show (NamedArgumentNew 'Parsed)
+deriving stock instance Show (NamedArgument 'Parsed)
 
-deriving stock instance Show (NamedArgumentNew 'Scoped)
+deriving stock instance Show (NamedArgument 'Scoped)
 
-deriving stock instance Eq (NamedArgumentNew 'Parsed)
+deriving stock instance Eq (NamedArgument 'Parsed)
 
-deriving stock instance Eq (NamedArgumentNew 'Scoped)
+deriving stock instance Eq (NamedArgument 'Scoped)
 
-deriving stock instance Ord (NamedArgumentNew 'Parsed)
+deriving stock instance Ord (NamedArgument 'Parsed)
 
-deriving stock instance Ord (NamedArgumentNew 'Scoped)
+deriving stock instance Ord (NamedArgument 'Scoped)
 
-data IsExhaustive = IsExhaustive
-  { _isExhaustive :: Bool,
-    _isExhaustiveKw :: Irrelevant KeywordRef
-  }
-  deriving stock (Eq, Show, Ord, Generic)
-
-instance Serialize IsExhaustive
-
-instance NFData IsExhaustive
-
-data NamedApplicationNew (s :: Stage) = NamedApplicationNew
-  { _namedApplicationNewName :: IdentifierType s,
-    _namedApplicationNewExhaustive :: IsExhaustive,
-    _namedApplicationNewArguments :: [NamedArgumentNew s]
+data NamedApplication (s :: Stage) = NamedApplication
+  { _namedApplicationName :: IdentifierType s,
+    _namedApplicationAtKw :: Irrelevant KeywordRef,
+    _namedApplicationArguments :: [NamedArgument s]
   }
   deriving stock (Generic)
 
-instance Serialize (NamedApplicationNew 'Scoped)
+instance Serialize (NamedApplication 'Scoped)
 
-instance NFData (NamedApplicationNew 'Scoped)
+instance NFData (NamedApplication 'Scoped)
 
-instance Serialize (NamedApplicationNew 'Parsed)
+instance Serialize (NamedApplication 'Parsed)
 
-instance NFData (NamedApplicationNew 'Parsed)
+instance NFData (NamedApplication 'Parsed)
 
-deriving stock instance Show (NamedApplicationNew 'Parsed)
+deriving stock instance Show (NamedApplication 'Parsed)
 
-deriving stock instance Show (NamedApplicationNew 'Scoped)
+deriving stock instance Show (NamedApplication 'Scoped)
 
-deriving stock instance Eq (NamedApplicationNew 'Parsed)
+deriving stock instance Eq (NamedApplication 'Parsed)
 
-deriving stock instance Eq (NamedApplicationNew 'Scoped)
+deriving stock instance Eq (NamedApplication 'Scoped)
 
-deriving stock instance Ord (NamedApplicationNew 'Parsed)
+deriving stock instance Ord (NamedApplication 'Parsed)
 
-deriving stock instance Ord (NamedApplicationNew 'Scoped)
+deriving stock instance Ord (NamedApplication 'Scoped)
 
 data RecordSyntaxDef (s :: Stage)
-  = RecordSyntaxOperator OperatorSyntaxDef
-  | RecordSyntaxIterator IteratorSyntaxDef
+  = RecordSyntaxOperator (OperatorSyntaxDef s)
+  | RecordSyntaxIterator (IteratorSyntaxDef s)
   deriving stock (Generic)
 
 instance Serialize (RecordSyntaxDef 'Scoped)
@@ -2711,7 +2809,7 @@ data ExpressionAtom (s :: Stage)
   | AtomLiteral LiteralLoc
   | AtomParens (ExpressionType s)
   | AtomIterator (Iterator s)
-  | AtomNamedApplicationNew (NamedApplicationNew s)
+  | AtomNamedApplication (NamedApplication s)
   deriving stock (Generic)
 
 instance Serialize (ExpressionAtom 'Parsed)
@@ -2937,7 +3035,8 @@ data FunctionLhs (s :: Stage) = FunctionLhs
     _funLhsInstance :: Maybe KeywordRef,
     _funLhsCoercion :: Maybe KeywordRef,
     _funLhsName :: FunctionSymbolType s,
-    _funLhsTypeSig :: TypeSig s
+    _funLhsTypeSig :: TypeSig s,
+    _funLhsIsTop :: FunctionIsTop
   }
   deriving stock (Generic)
 
@@ -2962,6 +3061,7 @@ deriving stock instance Ord (FunctionLhs 'Parsed)
 deriving stock instance Ord (FunctionLhs 'Scoped)
 
 makeLenses ''SideIfs
+makeLenses ''ReservedInductiveDef
 makeLenses ''RecordUpdatePun
 makeLenses ''RecordUpdateFieldItemAssign
 makeLenses ''FunctionDefNameScoped
@@ -2970,7 +3070,6 @@ makeLenses ''FunctionLhs
 makeLenses ''Statements
 makeLenses ''NamedArgumentFunctionDef
 makeLenses ''NamedArgumentPun
-makeLenses ''IsExhaustive
 makeLenses ''SideIfBranch
 makeLenses ''RhsExpression
 makeLenses ''PatternArg
@@ -2984,8 +3083,6 @@ makeLenses ''RecordUpdateExtra
 makeLenses ''RecordUpdate
 makeLenses ''RecordUpdateApp
 makeLenses ''RecordUpdateField
-makeLenses ''NonDefinitionsSection
-makeLenses ''DefinitionsSection
 makeLenses ''ProjectionDef
 makeLenses ''ScopedIden
 makeLenses ''FixityDef
@@ -3007,6 +3104,7 @@ makeLenses ''Judoc
 makeLenses ''JudocBlockParagraph
 makeLenses ''Function
 makeLenses ''InductiveDef
+makeLenses ''WithModule
 makeLenses ''PostfixApplication
 makeLenses ''InfixApplication
 makeLenses ''Application
@@ -3039,8 +3137,8 @@ makeLenses ''Initializer
 makeLenses ''Range
 makeLenses ''ArgumentBlock
 makeLenses ''NamedArgumentAssign
-makeLenses ''NamedArgumentNew
-makeLenses ''NamedApplicationNew
+makeLenses ''NamedArgument
+makeLenses ''NamedApplication
 makeLenses ''AliasDef
 makeLenses ''FixitySyntaxDef
 makeLenses ''ParsedFixityInfo
@@ -3053,20 +3151,29 @@ makeLenses ''RecordInfo
 makeLenses ''MarkdownInfo
 makeLenses ''Deriving
 
-makePrisms ''NamedArgumentNew
+makePrisms ''NamedArgument
+makePrisms ''PrecNum
+makePrisms ''Statement
 makePrisms ''ConstructorRhs
 makePrisms ''FunctionDefNameParsed
 
-functionDefLhs :: FunctionDef s -> FunctionLhs s
-functionDefLhs FunctionDef {..} =
-  FunctionLhs
-    { _funLhsBuiltin = _signBuiltin,
-      _funLhsTerminating = _signTerminating,
-      _funLhsInstance = _signInstance,
-      _funLhsCoercion = _signCoercion,
-      _funLhsName = _signName,
-      _funLhsTypeSig = _signTypeSig
-    }
+functionDefBuiltin :: Lens' (FunctionDef s) (Maybe (WithLoc BuiltinFunction))
+functionDefBuiltin = functionDefLhs . funLhsBuiltin
+
+functionDefTerminating :: Lens' (FunctionDef s) (Maybe KeywordRef)
+functionDefTerminating = functionDefLhs . funLhsTerminating
+
+functionDefInstance :: Lens' (FunctionDef s) (Maybe KeywordRef)
+functionDefInstance = functionDefLhs . funLhsInstance
+
+functionDefCoercion :: Lens' (FunctionDef s) (Maybe KeywordRef)
+functionDefCoercion = functionDefLhs . funLhsCoercion
+
+functionDefName :: Lens' (FunctionDef s) (FunctionSymbolType s)
+functionDefName = functionDefLhs . funLhsName
+
+functionDefTypeSig :: Lens' (FunctionDef s) (TypeSig s)
+functionDefTypeSig = functionDefLhs . funLhsTypeSig
 
 fixityFieldHelper :: SimpleGetter (ParsedFixityFields s) (Maybe a) -> SimpleGetter (ParsedFixityInfo s) (Maybe a)
 fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)
@@ -3074,13 +3181,16 @@ fixityFieldHelper l = to (^? fixityFields . _Just . l . _Just)
 fixityAssoc :: SimpleGetter (ParsedFixityInfo s) (Maybe (BinaryAssoc))
 fixityAssoc = fixityFieldHelper fixityFieldsAssoc
 
-fixityPrecSame :: SimpleGetter (ParsedFixityInfo s) (Maybe (SymbolType s))
+fixityPrecNum :: SimpleGetter (ParsedFixityInfo s) (Maybe PrecNum)
+fixityPrecNum = fixityFieldHelper fixityFieldsPrecNum
+
+fixityPrecSame :: SimpleGetter (ParsedFixityInfo s) (Maybe (IdentifierType s))
 fixityPrecSame = fixityFieldHelper fixityFieldsPrecSame
 
-fixityPrecAbove :: SimpleGetter (ParsedFixityInfo s) (Maybe [SymbolType s])
+fixityPrecAbove :: SimpleGetter (ParsedFixityInfo s) (Maybe [IdentifierType s])
 fixityPrecAbove = fixityFieldHelper fixityFieldsPrecAbove
 
-fixityPrecBelow :: SimpleGetter (ParsedFixityInfo s) (Maybe [SymbolType s])
+fixityPrecBelow :: SimpleGetter (ParsedFixityInfo s) (Maybe [IdentifierType s])
 fixityPrecBelow = fixityFieldHelper fixityFieldsPrecBelow
 
 instance (SingI s) => HasLoc (LetStatement s) where
@@ -3139,7 +3249,7 @@ instance (SingI s) => HasLoc (ArgumentBlock s) where
 instance HasAtomicity (ArgumentBlock s) where
   atomicity = const Atom
 
-instance HasAtomicity (NamedApplicationNew s) where
+instance HasAtomicity (NamedApplication s) where
   atomicity = const (Aggregate updateFixity)
 
 instance HasAtomicity (Do s) where
@@ -3166,7 +3276,7 @@ instance HasAtomicity Expression where
     ExpressionCase c -> atomicity c
     ExpressionIf x -> atomicity x
     ExpressionIterator i -> atomicity i
-    ExpressionNamedApplicationNew i -> atomicity i
+    ExpressionNamedApplication i -> atomicity i
     ExpressionRecordUpdate {} -> Aggregate updateFixity
     ExpressionParensRecordUpdate {} -> Atom
 
@@ -3238,8 +3348,15 @@ instance (SingI s) => HasLoc (ConstructorDef s) where
               <>? getLocConstructorRhs _constructorRhs
           )
 
+instance HasLoc (WithModule s) where
+  getLoc WithModule {..} = getLoc _withModuleWithKw <> getLoc _withModuleEndKw
+
 instance HasLoc (InductiveDef s) where
-  getLoc i = (getLoc <$> i ^. inductivePositive) ?<> getLoc (i ^. inductiveKw)
+  getLoc i =
+    ( (getLoc <$> i ^. inductivePositive)
+        ?<> getLoc (i ^. inductiveKw)
+    )
+      <>? (getLoc <$> i ^. inductiveWithModule)
 
 instance (SingI s) => HasLoc (AxiomDef s) where
   getLoc m = getLoc (m ^. axiomKw) <> getLocExpressionType (fromJust (m ^. axiomTypeSig . typeSigRetType))
@@ -3253,8 +3370,8 @@ instance HasLoc (OpenModule s short) where
       <>? fmap getLoc _openModuleUsingHiding
       <>? getLocPublicAnn _openModulePublic
 
-instance HasLoc (ProjectionDef s) where
-  getLoc = getLoc . (^. projectionConstructor)
+instance (SingI s) => HasLoc (ProjectionDef s) where
+  getLoc = getLocSymbolType . (^. projectionConstructor)
 
 getLocFunctionSymbolType :: forall s. (SingI s) => FunctionSymbolType s -> Interval
 getLocFunctionSymbolType = case sing :: SStage s of
@@ -3263,7 +3380,7 @@ getLocFunctionSymbolType = case sing :: SStage s of
 
 instance HasLoc FunctionDefNameScoped where
   getLoc FunctionDefNameScoped {..} =
-    getLoc _functionDefName
+    getLoc _functionDefNameScoped
       <>? (getLoc <$> _functionDefNamePattern)
 
 instance HasLoc FunctionDefNameParsed where
@@ -3288,6 +3405,7 @@ instance HasLoc (Statement 'Scoped) where
   getLoc :: Statement 'Scoped -> Interval
   getLoc = \case
     StatementSyntax t -> getLoc t
+    StatementReservedInductive t -> absurd t
     StatementDeriving t -> getLoc t
     StatementFunctionDef t -> getLoc t
     StatementImport t -> getLoc t
@@ -3377,9 +3495,9 @@ instance HasLoc (List s) where
 instance (SingI s) => HasLoc (NamedArgumentFunctionDef s) where
   getLoc (NamedArgumentFunctionDef f) = getLoc f
 
-instance (SingI s) => HasLoc (NamedArgumentNew s) where
+instance (SingI s) => HasLoc (NamedArgument s) where
   getLoc = \case
-    NamedArgumentNewFunction f -> getLoc f
+    NamedArgumentFunction f -> getLoc f
     NamedArgumentItemPun f -> getLoc f
 
 instance HasLoc (RecordUpdatePun s) where
@@ -3388,8 +3506,8 @@ instance HasLoc (RecordUpdatePun s) where
 instance HasLoc (NamedArgumentPun s) where
   getLoc NamedArgumentPun {..} = getLocSymbolType _namedArgumentPunSymbol
 
-instance (SingI s) => HasLoc (NamedApplicationNew s) where
-  getLoc NamedApplicationNew {..} = getLocIdentifierType _namedApplicationNewName
+instance (SingI s) => HasLoc (NamedApplication s) where
+  getLoc NamedApplication {..} = getLocIdentifierType _namedApplicationName
 
 instance (SingI s) => HasLoc (RecordUpdateField s) where
   getLoc = \case
@@ -3441,7 +3559,7 @@ instance HasLoc Expression where
     ExpressionBraces i -> getLoc i
     ExpressionDoubleBraces i -> getLoc i
     ExpressionIterator i -> getLoc i
-    ExpressionNamedApplicationNew i -> getLoc i
+    ExpressionNamedApplication i -> getLoc i
     ExpressionRecordUpdate i -> getLoc i
     ExpressionParensRecordUpdate i -> getLoc i
 
@@ -3525,12 +3643,13 @@ instance (SingI s) => HasLoc (FunctionDefBody s) where
 
 instance (SingI s) => HasLoc (FunctionDef s) where
   getLoc FunctionDef {..} =
-    (getLoc <$> _signDoc)
-      ?<> (getLoc <$> _signPragmas)
-      ?<> (getLoc <$> _signBuiltin)
-      ?<> (getLoc <$> _signTerminating)
-      ?<> (getLocFunctionSymbolType _signName)
-      <> getLoc _signBody
+    let FunctionLhs {..} = _functionDefLhs
+     in (getLoc <$> _functionDefDoc)
+          ?<> (getLoc <$> _functionDefPragmas)
+          ?<> (getLoc <$> _funLhsBuiltin)
+          ?<> (getLoc <$> _funLhsTerminating)
+          ?<> (getLocFunctionSymbolType _funLhsName)
+          <> getLoc _functionDefBody
 
 instance HasLoc (Example s) where
   getLoc e = e ^. exampleLoc
@@ -3669,7 +3788,7 @@ instance (SingI s) => HasLoc (ExpressionAtom s) where
     AtomLiteral x -> getLoc x
     AtomParens x -> getLocExpressionType x
     AtomIterator x -> getLoc x
-    AtomNamedApplicationNew x -> getLoc x
+    AtomNamedApplication x -> getLoc x
 
 instance HasLoc (ExpressionAtoms s) where
   getLoc = getLoc . (^. expressionAtomsLoc)
@@ -3694,11 +3813,6 @@ data ApeLeaf
   | ApeLeafPatternArg PatternArg
   | ApeLeafAtom (AnyStage ExpressionAtom)
 
-_DefinitionSyntax :: Traversal' (Definition s) (SyntaxDef s)
-_DefinitionSyntax f x = case x of
-  DefinitionSyntax r -> DefinitionSyntax <$> f r
-  _ -> pure x
-
 _SyntaxAlias :: Traversal' (SyntaxDef s) (AliasDef s)
 _SyntaxAlias f x = case x of
   SyntaxAlias r -> SyntaxAlias <$> f r
@@ -3719,7 +3833,12 @@ getFunctionSymbol sym = case sing :: SStage s of
   SParsed -> case sym of
     FunctionDefName p -> p
     FunctionDefNamePattern {} -> impossibleError "invalid call"
-  SScoped -> sym ^. functionDefName
+  SScoped -> sym ^. functionDefNameScoped
+
+modulePathTypeKey :: forall s. (SingI s) => ModulePathType s 'ModuleTop -> TopModulePathKey
+modulePathTypeKey p = case sing :: SStage s of
+  SParsed -> topModulePathKey p
+  SScoped -> topModulePathKey (p ^. S.nameConcrete)
 
 functionSymbolPattern :: forall s. (SingI s) => FunctionSymbolType s -> Maybe (PatternAtomType s)
 functionSymbolPattern f = case sing :: SStage s of
@@ -3729,19 +3848,19 @@ functionSymbolPattern f = case sing :: SStage s of
 withFunctionSymbol :: forall s a. (SingI s) => a -> (SymbolType s -> a) -> FunctionSymbolType s -> a
 withFunctionSymbol a f sym = case sing :: SStage s of
   SParsed -> maybe a f (sym ^? _FunctionDefName)
-  SScoped -> f (sym ^. functionDefName)
+  SScoped -> f (sym ^. functionDefNameScoped)
 
-namedArgumentNewSymbolParsed :: (SingI s) => SimpleGetter (NamedArgumentNew s) Symbol
-namedArgumentNewSymbolParsed = to $ \case
+namedArgumentSymbolParsed :: (SingI s) => SimpleGetter (NamedArgument s) Symbol
+namedArgumentSymbolParsed = to $ \case
   NamedArgumentItemPun a -> a ^. namedArgumentPunSymbol
-  NamedArgumentNewFunction a -> symbolParsed (getFunctionSymbol (a ^. namedArgumentFunctionDef . signName))
+  NamedArgumentFunction a -> symbolParsed (getFunctionSymbol (a ^. namedArgumentFunctionDef . functionDefName))
 
-namedArgumentNewSymbol :: Lens' (NamedArgumentNew 'Parsed) Symbol
-namedArgumentNewSymbol f = \case
+namedArgumentSymbol :: Lens' (NamedArgument 'Parsed) Symbol
+namedArgumentSymbol f = \case
   NamedArgumentItemPun a -> NamedArgumentItemPun <$> (namedArgumentPunSymbol f a)
-  NamedArgumentNewFunction a -> do
-    a' <- f (a ^?! namedArgumentFunctionDef . signName . _FunctionDefName)
-    return $ NamedArgumentNewFunction (over namedArgumentFunctionDef (set signName (FunctionDefName a')) a)
+  NamedArgumentFunction a -> do
+    a' <- f (a ^?! namedArgumentFunctionDef . functionDefName . _FunctionDefName)
+    return $ NamedArgumentFunction (over namedArgumentFunctionDef (set functionDefName (FunctionDefName a')) a)
 
 scopedIdenSrcName :: Lens' ScopedIden S.Name
 scopedIdenSrcName f n = case n ^. scopedIdenAlias of
@@ -3750,12 +3869,14 @@ scopedIdenSrcName f n = case n ^. scopedIdenAlias of
     a' <- f a
     pure (set scopedIdenAlias (Just a') n)
 
-fromParsedIteratorInfo :: ParsedIteratorInfo -> IteratorInfo
-fromParsedIteratorInfo ParsedIteratorInfo {..} =
-  IteratorInfo
-    { _iteratorInfoInitNum = (^. withLocParam) <$> _parsedIteratorInfoInitNum,
-      _iteratorInfoRangeNum = (^. withLocParam) <$> _parsedIteratorInfoRangeNum
-    }
+fromParsedIteratorInfo :: Maybe ParsedIteratorInfo -> IteratorInfo
+fromParsedIteratorInfo = \case
+  Nothing -> emptyIteratorInfo
+  Just ParsedIteratorInfo {..} ->
+    IteratorInfo
+      { _iteratorInfoInitNum = (^. withLocParam) <$> _parsedIteratorInfoInitNum,
+        _iteratorInfoRangeNum = (^. withLocParam) <$> _parsedIteratorInfoRangeNum
+      }
 
 nameBlockSymbols :: forall s. Traversal' (NameBlock s) (SymbolType s)
 nameBlockSymbols = nameBlockItems . each . nameItemSymbol . _Just
@@ -3793,3 +3914,9 @@ instance HasAtomicity Pattern where
     PatternList l -> atomicity l
     PatternEmpty {} -> Atom
     PatternRecord r -> atomicity r
+
+instance (SingI s) => HasLoc (OperatorSyntaxDef s) where
+  getLoc OperatorSyntaxDef {..} = getLoc _opSyntaxKw <> getLocIdentifierType _opSymbol
+
+instance (SingI s) => HasLoc (IteratorSyntaxDef s) where
+  getLoc IteratorSyntaxDef {..} = getLoc _iterSyntaxKw <> getLocIdentifierType _iterSymbol

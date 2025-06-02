@@ -271,10 +271,18 @@ instance PrettyCode ByteArrayOp where
       OpByteArrayFromListUInt8 -> Str.instrByteArrayFromListUInt8
       OpByteArrayLength -> Str.instrByteArrayLength
 
+instance PrettyCode Symbol where
+  ppCode sym = return (pretty sym)
+
+instance PrettyCode NockmaOp where
+  ppCode op = return $ case op of
+    NockmaOpReify -> primitive Str.nockmaReify
+
 instance PrettyCode CairoOp where
-  ppCode op = return $ primitive $ case op of
+  ppCode op = return . primitive $ case op of
     OpCairoPoseidon -> Str.instrPoseidon
     OpCairoEc -> Str.instrEcOp
+    OpCairoRangeCheck -> Str.cairoRangeCheck
     OpCairoRandomEcPoint -> Str.cairoRandomEcPoint
 
 instance PrettyCode AnomaOp where
@@ -295,14 +303,24 @@ instance PrettyCode AnomaOp where
     OpAnomaResourceDelta -> Str.anomaResourceDelta
     OpAnomaActionDelta -> Str.anomaActionDelta
     OpAnomaActionsDelta -> Str.anomaActionsDelta
-    OpAnomaProveAction -> Str.anomaProveAction
-    OpAnomaProveDelta -> Str.anomaProveDelta
     OpAnomaZeroDelta -> Str.anomaZeroDelta
     OpAnomaAddDelta -> Str.anomaAddDelta
     OpAnomaSubDelta -> Str.anomaSubDelta
     OpAnomaRandomGeneratorInit -> Str.anomaRandomGeneratorInit
     OpAnomaRandomNextBytes -> Str.anomaRandomNextBytes
     OpAnomaRandomSplit -> Str.anomaRandomSplit
+    OpAnomaIsCommitment -> Str.anomaIsCommitment
+    OpAnomaIsNullifier -> Str.anomaIsNullifier
+    OpAnomaCreateFromComplianceInputs -> Str.anomaCreateFromComplianceInputs
+    OpAnomaProveDelta -> Str.anomaProveDelta
+    OpAnomaSetToList -> Str.anomaSetToList
+    OpAnomaSetFromList -> Str.anomaSetFromList
+    OpAnomaTransactionCompose -> Str.anomaTransactionCompose
+    OpAnomaActionCreate -> Str.anomaActionCreate
+    OpAnomaKeccak256 -> Str.keccak256
+    OpAnomaSecp256k1SignCompact -> Str.secp256k1SignCompact
+    OpAnomaSecp256k1Verify -> Str.secp256k1Verify
+    OpAnomaSecp256k1PubKey -> Str.secp256k1PubKey
 
 instance PrettyCode UnaryOpcode where
   ppCode = \case
@@ -316,6 +334,12 @@ instance PrettyCode NodeUnop where
     op <- ppCode _nodeUnopOpcode
     arg <- ppCode _nodeUnopArg
     return $ op <> parens arg
+
+instance PrettyCode NodeNockma where
+  ppCode NodeNockma {..} = do
+    op <- ppCode _nodeNockmaOpcode
+    args <- ppCodeArgs _nodeNockmaArgs
+    return $ op <> parens args
 
 instance PrettyCode NodeCairo where
   ppCode NodeCairo {..} = do
@@ -433,6 +457,7 @@ instance PrettyCode Node where
     ByteArray x -> ppCode x
     Anoma x -> ppCode x
     Cairo x -> ppCode x
+    Nockma x -> ppCode x
     Constant x -> ppCode x
     MemRef x -> ppCode x
     AllocConstr x -> ppCode x
@@ -483,7 +508,7 @@ instance PrettyCode ConstructorInfo where
 
 ppInductive :: (Member (Reader Options) r) => InfoTable' t e -> InductiveInfo -> Sem r (Doc Ann)
 ppInductive tab InductiveInfo {..} = do
-  ctrs <- mapM (ppCode . lookupConstrInfo tab) _inductiveConstructors
+  ctrs <- mapM (ppCode . lookupTabConstrInfo tab) _inductiveConstructors
   return $ kwInductive <+> annotate (AnnKind KNameInductive) (pretty (quoteName _inductiveName)) <+> braces' (vcat (map (<> semi) ctrs))
 
 ppInfoTable :: (Member (Reader Options) r) => (t -> Sem r (Doc Ann)) -> InfoTable' t e -> Sem r (Doc Ann)

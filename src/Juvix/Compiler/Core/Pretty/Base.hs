@@ -32,59 +32,71 @@ class PrettyCode c where
   ppCode :: (Member (Reader Options) r) => c -> Sem r (Doc Ann)
 
 instance PrettyCode BuiltinOp where
-  ppCode = \case
-    OpIntAdd -> return primPlus
-    OpIntSub -> return primMinus
-    OpIntMul -> return primMul
-    OpIntDiv -> return primDiv
-    OpIntMod -> return primMod
-    OpIntLt -> return primLess
-    OpIntLe -> return primLessEquals
-    OpFieldAdd -> return primFieldAdd
-    OpFieldSub -> return primFieldSub
-    OpFieldMul -> return primFieldMul
-    OpFieldDiv -> return primFieldDiv
-    OpFieldFromInt -> return primFieldFromInt
-    OpFieldToInt -> return primFieldToInt
-    OpEq -> return primEquals
-    OpShow -> return primShow
-    OpStrConcat -> return primStrConcat
-    OpStrToInt -> return primStrToInt
-    OpAssert -> return primAssert
-    OpSeq -> return primSeq
-    OpTrace -> return primTrace
-    OpFail -> return primFail
-    OpAnomaGet -> return primAnomaGet
-    OpAnomaEncode -> return primAnomaEncode
-    OpAnomaDecode -> return primAnomaDecode
-    OpAnomaVerifyDetached -> return primAnomaVerifyDetached
-    OpAnomaSign -> return primAnomaSign
-    OpAnomaSignDetached -> return primAnomaSignDetached
-    OpAnomaVerifyWithMessage -> return primAnomaVerifyWithMessage
-    OpAnomaByteArrayToAnomaContents -> return primAnomaByteArrayToAnomaContents
-    OpAnomaByteArrayFromAnomaContents -> return primAnomaByteArrayFromAnomaContents
-    OpAnomaSha256 -> return primAnomaSha256
-    OpAnomaResourceCommitment -> return primResourceCommitment
-    OpAnomaResourceNullifier -> return primResourceNullifier
-    OpAnomaResourceKind -> return primResourceKind
-    OpAnomaResourceDelta -> return primResourceDelta
-    OpAnomaActionDelta -> return primActionDelta
-    OpAnomaActionsDelta -> return primActionsDelta
-    OpAnomaProveAction -> return primProveAction
-    OpAnomaProveDelta -> return primProveDelta
-    OpAnomaZeroDelta -> return primZeroDelta
-    OpAnomaAddDelta -> return primAddDelta
-    OpAnomaSubDelta -> return primSubDelta
-    OpAnomaRandomGeneratorInit -> return primRandomGeneratorInit
-    OpAnomaRandomNextBytes -> return primRandomNextBytes
-    OpAnomaRandomSplit -> return primRandomSplit
-    OpPoseidonHash -> return primPoseidonHash
-    OpEc -> return primEc
-    OpRandomEcPoint -> return primRandomEcPoint
-    OpUInt8ToInt -> return primUInt8ToInt
-    OpUInt8FromInt -> return primFieldFromInt
-    OpByteArrayFromListByte -> return primByteArrayFromListByte
-    OpByteArrayLength -> return primByteArrayLength
+  ppCode p = return $ case p of
+    OpIntAdd -> primPlus
+    OpIntSub -> primMinus
+    OpIntMul -> primMul
+    OpIntDiv -> primDiv
+    OpIntMod -> primMod
+    OpIntLt -> primLess
+    OpIntLe -> primLessEquals
+    OpFieldAdd -> primFieldAdd
+    OpFieldSub -> primFieldSub
+    OpFieldMul -> primFieldMul
+    OpFieldDiv -> primFieldDiv
+    OpFieldFromInt -> primFieldFromInt
+    OpFieldToInt -> primFieldToInt
+    OpEq -> primEquals
+    OpShow -> primShow
+    OpStrConcat -> primStrConcat
+    OpStrToInt -> primStrToInt
+    OpAssert -> primAssert
+    OpRangeCheck -> primRangeCheck
+    OpSeq -> primSeq
+    OpTrace -> primTrace
+    OpFail -> primFail
+    OpAnomaGet -> primAnomaGet
+    OpAnomaEncode -> primAnomaEncode
+    OpAnomaDecode -> primAnomaDecode
+    OpAnomaVerifyDetached -> primAnomaVerifyDetached
+    OpAnomaSign -> primAnomaSign
+    OpAnomaSignDetached -> primAnomaSignDetached
+    OpAnomaVerifyWithMessage -> primAnomaVerifyWithMessage
+    OpAnomaByteArrayToAnomaContents -> primAnomaByteArrayToAnomaContents
+    OpAnomaByteArrayFromAnomaContents -> primAnomaByteArrayFromAnomaContents
+    OpAnomaSha256 -> primAnomaSha256
+    OpAnomaResourceCommitment -> primResourceCommitment
+    OpAnomaResourceNullifier -> primResourceNullifier
+    OpAnomaResourceKind -> primResourceKind
+    OpAnomaResourceDelta -> primResourceDelta
+    OpAnomaActionDelta -> primActionDelta
+    OpAnomaActionsDelta -> primActionsDelta
+    OpAnomaZeroDelta -> primZeroDelta
+    OpAnomaAddDelta -> primAddDelta
+    OpAnomaSubDelta -> primSubDelta
+    OpAnomaRandomGeneratorInit -> primRandomGeneratorInit
+    OpAnomaRandomNextBytes -> primRandomNextBytes
+    OpAnomaRandomSplit -> primRandomSplit
+    OpAnomaIsCommitment -> primIsCommitment
+    OpAnomaIsNullifier -> primIsNullifier
+    OpAnomaCreateFromComplianceInputs -> primAnomaCreateFromComplianceInputs
+    OpAnomaProveDelta -> primAnomaProveDelta
+    OpAnomaActionCreate -> primActionCreate
+    OpAnomaTransactionCompose -> primTransactionCompose
+    OpAnomaSetToList -> primAnomaSetToList
+    OpAnomaSetFromList -> primAnomaSetFromList
+    OpNockmaReify -> primNockmaReify
+    OpPoseidonHash -> primPoseidonHash
+    OpEc -> primEc
+    OpRandomEcPoint -> primRandomEcPoint
+    OpUInt8ToInt -> primUInt8ToInt
+    OpUInt8FromInt -> primFieldFromInt
+    OpByteArrayFromListByte -> primByteArrayFromListByte
+    OpByteArrayLength -> primByteArrayLength
+    OpAnomaKeccak256 -> Str.keccak256
+    OpAnomaSecp256k1SignCompact -> primitive Str.secp256k1SignCompact
+    OpAnomaSecp256k1Verify -> primitive Str.secp256k1Verify
+    OpAnomaSecp256k1PubKey -> primitive Str.secp256k1PubKey
 
 instance PrettyCode BuiltinDataTag where
   ppCode = \case
@@ -94,11 +106,22 @@ instance PrettyCode BuiltinDataTag where
     TagBind -> return $ annotate (AnnKind KNameConstructor) (pretty ("bind" :: String))
     TagWrite -> return $ annotate (AnnKind KNameConstructor) (pretty ("write" :: String))
     TagReadLn -> return $ annotate (AnnKind KNameConstructor) (pretty ("readLn" :: String))
+    TagJsonArray -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonArray" :: String))
+    TagJsonBool -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonBool" :: String))
+    TagJsonObject -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonObject" :: String))
+    TagJsonNumber -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonNumber" :: String))
+    TagJsonString -> return $ annotate (AnnKind KNameConstructor) (pretty ("jsonString" :: String))
 
 instance PrettyCode Tag where
   ppCode = \case
     BuiltinTag tag -> ppCode tag
     UserTag (TagUser mid tag) -> return $ kwUnnamedConstr <> pretty tag <> "@" <> pretty mid
+
+instance PrettyCode ModuleId where
+  ppCode = return . pretty
+
+instance PrettyCode Symbol where
+  ppCode = return . pretty
 
 instance PrettyCode Primitive where
   ppCode = \case
@@ -568,10 +591,9 @@ instance PrettyCode InfoTable where
   ppCode :: forall r. (Member (Reader Options) r) => InfoTable -> Sem r (Doc Ann)
   ppCode tbl = do
     let header x = annotate AnnImportant (Str.commentLineStart <+> x) <> line
-    tys <- ppInductives (toList (tbl ^. infoInductives))
+    tys <- ppInductives (sortOn (^. inductiveSymbol) $ toList (tbl ^. infoInductives))
     sigs <- ppSigs (sortOn (^. identifierSymbol) $ toList (tbl ^. infoIdentifiers))
     ctx' <- ppContext (tbl ^. identContext)
-    axioms <- vsep <$> mapM ppCode (tbl ^. infoAxioms)
     main <- maybe (return "") (\s -> (<> line) . (line <>) <$> ppName KNameFunction (identName' tbl s)) (tbl ^. infoMain)
     return
       ( header "Inductives:"
@@ -579,9 +601,6 @@ instance PrettyCode InfoTable where
           <> line
           <> header "Identifiers:"
           <> sigs
-          <> line
-          <> header "Axioms:"
-          <> axioms
           <> line
           <> header "Context:"
           <> ctx'
@@ -648,10 +667,16 @@ instance PrettyCode InfoTable where
           shouldPrintInductive = \case
             Just (BuiltinTypeInductive i) -> case i of
               BuiltinPair -> True
+              BuiltinJson -> True
               BuiltinPoseidonState -> True
               BuiltinEcPoint -> True
               BuiltinAnomaResource -> True
+              BuiltinAnomaNullifierKey -> True
               BuiltinAnomaAction -> True
+              BuiltinAnomaComplianceInputs -> True
+              BuiltinAnomaShieldedTransaction -> True
+              BuiltinNockmaNoun -> True
+              --
               BuiltinList -> False
               BuiltinEq -> False
               BuiltinOrd -> False
@@ -660,14 +685,8 @@ instance PrettyCode InfoTable where
               BuiltinNat -> False
               BuiltinInt -> False
               BuiltinBool -> False
-            Just _ -> False
+            Just (BuiltinTypeAxiom _) -> False
             Nothing -> True
-
-instance PrettyCode AxiomInfo where
-  ppCode ii = do
-    name <- ppName KNameAxiom (ii ^. axiomName)
-    ty <- ppCode (ii ^. axiomType)
-    return (kwAxiom <+> name <+> kwColon <+> ty <> kwSemicolon)
 
 instance PrettyCode Stripped.ArgumentInfo where
   ppCode :: (Member (Reader Options) r) => Stripped.ArgumentInfo -> Sem r (Doc Ann)
@@ -710,7 +729,7 @@ instance PrettyCode Stripped.InfoTable where
           ppInductive :: Stripped.InductiveInfo -> Sem r (Doc Ann)
           ppInductive ii = do
             name <- ppName KNameInductive (ii ^. Stripped.inductiveName)
-            ctrs <- mapM (fmap (<> semi) . ppCode . Stripped.lookupConstructorInfo tbl) (ii ^. Stripped.inductiveConstructors)
+            ctrs <- mapM (fmap (<> semi) . ppCode . Stripped.lookupTabConstructorInfo tbl) (ii ^. Stripped.inductiveConstructors)
             return (kwInductive <+> name <+> braces (line <> indent' (vsep ctrs) <> line))
 
 instance (PrettyCode a) => PrettyCode (NonEmpty a) where
@@ -720,6 +739,9 @@ instance (PrettyCode a) => PrettyCode [a] where
   ppCode x = do
     cs <- mapM ppCode x
     return $ encloseSep "(" ")" ", " cs
+
+instance (PrettyCode a) => PrettyCode (Maybe a) where
+  ppCode = maybe (return "Nothing") (fmap ("Just " <>) . ppCode)
 
 --------------------------------------------------------------------------------
 -- printing values
@@ -931,6 +953,9 @@ kwDef = keyword Str.def
 primAssert :: Doc Ann
 primAssert = primitive Str.assert_
 
+primRangeCheck :: Doc Ann
+primRangeCheck = primitive Str.rangeCheck
+
 primSeq :: Doc Ann
 primSeq = primitive Str.seqq_
 
@@ -985,12 +1010,6 @@ primActionDelta = primitive Str.anomaActionDelta
 primActionsDelta :: Doc Ann
 primActionsDelta = primitive Str.anomaActionsDelta
 
-primProveDelta :: Doc Ann
-primProveDelta = primitive Str.anomaProveDelta
-
-primProveAction :: Doc Ann
-primProveAction = primitive Str.anomaProveAction
-
 primZeroDelta :: Doc Ann
 primZeroDelta = primitive Str.anomaZeroDelta
 
@@ -1008,6 +1027,33 @@ primRandomNextBytes = primitive Str.anomaRandomNextBytes
 
 primRandomSplit :: Doc Ann
 primRandomSplit = primitive Str.anomaRandomSplit
+
+primIsCommitment :: Doc Ann
+primIsCommitment = primitive Str.anomaIsCommitment
+
+primTransactionCompose :: Doc Ann
+primTransactionCompose = primitive Str.anomaTransactionCompose
+
+primActionCreate :: Doc Ann
+primActionCreate = primitive Str.anomaActionCreate
+
+primIsNullifier :: Doc Ann
+primIsNullifier = primitive Str.anomaIsNullifier
+
+primAnomaCreateFromComplianceInputs :: Doc Ann
+primAnomaCreateFromComplianceInputs = primitive Str.anomaCreateFromComplianceInputs
+
+primAnomaProveDelta :: Doc Ann
+primAnomaProveDelta = primitive Str.anomaProveDelta
+
+primAnomaSetToList :: Doc Ann
+primAnomaSetToList = primitive Str.anomaSetToList
+
+primAnomaSetFromList :: Doc Ann
+primAnomaSetFromList = primitive Str.anomaSetFromList
+
+primNockmaReify :: Doc Ann
+primNockmaReify = primitive Str.nockmaReify
 
 primPoseidonHash :: Doc Ann
 primPoseidonHash = primitive Str.cairoPoseidon

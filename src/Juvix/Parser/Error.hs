@@ -5,6 +5,7 @@ module Juvix.Parser.Error
 where
 
 import Commonmark qualified as MK
+import Data.Yaml qualified as Yaml
 import Juvix.Compiler.Backend.Markdown.Error
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options (fromGenericOptions)
@@ -19,6 +20,7 @@ import Text.Parsec.Pos qualified as P
 
 data ParserError
   = ErrMegaparsec MegaparsecError
+  | ErrSimpleParserError SimpleParserError
   | ErrCommonmark CommonmarkError
   | ErrWrongTopModuleName WrongTopModuleName
   | ErrWrongTopModuleNameOrphan WrongTopModuleNameOrphan
@@ -27,10 +29,23 @@ data ParserError
   | ErrDanglingJudoc DanglingJudoc
   | ErrMarkdownBackend MarkdownBackendError
   | ErrFlatParseError FlatParseError
+  | ErrExpectedDerivingInstance ExpectedDerivingInstanceError
+  | ErrDerivingInstancePatterns DerivingInstancePatternsError
+  | ErrYamlParseError YamlParseError
+  | ErrCoercionNotAllowed CoercionNotAllowedError
+  | ErrInstanceNotAllowed InstanceNotAllowedError
+  | ErrExpectedInstance ExpectedInstanceError
+  | ErrExpectedFunctionName ExpectedFunctionNameError
+  | ErrExpectedResultType ExpectedResultTypeError
+  | ErrExpectedColonEquals ExpectedColonEqualsError
+
+instance FromSimpleParserError ParserError where
+  fromSimpleParserError = ErrSimpleParserError
 
 instance ToGenericError ParserError where
   genericError = \case
     ErrMegaparsec e -> genericError e
+    ErrSimpleParserError e -> genericError e
     ErrCommonmark e -> genericError e
     ErrWrongTopModuleName e -> genericError e
     ErrWrongTopModuleNameOrphan e -> genericError e
@@ -39,6 +54,169 @@ instance ToGenericError ParserError where
     ErrMarkdownBackend e -> genericError e
     ErrFlatParseError e -> genericError e
     ErrNamedApplicationMissingAt e -> genericError e
+    ErrExpectedDerivingInstance e -> genericError e
+    ErrDerivingInstancePatterns e -> genericError e
+    ErrYamlParseError e -> genericError e
+    ErrCoercionNotAllowed e -> genericError e
+    ErrInstanceNotAllowed e -> genericError e
+    ErrExpectedInstance e -> genericError e
+    ErrExpectedFunctionName e -> genericError e
+    ErrExpectedResultType e -> genericError e
+    ErrExpectedColonEquals e -> genericError e
+
+newtype ExpectedColonEqualsError = ExpectedColonEqualsError
+  { _expectedColonEqualsErrorLoc :: Interval
+  }
+  deriving stock (Show)
+
+instance HasLoc ExpectedColonEqualsError where
+  getLoc ExpectedColonEqualsError {..} = _expectedColonEqualsErrorLoc
+
+instance ToGenericError ExpectedColonEqualsError where
+  genericError e =
+    return
+      GenericError
+        { _genericErrorLoc = getLoc e,
+          _genericErrorMessage = mkAnsiText ("Expected ':=' instead of '='" :: Text),
+          _genericErrorIntervals = [getLoc e]
+        }
+
+newtype ExpectedResultTypeError = ExpectedResultTypeError
+  { _expectedResultTypeErrorLoc :: Interval
+  }
+  deriving stock (Show)
+
+instance HasLoc ExpectedResultTypeError where
+  getLoc ExpectedResultTypeError {..} = _expectedResultTypeErrorLoc
+
+instance ToGenericError ExpectedResultTypeError where
+  genericError e =
+    return
+      GenericError
+        { _genericErrorLoc = getLoc e,
+          _genericErrorMessage = mkAnsiText ("Expected result type" :: Text),
+          _genericErrorIntervals = [getLoc e]
+        }
+
+newtype ExpectedFunctionNameError = ExpectedFunctionNameError
+  { _expectedFunctionNameErrorLoc :: Interval
+  }
+  deriving stock (Show)
+
+instance HasLoc ExpectedFunctionNameError where
+  getLoc ExpectedFunctionNameError {..} = _expectedFunctionNameErrorLoc
+
+instance ToGenericError ExpectedFunctionNameError where
+  genericError e =
+    return
+      GenericError
+        { _genericErrorLoc = getLoc e,
+          _genericErrorMessage = mkAnsiText ("Expected function name" :: Text),
+          _genericErrorIntervals = [getLoc e]
+        }
+
+newtype ExpectedInstanceError = ExpectedInstanceError
+  { _expectedInstanceErrorLoc :: Interval
+  }
+  deriving stock (Show)
+
+instance HasLoc ExpectedInstanceError where
+  getLoc ExpectedInstanceError {..} = _expectedInstanceErrorLoc
+
+instance ToGenericError ExpectedInstanceError where
+  genericError e =
+    return
+      GenericError
+        { _genericErrorLoc = getLoc e,
+          _genericErrorMessage = mkAnsiText ("Expected 'instance'" :: Text),
+          _genericErrorIntervals = [getLoc e]
+        }
+
+newtype InstanceNotAllowedError = InstanceNotAllowedError
+  { _instanceNotAllowedErrorLoc :: Interval
+  }
+  deriving stock (Show)
+
+instance HasLoc InstanceNotAllowedError where
+  getLoc InstanceNotAllowedError {..} = _instanceNotAllowedErrorLoc
+
+instance ToGenericError InstanceNotAllowedError where
+  genericError e =
+    return
+      GenericError
+        { _genericErrorLoc = getLoc e,
+          _genericErrorMessage = mkAnsiText ("'instance' not allowed here" :: Text),
+          _genericErrorIntervals = [getLoc e]
+        }
+
+newtype CoercionNotAllowedError = CoercionNotAllowedError
+  { _coercionNotAllowedErrorLoc :: Interval
+  }
+  deriving stock (Show)
+
+instance HasLoc CoercionNotAllowedError where
+  getLoc CoercionNotAllowedError {..} = _coercionNotAllowedErrorLoc
+
+instance ToGenericError CoercionNotAllowedError where
+  genericError e =
+    return
+      GenericError
+        { _genericErrorLoc = getLoc e,
+          _genericErrorMessage = mkAnsiText ("'coercion' not allowed here" :: Text),
+          _genericErrorIntervals = [getLoc e]
+        }
+
+data YamlParseError = YamlParseError
+  { _yamlParseError :: Yaml.ParseException,
+    _yamlParseErrorLoc :: Interval
+  }
+  deriving stock (Show)
+
+instance HasLoc YamlParseError where
+  getLoc YamlParseError {..} = _yamlParseErrorLoc
+
+instance ToGenericError YamlParseError where
+  genericError e@YamlParseError {..} =
+    return
+      GenericError
+        { _genericErrorLoc = getLoc e,
+          _genericErrorMessage = mkAnsiText $ Yaml.prettyPrintParseException _yamlParseError,
+          _genericErrorIntervals = [getLoc e]
+        }
+
+newtype DerivingInstancePatternsError = DerivingInstancePatternsError
+  { _derivingInstancePatternsErrorLoc :: Interval
+  }
+  deriving stock (Show)
+
+instance HasLoc DerivingInstancePatternsError where
+  getLoc DerivingInstancePatternsError {..} = _derivingInstancePatternsErrorLoc
+
+instance ToGenericError DerivingInstancePatternsError where
+  genericError e =
+    return
+      GenericError
+        { _genericErrorLoc = getLoc e,
+          _genericErrorMessage = mkAnsiText ("Patterns not allowed for 'deriving instance'" :: Text),
+          _genericErrorIntervals = [getLoc e]
+        }
+
+newtype ExpectedDerivingInstanceError = ExpectedDerivingInstanceError
+  { _expectedDerivingInstanceErrorLoc :: Interval
+  }
+  deriving stock (Show)
+
+instance HasLoc ExpectedDerivingInstanceError where
+  getLoc ExpectedDerivingInstanceError {..} = _expectedDerivingInstanceErrorLoc
+
+instance ToGenericError ExpectedDerivingInstanceError where
+  genericError e =
+    return
+      GenericError
+        { _genericErrorLoc = getLoc e,
+          _genericErrorMessage = mkAnsiText ("Expected 'deriving instance'" :: Text),
+          _genericErrorIntervals = [getLoc e]
+        }
 
 newtype FlatParseError = FlatParseError
   { _flatParseErrorLoc :: Interval

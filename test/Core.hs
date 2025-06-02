@@ -8,7 +8,6 @@ import Core.Normalize qualified as Normalize
 import Core.Print qualified as Print
 import Core.Recursor qualified as Rec
 import Core.Transformation qualified as Transformation
-import Core.VampIR qualified as VampIR
 
 allTests :: TestTree
 allTests =
@@ -20,6 +19,5 @@ allTests =
       Transformation.allTests,
       Asm.allTests,
       Compile.allTests,
-      Normalize.allTests,
-      VampIR.allTests
+      Normalize.allTests
     ]

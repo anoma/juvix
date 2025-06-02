@@ -7,13 +7,14 @@ where
 
 import Juvix.Compiler.Reg.Keywords
 import Juvix.Compiler.Tree.Translation.FromSource.Lexer.Base
+import Juvix.Parser.Error.Base
 import Juvix.Prelude
 
-int :: ParsecS r Int
-int = (^. withLocParam) <$> number (-(2 ^ (31 :: Int))) (2 ^ (31 :: Int))
+int :: (Member (Error SimpleParserError) r) => ParsecS r Int
+int = (^. withLocParam) <$> number @SimpleParserError (-(2 ^ (31 :: Int))) (2 ^ (31 :: Int))
 
-smallnat :: ParsecS r Int
-smallnat = (^. withLocParam) <$> number 0 256
+smallnat :: (Member (Error SimpleParserError) r) => ParsecS r Int
+smallnat = (^. withLocParam) <$> number @SimpleParserError 0 256
 
 identifier :: ParsecS r Text
 identifier = lexeme bareIdentifier

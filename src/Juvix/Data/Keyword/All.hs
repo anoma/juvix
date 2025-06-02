@@ -61,9 +61,6 @@ kwExclamation = asciiKw Str.exclamation
 kwAt :: Keyword
 kwAt = asciiKw Str.at_
 
-kwAtQuestion :: Keyword
-kwAtQuestion = asciiKw Str.atQuestion
-
 kwAxiom :: Keyword
 kwAxiom = asciiKw Str.axiom
 
@@ -156,6 +153,9 @@ kwBinary = asciiKw Str.binary
 
 kwSame :: Keyword
 kwSame = asciiKw Str.same
+
+kwPrecedence :: Keyword
+kwPrecedence = asciiKw Str.precedence
 
 kwBelow :: Keyword
 kwBelow = asciiKw Str.below
@@ -342,6 +342,9 @@ kwEcOp = asciiKw Str.instrEcOp
 
 kwRandomEcPoint :: Keyword
 kwRandomEcPoint = asciiKw Str.cairoRandomEcPoint
+
+kwRangeCheck :: Keyword
+kwRangeCheck = asciiKw Str.instrRangeCheck
 
 kwAlloc :: Keyword
 kwAlloc = asciiKw Str.instrAlloc
@@ -553,12 +556,6 @@ kwAnomaActionDelta = asciiKw Str.anomaActionDelta
 kwAnomaActionsDelta :: Keyword
 kwAnomaActionsDelta = asciiKw Str.anomaActionsDelta
 
-kwAnomaProveAction :: Keyword
-kwAnomaProveAction = asciiKw Str.anomaProveAction
-
-kwAnomaProveDelta :: Keyword
-kwAnomaProveDelta = asciiKw Str.anomaProveDelta
-
 kwAnomaZeroDelta :: Keyword
 kwAnomaZeroDelta = asciiKw Str.anomaZeroDelta
 
@@ -576,6 +573,27 @@ kwAnomaRandomNextBytes = asciiKw Str.anomaRandomNextBytes
 
 kwAnomaRandomSplit :: Keyword
 kwAnomaRandomSplit = asciiKw Str.anomaRandomSplit
+
+kwAnomaIsCommitment :: Keyword
+kwAnomaIsCommitment = asciiKw Str.anomaIsCommitment
+
+kwAnomaIsNullifier :: Keyword
+kwAnomaIsNullifier = asciiKw Str.anomaIsNullifier
+
+kwAnomaCreateFromComplianceInputs :: Keyword
+kwAnomaCreateFromComplianceInputs = asciiKw Str.anomaCreateFromComplianceInputs
+
+kwAnomaTransactionCompose :: Keyword
+kwAnomaTransactionCompose = asciiKw Str.anomaTransactionCompose
+
+kwAnomaActionCreate :: Keyword
+kwAnomaActionCreate = asciiKw Str.anomaActionCreate
+
+kwAnomaSetToList :: Keyword
+kwAnomaSetToList = asciiKw Str.anomaSetToList
+
+kwAnomaSetFromList :: Keyword
+kwAnomaSetFromList = asciiKw Str.anomaSetFromList
 
 delimBraceL :: Keyword
 delimBraceL = mkDelim Str.braceL

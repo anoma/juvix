@@ -1,6 +1,7 @@
 module BackendMarkdown.Positive where
 
 import Base
+import Juvix.Compiler.Backend.Markdown.Error
 import Juvix.Compiler.Backend.Markdown.Translation.FromTyped.Source
 import Juvix.Compiler.Concrete qualified as Concrete
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
@@ -37,7 +38,7 @@ testDescr PosTest {..} =
         step "Parsing & Scoping"
         PipelineResult {..} <- snd <$> testRunIO entryPoint upToScopingEntry
         let m = _pipelineResult ^. Scoper.resultModule
-        let opts =
+            opts =
               ProcessJuvixBlocksArgs
                 { _processJuvixBlocksArgsConcreteOpts = Concrete.defaultOptions,
                   _processJuvixBlocksArgsUrlPrefix = _UrlPrefix,
@@ -53,7 +54,7 @@ testDescr PosTest {..} =
                     root <//> $(mkRelDir "markdown")
                 }
 
-        let res = fromJuvixMarkdown' opts
+        let res = run (runError @MarkdownBackendError (fromJuvixMarkdown opts))
         case res of
           Left err -> assertFailure (show err)
           Right md -> do

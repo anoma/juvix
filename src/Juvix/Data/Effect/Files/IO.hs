@@ -13,7 +13,6 @@ import Juvix.Prelude.Path
 import Juvix.Prelude.Prepath
 import Path.IO qualified as Path
 import System.Environment.XDG.BaseDir
-import System.IO.Error
 import System.IO.Temp
 import System.Posix.Types qualified as P
 import System.PosixCompat.Files qualified as P
@@ -48,7 +47,7 @@ runFilesIO = interpret helper
       RenameFile' p1 p2 -> Path.renameFile p1 p2
       CopyFile' p1 p2 -> Path.copyFile p1 p2
       CopyDirectory p1 p2 -> Path.copyDirRecur p1 p2
-      JuvixConfigDir -> juvixConfigDirIO
+      JuvixConfigDir -> juvixConfigDirIO >>= canonicalizePath
       CanonicalDir root d -> prepathToAbsDir root d
       NormalizeDir p -> canonicalizePath p
       NormalizeFile b -> canonicalizePath b

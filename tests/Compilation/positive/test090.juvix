@@ -1,0 +1,35 @@
+-- Module self-reference
+module test090;
+
+import Stdlib.Data.Nat as Delta;
+
+x : Delta.Nat := 9;
+
+module Resource0;
+  x : Delta.Nat := 10;
+end;
+
+module Resource;
+  x : Delta.Nat := 1;
+
+  module Gamma;
+    x : Delta.Nat := 2;
+  end;
+
+  module Delta;
+    open Delta using {+; *};
+
+    x : Delta.Nat := Resource.x + Resource0.x;
+
+    a : Delta.Nat := x * Resource.Gamma.x + test090.x;
+
+    b : Delta.Nat := 1900;
+  end;
+
+  open Resource.Delta;
+
+  b : Delta.Nat := a;
+end;
+
+-- result: 31
+main : Delta.Nat := Resource.b;

@@ -185,6 +185,10 @@ tests =
       $(mkRelDir "Internal")
       $(mkRelFile "Lambda.juvix"),
     posTest
+      "AnomaSet"
+      $(mkRelDir "Internal")
+      $(mkRelFile "AnomaSet.juvix"),
+    posTest
       "Simple mutual inference"
       $(mkRelDir "Internal")
       $(mkRelFile "Mutual.juvix"),
@@ -341,9 +345,17 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "issue2994.juvix"),
     posTest
+      "Positivity (issue 3348)"
+      $(mkRelDir "Internal")
+      $(mkRelFile "Positivity.juvix"),
+    posTest
       "Termination crash because of empty permutation"
       $(mkRelDir ".")
-      $(mkRelFile "issue3064.juvix")
+      $(mkRelFile "issue3064.juvix"),
+    posTest
+      "Let-patterns with named arguments"
+      $(mkRelDir ".")
+      $(mkRelFile "NamedArgLet.juvix")
   ]
     <> [ compilationTest t | t <- Compilation.tests
        ]

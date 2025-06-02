@@ -1,5 +1,6 @@
 module Juvix.Data.ModuleId where
 
+import Juvix.Data.PackageId
 import Juvix.Data.TopModulePathKey
 import Juvix.Extra.Serialize
 import Juvix.Prelude.Base
@@ -7,8 +8,7 @@ import Prettyprinter
 
 data ModuleId = ModuleId
   { _moduleIdPath :: TopModulePathKey,
-    _moduleIdPackage :: Text,
-    _moduleIdPackageVersion :: Text
+    _moduleIdPackageId :: PackageId
   }
   deriving stock (Show, Eq, Ord, Generic, Data)
 
@@ -27,6 +27,18 @@ defaultModuleId :: ModuleId
 defaultModuleId =
   ModuleId
     { _moduleIdPath = nonEmptyToTopModulePathKey (pure "$DefaultModule$"),
-      _moduleIdPackage = "$",
-      _moduleIdPackageVersion = "1.0"
+      _moduleIdPackageId =
+        PackageId
+          { _packageIdName = "$",
+            _packageIdVersion = SemVer 1 0 0 Nothing Nothing
+          }
     }
+
+getModuleId :: forall r. (Member (Reader PackageId) r) => TopModulePathKey -> Sem r ModuleId
+getModuleId path = do
+  pkgId <- ask
+  return
+    ModuleId
+      { _moduleIdPath = path,
+        _moduleIdPackageId = pkgId
+      }

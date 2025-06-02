@@ -21,8 +21,6 @@ type InductiveInfo = InductiveInfo' Node
 
 type ConstructorInfo = ConstructorInfo' Node
 
-type AxiomInfo = AxiomInfo' Node
-
 type ParameterInfo = ParameterInfo' Node
 
 type SpecialisationInfo = SpecialisationInfo' Node
@@ -99,6 +97,9 @@ lookupTabBuiltinFunction tab b = (HashMap.!) (tab ^. infoIdentifiers) . funSym <
       IdentFun s -> s
       _ -> error "core infotable: expected function identifier"
 
+lookupTabParamsNum :: InfoTable -> Symbol -> Int
+lookupTabParamsNum m sym = length (lookupTabInductiveInfo m sym ^. inductiveParams)
+
 identName' :: InfoTable -> Symbol -> Text
 identName' tab sym = lookupTabIdentifierInfo tab sym ^. identifierName
 
@@ -127,8 +128,7 @@ pruneInfoTable' tab =
       infoConstructors
       ( HashMap.filter
           ( \ConstructorInfo {..} ->
-              isBuiltinTag _constructorTag
-                || HashMap.member _constructorInductive (tab ^. infoInductives)
+              HashMap.member _constructorInductive (tab ^. infoInductives)
           )
       )
     $ over
@@ -148,13 +148,3 @@ pruneInfoTable' tab =
             )
         )
         tab'
-
-tableIsFragile :: InfoTable -> Bool
-tableIsFragile tab = any isFragile (HashMap.elems $ tab ^. infoIdentifiers)
-  where
-    isFragile :: IdentifierInfo -> Bool
-    isFragile IdentifierInfo {..} =
-      case _identifierPragmas ^. pragmasInline of
-        Just InlineAlways -> True
-        Just InlineCase -> True
-        _ -> False

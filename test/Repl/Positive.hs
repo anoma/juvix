@@ -1,10 +1,12 @@
 module Repl.Positive where
 
 import Base
+import Juvix.Compiler.Backend
 import Juvix.Compiler.Core qualified as Core
 import Juvix.Compiler.Core.Extra.Value qualified as Core
 import Juvix.Compiler.Core.Language.Value qualified as Core
 import Juvix.Compiler.Core.Transformation
+import Juvix.Compiler.Pipeline.EntryPoint qualified as EntryPoint
 import Juvix.Compiler.Pipeline.Repl
 import Juvix.Compiler.Pipeline.Root
 import Juvix.Extra.Paths qualified as P
@@ -21,8 +23,12 @@ runTaggedLockIO' =
 loadPrelude :: Path Abs Dir -> IO (Artifacts, EntryPoint)
 loadPrelude rootDir = runTaggedLockIO' $ do
   runReader rootDir writeStdlib
-  pkg <- readPackageRootIO root
-  let ep = defaultEntryPoint (pkg ^. packageId) root (Just (rootDir <//> preludePath))
+  let entry0 = defaultEntryPoint packageBaseId root (Just (rootDir <//> preludePath))
+  pkg <- runReader entry0 $ readPackageRootIO root
+  let ep =
+        set entryPointTarget (Just TargetCore)
+          . set entryPointPipeline (Just EntryPoint.PipelineEval)
+          $ defaultEntryPoint (pkg ^. packageId) root (Just (rootDir <//> preludePath))
   artif <- runReplPipelineIO ep
   return (artif, ep)
   where
@@ -126,7 +132,7 @@ evalRepl artif ep n = do
       . runReader ep
       . runError @JuvixError
       . runState artif
-      . runTransformations True toStoredTransformations
+      . runTransformations True toEvalTransformations
       $ n
   doEvalIO' artif' n' >>= assertNoJuvixError
   where

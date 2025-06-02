@@ -15,7 +15,8 @@ allTests =
           [ "Test007: Higher-order functions",
             "Test022: Self-application",
             "Test025: Dynamic closure extension",
-            "Test032: Church numerals"
+            "Test032: Church numerals",
+            "Test043: Unary closure calls"
           ]
           Eval.tests
     )

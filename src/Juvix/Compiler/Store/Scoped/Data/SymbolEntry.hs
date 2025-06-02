@@ -78,6 +78,10 @@ instance HasLoc PreSymbolEntry where
 instance HasLoc SymbolEntry where
   getLoc = (^. symbolEntry . S.nameDefined)
 
+instance HasNameKind FixitySymbolEntry where
+  getNameKind (FixitySymbolEntry s) = S.getNameKind s
+  getNameKindPretty (FixitySymbolEntry s) = S.getNameKindPretty s
+
 instance HasNameKind ModuleSymbolEntry where
   getNameKind (ModuleSymbolEntry s) = S.getNameKind s
   getNameKindPretty (ModuleSymbolEntry s) = S.getNameKindPretty s
@@ -85,8 +89,15 @@ instance HasNameKind ModuleSymbolEntry where
 instance HasLoc ModuleSymbolEntry where
   getLoc (ModuleSymbolEntry s) = s ^. S.nameDefined
 
+instance HasLoc FixitySymbolEntry where
+  getLoc (FixitySymbolEntry s) = s ^. S.nameDefined
+
 symbolEntryNameId :: SymbolEntry -> NameId
 symbolEntryNameId = (^. symbolEntry . S.nameId)
+
+instance HasNameKind PreSymbolEntry where
+  getNameKind = S.getNameKind . (^. preSymbolName)
+  getNameKindPretty = S.getNameKindPretty . (^. preSymbolName)
 
 instance HasNameKind SymbolEntry where
   getNameKind = S.getNameKind . (^. symbolEntry)

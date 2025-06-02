@@ -1,21 +1,31 @@
 module Anoma.Effect.RunNockma
   ( module Anoma.Effect.RunNockma,
-    module Anoma.Rpc.RunNock,
+    module Anoma.Http.RunNock,
   )
 where
 
 import Anoma.Effect.Base
-import Anoma.Rpc.RunNock
+import Anoma.Http.RunNock
+import Data.ByteString.Base64 qualified as Base64
+import Data.Text qualified as Text
 import Juvix.Compiler.Nockma.Encoding
 import Juvix.Compiler.Nockma.Language qualified as Nockma
+import Juvix.Compiler.Nockma.Pretty qualified as Nockma
 import Juvix.Data.CodeAnn
 import Juvix.Prelude
 import Juvix.Prelude.Aeson (Value)
 import Juvix.Prelude.Aeson qualified as Aeson
 
+-- | An argument to a program sent to the RunNock endpoint
+data RunNockmaArg
+  = -- | An argument that must be jammed before it is sent
+    RunNockmaArgTerm (Nockma.Term Natural)
+  | -- | An argument that is already jammed and must not be jammed again before it is sent
+    RunNockmaArgJammed ByteString
+
 data RunNockmaInput = RunNockmaInput
   { _runNockmaProgram :: Nockma.Term Natural,
-    _runNockmaArgs :: [Nockma.Term Natural]
+    _runNockmaArgs :: [RunNockmaArg]
   }
 
 data RunNockmaResult = RunNockmaResult
@@ -33,17 +43,23 @@ runNockma ::
   Sem r RunNockmaResult
 runNockma i = do
   let prog' = encodeJam64 (i ^. runNockmaProgram)
-      args = map (NockInputJammed . encodeJam64) (i ^. runNockmaArgs)
+      args = map prepareArgument (i ^. runNockmaArgs)
       msg =
         RunNock
           { _runNockJammedProgram = prog',
             _runNockPrivateInputs = args,
             _runNockPublicInputs = []
           }
+  logVerbose ("Request: " <> show runNockUrl)
   logMessageValue "Request Payload" msg
-  resVal :: Value <- anomaRpc runNockGrpcUrl (Aeson.toJSON msg) >>= fromJSONErr
+  resVal :: Value <- anomaPost runNockUrl (Aeson.toJSON msg) >>= fromJSONErr
   logMessageValue "Response Payload" resVal
-  res :: Response <- fromJSONErr resVal
+  res :: Response <- case Aeson.fromJSON resVal of
+    Aeson.Success r
+      | r ^. successResult /= "error" -> return $ ResponseSuccess r
+    _ -> do
+      r <- fromJSONErr resVal
+      return $ ResponseError r
   case res of
     ResponseSuccess s -> do
       result <- decodeCue64 (s ^. successResult)
@@ -53,4 +69,17 @@ runNockma i = do
           { _runNockmaResult = result,
             _runNockmaTraces = traces
           }
-    ResponseError err -> throw (SimpleError (mkAnsiText (err ^. errorError)))
+    ResponseError err -> do
+      traces <- mapM decodeCue64 (err ^. errorTraces)
+      throw
+        . SimpleError
+        $ mkAnsiText @Text "runNockma failed:\n"
+          <> mkAnsiText (err ^. errorError)
+          <> "\n\nTraces:\n"
+          <> mkAnsiText (Text.unlines (map Nockma.ppTrace traces))
+  where
+    prepareArgument :: RunNockmaArg -> Text
+    prepareArgument =
+      \case
+        RunNockmaArgTerm t -> encodeJam64 t
+        RunNockmaArgJammed a -> decodeUtf8 (Base64.encode a)

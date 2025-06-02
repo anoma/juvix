@@ -21,14 +21,35 @@ v2Root = relToProject $(mkRelDir "tests/positive/PackageLoaderV2")
 testDescr :: Path Abs Dir -> PosTest -> TestDescr
 testDescr root PosTest {..} =
   let tRoot = root <//> _relDir
+      sroot :: SomeRoot
+      sroot =
+        SomeRoot
+          { _someRootDir = tRoot,
+            _someRootType = GlobalPackageDescription
+          }
+      root' :: Root
+      root' =
+        Root
+          { _rootSomeRoot = sroot,
+            _rootInvokeDir = tRoot,
+            _rootBuildDir = DefaultBuildDir
+          }
+      rootPkg :: PackageId
+      rootPkg =
+        PackageId
+          { _packageIdVersion = defaultVersion,
+            _packageIdName = "Package"
+          }
    in TestDescr
         { _testName = _name,
           _testRoot = tRoot,
           _testAssertion = Single $ do
+            let entry = defaultEntryPoint rootPkg root' Nothing
             withTempDir' $ \d -> do
               let buildDir = CustomBuildDir (Abs d)
               res <-
                 runM
+                  . runReader entry
                   . runError @JuvixError
                   . runFilesIO
                   . mapError (JuvixError @PackageLoaderError)

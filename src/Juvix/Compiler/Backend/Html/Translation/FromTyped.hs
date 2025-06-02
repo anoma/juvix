@@ -17,6 +17,7 @@ import Juvix.Compiler.Concrete.Keywords qualified as Kw
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Data.CodeReference
 import Juvix.Extra.Assets
 import Juvix.Prelude hiding (Tree)
 import Juvix.Prelude.Pretty
@@ -428,6 +429,7 @@ goStatement = \case
   StatementImport t -> goImport t
   StatementModule m -> goLocalModule m
   StatementProjectionDef {} -> mempty
+  StatementReservedInductive x -> absurd x
   where
     goSyntax :: SyntaxDef 'Scoped -> Sem r Html
     goSyntax = \case
@@ -459,14 +461,14 @@ goFixity def = do
 
     mkPrec :: Sem r Html
     mkPrec = case info ^. fixityPrecSame of
-      Just (txt :: S.Symbol) -> do
+      Just (txt :: ScopedIden) -> do
         d <- ppCodeHtml defaultOptions txt
         return (row $ toHtml ("Same precedence as " <> d))
       Nothing ->
         goPrec "Higher" (info ^. fixityPrecAbove)
           <> goPrec "Lower" (info ^. fixityPrecBelow)
         where
-          goPrec :: Html -> Maybe [S.Symbol] -> Sem r Html
+          goPrec :: Html -> Maybe [ScopedIden] -> Sem r Html
           goPrec above ls = do
             semicolon' <- semiSeparator
             case ls >>= nonEmpty of
@@ -541,12 +543,12 @@ goAxiom axiom = do
 goDeriving :: forall r. (Members '[Reader HtmlOptions] r) => Deriving 'Scoped -> Sem r Html
 goDeriving def = do
   sig <- ppHelper (ppCode def)
-  defHeader (def ^. derivingFunLhs . funLhsName . functionDefName) sig Nothing
+  defHeader (def ^. derivingFunLhs . funLhsName . functionDefNameScoped) sig Nothing
 
 goFunctionDef :: forall r. (Members '[Reader HtmlOptions] r) => FunctionDef 'Scoped -> Sem r Html
 goFunctionDef def = do
-  sig <- ppHelper (ppCode (functionDefLhs def))
-  defHeader (def ^. signName . functionDefName) sig (def ^. signDoc)
+  sig <- ppHelper (ppCode (def ^. functionDefLhs))
+  defHeader (def ^. functionDefName . functionDefNameScoped) sig (def ^. functionDefDoc)
 
 goInductive :: forall r. (Members '[Reader HtmlOptions] r) => InductiveDef 'Scoped -> Sem r Html
 goInductive def = do
@@ -609,25 +611,27 @@ defHeader name sig mjudoc = do
     $ funHeader'
       <> judoc'
   where
-    uid :: NameId
-    uid = name ^. S.nameId
-
-    tmp :: TopModulePath
-    tmp = name ^. S.nameDefinedIn . S.absTopModulePath
-
     judoc :: Sem r Html
     judoc = do
       judoc' <- goJudocMay mjudoc
       return (Html.div ! Attr.class_ "doc" $ judoc')
 
+    loc :: TopCodeReference
+    loc =
+      TopCodeReference
+        { _topCodeReferenceAbsModule = name ^. S.nameDefinedIn,
+          _topCodeReferenceVerbatimSymbol = name ^. S.nameVerbatim
+        }
+
     functionHeader :: Sem r Html
     functionHeader = do
-      sourceLink' <- sourceAndSelfLink tmp uid
+      sourceLink' <- sourceAndSelfLink (CodeReferenceLocTop loc)
       return $ noDefHeader (sig <> sourceLink')
 
-sourceAndSelfLink :: (Members '[Reader HtmlOptions] r) => TopModulePath -> NameId -> Sem r Html
-sourceAndSelfLink tmp name = do
-  ref' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef tmp (Just name))
+sourceAndSelfLink :: (Members '[Reader HtmlOptions] r) => CodeReferenceLoc -> Sem r Html
+sourceAndSelfLink loc = do
+  ref' <- local (set htmlOptionsKind HtmlSrc) (nameIdAttrRef (loc ^. codeReferenceLocTopModule) (Just loc))
+  attrId <- nameIdAttr loc
   return $
     ( a
         ! Attr.href ref'
@@ -635,13 +639,7 @@ sourceAndSelfLink tmp name = do
         $ "Source"
     )
       <> ( a
-             ! Attr.href (selfLinkName name)
+             ! Attr.href ("#" <> attrId)
              ! Attr.class_ "selflink"
              $ "#"
          )
-
-tagIden :: (IsString c) => NameId -> c
-tagIden = fromText . prettyText
-
-selfLinkName :: (IsString c) => NameId -> c
-selfLinkName x = fromText $ "#" <> tagIden x

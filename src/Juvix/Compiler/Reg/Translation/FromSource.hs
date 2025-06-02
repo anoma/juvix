@@ -7,8 +7,8 @@ where
 
 import Control.Monad.Trans.Class (lift)
 import Data.HashMap.Strict qualified as HashMap
-import Juvix.Compiler.Reg.Data.InfoTable
 import Juvix.Compiler.Reg.Data.InfoTableBuilder
+import Juvix.Compiler.Reg.Data.Module
 import Juvix.Compiler.Reg.Language
 import Juvix.Compiler.Reg.Translation.FromSource.Lexer
 import Juvix.Compiler.Tree.Translation.FromSource.Base
@@ -31,25 +31,25 @@ parseRegSig =
       _parserSigEmptyExtra = ()
     }
 
-parseText :: Text -> Either MegaparsecError InfoTable
+parseText :: Text -> Either ParserError Module
 parseText = runParser noFile
 
-parseText' :: BuilderState -> Text -> Either MegaparsecError BuilderState
+parseText' :: BuilderState -> Text -> Either ParserError BuilderState
 parseText' bs = runParser' bs noFile
 
-runParser :: Path Abs File -> Text -> Either MegaparsecError InfoTable
+runParser :: Path Abs File -> Text -> Either ParserError Module
 runParser = runParserS parseRegSig
 
-runParser' :: BuilderState -> Path Abs File -> Text -> Either MegaparsecError BuilderState
+runParser' :: BuilderState -> Path Abs File -> Text -> Either ParserError BuilderState
 runParser' = runParserS' parseRegSig
 
 parseCode ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Code
 parseCode = P.sepEndBy instruction (kw delimSemicolon)
 
 instruction ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Instruction
 instruction =
   (instrNop >> return Nop)
@@ -68,7 +68,7 @@ instruction =
     <|> instrWithResult
 
 instrWithResult ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Instruction
 instrWithResult = do
   vref <- declVarRef
@@ -87,7 +87,7 @@ instrNop :: ParsecS r ()
 instrNop = kw kwNop
 
 instrBinop ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrBinop
 instrBinop vref =
@@ -106,7 +106,7 @@ instrBinop vref =
     <|> parseBinaryOp kwStrcat OpStrConcat vref
 
 parseBinaryOp ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   Keyword ->
   BinaryOp ->
   VarRef ->
@@ -124,16 +124,18 @@ parseBinaryOp kwd op vref = do
       }
 
 instrUnop ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrUnop
 instrUnop vref =
   parseUnaryOp kwShow OpShow vref
     <|> parseUnaryOp kwAtoi OpStrToInt vref
+    <|> parseUnaryOp kwIntToField OpIntToField vref
+    <|> parseUnaryOp kwFieldToInt OpFieldToInt vref
     <|> parseUnaryOp kwArgsNum OpArgsNum vref
 
 parseUnaryOp ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   Keyword ->
   UnaryOp ->
   VarRef ->
@@ -149,16 +151,17 @@ parseUnaryOp kwd op vref = do
       }
 
 instrCairo ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrCairo
 instrCairo vref =
   parseCairoOp kwPoseidon OpCairoPoseidon vref
     <|> parseCairoOp kwEcOp OpCairoEc vref
     <|> parseCairoOp kwRandomEcPoint OpCairoRandomEcPoint vref
+    <|> parseCairoOp kwRangeCheck OpCairoRangeCheck vref
 
 parseCairoOp ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   Keyword ->
   CairoOp ->
   VarRef ->
@@ -174,7 +177,7 @@ parseCairoOp kwd op vref = do
       }
 
 instrAssign ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrAssign
 instrAssign vref = do
@@ -186,7 +189,7 @@ instrAssign vref = do
       }
 
 instrTrace ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrTrace
 instrTrace = do
   kw kwTrace
@@ -197,7 +200,7 @@ instrTrace = do
       }
 
 instrAssert ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrAssert
 instrAssert = do
   kw kwAssert
@@ -211,7 +214,7 @@ instrDump :: ParsecS r ()
 instrDump = kw kwDump
 
 instrFailure ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrFailure
 instrFailure = do
   kw kwFail
@@ -222,7 +225,7 @@ instrFailure = do
       }
 
 instrPrealloc ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrPrealloc
 instrPrealloc = do
   kw kwPrealloc
@@ -235,7 +238,7 @@ instrPrealloc = do
       }
 
 instrAlloc ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrAlloc
 instrAlloc vref = do
@@ -251,7 +254,7 @@ instrAlloc vref = do
       }
 
 instrAllocClosure ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrAllocClosure
 instrAllocClosure vref = do
@@ -268,7 +271,7 @@ instrAllocClosure vref = do
       }
 
 instrExtendClosure ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrExtendClosure
 instrExtendClosure vref = do
@@ -283,34 +286,34 @@ instrExtendClosure vref = do
       }
 
 liveVars ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r [VarRef]
 liveVars = do
   P.try (comma >> symbol "live:")
   parens (P.sepBy varRef comma)
 
 outVar ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r VarRef
 outVar = do
   P.try (comma >> symbol "out:")
   varRef
 
 parseArgs ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r [Value]
 parseArgs = do
   parens (P.sepBy value comma)
 
 parseCallType ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r CallType
 parseCallType =
   (CallFun <$> funSymbol @Code @() @VarRef)
     <|> (CallClosure <$> varRef)
 
 instrCall ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrCall
 instrCall vref = do
@@ -327,7 +330,7 @@ instrCall vref = do
       }
 
 instrCallClosures ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r InstrCallClosures
 instrCallClosures vref = do
@@ -344,7 +347,7 @@ instrCallClosures vref = do
       }
 
 instrTailCall ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrTailCall
 instrTailCall = do
   kw kwCallTail
@@ -357,7 +360,7 @@ instrTailCall = do
       }
 
 instrTailCallClosures ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrTailCallClosures
 instrTailCallClosures = do
   kw kwCCallTail
@@ -370,7 +373,7 @@ instrTailCallClosures = do
       }
 
 instrReturn ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrReturn
 instrReturn = do
   kw kwRet
@@ -387,7 +390,7 @@ parseBoolOp =
     <|> (kw kwEq_ >> return OpEq)
 
 instrIf ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrIf
 instrIf = do
   kw kwIf
@@ -414,7 +417,7 @@ instrIf = do
       }
 
 instrBranch ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrBranch
 instrBranch = do
   kw kwBr
@@ -437,7 +440,7 @@ instrBranch = do
       }
 
 instrCase ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrCase
 instrCase = do
   kw kwCase
@@ -459,7 +462,7 @@ instrCase = do
       }
 
 caseBranch ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r CaseBranch
 caseBranch = do
   tag <- P.try $ do
@@ -478,7 +481,7 @@ caseBranch = do
       }
 
 defaultBranch ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Code
 defaultBranch = do
   symbol "default:"
@@ -487,22 +490,22 @@ defaultBranch = do
   return c
 
 instrBlock ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r InstrBlock
 instrBlock = InstrBlock <$> braces parseCode
 
 varRef ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r VarRef
 varRef = varArg <|> varTmp <|> namedRef @Code @() @VarRef
 
 declVarRef ::
   forall r.
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r VarRef
 declVarRef = varArg <|> varTmp <|> namedRef' @Code @() @VarRef decl
   where
-    decl :: Int -> Text -> ParsecS r VarRef
+    decl :: Interval -> Text -> ParsecS r VarRef
     decl _ txt = do
       idx <- lift $ gets @LocalParams (^. localParamsTempIndex)
       lift $ modify' @LocalParams (over localParamsTempIndex (+ 1))
@@ -510,7 +513,7 @@ declVarRef = varArg <|> varTmp <|> namedRef' @Code @() @VarRef decl
       lift $ modify' (over localParamsNameMap (HashMap.insert txt vref))
       return vref
 
-varArg :: ParsecS r VarRef
+varArg :: (Member (Error SimpleParserError) r) => ParsecS r VarRef
 varArg = do
   kw kwArg
   off <- brackets int
@@ -521,7 +524,7 @@ varArg = do
         _varRefName = Nothing
       }
 
-varTmp :: ParsecS r VarRef
+varTmp :: (Member (Error SimpleParserError) r) => ParsecS r VarRef
 varTmp = do
   kw kwTmp
   off <- brackets int
@@ -533,19 +536,19 @@ varTmp = do
       }
 
 value ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Value
 value = (ValConst <$> constant) <|> varOrConstrRef
 
 varOrConstrRef ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   ParsecS r Value
 varOrConstrRef = do
   r <- varRef
   (CRef <$> constrField r) <|> return (VRef r)
 
 constrField ::
-  (Members '[Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
+  (Members '[Error SimpleParserError, Reader ParserSig, InfoTableBuilder, State LocalParams] r) =>
   VarRef ->
   ParsecS r ConstrField
 constrField ref = do

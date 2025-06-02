@@ -1,7 +1,6 @@
 module Juvix.Compiler.Concrete.Data.InfoTableBuilder where
 
 import Data.HashMap.Strict qualified as HashMap
-import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.Highlight.Builder
 import Juvix.Compiler.Concrete.Data.Scope
 import Juvix.Compiler.Concrete.Data.ScopedName
@@ -15,18 +14,17 @@ data InfoTableBuilder :: Effect where
   RegisterConstructor :: ConstructorDef 'Scoped -> InfoTableBuilder m ()
   RegisterInductive :: InductiveDef 'Scoped -> InfoTableBuilder m ()
   RegisterFunctionDef :: FunctionDef 'Scoped -> InfoTableBuilder m ()
-  RegisterName :: (HasLoc c) => S.Name' c -> InfoTableBuilder m ()
-  RegisterScopedIden :: ScopedIden -> InfoTableBuilder m ()
+  RegisterName :: (HasLoc c) => Bool -> S.Name' c -> InfoTableBuilder m ()
+  RegisterScopedIden :: Bool -> ScopedIden -> InfoTableBuilder m ()
   RegisterModuleDoc :: S.NameId -> Maybe (Judoc 'Scoped) -> InfoTableBuilder m ()
-  RegisterFixity :: FixityDef -> InfoTableBuilder m ()
-  RegisterPrecedence :: S.NameId -> S.NameId -> InfoTableBuilder m ()
+  RegisterFixityDef :: FixityDef -> InfoTableBuilder m ()
   RegisterHighlightDoc :: S.NameId -> Maybe (Judoc 'Scoped) -> InfoTableBuilder m ()
   RegisterNameSig :: S.NameId -> NameSignature 'Scoped -> InfoTableBuilder m ()
   RegisterConstructorSig :: S.NameId -> RecordNameSignature 'Scoped -> InfoTableBuilder m ()
   RegisterParsedNameSig :: S.NameId -> NameSignature 'Parsed -> InfoTableBuilder m ()
   RegisterParsedConstructorSig :: S.NameId -> RecordNameSignature 'Parsed -> InfoTableBuilder m ()
   RegisterRecordInfo :: S.NameId -> RecordInfo -> InfoTableBuilder m ()
-  RegisterAlias :: S.NameId -> PreSymbolEntry -> InfoTableBuilder m ()
+  RegisterAlias :: S.NameId -> ScopedIden -> InfoTableBuilder m ()
   RegisterLocalModule :: ScopedModule -> InfoTableBuilder m ()
   GetBuilderInfoTable :: InfoTableBuilder m InfoTable
   GetBuiltinSymbol' :: Interval -> BuiltinPrim -> InfoTableBuilder m S.Symbol
@@ -61,21 +59,16 @@ runInfoTableBuilder ini = reinterpret (runState ini) $ \case
           modify' (over infoInductives (HashMap.insert (ity ^. inductiveName . nameId) ity))
           highlightDoc (ity ^. inductiveName . nameId) j
   RegisterFunctionDef f -> do
-    let j = f ^. signDoc
-        fid = f ^. signName . functionDefName . nameId
+    let j = f ^. functionDefDoc
+        fid = f ^. functionDefName . functionDefNameScoped . nameId
     modify' (over infoFunctions (HashMap.insert fid f))
     highlightDoc fid j
-  RegisterName n -> highlightName (S.anameFromName n)
-  RegisterScopedIden n -> highlightName (anameFromScopedIden n)
+  RegisterName isTop n -> highlightName (S.anameFromName isTop n)
+  RegisterScopedIden isTop n -> highlightName (anameFromScopedIden isTop n)
   RegisterModuleDoc uid doc -> highlightDoc uid doc
-  RegisterFixity f -> do
+  RegisterFixityDef f -> do
     let sid = f ^. fixityDefSymbol . S.nameId
-    modify (over infoFixities (HashMap.insert sid f))
-    case f ^. fixityDefFixity . fixityId of
-      Just fid -> modify (over infoPrecedenceGraph (HashMap.alter (Just . fromMaybe mempty) fid))
-      Nothing -> return ()
-  RegisterPrecedence l h ->
-    modify (over infoPrecedenceGraph (HashMap.alter (Just . HashSet.insert h . fromMaybe mempty) l))
+    modify (set (infoFixities . at sid) (Just f))
   RegisterHighlightDoc fid doc ->
     highlightDoc fid doc
   RegisterNameSig uid sig ->
@@ -138,15 +131,16 @@ registerBuiltinHelper b n = do
             }
 
 runInfoTableBuilderRepl :: (Members '[Error ScoperError] r) => InfoTable -> Sem (InfoTableBuilder ': r) a -> Sem r (InfoTable, a)
-runInfoTableBuilderRepl tab = ignoreHighlightBuilder . runInfoTableBuilder tab . raiseUnder
+runInfoTableBuilderRepl tab = evalHighlightBuilder . runInfoTableBuilder tab . raiseUnder
 
 ignoreInfoTableBuilder :: (Members '[Error ScoperError, HighlightBuilder] r) => Sem (InfoTableBuilder ': r) a -> Sem r a
 ignoreInfoTableBuilder = fmap snd . runInfoTableBuilder mempty
 
-anameFromScopedIden :: ScopedIden -> AName
-anameFromScopedIden s =
+anameFromScopedIden :: Bool -> ScopedIden -> AName
+anameFromScopedIden isTop s =
   AName
     { _anameLoc = getLoc s,
+      _anameIsTop = isTop,
       _anameKindPretty = getNameKindPretty s,
       _anameDocId = s ^. scopedIdenFinal . nameId,
       _anameDefinedLoc = s ^. scopedIdenSrcName . nameDefined,
@@ -164,9 +158,3 @@ lookupInfo' f = do
 
 lookupFixity :: (Members '[InfoTableBuilder, Reader InfoTable] r) => S.NameId -> Sem r FixityDef
 lookupFixity uid = lookupInfo (^. infoFixities . at uid)
-
-getPrecedenceGraph :: (Members '[InfoTableBuilder, Reader InfoTable] r) => Sem r PrecedenceGraph
-getPrecedenceGraph = do
-  tab <- ask
-  tab' <- getBuilderInfoTable
-  return $ combinePrecedenceGraphs (tab ^. infoPrecedenceGraph) (tab' ^. infoPrecedenceGraph)

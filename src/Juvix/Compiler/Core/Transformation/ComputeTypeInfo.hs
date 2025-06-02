@@ -5,6 +5,14 @@ import Juvix.Compiler.Core.Extra
 import Juvix.Compiler.Core.Info.TypeInfo qualified as Info
 import Juvix.Compiler.Core.Transformation.Base
 
+computeNodeType' :: Module -> BinderList Binder -> Node -> Type
+computeNodeType' md bl node = rePis argtys' ty'
+  where
+    ty = computeNodeType md (mkLambdas'' (reverse (toList bl)) node)
+    (argtys, ty') = unfoldPi ty
+    argtys' = drop (length bl) argtys
+
+-- | Computes the type of a closed well-typed node.
 computeNodeType :: Module -> Node -> Type
 computeNodeType md = Info.getNodeType . computeNodeTypeInfo md
 
@@ -67,10 +75,12 @@ computeNodeTypeInfo md = umapL go
           OpAssert -> case _builtinAppArgs of
             [arg] -> Info.getNodeType arg
             _ -> error "incorrect assert builtin application"
+          OpRangeCheck -> mkTypeBool'
           OpTrace -> case _builtinAppArgs of
             [arg] -> Info.getNodeType arg
             _ -> error "incorrect trace builtin application"
           OpFail -> Info.getNodeType node
+          OpNockmaReify -> Info.getNodeType node
           OpAnomaGet -> Info.getNodeType node
           OpAnomaEncode -> Info.getNodeType node
           OpAnomaDecode -> Info.getNodeType node
@@ -87,14 +97,20 @@ computeNodeTypeInfo md = umapL go
           OpAnomaResourceDelta -> mkDynamic'
           OpAnomaActionDelta -> mkDynamic'
           OpAnomaActionsDelta -> mkDynamic'
-          OpAnomaProveAction -> mkTypeInteger'
-          OpAnomaProveDelta -> mkTypeInteger'
           OpAnomaZeroDelta -> mkDynamic'
           OpAnomaAddDelta -> mkDynamic'
           OpAnomaSubDelta -> mkDynamic'
           OpAnomaRandomGeneratorInit -> mkTypeRandomGenerator'
           OpAnomaRandomNextBytes -> mkDynamic'
           OpAnomaRandomSplit -> mkDynamic'
+          OpAnomaIsCommitment -> mkTypeBool'
+          OpAnomaIsNullifier -> mkTypeBool'
+          OpAnomaCreateFromComplianceInputs -> mkDynamic'
+          OpAnomaProveDelta -> mkDynamic'
+          OpAnomaActionCreate -> mkDynamic'
+          OpAnomaTransactionCompose -> mkDynamic'
+          OpAnomaSetToList -> mkDynamic'
+          OpAnomaSetFromList -> mkDynamic'
           OpPoseidonHash -> case _builtinAppArgs of
             [arg] -> Info.getNodeType arg
             _ -> error "incorrect poseidon builtin application"
@@ -108,6 +124,10 @@ computeNodeTypeInfo md = umapL go
           OpUInt8FromInt -> mkTypeUInt8'
           OpByteArrayFromListByte -> mkDynamic'
           OpByteArrayLength -> mkTypeInteger'
+          OpAnomaKeccak256 -> Info.getNodeType node
+          OpAnomaSecp256k1SignCompact -> Info.getNodeType node
+          OpAnomaSecp256k1Verify -> Info.getNodeType node
+          OpAnomaSecp256k1PubKey -> Info.getNodeType node
       NCtr Constr {..} ->
         let ci = lookupConstructorInfo md _constrTag
             ii = lookupInductiveInfo md (ci ^. constructorInductive)

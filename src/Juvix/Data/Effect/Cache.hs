@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
-{-# OPTIONS_GHC -Wno-unused-type-patterns #-}
-
 module Juvix.Data.Effect.Cache
   ( runCache,
     evalCache,

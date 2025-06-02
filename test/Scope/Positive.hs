@@ -5,6 +5,8 @@ import Juvix.Compiler.Concrete.Extra
 import Juvix.Compiler.Concrete.Print qualified as P
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as Parser
+import Juvix.Compiler.Concrete.Translation.ImportScanner.FlatParse qualified as FlatParse
+import Juvix.Compiler.Concrete.Translation.ImportScanner.Megaparsec qualified as Megaparsec
 import Juvix.Compiler.Store.Scoped.Language
 import Juvix.Prelude.Pretty
 
@@ -49,11 +51,11 @@ testDescr PosTest {..} = helper renderCodeNew
               _testAssertion = Steps $ \step -> do
                 entryPoint <- testDefaultEntryPointIO tRoot file'
 
-                let evalHelper :: Text -> Sem (PipelineEff PipelineAppEffects) a -> IO (PipelineResult a)
-                    evalHelper input_ m = snd <$> testRunIO entryPoint {_entryPointStdin = Just input_} m
+                let evalHelper :: Maybe Text -> Sem (PipelineEff PipelineAppEffects) a -> IO a
+                    evalHelper input_ m = (^. pipelineResult) . snd <$> testRunIO entryPoint {_entryPointStdin = input_} m
 
                 step "Parsing & Scoping"
-                PipelineResult s _ _ <- snd <$> testRunIO entryPoint upToScopingEntry
+                s :: Scoper.ScoperResult <- evalHelper Nothing upToScopingEntry
 
                 let p = s ^. Scoper.resultParserResult
                     fScoped :: Text
@@ -62,11 +64,16 @@ testDescr PosTest {..} = helper renderCodeNew
                     fParsed = renderer $ p ^. Parser.resultModule
 
                 step "Parsing & scoping pretty scoped"
-                PipelineResult s' _ _ <- evalHelper fScoped upToScopingEntry
+                s' <- evalHelper (Just fScoped) upToScopingEntry
                 let p' = s' ^. Scoper.resultParserResult
 
                 step "Parsing pretty parsed"
-                PipelineResult parsedPretty' _ _ <- evalHelper fParsed upToParsedSource
+                parsedPretty' <- evalHelper (Just fParsed) upToParsedSource
+
+                step "Scan with flatparse"
+                bs <- runM (runFilesIO (readFileBS' file'))
+                scanFlatParse <- maybe (error "Flatparse import scan failed") return (FlatParse.scanBSImports file' bs)
+                let scanMega = Megaparsec.parserStateToScanResult (p ^. Parser.resultParserState)
 
                 step "Checks"
                 let smodule = s ^. Scoper.resultModule
@@ -79,6 +86,7 @@ testDescr PosTest {..} = helper renderCodeNew
                 assertEqDiffShow "check: scope . parse . pretty . scope . parse = scope . parse" smodule smodule'
                 assertEqDiffShow "check: parse . pretty . scope . parse = parse" pmodule pmodule'
                 assertEqDiffShow "check: parse . pretty . parse = parse" pmodule parsedPrettyModule
+                assertBool "scanned imports with flatparse == scanned imports with megaparsec" (scanFlatParse == scanMega)
             }
 
 allTests :: TestTree
@@ -271,6 +279,14 @@ tests =
       $(mkRelDir "issue2929")
       $(mkRelFile "main.juvix"),
     posTest
+      "Forward reference local modules"
+      $(mkRelDir "issue3032")
+      $(mkRelFile "Example.juvix"),
+    posTest
+      "Forward reference local modules (2)"
+      $(mkRelDir ".")
+      $(mkRelFile "ForwardReferenceModules.juvix"),
+    posTest
       "Proper formatting of import module path"
       $(mkRelDir "issue2737")
       $(mkRelFile "main.juvix"),
@@ -279,7 +295,23 @@ tests =
       $(mkRelDir "issue3068")
       $(mkRelFile "main.juvix"),
     posTest
+      "Fixity overwrite"
+      $(mkRelDir ".")
+      $(mkRelFile "FixityOverwrite.juvix"),
+    posTest
       "Type signatures"
       $(mkRelDir ".")
-      $(mkRelFile "TypeSignatures.juvix")
+      $(mkRelFile "TypeSignatures.juvix"),
+    posTest
+      "Scope ill typed"
+      $(mkRelDir ".")
+      $(mkRelFile "ScopeIllTyped.juvix"),
+    posTest
+      "Whitespace"
+      $(mkRelDir ".")
+      $(mkRelFile "Whitespace.juvix"),
+    posTest
+      "Tabs"
+      $(mkRelDir ".")
+      $(mkRelFile "Tab.juvix")
   ]

@@ -1,4 +1,4 @@
-working-directory: ./../../positive/Markdown
+working-directory: ./../../positive
 
 tests:
   - name: markdown-help-theme
@@ -9,7 +9,7 @@ tests:
       - markdown
       - --help
     stdout:
-      contains: JUVIX_MARKDOWN_FILE
+      contains: JUVIX_MD_FILE_OR_PROJECT
     exit-status: 0
 
   - name: markdown-stdout
@@ -19,9 +19,8 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        cp Test.juvix.md $temp
+        cp -r Markdown/* $temp
         cd $temp
-        touch juvix.yaml
         juvix --log-level error markdown Test.juvix.md --stdout
     stdout:
       contains:
@@ -35,9 +34,8 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        cp Test.juvix.md $temp
+        cp -r Markdown/* $temp
         cd $temp
-        touch juvix.yaml
         juvix --log-level error markdown Test.juvix.md --output-dir=OUT
         [ -d OUT ]
         [ -f OUT/Test.md ]
@@ -51,9 +49,8 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        cp Test.juvix.md $temp
+        cp -r Markdown/* $temp
         cd $temp
-        touch juvix.yaml
         juvix --log-level error markdown Test.juvix.md --prefix-id="XYZ"
         cat markdown/Test.md
     stdout:
@@ -68,9 +65,8 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        cp Test.juvix.md $temp
+        cp -r Markdown/* $temp
         cd $temp
-        touch juvix.yaml
         juvix --log-level error markdown Test.juvix.md --no-path --stdout
     stdout:
       matches: |
@@ -84,11 +80,42 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        cp Test.juvix.md $temp
+        cp -r Markdown/* $temp
         cd $temp
-        touch juvix.yaml
         juvix --log-level error markdown Test.juvix.md --no-path --prefix-url Y --prefix-id X --stdout
     stdout:
       matches: |
         .*href="Y#XTest:[0-9]+".*
+    exit-status: 0
+
+  - name: markdown-folder-structure
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cp -r Markdown/* $temp
+        cd $temp
+        juvix markdown --folder-structure --log-level error
+        cd markdown
+        [ -f Test.md ]
+        [ -f Dir/Nested.md ]
+    stdout: ''
+    exit-status: 0
+
+  - name: markdown-flat-structure
+    command:
+      shell:
+        - bash
+      script: |
+        temp=$(mktemp -d)
+        trap 'rm -rf -- "$temp"' EXIT
+        cp -r Markdown/* $temp
+        cd $temp
+        juvix markdown --folder-structure --log-level error
+        cd markdown
+        [ -f Test.md ]
+        [ -f Dir.Nested.md ]
+    stdout: ''
     exit-status: 0

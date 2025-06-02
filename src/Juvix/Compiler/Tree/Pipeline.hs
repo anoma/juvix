@@ -1,17 +1,18 @@
 module Juvix.Compiler.Tree.Pipeline
   ( module Juvix.Compiler.Tree.Pipeline,
-    module Juvix.Compiler.Tree.Data.InfoTable,
+    module Juvix.Compiler.Tree.Data.Module,
   )
 where
 
-import Juvix.Compiler.Tree.Data.InfoTable
+import Juvix.Compiler.Pipeline.EntryPoint
+import Juvix.Compiler.Tree.Data.Module
 import Juvix.Compiler.Tree.Transformation
 
-toNockma :: (Member (Error JuvixError) r) => InfoTable -> Sem r InfoTable
-toNockma = applyTransformations toNockmaTransformations
+toNockma :: (Members '[Error JuvixError, Reader EntryPoint] r) => Module -> Sem r Module
+toNockma = mapReader fromEntryPoint . applyTransformations toNockmaTransformations
 
-toAsm :: (Member (Error JuvixError) r) => InfoTable -> Sem r InfoTable
-toAsm = applyTransformations toAsmTransformations
+toAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Module -> Sem r Module
+toAsm = mapReader fromEntryPoint . applyTransformations toAsmTransformations
 
-toCairoAsm :: (Member (Error JuvixError) r) => InfoTable -> Sem r InfoTable
-toCairoAsm = applyTransformations toCairoAsmTransformations
+toCairoAsm :: (Members '[Error JuvixError, Reader EntryPoint] r) => Module -> Sem r Module
+toCairoAsm = mapReader fromEntryPoint . applyTransformations toCairoAsmTransformations

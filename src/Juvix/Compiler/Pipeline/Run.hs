@@ -10,7 +10,7 @@ import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping qualified as Scoper
 import Juvix.Compiler.Concrete.Translation.FromSource qualified as P
 import Juvix.Compiler.Concrete.Translation.FromSource.TopModuleNameChecker (TopModuleNameChecker, runTopModuleNameChecker)
-import Juvix.Compiler.Concrete.Translation.ImportScanner (ImportScanStrategy, defaultImportScanStrategy)
+import Juvix.Compiler.Concrete.Translation.ImportScanner (ImportScanStrategy)
 import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data qualified as Core
 import Juvix.Compiler.Internal.Translation qualified as Internal
@@ -26,7 +26,9 @@ import Juvix.Compiler.Pipeline.Package.Loader.Error
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff
 import Juvix.Compiler.Pipeline.Package.Loader.EvalEff.IO
 import Juvix.Compiler.Pipeline.Package.Loader.PathResolver
+import Juvix.Compiler.Pipeline.SHA256Cache
 import Juvix.Compiler.Store.Scoped.Language qualified as Scoped
+import Juvix.Compiler.Verification.Dumper
 import Juvix.Data.Effect.Git
 import Juvix.Data.Effect.Process
 import Juvix.Data.Effect.TaggedLock
@@ -59,7 +61,7 @@ runPipelineRecursiveEither ::
   Sem r (Either JuvixError (a, [a]))
 runPipelineRecursiveEither entry a = do
   x <- runIOEitherPipeline' entry $ do
-    processRecursiveUpTo a
+    processRecursivelyUpTo a
   return . mapRight snd $ snd x
 
 runIOEitherHelper ::
@@ -118,7 +120,7 @@ runIOEitherPipeline' entry a = do
     . runJuvixError
     . runFilesIO
     . runReader entry
-    . runLogIO
+    . runDumper
     . runProcessIO
     . mapError (JuvixError @GitProcessError)
     . runGitProcess
@@ -131,6 +133,7 @@ runIOEitherPipeline' entry a = do
     . runTopModuleNameChecker
     . runReader (opts ^. pipelineImportStrategy)
     . withImportTree (entry ^. entryPointModulePath)
+    . runMigration
     . evalModuleInfoCacheHelper
     $ a
 
@@ -150,11 +153,12 @@ evalModuleInfoCacheHelper ::
          Reader NumThreads,
          Reader PipelineOptions,
          Logger,
-         Files
+         Files,
+         Dumper
        ]
       r
   ) =>
-  Sem (ModuleInfoCache ': ProgressLog ': JvoCache ': r) a ->
+  Sem (ModuleInfoCache ': SHA256Cache ': ProgressLog ': JvoCache ': r) a ->
   Sem r a
 evalModuleInfoCacheHelper m = do
   hasParallelSupport <- supportsParallel
@@ -215,16 +219,16 @@ runReplPipelineIOEither' lockMode entry = do
       . runReader defaultPipelineOptions
       . runLoggerIO replLoggerOptions
       . runConcurrent
-      . runReader defaultNumThreads
+      . mapReader (^. pipelineNumThreads)
       . evalInternet hasInternet
-      . ignoreHighlightBuilder
+      . evalHighlightBuilder
       . runError
       . runState initialArtifacts
       . runNameIdGenArtifacts
       . runFilesIO
       . runReader entry
+      . ignoreDumper
       . runTaggedLock lockMode
-      . runLogIO
       . mapError (JuvixError @GitProcessError)
       . runProcessIO
       . runGitProcess
@@ -232,11 +236,12 @@ runReplPipelineIOEither' lockMode entry = do
       . mapError (JuvixError @PackageLoaderError)
       . runEvalFileEffIO
       . runDependencyResolver
-      . runReader defaultDependenciesConfig
+      . mapReader (^. pipelineDependenciesConfig)
       . runPathResolver'
       . runTopModuleNameChecker
-      . runReader defaultImportScanStrategy
+      . mapReader (^. pipelineImportStrategy)
       . withImportTree (entry ^. entryPointModulePath)
+      . runMigration
       . evalModuleInfoCacheHelper
       $ processFileToStoredCore entry
   return $ case eith of
@@ -298,7 +303,7 @@ runReplPipelineIOEither' lockMode entry = do
           _artifactResolver = iniResolverState,
           _artifactNameIdState = genNameIdState defaultModuleId,
           _artifactTypeCheckingTables = mempty,
-          _artifactCoreModule = Core.emptyModule,
+          _artifactCoreModule = Core.emptyModule defaultModuleId,
           _artifactScopeTable = mempty,
           _artifactScopeExports = mempty,
           _artifactScoperState = Scoper.iniScoperState mempty,

@@ -17,6 +17,7 @@ data HighlightBuilder :: Effect where
   HighlightError :: Interval -> HighlightBuilder m ()
   HighlightDoc :: NameId -> Maybe (Judoc 'Scoped) -> HighlightBuilder m ()
   HighlightName :: AName -> HighlightBuilder m ()
+  HighlightPrec :: WithLoc Int -> HighlightBuilder m ()
   HighlightParsedItem :: ParsedItem -> HighlightBuilder m ()
   HighlightType :: NameId -> Internal.Expression -> HighlightBuilder m ()
   HighlightMergeDocTable :: DocTable -> HighlightBuilder m ()
@@ -27,15 +28,16 @@ makeSem ''HighlightBuilder
 runHighlightBuilder :: Sem (HighlightBuilder ': r) a -> Sem r (HighlightInput, a)
 runHighlightBuilder = reinterpret (runStateShared emptyHighlightInput) $ \case
   HighlightError e -> modifyShared (over highlightErrors (e :))
-  HighlightName a -> modifyShared (over (highlightNames) (a :))
+  HighlightName a -> modifyShared (over highlightNames (a :))
   HighlightParsedItem p -> modifyShared (over (highlightParsedItems) (p :))
+  HighlightPrec p -> modifyShared (over highlightPrecItems (p :))
   HighlightDoc k md -> modifyShared (set (highlightDocTable . at k) md)
   HighlightType uid ty -> modifyShared (set (highlightTypes . typesTable . at uid) (Just ty))
   HighlightMergeDocTable tbl -> modifyShared (over highlightDocTable (HashMap.union tbl))
   GetDocTable uid -> filterByTopModule uid <$> getsShared (^. highlightDocTable)
 
-ignoreHighlightBuilder :: Sem (HighlightBuilder ': r) a -> Sem r a
-ignoreHighlightBuilder = fmap snd . runHighlightBuilder
+evalHighlightBuilder :: Sem (HighlightBuilder ': r) a -> Sem r a
+evalHighlightBuilder = fmap snd . runHighlightBuilder
 
 runJuvixError :: (Members '[HighlightBuilder] r) => Sem (Error JuvixError ': r) a -> Sem r (Either JuvixError a)
 runJuvixError m = do

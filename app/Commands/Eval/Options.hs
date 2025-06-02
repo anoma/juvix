@@ -3,7 +3,9 @@ module Commands.Eval.Options where
 import App
 import CommonOptions
 import Evaluator qualified as Eval
+import Juvix.Compiler.Backend
 import Juvix.Compiler.Core.Pretty.Options qualified as Core
+import Juvix.Compiler.Pipeline.EntryPoint
 
 data EvalOptions = EvalOptions
   { _evalInputFile :: Maybe (AppPath File),
@@ -18,6 +20,11 @@ instance CanonicalProjection EvalOptions Core.Options where
     Core.defaultOptions
       { Core._optShowDeBruijnIndices = False
       }
+
+instance EntryPointOptions EvalOptions where
+  applyOptions _ =
+    set entryPointPipeline (Just PipelineEval)
+      . set entryPointTarget (Just TargetCore)
 
 evalOptionsToEvalOptions :: (Members '[App] r) => EvalOptions -> Sem r Eval.EvalOptions
 evalOptionsToEvalOptions c = do

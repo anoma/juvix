@@ -154,7 +154,7 @@ printSpaceSpan = mapM_ printSpaceSection . (^. spaceSpan)
 
 printComment :: (Members '[State Builder] r) => Comment -> Sem r ()
 printComment c = do
-  append' (annotate AnnComment (P.pretty c))
+  append' (ppCodeAnn c)
   hardline'
 
 popQueue :: (Members '[State Builder] r) => Sem r ()

@@ -1,0 +1,517 @@
+module ResourceMachine;
+
+import Encode open;
+import ByteArray open;
+import Stdlib.Prelude open;
+import Stdlib.Debug.Fail open;
+
+type Tag :=
+  | Created Commitment
+  | Consumed Nullifier
+with
+  toNat : Tag -> Nat
+    | (Created x) := Commitment.toNat x
+    | (Consumed x) := Nullifier.toNat x;
+end;
+
+open Tag using {Consumed; Created} public;
+
+type Nullifier := privateMk Nat
+with
+  toNat : Nullifier -> Nat
+    | (privateMk c) := c;
+
+  fromNat : Nat -> Nullifier := privateMk;
+
+  deriving instance
+  Nullifier-Ord : Ord Nullifier;
+
+  deriving instance
+  Nullifier-Eq : Eq Nullifier;
+end;
+
+--- The nullifier key type describing a secret required to compute the ;Nullifier; of a resource
+builtin anoma-nullifier-key
+type NullifierKey := privateMk ByteArray
+with
+  size : Nat := 64;
+
+  fromByteArray : ByteArray -> NullifierKey := privateMk;
+
+  toByteArray : NullifierKey -> ByteArray
+    | (privateMk b) := b;
+
+  module Transparent;
+    mk : NullifierKey := privateMk (ByteArray.zero size);
+  end;
+
+  deriving instance
+  NullifierKey-Ord : Ord NullifierKey;
+
+  deriving instance
+  NullifierKey-Eq : Eq NullifierKey;
+end;
+
+type Commitment := privateMk Nat
+with
+  toNat : Commitment -> Nat
+    | (privateMk c) := c;
+
+  fromNat : Nat -> Commitment := privateMk;
+
+  deriving instance
+  Commitment-Eq : Eq Commitment;
+
+  deriving instance
+  Commitment-Ord : Ord Commitment;
+end;
+
+deriving instance
+Tag-Eq : Eq Tag;
+
+deriving instance
+Tag-Ord : Ord Tag;
+
+-- always 0
+-- in compliance_unit.ex it is checked that the proof is 0, otherwise it errors
+type Proof := privateMk Nat
+with
+  module Transparent;
+    mk : Proof := privateMk 0;
+  end;
+end;
+
+-- always 0
+-- in compliance_unit.ex it is checked that the verifying key is 0, otherwise it errors
+type VerifyingKey := privateMk Nat
+with
+  module Transparent;
+    mk : VerifyingKey := privateMk 0;
+  end;
+end;
+
+type ConsumedItem :=
+  mk@{
+    nullifier : Nullifier;
+    root : CommitmentRoot;
+    logic : Encoded Logic;
+  };
+
+type DeltaHash := privateMk Nat;
+
+type CreatedItem :=
+  mk@{
+    commitment : Commitment;
+    logic : Encoded Logic;
+  };
+
+type Instance :=
+  mk@{
+    consumed : List ConsumedItem;
+    created : List CreatedItem;
+    deltaHash : DeltaHash;
+  };
+
+type ComplianceUnit :=
+  privateMk@{
+    proof : Proof;
+    instance : Instance;
+    verifyingKey : VerifyingKey;
+  }
+with
+  module Transparent;
+    mk (instance : Instance) : ComplianceUnit :=
+      privateMk@{
+        instance;
+        proof := Proof.Transparent.mk;
+        verifyingKey := VerifyingKey.Transparent.mk;
+      };
+  end;
+end;
+
+type Logic : Type :=
+  mk@{
+    compute : Logic.Arg -> Bool;
+  }
+with
+  -- called RLPS.Instance
+  positive
+  type Arg :=
+    mk@{
+      self : Resource;
+      isConsumed : Bool;
+      consumed : List Resource;
+      created : List Resource;
+      appData : AppData;
+    };
+end;
+
+type Label := mk Nat
+with
+  toNat : Label -> Nat
+    | (mk l) := l;
+
+  fromNat : Nat -> Label := mk;
+
+  deriving instance
+  Label-Ord : Ord Label;
+
+  deriving instance
+  Label-Eq : Eq Label;
+end;
+
+--- A fixed-size data type encoding a number to be used once ensuring that the resource commitment is unique.
+--- NOTE: This should be a number having an at most negligible chance of repeating is sufficient, e.g., a pseudo-random number.
+type Nonce := privateMk ByteArray
+with
+  size : Nat := 32;
+
+  fromNat : Nat -> Nonce := fromAnomaContents size >> privateMk;
+
+  from32SizedByteArray : ByteArray -> Nonce :=  privateMk;
+
+  toAnomaAtom : Nonce -> AnomaAtom := toNat >> AnomaAtom.fromNat;
+
+  toNat : Nonce -> Nat
+    | (privateMk nonce) := toAnomaContents nonce;
+
+  deriving instance
+  Nonce-Ord : Ord Nonce;
+
+  deriving instance
+  Nonce-Eq : Eq Nonce;
+end;
+
+--- The nullifier key type describing a secret required to compute the ;Nullifier; of a resource
+type NullifierKeyCommitment := mk ByteArray
+with
+  zero : NullifierKeyCommitment :=
+    NullifierKeyCommitment.mk (ByteArray.zero 32);
+
+  fromByteArray : ByteArray -> NullifierKeyCommitment := mk;
+
+  toAnomaAtom : NullifierKeyCommitment -> AnomaAtom :=
+    toByteArray >> toAnomaContents >> AnomaAtom.fromNat;
+
+  toByteArray : NullifierKeyCommitment -> ByteArray
+    | (mk b) := b;
+
+  deriving instance
+  NullifierKeyCommitment-Ord : Ord NullifierKeyCommitment;
+
+  deriving instance
+  NullifierKeyCommitment-Eq : Eq NullifierKeyCommitment;
+end;
+
+builtin anoma-resource
+type Resource :=
+  mk@{
+    logic : Encoded Logic;
+    label : Label;
+    value : AnomaAtom;
+    quantity : Nat;
+    ephemeral : Bool;
+    nonce : Nonce;
+    nullifierKeyCommitment : NullifierKeyCommitment;
+    unusedRandSeed : Nat;
+  }
+with
+  builtin anoma-resource-delta
+  axiom delta : Resource -> Delta;
+
+  module Transparent;
+    nullifier : Resource -> Nullifier :=
+      NullifiableResource.Transparent.mk >> NullifiableResource.nullifier;
+  end;
+end;
+
+-- Dev Note: Corresponds to Set in Hoon (MapSet in Elixir)
+module AnomaSet;
+  builtin anoma-set
+  axiom AnomaSet (A : Type) : Type;
+
+  builtin anoma-set-to-list
+  axiom toList {A} (set : AnomaSet A) : List A;
+
+  builtin anoma-set-from-list
+  axiom fromList {A} (list : List A) : AnomaSet A;
+
+  empty {A} : AnomaSet A := fromList [];
+end;
+
+open AnomaSet using {AnomaSet} public;
+
+type AnomaMap (key value : Type) := privateMk (AnomaSet (Pair key value))
+with
+  empty {key value} : AnomaMap key value := fromList [];
+
+  fromList {key} {value} : List (Pair key value) -> AnomaMap key value :=
+    AnomaSet.fromList >> privateMk;
+
+  toList {key} {value} : AnomaMap key value -> List (Pair key value)
+    | (privateMk m) := AnomaSet.toList m;
+
+  toMap {key} {value} {{Ord key}} : AnomaMap key value -> Map key value
+    | (privateMk m) := Map.fromList (AnomaSet.toList m);
+
+  fromMap {key} {value} : Map key value -> AnomaMap key value :=
+    Map.toList >> fromList;
+end;
+
+type AnomaAtom := mk Nat
+with
+  fromNat : Nat -> AnomaAtom := mk;
+
+  toNat : AnomaAtom -> Nat
+    | (mk n) := n;
+
+  deriving instance
+  AnomaAtomEqI : Eq AnomaAtom;
+
+  deriving instance
+  AnomaAtomOrdI : Ord AnomaAtom;
+end;
+
+deriving instance
+RawTag-Eq : Eq RawTag;
+
+deriving instance
+RawTag-Ord : Ord RawTag;
+
+type RawTag := privateMk Nat
+with
+  builtin anoma-is-commitment
+  axiom builtinIsCommitment : Nat -> Bool;
+
+  isCommitment : RawTag -> Bool := toNat >> builtinIsCommitment;
+
+  builtin anoma-is-nullifier
+  axiom builtinIsNullifier : Nat -> Bool;
+
+  isNullifier : RawTag -> Bool := toNat >> builtinIsNullifier;
+
+  toTag (r : RawTag) : Maybe Tag :=
+    if
+      | isCommitment r := just (Created (Commitment.fromNat (toNat r)))
+      | isNullifier r := just (Consumed (Nullifier.fromNat (toNat r)))
+      | else := nothing;
+
+  fromTag : Tag -> RawTag := Tag.toNat >> fromNat;
+
+  toNat : RawTag -> Nat
+    | (privateMk c) := c;
+
+  fromNat : Nat -> RawTag := privateMk;
+end;
+
+type AppData := privateMk (AnomaMap RawTag AppData.Value)
+with
+  type Value :=
+    mk@{
+      atom : AnomaAtom;
+      deletionCriteria : Bool;
+    }
+  with
+    fromAnomaAtom (atom : AnomaAtom) : Value :=
+      mk@{
+        atom;
+        deletionCriteria := true;
+      };
+  end;
+
+  empty : AppData := privateMk AnomaMap.empty;
+
+  toMap : AppData -> Map RawTag AnomaAtom
+    | (privateMk m) :=
+      AnomaMap.toList m |> map \{(k, v) := k, Value.atom v} |> Map.fromList;
+
+  fromMap : Map RawTag AnomaAtom -> AppData :=
+    Map.toList
+      >> map \{(k, v) := k, Value.fromAnomaAtom v}
+      >> AnomaMap.fromList
+      >> privateMk;
+end;
+
+builtin anoma-delta
+axiom Delta : Type;
+
+module Kind;
+  builtin anoma-kind
+  axiom Kind : Type;
+
+  instance
+  KindEq : Eq Kind :=
+    Eq.mk@{
+      isEqual (a b : Kind) : Bool :=
+        builtinAnomaEncode a == builtinAnomaEncode b;
+    };
+end;
+
+open Kind using {Kind} public;
+
+instance
+ShowKindI : Show Kind :=
+  Show.mk@{
+    show (_ : Kind) : String := "<kind>";
+  };
+
+builtin anoma-resource-commitment
+axiom rawCommitment : Resource -> Nat;
+
+commitment : Resource -> Commitment := rawCommitment >> Commitment.fromNat;
+
+builtin anoma-resource-kind
+axiom kind : Resource -> Kind;
+
+type LogicProof :=
+  privateMk@{
+    logic : Logic;
+    proof : Proof;
+  }
+with
+  module Transparent;
+    mk (logic : Logic) : LogicProof :=
+      privateMk@{
+        logic;
+        proof := Proof.Transparent.mk;
+      };
+  end;
+end;
+
+type RootedNullifiableResource :=
+  mk@{
+    key : NullifierKey;
+    resource : Resource;
+    root : CommitmentRoot;
+  }
+with
+  module Transparent;
+    mkEphemeral (resource : Resource) : RootedNullifiableResource :=
+      if
+        | Resource.ephemeral resource :=
+          mk@{
+            resource;
+            root := CommitmentRoot.fromNat 0;
+          }
+        | else :=
+          failwith "mkEphemeral requires an ephemeral resource as an argument";
+
+    mk
+      (resource : Resource)
+      (root : CommitmentRoot)
+      : RootedNullifiableResource :=
+      RootedNullifiableResource.mk@{
+        resource;
+        root;
+        key := NullifierKey.Transparent.mk;
+      };
+  end;
+end;
+
+type NullifiableResource :=
+  mk@{
+    key : NullifierKey;
+    resource : Resource;
+  }
+with
+  builtin anoma-resource-nullifier
+  axiom rawNullifier : NullifierKey -> Resource -> Nat;
+
+  nullifier : NullifiableResource -> Nullifier :=
+    resource >> rawNullifier NullifierKey.Transparent.mk >> Nullifier.fromNat;
+
+  module Transparent;
+    mk (resource : Resource) : NullifiableResource :=
+      NullifiableResource.mk@{
+        resource;
+        key := NullifierKey.Transparent.mk;
+      };
+  end;
+end;
+
+builtin anoma-action
+type Action :=
+  mk@{
+    commitments : List Commitment;
+    nullifiers : List Nullifier;
+    resourceLogicProofs : AnomaMap RawTag LogicProof;
+    complianceUnits : AnomaSet ComplianceUnit;
+    appData : AppData;
+  }
+with
+  builtin anoma-action-delta
+  axiom delta : Action -> Delta;
+
+  -- We need it to compute the Delta in unbalanced transactions
+  builtin anoma-actions-delta
+  axiom listDelta : List Action -> Delta;
+
+  create
+    (consumed : List RootedNullifiableResource)
+    (created : List Resource)
+    (appData : AppData)
+    : Action :=
+    builtinCreate@{
+      consumed;
+      created;
+      appData;
+    };
+
+  builtin anoma-action-create
+  axiom builtinCreate
+    (consumed : List RootedNullifiableResource)
+    (created : List Resource)
+    (appData : AppData)
+    : Action;
+end;
+
+builtin anoma-zero-delta
+axiom zeroDelta : Delta;
+
+builtin anoma-add-delta
+axiom addDelta : Delta -> Delta -> Delta;
+
+builtin anoma-sub-delta
+axiom subDelta : Delta -> Delta -> Delta;
+
+--- A Commitment Tree root
+type CommitmentRoot := privateMk Nat
+with
+  fromNat : Nat -> CommitmentRoot := privateMk;
+
+  toNat : CommitmentRoot -> Nat
+    | (privateMk r) := r;
+
+  deriving instance
+  Root-Ord : Ord CommitmentRoot;
+
+  deriving instance
+  Root-Eq : Eq CommitmentRoot;
+end;
+
+type DeltaProof := privateMk Nat
+with
+  mk : DeltaProof := privateMk 0;
+end;
+
+builtin anoma-transaction
+type Transaction :=
+  privateMk@{
+    roots : AnomaSet CommitmentRoot;
+    actions : AnomaSet Action;
+    deltaProof : DeltaProof;
+  }
+with
+  mk
+    (roots : AnomaSet CommitmentRoot)
+    (actions : AnomaSet Action)
+    : Transaction :=
+    privateMk@{
+      roots;
+      actions;
+      deltaProof := DeltaProof.mk;
+    };
+
+  builtin anoma-transaction-compose
+  axiom compose (tx1 tx2 : Transaction) : Transaction;
+end;

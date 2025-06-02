@@ -95,12 +95,14 @@ runParserResultBuilder s =
       registerItem' i
     RegisterSpaceSpan g -> do
       modify' (over parserStateComments (g :))
-      forM_ (g ^.. spaceSpan . each . _SpaceComment) $ \c ->
-        registerItem'
-          ParsedItem
-            { _parsedLoc = getLoc c,
-              _parsedTag = ParsedTagComment
-            }
+      forM_ (g ^.. spaceSpan . each . _SpaceComment) $ \c -> do
+        let i =
+              ParsedItem
+                { _parsedLoc = getLoc c,
+                  _parsedTag = ParsedTagComment
+                }
+        highlightParsedItem i
+        registerItem' i
 
 ignoreParserResultBuilder :: Sem (ParserResultBuilder ': r) a -> Sem r a
 ignoreParserResultBuilder = interpret $ \case

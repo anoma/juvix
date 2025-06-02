@@ -1,22 +1,20 @@
 module Juvix.Compiler.Store.Scoped.Data.InfoTable where
 
 import Data.HashMap.Strict qualified as HashMap
-import Data.HashSet qualified as HashSet
 import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
-import Juvix.Compiler.Store.Scoped.Data.SymbolEntry
 import Juvix.Extra.Serialize
 import Juvix.Prelude
 
 type DocTable = HashMap NameId (Judoc 'Scoped)
 
+-- | Fixity precedence
 type PrecedenceGraph = HashMap S.NameId (HashSet S.NameId)
 
 type BuiltinsTable = HashMap BuiltinPrim S.Symbol
 
 data InfoTable = InfoTable
   { _infoFixities :: HashMap S.NameId FixityDef,
-    _infoPrecedenceGraph :: PrecedenceGraph,
     _infoConstructorSigs :: HashMap NameId (RecordNameSignature 'Scoped),
     _infoNameSigs :: HashMap NameId (NameSignature 'Scoped),
     _infoParsedConstructorSigs :: HashMap NameId (RecordNameSignature 'Parsed),
@@ -28,7 +26,7 @@ data InfoTable = InfoTable
     _infoAxioms :: HashMap NameId (AxiomDef 'Scoped),
     -- | Contains the builtins defined in itself *and* its local modules
     _infoBuiltins :: BuiltinsTable,
-    _infoScoperAlias :: HashMap S.NameId PreSymbolEntry
+    _infoScoperAlias :: HashMap S.NameId ScopedIden
   }
   deriving stock (Generic)
 
@@ -42,7 +40,6 @@ instance Semigroup InfoTable where
   tab1 <> tab2 =
     InfoTable
       { _infoFixities = mappendField' infoFixities,
-        _infoPrecedenceGraph = appendFieldWith' combinePrecedenceGraphs infoPrecedenceGraph,
         _infoConstructorSigs = mappendField' infoConstructorSigs,
         _infoNameSigs = mappendField' infoNameSigs,
         _infoParsedConstructorSigs = mappendField' infoParsedConstructorSigs,
@@ -66,7 +63,6 @@ instance Monoid InfoTable where
   mempty =
     InfoTable
       { _infoFixities = mempty,
-        _infoPrecedenceGraph = mempty,
         _infoConstructorSigs = mempty,
         _infoNameSigs = mempty,
         _infoParsedConstructorSigs = mempty,
@@ -79,10 +75,6 @@ instance Monoid InfoTable where
         _infoBuiltins = mempty,
         _infoScoperAlias = mempty
       }
-
-combinePrecedenceGraphs :: PrecedenceGraph -> PrecedenceGraph -> PrecedenceGraph
-combinePrecedenceGraphs g1 g2 =
-  HashMap.unionWith HashSet.union g1 g2
 
 filterByTopModule :: ModuleId -> HashMap NameId b -> HashMap NameId b
 filterByTopModule m = HashMap.filterWithKey (\k _v -> sameModule k)

@@ -59,3 +59,11 @@ checkRandomEcPoint f = do
   pt <- getBuiltinNameScoper (getLoc f) BuiltinEcPoint
   unless (ftype === pt) $
     builtinsErrorText (getLoc f) "randomEcPoint must be of type Ec.Point"
+
+checkRangeCheck :: (Members '[Reader BuiltinsTable, Error ScoperError, NameIdGen] r) => AxiomDef -> Sem r ()
+checkRangeCheck f = do
+  let ftype = f ^. axiomType
+  field_ <- getBuiltinNameScoper (getLoc f) BuiltinField
+  bool_ <- getBuiltinNameScoper (getLoc f) BuiltinBool
+  unless (ftype === (field_ --> field_ --> bool_)) $
+    builtinsErrorText (getLoc f) "rangeCheck must be of type Field -> Field -> Bool"

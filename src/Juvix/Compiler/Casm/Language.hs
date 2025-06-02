@@ -99,7 +99,8 @@ data Instruction
 data InstrAssign = InstrAssign
   { _instrAssignValue :: RValue,
     _instrAssignResult :: MemRef,
-    _instrAssignIncAp :: Bool
+    _instrAssignIncAp :: Bool,
+    _instrAssignComment :: Maybe Text
   }
 
 data InstrExtraBinop = InstrExtraBinop
@@ -107,13 +108,15 @@ data InstrExtraBinop = InstrExtraBinop
     _instrExtraBinopArg2 :: Value,
     _instrExtraBinopResult :: MemRef,
     _instrExtraBinopOpcode :: ExtraOpcode,
-    _instrExtraBinopIncAp :: Bool
+    _instrExtraBinopIncAp :: Bool,
+    _instrExtraBinopComment :: Maybe Text
   }
 
 data InstrJump = InstrJump
   { _instrJumpTarget :: RValue,
     _instrJumpRel :: Bool,
-    _instrJumpIncAp :: Bool
+    _instrJumpIncAp :: Bool,
+    _instrJumpComment :: Maybe Text
   }
 
 -- | Jump if value is nonzero. Boolean true is translated to zero, false to
@@ -121,12 +124,14 @@ data InstrJump = InstrJump
 data InstrJumpIf = InstrJumpIf
   { _instrJumpIfTarget :: Value,
     _instrJumpIfValue :: MemRef,
-    _instrJumpIfIncAp :: Bool
+    _instrJumpIfIncAp :: Bool,
+    _instrJumpIfComment :: Maybe Text
   }
 
 data InstrCall = InstrCall
   { _instrCallTarget :: Value,
-    _instrCallRel :: Bool
+    _instrCallRel :: Bool,
+    _instrCallComment :: Maybe Text
   }
 
 newtype InstrAlloc = InstrAlloc

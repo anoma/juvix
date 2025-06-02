@@ -56,14 +56,37 @@ mkConstr' = mkConstr Info.empty
 mkLambda :: Info -> Binder -> Node -> Node
 mkLambda i bi b = NLam (Lambda i bi b)
 
+-- TODO use this in Core/Translation/FromInternal.hs
+
+-- | If b is a builtin with arguments ty1 ty2
+-- it returns: `\lambda (x1 : ty1) (x2 : ty2) := b x1 x2`
+mkBuiltinExpanded' :: BuiltinOp -> [Type] -> Node
+mkBuiltinExpanded' b argTys =
+  let numArgs = length argTys
+      prefixTypes = length (takeWhile isUniverse argTys)
+      app = mkBuiltinApp' b [mkVar' argIx | argIx <- reverse [0 .. numArgs - 1 - prefixTypes]]
+   in if
+          | builtinOpArgsNum b == numArgs - prefixTypes -> mkLambdas' argTys app
+          | otherwise ->
+              impossibleError
+                ( "unexpected number of args to builtin "
+                    <> show b
+                )
+
 mkLambda' :: Type -> Node -> Node
 mkLambda' ty = mkLambda Info.empty (mkBinder' ty)
+
+mkLambda'' :: Binder -> Node -> Node
+mkLambda'' = mkLambda Info.empty
 
 mkLambdas :: [Info] -> [Binder] -> Node -> Node
 mkLambdas is bs n = foldl' (flip (uncurry mkLambda)) n (reverse (zipExact is bs))
 
 mkLambdas' :: [Type] -> Node -> Node
 mkLambdas' tys n = foldl' (flip mkLambda') n (reverse tys)
+
+mkLambdas'' :: [Binder] -> Node -> Node
+mkLambdas'' bs n = foldl' (flip mkLambda'') n (reverse bs)
 
 mkLetItem :: Text -> Type -> Node -> LetItem
 mkLetItem name ty = LetItem (mkBinder name ty)
@@ -398,6 +421,18 @@ isPatConstr :: Pattern -> Bool
 isPatConstr = \case
   PatConstr {} -> True
   PatWildcard {} -> False
+
+{------------------------------------------------------------------------}
+{- match branch -}
+
+isMatchBranchRhsExpression :: MatchBranch -> Bool
+isMatchBranchRhsExpression MatchBranch {..} =
+  case _matchBranchRhs of
+    MatchBranchRhsExpression {} -> True
+    MatchBranchRhsIfs {} -> False
+
+isMatchBranchRhsIf :: MatchBranch -> Bool
+isMatchBranchRhsIf = not . isMatchBranchRhsExpression
 
 {------------------------------------------------------------------------}
 {- generic Node destruction -}

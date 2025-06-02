@@ -1,0 +1,40 @@
+module ForwardReferenceModules;
+
+module ImportantStuffFirst;
+  open Forest public;
+
+  --- N-Ary tree.
+  type Tree (A : Type) := node : A -> Forest A -> Tree A;
+
+  open Tree using {node} public;
+
+  open List public;
+end;
+
+axiom T : ImportantStuffFirst.LA;
+
+module List;
+  --- Inductive list.
+  type List (a : Type) :=
+    | --- The empty list
+      nil : List a
+    | --- An element followed by a list
+      :: : a → List a → List a;
+
+  open List using {nil; ::} public;
+
+  axiom LA : Type;
+end;
+
+module Forest;
+  open ImportantStuffFirst public;
+
+  module Empty;
+    axiom E : Type;
+  end;
+
+  Forest : Type -> Type
+    | A := List.List (Tree A);
+
+  open List public;
+end;

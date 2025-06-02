@@ -1,0 +1,5 @@
+module ArgNameDefaultValue;
+
+type T := mkT;
+
+f {x : T := x} : T := mkT;

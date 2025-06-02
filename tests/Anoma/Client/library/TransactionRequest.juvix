@@ -1,0 +1,35 @@
+module TransactionRequest;
+
+import Stdlib.Prelude open;
+import ResourceMachine open;
+
+type TransactionCandidate :=
+  mkTransactionCandidate@{
+    --- keyspace is unused
+    keyspace : Nat;
+    transactionFunction : Unit -> Transaction;
+  };
+
+open TransactionCandidate using {mkTransactionCandidate} public;
+
+module TransactionRequest;
+
+  type TransactionRequest :=
+    mkTransactionRequest@{
+      payload : Unit -> TransactionCandidate;
+    };
+
+  open TransactionRequest using {mkTransactionRequest} public;
+
+  fromTransaction (tx : Transaction) : TransactionRequest :=
+    mkTransactionRequest@{
+      payload :=
+        const
+          mkTransactionCandidate@{
+            keyspace := 0;
+            transactionFunction := const tx;
+          };
+    };
+end;
+
+open TransactionRequest using {TransactionRequest; mkTransactionRequest} public;

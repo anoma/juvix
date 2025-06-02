@@ -14,35 +14,43 @@ adjustAp idx mr@MemRef {..} = case _memRefReg of
   Ap -> MemRef Ap (_memRefOff - idx)
   Fp -> mr
 
-mkAssign :: MemRef -> RValue -> Instruction
-mkAssign mr rv =
+mkAssign' :: Maybe Text -> MemRef -> RValue -> Instruction
+mkAssign' comment mr rv =
   Assign
     InstrAssign
       { _instrAssignResult = mr,
         _instrAssignValue = rv,
-        _instrAssignIncAp = False
+        _instrAssignIncAp = False,
+        _instrAssignComment = comment
       }
 
-mkAssignAp :: RValue -> Instruction
-mkAssignAp v =
+mkAssign :: MemRef -> RValue -> Instruction
+mkAssign = mkAssign' Nothing
+
+mkAssignAp' :: Maybe Text -> RValue -> Instruction
+mkAssignAp' comment v =
   Assign
     InstrAssign
       { _instrAssignResult = MemRef Ap 0,
         _instrAssignValue = v,
-        _instrAssignIncAp = True
+        _instrAssignIncAp = True,
+        _instrAssignComment = comment
       }
 
+mkAssignAp :: RValue -> Instruction
+mkAssignAp = mkAssignAp' Nothing
+
 mkCallRel :: Value -> Instruction
-mkCallRel tgt = Call (InstrCall tgt True)
+mkCallRel tgt = Call (InstrCall tgt True Nothing)
 
 mkCallAbs :: Value -> Instruction
-mkCallAbs tgt = Call (InstrCall tgt False)
+mkCallAbs tgt = Call (InstrCall tgt False Nothing)
 
 mkJumpAbs :: RValue -> Instruction
-mkJumpAbs tgt = Jump (InstrJump tgt False False)
+mkJumpAbs tgt = Jump (InstrJump tgt False False Nothing)
 
 mkJumpIf :: Value -> MemRef -> Instruction
-mkJumpIf tgt v = JumpIf (InstrJumpIf tgt v False)
+mkJumpIf tgt v = JumpIf (InstrJumpIf tgt v False Nothing)
 
 mkJumpRel :: RValue -> Instruction
-mkJumpRel tgt = Jump (InstrJump tgt True False)
+mkJumpRel tgt = Jump (InstrJump tgt True False Nothing)

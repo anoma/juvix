@@ -3,9 +3,8 @@ module Package;
 import PackageDescription.V2 open;
 
 package : Package :=
-  defaultPackage@?{
+  defaultPackage@{
     name := "main-project";
     version := mkVersion 0 0 1;
-    dependencies :=
-      [path ".libs/Extra"; path ".libs/Base"; defaultStdlib]
+    dependencies := [path ".libs/Extra"; path ".libs/Base"; defaultStdlib];
   };

@@ -8,6 +8,7 @@ import Juvix.Compiler.Core.Pipeline
 import Juvix.Compiler.Core.Pretty
 import Juvix.Compiler.Core.Transformation
 import Juvix.Compiler.Core.Translation.FromSource
+import Juvix.Compiler.Verification.Dumper
 import Juvix.Data.Field
 
 coreNormalizeAssertion ::
@@ -19,13 +20,13 @@ coreNormalizeAssertion mainFile expectedFile step = do
   step "Parse"
   r <- parseFile mainFile
   case r of
-    Left err -> assertFailure (prettyString err)
+    Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
     Right (_, Nothing) -> assertFailure "Empty program"
     Right (tabIni, Just node) -> do
       step "Transform"
       let tab = setupMainFunction defaultModuleId tabIni node
-          transforms = toStoredTransformations ++ toNormalizeTransformations
-      case run $ runReader defaultCoreOptions $ runError @JuvixError $ applyTransformations transforms (moduleFromInfoTable tab) of
+          transforms = toNormalizeTransformations
+      case run . runReader defaultCoreOptions . runError @JuvixError . ignoreDumper $ applyTransformations transforms (moduleFromInfoTable tab) of
         Left err -> assertFailure (prettyString (fromJuvixError @GenericError err))
         Right m -> do
           step "Normalize"

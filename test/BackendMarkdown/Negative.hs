@@ -48,7 +48,7 @@ testDescr NegTest {..} =
                 _processJuvixBlocksArgsOutputDir =
                   root <//> $(mkRelDir "markdown")
               }
-          res = fromJuvixMarkdown' opts
+          res = run (runError @MarkdownBackendError (fromJuvixMarkdown opts))
       case res of
         Left err -> whenJust (_checkErr (JuvixError err)) assertFailure
         Right _ -> assertFailure "Unexpected success"
@@ -63,7 +63,7 @@ root :: Path Abs Dir
 root = relToProject $(mkRelDir "tests/negative")
 
 wrongError :: JuvixError -> Maybe FailMsg
-wrongError e = Just ("unexpected error: " <> unpack (renderTextDefault e))
+wrongError e = Just ("unexpected error: " <> renderStringDefault e)
 
 tests :: [NegTest]
 tests =

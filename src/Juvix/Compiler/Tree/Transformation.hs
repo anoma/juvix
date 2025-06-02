@@ -14,16 +14,20 @@ import Juvix.Compiler.Tree.Transformation.CheckNoAnoma
 import Juvix.Compiler.Tree.Transformation.CheckNoByteArray
 import Juvix.Compiler.Tree.Transformation.FilterUnreachable
 import Juvix.Compiler.Tree.Transformation.IdentityTrans
+import Juvix.Compiler.Tree.Transformation.Optimize.ConvertUnaryCalls
+import Juvix.Compiler.Tree.Transformation.Optimize.Phase.Main
 import Juvix.Compiler.Tree.Transformation.Validate
 
-applyTransformations :: forall r. (Member (Error JuvixError) r) => [TransformationId] -> InfoTable -> Sem r InfoTable
+applyTransformations :: forall r. (Members '[Error JuvixError, Reader Options] r) => [TransformationId] -> Module -> Sem r Module
 applyTransformations ts tbl = foldM (flip appTrans) tbl ts
   where
-    appTrans :: TransformationId -> InfoTable -> Sem r InfoTable
+    appTrans :: TransformationId -> Module -> Sem r Module
     appTrans = \case
       IdentityTrans -> return . identity
       IdentityU -> return . identityU
       IdentityD -> return . identityD
+      ConvertUnaryCalls -> return . convertUnaryCalls
+      OptPhaseMain -> optimize
       Apply -> return . computeApply
       FilterUnreachable -> return . filterUnreachable
       Validate -> mapError (JuvixError @TreeError) . validate

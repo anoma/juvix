@@ -5,6 +5,7 @@ import Juvix.Compiler.Pipeline.Loader.PathResolver.PackageInfo
 import Juvix.Compiler.Pipeline.Package.Base
 import Juvix.Data.CodeAnn
 import Juvix.Data.Effect.Git
+import Juvix.Extra.Paths.Base
 import Juvix.Prelude
 
 data DependencyErrorGit = DependencyErrorGit
@@ -93,6 +94,7 @@ data PathResolverError
   = ErrDependencyConflict DependencyConflict
   | ErrMissingModule MissingModule
   | ErrPackageInvalidImport PackageInvalidImport
+  | ErrPackageNameConflict PackageNameConflict
   deriving stock (Show)
 
 instance ToGenericError PathResolverError where
@@ -114,12 +116,14 @@ instance HasLoc PathResolverError where
       getLoc _missingModule
     ErrPackageInvalidImport PackageInvalidImport {..} ->
       getLoc _packageInvalidImport
+    ErrPackageNameConflict a -> getLoc a
 
 instance PrettyCodeAnn PathResolverError where
   ppCodeAnn = \case
     ErrDependencyConflict e -> ppCodeAnn e
     ErrMissingModule e -> ppCodeAnn e
     ErrPackageInvalidImport e -> ppCodeAnn e
+    ErrPackageNameConflict e -> ppCodeAnn e
 
 data DependencyConflict = DependencyConflict
   { _conflictPackages :: NonEmpty PackageInfo,
@@ -184,3 +188,29 @@ instance PrettyCodeAnn PackageInvalidImport where
       <+> "cannot be imported by the Package file."
         <> line
         <> "Package files may only import modules from the Juvix standard library, Juvix.Builtin modules, or from the PackageDescription module."
+
+data PackageNameConflict = PackageNameConflict
+  { _packageNameConflictPackage :: PackageInfo,
+    -- | Must contain at least two elements
+    _packageNameConflictVersions :: NonEmpty (SemVer, NonEmpty (Path Abs Dir))
+  }
+  deriving stock (Show)
+
+instance HasLoc PackageNameConflict where
+  getLoc PackageNameConflict {..} = intervalFromFile (_packageNameConflictPackage ^. packageRoot <//> packageFilePath)
+
+instance PrettyCodeAnn PackageNameConflict where
+  ppCodeAnn PackageNameConflict {..} = do
+    "The package"
+      <+> important (pretty pkgName)
+      <+> "is used with different versions:"
+        <> line
+        <> itemize
+          [ "version"
+              <+> (important . pretty . prettySemVer $ ver)
+                <> line
+                <> indent' (itemize ["at" <+> important (pretty p) | p <- toList paths])
+            | (ver, paths) <- toList _packageNameConflictVersions
+          ]
+    where
+      pkgName = _packageNameConflictPackage ^. packageInfoPackageId . packageIdName

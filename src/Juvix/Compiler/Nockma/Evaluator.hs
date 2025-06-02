@@ -177,7 +177,19 @@ eval initstack initterm = ignoreOpCounts (evalProfile initstack initterm)
 
 evalProfile ::
   forall s a.
-  (Hashable a, Integral a, Members '[Reader (Storage a), State OpCounts, Reader EvalOptions, Output (Term a), Error (NockEvalError a), Error (ErrNockNatural a)] s, NockNatural a) =>
+  ( Hashable a,
+    Integral a,
+    Members
+      '[ Reader (Storage a),
+         State OpCounts,
+         Reader EvalOptions,
+         Output (Term a),
+         Error (NockEvalError a),
+         Error (ErrNockNatural a)
+       ]
+      s,
+    NockNatural a
+  ) =>
   Term a ->
   Term a ->
   Sem s (Term a)
@@ -247,7 +259,10 @@ evalProfile inistack initerm =
                 TermAtom a -> do
                   r <- Encoding.cueEither a
                   either (throwDecodingFailed args') return r
-                TermCell {} -> throwDecodingFailed args' DecodingErrorExpectedAtom
+                TermCell {} ->
+                  -- In the simulated storage, we allow already decoded cells
+                  -- for efficiency. Decoding these should then be a no-op.
+                  return args'
               StdlibVerifyDetached -> case args' of
                 TCell (TermAtom sig) (TCell (TermAtom message) (TermAtom pubKey)) -> goVerifyDetached sig message pubKey
                 _ -> error "expected a term of the form [signature (atom) message (encoded term) public_key (atom)]"
@@ -280,11 +295,27 @@ evalProfile inistack initerm =
               StdlibRandomInitGen -> case args' of
                 TermAtom a -> goRandomInitGen a
                 _ -> error "StdlibRandomInitGen must be called with an atom"
-              StdlibRandomNextBytes -> case args' of
-                TermCell (Cell g (TermAtom n)) -> goRandomNextBytes n g
-                _ -> error "StdlibRandomNextBytes must be called with a cell containing an atom and a term"
+              StdlibRandomNextBits -> case args' of
+                TermCell (Cell g (TermAtom n)) -> goRandomNextBits n g
+                _ -> error "StdlibRandomNextBits must be called with a cell containing an atom and a term"
               StdlibRandomSplit -> goRandomSplit args'
+              StdlibAnomaSetFromList -> return (goAnomaSetFromList args')
+              StdlibAnomaSetToList -> return args'
+              StdlibSecp256k1PubKey -> unsupported f
+              StdlibSecp256k1SignCompact -> unsupported f
+              StdlibSecp256k1Verify -> unsupported f
+              StdlibKeccak256 -> unsupported f
           where
+            unsupported :: StdlibFunction -> Sem r (Term a)
+            unsupported thing = error ("Unsupported operation: " <> prettyText thing)
+
+            goAnomaSetFromList :: Term a -> Term a
+            goAnomaSetFromList arg =
+              foldr
+                (\t acc -> TermCell (mkCell t acc))
+                (TermAtom nockNil)
+                (nubHashable (checkTermToList arg))
+
             serializeSMGen :: R.SMGen -> Term a
             serializeSMGen s =
               let (seed, gamma) = R.unseedSMGen s
@@ -300,11 +331,21 @@ evalProfile inistack initerm =
                 return (R.seedSMGen' (seed, gamma))
               _ -> error "deserializeSMGen must be called with a cell containing two atoms"
 
-            goRandomNextBytes :: Atom a -> Term a -> Sem r (Term a)
-            goRandomNextBytes n g = do
+            -- NOTE It will report an error if the number of bits is not divisible by 8
+            goRandomNextBits :: Atom a -> Term a -> Sem r (Term a)
+            goRandomNextBits n g = do
               gen <- deserializeSMGen g
-              len :: Int <- fromIntegral <$> nockNatural n
-              let (bs, newGen) = R.genByteString len gen
+              numBits :: Int <- fromIntegral <$> nockNatural n
+              numBytes <- case numBits `quotRem` 8 of
+                (b, 0) -> return b
+                _ ->
+                  throw $
+                    ErrCantGenerateRandomBits
+                      CantGenerateRandomBits
+                        { _cantGenerateRandomBitsAtom = n,
+                          _cantGenerateRandomBitsNumBits = numBits
+                        }
+              let (bs, newGen) = R.genByteString numBytes gen
                   newGenTerm = serializeSMGen newGen
               atomBs <- TermAtom <$> byteStringToAtom bs
               return (TermCell (Cell atomBs newGenTerm))
@@ -338,10 +379,9 @@ evalProfile inistack initerm =
 
             checkTermToList :: Term a -> [Term a]
             checkTermToList = \case
-              TermAtom x ->
-                if
-                    | x `nockmaEq` nockNil -> []
-                    | otherwise -> error "expected a list to be terminated by nil"
+              TermAtom x
+                | x `nockmaEq` nockNil -> []
+                | otherwise -> error "expected a list to be terminated by nil"
               TermCell c -> c ^. cellLeft : checkTermToList (c ^. cellRight)
 
             checkTermToListAtom :: Term a -> [Atom a]
@@ -483,7 +523,7 @@ evalProfile inistack initerm =
               cellTerm <- withCrumb (crumb crumbDecodeFirst) (asCell (c ^. operatorCellTerm))
               t1' <- evalArg crumbEvalFirst stack (cellTerm ^. cellLeft)
               t2' <- evalArg crumbEvalSecond stack (cellTerm ^. cellRight)
-              evalArg crumbEvalSecond t1' t2'
+              evalArg crumbEvalApply t1' t2'
 
             goOpIf :: Sem r (Term a)
             goOpIf = do

@@ -1,6 +1,7 @@
 module Juvix.Data.Loc where
 
 import Juvix.Extra.Serialize
+import Juvix.Prelude.Aeson qualified as Aeson
 import Juvix.Prelude.Base
 import Juvix.Prelude.Path
 import Prettyprinter
@@ -112,10 +113,17 @@ getLocSpan' gl l = gl (head l) <> gl (last l)
 instance Semigroup Interval where
   Interval f s e <> Interval _f s' e' = Interval f (min s s') (max e e')
 
+$(Aeson.deriveToJSON Aeson.defaultOptions ''Pos)
+$(Aeson.deriveToJSON Aeson.defaultOptions ''FileLoc)
+$(Aeson.deriveToJSON Aeson.defaultOptions ''Interval)
+
 makeLenses ''Interval
 makeLenses ''FileLoc
 makeLenses ''Loc
 makeLenses ''Pos
+
+intervalFromFile :: Path Abs File -> Interval
+intervalFromFile = singletonInterval . mkInitialLoc
 
 singletonInterval :: Loc -> Interval
 singletonInterval l =
@@ -148,8 +156,11 @@ mkInterval :: Loc -> Loc -> Interval
 mkInterval start end =
   Interval (start ^. locFile) (start ^. locFileLoc) (end ^. locFileLoc)
 
+filterByLoc' :: (p -> Interval) -> Path Abs File -> [p] -> [p]
+filterByLoc' getloc p = filter ((== p) . (^. intervalFile) . getloc)
+
 filterByLoc :: (HasLoc p) => Path Abs File -> [p] -> [p]
-filterByLoc p = filter ((== p) . (^. intervalFile) . getLoc)
+filterByLoc = filterByLoc' getLoc
 
 instance Pretty Pos where
   pretty :: Pos -> Doc a

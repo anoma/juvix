@@ -3,10 +3,12 @@ module Package;
 import PackageDescription.V2 open;
 
 package : Package :=
-  defaultPackage@?{
+  defaultPackage@{
+    name := "fancy";
     dependencies :=
-      [ path "../FancyPaths/././path with spaces"
-      ; path "$(JUVIX_TEST_PATH)/../$(JUVIX_TEST_PATH)/"
-      ; path "~"
-      ]
+      [
+        path "../FancyPaths/././path with spaces";
+        path "$(JUVIX_TEST_PATH)/../$(JUVIX_TEST_PATH)/";
+        path "~";
+      ];
   };

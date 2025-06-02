@@ -32,6 +32,14 @@ parseText = runParser noFile
 parseReplText :: Text -> Either MegaparsecError (ReplTerm Natural)
 parseReplText = runParserFor replTerm noFile
 
+-- | Parse the file as an annotated unjammed term.
+parsePrettyTerm ::
+  forall r.
+  (Members '[Files, Error JuvixError] r) =>
+  Prelude.Path Abs File ->
+  Sem r (Term Natural)
+parsePrettyTerm f = evalHighlightBuilder (parseTermFile f)
+
 -- | If the file ends in .debug.nockma it parses an annotated unjammed term. Otherwise
 -- it is equivalent to cueJammedFile
 cueJammedFileOrPretty ::
@@ -40,7 +48,7 @@ cueJammedFileOrPretty ::
   Prelude.Path Abs File ->
   Sem r (Term Natural)
 cueJammedFileOrPretty f
-  | f `hasExtensions` nockmaDebugFileExts = ignoreHighlightBuilder (parseTermFile f)
+  | f `hasExtensions` nockmaDebugFileExts = parsePrettyTerm f
   | otherwise = cueJammedFile f
 
 -- | If the file ends in .debug.nockma it parses an annotated unjammed program. Otherwise
@@ -114,7 +122,7 @@ runParserForSem p f txt = do
     Right t -> return t
 
 runParserFor :: Parser a -> Prelude.Path Abs File -> Text -> Either MegaparsecError a
-runParserFor p f = run . ignoreHighlightBuilder . runError . runParserForSem p f
+runParserFor p f = run . evalHighlightBuilder . runError . runParserForSem p f
 
 runParser :: Prelude.Path Abs File -> Text -> Either MegaparsecError (Term Natural)
 runParser = runParserFor term
@@ -304,7 +312,8 @@ cell = do
         CellInfo
           { _cellInfoCall = c,
             _cellInfoTag = lbl,
-            _cellInfoLoc = Irrelevant (Just (lloc <> rloc))
+            _cellInfoLoc = Irrelevant (Just (lloc <> rloc)),
+            _cellInfoHash = hash r
           }
   return (set cellInfo info r)
   where

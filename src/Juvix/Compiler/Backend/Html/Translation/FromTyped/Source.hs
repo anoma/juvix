@@ -13,9 +13,10 @@ import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Print
 import Juvix.Compiler.Internal.Pretty qualified as Internal
 import Juvix.Compiler.Pipeline.Loader.PathResolver
-import Juvix.Data.CodeAnn (codeAnnReferenceModule, codeAnnReferenceNameId)
+import Juvix.Data.CodeReference
 import Juvix.Extra.Assets (writeAssets)
 import Juvix.Prelude
+import Juvix.Prelude.Pretty (prettyIsString, prettyText)
 import Prettyprinter
 import Prettyprinter.Render.Util.SimpleDocTree
 import Text.Blaze.Html
@@ -78,7 +79,7 @@ data GenModuleTextArgs = GenModuleTextArgs
 
 makeLenses ''GenModuleTextArgs
 
-genSourceHtml :: GenSourceHtmlArgs -> IO ()
+genSourceHtml :: forall m. (MonadMask m, MonadIO m) => GenSourceHtmlArgs -> m ()
 genSourceHtml o@GenSourceHtmlArgs {..} = do
   let outputDir = _genSourceHtmlArgsOutputDir
   ensureDir outputDir
@@ -113,24 +114,25 @@ genSourceHtml o@GenSourceHtmlArgs {..} = do
     topModules :: HashMap NameId (Module 'Scoped 'ModuleTop)
     topModules = HashMap.fromList [(entry ^. modulePath . S.nameId, entry)]
 
-    outputModule :: Module 'Scoped 'ModuleTop -> IO ()
+    outputModule :: Module 'Scoped 'ModuleTop -> m ()
     outputModule m = do
       ensureDir (parent outputFile)
       let absPath = (htmlOptions ^. htmlOptionsOutputDir) <//> outputFile
       putStrLn $ "Writing " <> pack (toFilePath absPath)
-      utc <- getCurrentTime
-      Text.writeFile
-        (toFilePath outputFile)
-        ( run
-            . runReader htmlOptions
-            $ genModuleText
-              GenModuleTextArgs
-                { _genModuleTextArgsConcreteOpts = o ^. genSourceHtmlArgsConcreteOpts,
-                  _genModuleTextArgsUTC = utc,
-                  _genModuleTextArgsComments = _genSourceHtmlArgsComments,
-                  _genModuleTextArgsModule = m
-                }
-        )
+      utc <- liftIO getCurrentTime
+      liftIO $
+        Text.writeFile
+          (toFilePath outputFile)
+          ( run
+              . runReader htmlOptions
+              $ genModuleText
+                GenModuleTextArgs
+                  { _genModuleTextArgsConcreteOpts = o ^. genSourceHtmlArgsConcreteOpts,
+                    _genModuleTextArgsUTC = utc,
+                    _genModuleTextArgsComments = _genSourceHtmlArgsComments,
+                    _genModuleTextArgsModule = m
+                  }
+          )
       where
         ext = Text.unpack (htmlOptions ^. htmlOptionsExt)
 
@@ -325,6 +327,7 @@ putTag ann x = case ann of
   AnnUnkindedSym -> return (Html.span ! juClass JuVar $ x)
   AnnComment -> return (Html.span ! juClass JuComment $ x)
   AnnPragma -> return (Html.span ! juClass JuComment $ x)
+  AnnError -> return (Html.span ! juClass JuAxiom $ x)
   AnnJudoc -> return (Html.span ! juClass JuJudoc $ x)
   AnnDelimiter -> return (Html.span ! juClass JuDelimiter $ x)
   AnnDef r -> boldDefine <*> tagDef r
@@ -339,15 +342,16 @@ putTag ann x = case ann of
         HtmlSrc -> id
         HtmlOnly -> id
 
-    tagDef :: CodeAnnReference -> Sem r Html
+    tagDef :: CodeReference -> Sem r Html
     tagDef ref = do
       ref' <- tagRef ref
-      attrId <- nameIdAttr (ref ^. codeAnnReferenceNameId)
+      attrId <- nameIdAttr (ref ^. codeReferenceLoc)
       return $ (Html.span ! Attr.id attrId) ref'
 
-    tagRef :: CodeAnnReference -> Sem r Html
+    tagRef :: CodeReference -> Sem r Html
     tagRef ref = do
-      pth <- nameIdAttrRef (ref ^. codeAnnReferenceModule) (Just (ref ^. codeAnnReferenceNameId))
+      let loc = ref ^. codeReferenceLoc
+      pth <- nameIdAttrRef (loc ^. codeReferenceLocTopModule) (Just loc)
       return
         . (Html.span ! Attr.class_ "annot")
         . ( a
@@ -361,10 +365,20 @@ putTag ann x = case ann of
       Html.span
         ! juClass (juKindColor k)
 
-nameIdAttr :: (Members '[Reader HtmlOptions] r) => S.NameId -> Sem r AttributeValue
+nameIdAttr :: (Members '[Reader HtmlOptions] r) => CodeReferenceLoc -> Sem r AttributeValue
 nameIdAttr nid = do
-  pfx <- unpack <$> asks (^. htmlOptionsIdPrefix)
-  return $ fromString $ pfx <> show (pretty nid)
+  pfx <- fromText <$> asks (^. htmlOptionsIdPrefix)
+  return (pfx <> uid)
+  where
+    uid :: AttributeValue
+    uid = case nid of
+      CodeReferenceLocLocal l -> prettyIsString (l ^. localCodeReferenceNameId)
+      CodeReferenceLocTop t -> fromText (dottedTopCodeReference t)
+
+    --  If the path is Top.Local-1.Local-2.sym it returns Local-1.Local-2.sym. Note
+    -- that the top module is ignored.
+    dottedTopCodeReference :: TopCodeReference -> Text
+    dottedTopCodeReference TopCodeReference {..} = Text.intercalate "." (map prettyText (_topCodeReferenceAbsModule ^. absLocalPath) ++ [_topCodeReferenceVerbatimSymbol])
 
 moduleDocRelativePath :: (Members '[Reader HtmlOptions] r) => TopModulePath -> Sem r (Path Rel File)
 moduleDocRelativePath m = do
@@ -385,15 +399,15 @@ moduleDocRelativePath m = do
               relpath
               (stripProperPrefix (fromJust (parseRelDir fixPrefix)) relpath)
 
-nameIdAttrRef :: (Members '[Reader HtmlOptions] r) => TopModulePath -> Maybe S.NameId -> Sem r AttributeValue
+nameIdAttrRef :: (Members '[Reader HtmlOptions] r) => TopModulePath -> Maybe CodeReferenceLoc -> Sem r AttributeValue
 nameIdAttrRef tp mid = do
-  prefixUrl <- unpack <$> asks (^. htmlOptionsUrlPrefix)
-  path <- toFilePath <$> moduleDocRelativePath tp
+  prefixUrl <- fromText <$> asks (^. htmlOptionsUrlPrefix)
+  path <- fromString . toFilePath <$> moduleDocRelativePath tp
   noPath <- asks (^. htmlOptionsNoPath)
-  let prefix = prefixUrl <> if noPath then "" else path
-  attr <-
-    maybe
-      (return mempty)
-      (((preEscapedToValue '#' <>) <$>) . nameIdAttr)
-      mid
-  return $ fromString prefix <> attr
+  let prefix = prefixUrl <> if noPath then mempty else path
+  attr <- case mid of
+    Nothing -> return mempty
+    Just uid -> do
+      idAttr <- nameIdAttr uid
+      return (preEscapedToValue '#' <> idAttr)
+  return $ prefix <> attr

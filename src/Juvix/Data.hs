@@ -1,6 +1,7 @@
 module Juvix.Data
   ( module Juvix.Data.Effect,
     module Juvix.Data.Error,
+    module Juvix.Data.PackageId,
     module Juvix.Data.ProjectionKind,
     module Juvix.Data.NumThreads,
     module Juvix.Data.Fixity,
@@ -15,7 +16,7 @@ module Juvix.Data
     module Juvix.Data.Pragmas,
     module Juvix.Data.Processed,
     module Juvix.Data.Uid,
-    module Juvix.Data.Logger,
+    module Juvix.Data.Migrate,
     module Juvix.Data.Universe,
     module Juvix.Data.Wildcard,
     module Juvix.Data.WithLoc,
@@ -25,6 +26,7 @@ module Juvix.Data
     module Juvix.Data.Keyword,
     module Juvix.Data.Polarity,
     module Juvix.Data.ParsedItem,
+    module Juvix.Data.ImportScan,
   )
 where
 
@@ -35,14 +37,16 @@ import Juvix.Data.Error
 import Juvix.Data.FileExt
 import Juvix.Data.Fixity
 import Juvix.Data.Hole
+import Juvix.Data.ImportScan
 import Juvix.Data.InstanceHole
 import Juvix.Data.Irrelevant
 import Juvix.Data.IsImplicit
 import Juvix.Data.Keyword
 import Juvix.Data.Loc
-import Juvix.Data.Logger
+import Juvix.Data.Migrate
 import Juvix.Data.NameId qualified
 import Juvix.Data.NumThreads
+import Juvix.Data.PackageId
 import Juvix.Data.ParsedItem
 import Juvix.Data.Polarity
 import Juvix.Data.Pragmas

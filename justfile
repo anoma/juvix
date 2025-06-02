@@ -13,8 +13,8 @@ disableOptimized := ''
 # set to non-empty string to enable command debugging
 enableDebug := ''
 
-# set to non-empty string to enable pedantic mode
-pedantic := ''
+# set to non-empty string to disable pedantic mode
+disablePedantic := ''
 
 # set to number of parallel jobs
 numParallelJobs := ''
@@ -37,7 +37,7 @@ runtimeLibtoolFlag := if runtimeLibtoolArg == '' { '' } else { "LIBTOOL=" + runt
 runtimeArgs := trim(runtimeCcFlag + ' ' + runtimeLibtoolFlag)
 
 # flags used in the stack command
-stackOptFlag := (if disableOptimized == '' { '' } else { '--fast' }) + ' ' + (if pedantic == '' { '' } else { '--pedantic' })
+stackOptFlag := (if disableOptimized == '' { '' } else { '--fast' }) + ' ' + (if disablePedantic == '' { '--pedantic' } else {  '' })
 # The ghc `-j` flag defaults to number of cpus when no argument is passed
 stackGhcParallelFlag := if disableParallel == '' { "--ghc-options=-j" + numParallelJobs } else { '' }
 # The stack `-j` options requires an argument

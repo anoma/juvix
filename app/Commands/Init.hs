@@ -49,7 +49,7 @@ init opts = do
   when isInteractive (renderStdOutLn @Text "you are all set")
   where
     isInteractive :: Bool
-    isInteractive = not (opts ^. initOptionsNonInteractive) && not (opts ^. initOptionsBasic)
+    isInteractive = opts ^. initOptionsInteractive
 
 checkNotInProject :: forall r. (Members '[EmbedIO, App] r) => Sem r ()
 checkNotInProject =
@@ -63,7 +63,8 @@ checkNotInProject =
 checkPackage :: forall r. (Members '[EmbedIO, App] r) => Sem r ()
 checkPackage = do
   cwd <- getCurrentDir
-  ep <- runError @JuvixError (runTaggedLockPermissive (loadPackageFileIO cwd DefaultBuildDir))
+  entry <- runTaggedLockPermissive getEntryPointPackage
+  ep <- runError @JuvixError (runTaggedLockPermissive (runReader entry $ loadPackageFileIO cwd DefaultBuildDir))
   case ep of
     Left {} -> do
       renderStdOutLn @Text "Package.juvix is invalid. Please raise an issue at https://github.com/anoma/juvix/issues"

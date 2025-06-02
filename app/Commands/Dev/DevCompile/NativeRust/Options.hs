@@ -24,5 +24,6 @@ parseNativeRust = do
 
 instance EntryPointOptions (NativeRustOptions k) where
   applyOptions opts =
-    set entryPointTarget (Just TargetRust)
+    set entryPointPipeline (Just PipelineExec)
+      . set entryPointTarget (Just TargetRust)
       . applyOptions (opts ^. nativeRustCompileCommonOptions)

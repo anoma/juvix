@@ -6,7 +6,7 @@ import Text.Megaparsec qualified as M
 import Text.Megaparsec.Error (errorOffset)
 
 instance Pretty MegaparsecError where
-  pretty (MegaparsecError b) = pretty (M.errorBundlePretty b)
+  pretty (MegaparsecError b) = pretty (M.errorBundlePrettyWith (\_ _ -> M.parseErrorTextPretty) b)
 
 instance HasLoc MegaparsecError where
   getLoc (MegaparsecError b) = singletonInterval (mkLoc offset sourcePos)
@@ -41,3 +41,29 @@ fromMegaParsecError :: Either MegaparsecError a -> a
 fromMegaParsecError = \case
   Left e -> error (prettyText e)
   Right a -> a
+
+data SimpleParserError = SimpleParserError
+  { _simpleParserErrorLoc :: Interval,
+    _simpleParserErrorMessage :: Text
+  }
+  deriving stock (Show)
+
+makeLenses ''SimpleParserError
+
+instance HasLoc SimpleParserError where
+  getLoc SimpleParserError {..} = _simpleParserErrorLoc
+
+instance ToGenericError SimpleParserError where
+  genericError SimpleParserError {..} =
+    return
+      GenericError
+        { _genericErrorLoc = _simpleParserErrorLoc,
+          _genericErrorMessage = mkAnsiText _simpleParserErrorMessage,
+          _genericErrorIntervals = [_simpleParserErrorLoc]
+        }
+
+class FromSimpleParserError a where
+  fromSimpleParserError :: SimpleParserError -> a
+
+instance FromSimpleParserError SimpleParserError where
+  fromSimpleParserError = id

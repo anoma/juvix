@@ -1,0 +1,3 @@
+def main := f 0;
+
+def f := \x x;

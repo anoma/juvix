@@ -17,13 +17,21 @@ data JuvixCodeBlock = JuvixCodeBlock
     _juvixCodeBlockOptions :: Text,
     _juvixCodeBlockInterval :: Maybe Interval
   }
-  deriving stock (Eq, Ord)
+  deriving stock (Eq, Ord, Generic)
+
+instance Serialize JuvixCodeBlock
+
+instance NFData JuvixCodeBlock
 
 data TextBlock = TextBlock
   { _textBlock :: !Text,
     _textBlockInterval :: Maybe Interval
   }
-  deriving stock (Eq, Ord)
+  deriving stock (Eq, Ord, Generic)
+
+instance Serialize TextBlock
+
+instance NFData TextBlock
 
 makeLenses ''JuvixCodeBlock
 makeLenses ''TextBlock
@@ -49,7 +57,11 @@ data Mk
   | MkTextBlock TextBlock
   | MkNull
   | MkConcat Mk Mk
-  deriving stock (Eq, Show, Ord)
+  deriving stock (Eq, Show, Ord, Generic)
+
+instance Serialize Mk
+
+instance NFData Mk
 
 instance Semigroup TextBlock where
   a <> b =

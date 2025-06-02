@@ -13,7 +13,6 @@ import Juvix.Compiler.Concrete.Data.ScopedName qualified as S
 import Juvix.Compiler.Concrete.Language
 import Juvix.Compiler.Concrete.Pretty.Options (Options, fromGenericOptions)
 import Juvix.Compiler.Concrete.Translation.FromParsed.Analysis.Scoping.Error.Pretty
-import Juvix.Compiler.Concrete.Translation.ImportScanner.Base
 import Juvix.Compiler.Internal.Language qualified as I
 import Juvix.Compiler.Internal.Pretty qualified as I
 import Juvix.Compiler.Store.Scoped.Language (FixitySymbolEntry, ModuleSymbolEntry, PreSymbolEntry)
@@ -209,68 +208,6 @@ instance ToGenericError QualSymNotInScope where
           i = getLoc _qualSymNotInScope
           msg = "Qualified symbol not in scope:" <+> ppCode opts' _qualSymNotInScope
 
-data DuplicateOperator = DuplicateOperator
-  { _dupOperatorFirst :: OperatorSyntaxDef,
-    _dupOperatorSecond :: OperatorSyntaxDef
-  }
-  deriving stock (Show)
-
-instance ToGenericError DuplicateOperator where
-  genericError DuplicateOperator {..} = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = i2,
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [i1, i2]
-            }
-        where
-          opts' = fromGenericOptions opts
-          i1 = getLoc _dupOperatorFirst
-          i2 = getLoc _dupOperatorSecond
-
-          msg =
-            "Multiple operator declarations for symbol"
-              <+> ppCode opts' sym
-                <> ":"
-                <> line
-                <> indent' (align locs)
-            where
-              sym = _dupOperatorFirst ^. opSymbol
-              locs = vsep $ map (pretty . getLoc) [_dupOperatorFirst, _dupOperatorSecond]
-
-data DuplicateIterator = DuplicateIterator
-  { _dupIteratorFirst :: IteratorSyntaxDef,
-    _dupIteratorSecond :: IteratorSyntaxDef
-  }
-  deriving stock (Show)
-
-instance ToGenericError DuplicateIterator where
-  genericError DuplicateIterator {..} = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = i2,
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [i1, i2]
-            }
-        where
-          opts' = fromGenericOptions opts
-          i1 = getLoc _dupIteratorFirst
-          i2 = getLoc _dupIteratorSecond
-
-          msg =
-            "Multiple iterator declarations for symbol"
-              <+> ppCode opts' sym
-                <> ":"
-                <> line
-                <> indent' (align locs)
-            where
-              sym = _dupIteratorFirst ^. iterSymbol
-              locs = vsep $ map (pretty . getLoc) [_dupIteratorFirst, _dupIteratorFirst]
-
 data ExportEntries
   = ExportEntriesSymbols (NonEmpty PreSymbolEntry)
   | ExportEntriesModules (NonEmpty ModuleSymbolEntry)
@@ -278,8 +215,9 @@ data ExportEntries
   deriving stock (Show)
 
 data MultipleExportConflict = MultipleExportConflict
-  { _multipleExportModule :: S.AbsModulePath,
+  { _multipleExportModule :: AbsModulePath,
     _multipleExportSymbol :: Symbol,
+    _multipleExportNameSpace :: NameSpace,
     _multipleExportEntries :: ExportEntries
   }
   deriving stock (Show)
@@ -298,10 +236,21 @@ instance ToGenericError MultipleExportConflict where
           opts' = fromGenericOptions opts
           i = getLoc _multipleExportModule
           msg =
-            "The symbol"
+            "The"
+              <+> nameSpaceElemName _multipleExportNameSpace
               <+> ppCode opts' _multipleExportSymbol
               <+> "is exported multiple times in the module"
               <+> ppCode opts' _multipleExportModule
+                <> hardline
+                <> itemize
+                  ( case _multipleExportEntries of
+                      ExportEntriesSymbols s -> ppEntry <$> s
+                      ExportEntriesModules s -> ppEntry <$> s
+                      ExportEntriesFixities s -> ppEntry <$> s
+                  )
+            where
+              ppEntry :: (HasLoc e) => e -> Doc CodeAnn
+              ppEntry e = "Defined in" <+> annotate (AnnKind KNameTopModule) (pretty (getLoc e))
 
 data NotInScope = NotInScope
   { _notInScopeSymbol :: Symbol,
@@ -424,52 +373,6 @@ instance ToGenericError ModuleNotInScope where
           opts' = fromGenericOptions opts
           i = getLoc (e ^. moduleNotInScopeName)
           msg = "The module" <+> ppCode opts' _moduleNotInScopeName <+> "is not in scope"
-
-newtype UnusedOperatorDef = UnusedOperatorDef
-  { _unusedOperatorDef :: OperatorSyntaxDef
-  }
-  deriving stock (Show)
-
-instance ToGenericError UnusedOperatorDef where
-  genericError UnusedOperatorDef {..} = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = i,
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [i]
-            }
-        where
-          opts' = fromGenericOptions opts
-          i = getLoc _unusedOperatorDef
-          msg =
-            "Unused operator syntax definition:"
-              <> line
-              <> ppCode opts' _unusedOperatorDef
-
-newtype UnusedIteratorDef = UnusedIteratorDef
-  { _unusedIteratorDef :: IteratorSyntaxDef
-  }
-  deriving stock (Show)
-
-instance ToGenericError UnusedIteratorDef where
-  genericError UnusedIteratorDef {..} = ask >>= generr
-    where
-      generr opts =
-        return
-          GenericError
-            { _genericErrorLoc = i,
-              _genericErrorMessage = prettyError msg,
-              _genericErrorIntervals = [i]
-            }
-        where
-          opts' = fromGenericOptions opts
-          i = getLoc _unusedIteratorDef
-          msg =
-            "Unused iterator syntax definition:"
-              <> line
-              <> ppCode opts' _unusedIteratorDef
 
 data AmbiguousSym = AmbiguousSym
   { _ambiguousSymName :: Name,
@@ -701,7 +604,7 @@ instance ToGenericError ConstructorExpectedLeftApplication where
 
 data ModuleDoesNotExportSymbol = ModuleDoesNotExportSymbol
   { _moduleDoesNotExportSymbol :: Symbol,
-    _moduleDoesNotExportModule :: S.TopModulePath
+    _moduleDoesNotExportModule :: S.Name
   }
 
 instance ToGenericError ModuleDoesNotExportSymbol where
@@ -741,7 +644,7 @@ instance ToGenericError IteratorInitializer where
       i = getLoc _iteratorInitializerIterator
 
 newtype InvalidRangeNumber = InvalidRangeNumber
-  { _invalidRangeNumber :: IteratorSyntaxDef
+  { _invalidRangeNumber :: IteratorSyntaxDef 'Parsed
   }
   deriving stock (Show)
 
@@ -993,31 +896,6 @@ instance ToGenericError PrecedenceInconsistencyError where
     where
       i :: Interval
       i = getLoc _precedenceInconsistencyErrorFixityDef
-
-data IncomaprablePrecedences = IncomaprablePrecedences
-  { _incomparablePrecedencesName1 :: S.Name,
-    _incomparablePrecedencesName2 :: S.Name
-  }
-  deriving stock (Show)
-
-instance ToGenericError IncomaprablePrecedences where
-  genericError IncomaprablePrecedences {..} = do
-    opts <- fromGenericOptions <$> ask
-    let msg =
-          "Operators"
-            <+> ppCode opts _incomparablePrecedencesName1
-            <+> "and"
-            <+> ppCode opts _incomparablePrecedencesName2
-            <+> "have incomparable precedences"
-    return
-      GenericError
-        { _genericErrorLoc = i,
-          _genericErrorMessage = mkAnsiText msg,
-          _genericErrorIntervals = [i]
-        }
-    where
-      i :: Interval
-      i = getLoc _incomparablePrecedencesName1
 
 newtype WrongDefaultValue = WrongDefaultValue
   { _wrongDefaultValue :: SigArg 'Parsed

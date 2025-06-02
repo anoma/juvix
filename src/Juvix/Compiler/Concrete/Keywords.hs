@@ -28,7 +28,6 @@ import Juvix.Data.Keyword.All
     kwAssign,
     kwAssoc,
     kwAt,
-    kwAtQuestion,
     kwAxiom,
     kwBelow,
     kwBinary,
@@ -63,6 +62,7 @@ import Juvix.Data.Keyword.All
     kwOperator,
     kwPipe,
     kwPositive,
+    kwPrecedence,
     kwPublic,
     kwRange,
     kwRight,
@@ -76,6 +76,7 @@ import Juvix.Data.Keyword.All
     kwUsing,
     kwWhere,
     kwWildcard,
+    kwWith,
   )
 import Juvix.Prelude
 
@@ -88,7 +89,6 @@ reservedKeywords =
     kwAssign,
     kwDeriving,
     kwAt,
-    kwAtQuestion,
     kwAxiom,
     kwCase,
     kwColon,
@@ -114,5 +114,6 @@ reservedKeywords =
     kwType,
     kwUsing,
     kwWhere,
+    kwWith,
     kwWildcard
   ]

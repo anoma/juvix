@@ -1,0 +1,11 @@
+module test003;
+
+import Stdlib.Cairo.RangeCheck open;
+import Stdlib.Prelude open;
+
+main : Field :=
+  let
+    x := 1;
+    y := 2;
+    z := x + y;
+  in rangeCheck z 2 >-> z;

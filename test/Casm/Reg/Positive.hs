@@ -228,5 +228,29 @@ tests =
       $(mkRelDir ".")
       $(mkRelFile "test043.jvr")
       $(mkRelFile "out/test043.out")
-      Nothing
+      Nothing,
+    PosTest
+      "Test044: Extend closure in true branch"
+      $(mkRelDir ".")
+      $(mkRelFile "test044.jvr")
+      $(mkRelFile "out/test044.out")
+      (Just $(mkRelFile "in/test044.json")),
+    PosTest
+      "Test045: Extend closure in false branch"
+      $(mkRelDir ".")
+      $(mkRelFile "test045.jvr")
+      $(mkRelFile "out/test045.out")
+      (Just $(mkRelFile "in/test045.json")),
+    PosTest
+      "Test046: Call in true branch"
+      $(mkRelDir ".")
+      $(mkRelFile "test046.jvr")
+      $(mkRelFile "out/test046.out")
+      (Just $(mkRelFile "in/test046.json")),
+    PosTest
+      "Test047: Call in false branch"
+      $(mkRelDir ".")
+      $(mkRelFile "test047.jvr")
+      $(mkRelFile "out/test047.out")
+      (Just $(mkRelFile "in/test047.json"))
   ]

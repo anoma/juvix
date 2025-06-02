@@ -1,0 +1,34 @@
+module Impossible;
+
+syntax fixity cons := binary {assoc := right};
+
+module ImportantStuffFirst;
+  open Forest;
+
+  --- N-Ary tree.
+  type Tree (A : Type) := node : A -> Forest A -> Tree A;
+
+  open Tree using {node} public;
+end;
+
+module Forest;
+  open ImportantStuffFirst;
+
+  Forest : Type -> Type
+    | A := List.List (Tree A);
+
+-- open List public; -- Impossible
+end;
+
+module List;
+  --- Inductive list.
+  type List (a : Type) :=
+    | --- The empty list
+      nil : List a
+    | --- An element followed by a list
+      :: : a → List a → List a;
+
+  open List using {nil; ::} public;
+
+  syntax operator :: cons;
+end;

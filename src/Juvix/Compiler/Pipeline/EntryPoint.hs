@@ -16,6 +16,16 @@ data SymbolPruningMode
   | KeepAll
   deriving stock (Eq, Show)
 
+data Pipeline
+  = PipelineEval
+  | PipelineExec
+  | PipelineTypecheck
+  deriving stock (Eq, Show, Generic)
+
+instance Serialize Pipeline
+
+instance NFData Pipeline
+
 -- | A module in _entryModulePath is the unit of compilation
 data EntryPoint = EntryPoint
   { _entryPointRoot :: Path Abs Dir,
@@ -29,34 +39,61 @@ data EntryPoint = EntryPoint
     _entryPointNoStdlib :: Bool,
     _entryPointSomeRoot :: SomeRoot,
     _entryPointPackageId :: PackageId,
+    _entryPointMainPackageId :: MainPackageId,
     _entryPointStdin :: Maybe Text,
     _entryPointTarget :: Maybe Target,
     _entryPointDebug :: Bool,
     _entryPointUnsafe :: Bool,
+    -- | Skip the correctness check in the Core pipeline part.
+    _entryPointNoCheck :: Bool,
     _entryPointUnrollLimit :: Int,
     _entryPointOptimizationLevel :: Int,
     _entryPointInliningDepth :: Int,
     _entryPointGenericOptions :: GenericOptions,
     _entryPointModulePath :: Maybe (Path Abs File),
+    _entryPointMainFile :: Maybe (Path Abs File),
     _entryPointSymbolPruningMode :: SymbolPruningMode,
     _entryPointOffline :: Bool,
     _entryPointFieldSize :: Natural,
-    _entryPointIsabelleOnlyTypes :: Bool
+    _entryPointIsabelleOnlyTypes :: Bool,
+    _entryPointPipeline :: Maybe Pipeline,
+    _entryPointNoAnomaStdlib :: Bool,
+    _entryPointNoNockImportDecoding :: Bool,
+    -- | The SHA256 hash of the source file at _entryPointModulePath
+    _entryPointSHA256 :: Maybe Text,
+    -- | Dump verification statements?
+    _entryPointVerify :: Bool
   }
   deriving stock (Eq, Show)
 
 makeLenses ''EntryPoint
 
-getEntryPointTarget :: EntryPoint -> Target
-getEntryPointTarget e = fromMaybe defaultTarget (e ^. entryPointTarget)
-  where
-    -- TODO is having a default target a good idea?
-    defaultTarget = TargetCore
+entryPointPackageType :: Lens' EntryPoint PackageType
+entryPointPackageType = entryPointSomeRoot . someRootType
 
+entryPointIsMainFile :: EntryPoint -> Bool
+entryPointIsMainFile entry =
+  entry ^. entryPointMainFile == entry ^. entryPointModulePath
+
+entryPointVerificationEnabled :: EntryPoint -> Bool
+entryPointVerificationEnabled entry =
+  entry ^. entryPointVerify && entryPointIsMainFile entry
+
+defaultUnrollLimit :: Int
+defaultUnrollLimit = 140
+
+defaultOptimizationLevel :: Int
+defaultOptimizationLevel = 1
+
+defaultInliningDepth :: Int
+defaultInliningDepth = 3
+
+-- | Don't use this without updating the options
 defaultEntryPoint :: PackageId -> Root -> Maybe (Path Abs File) -> EntryPoint
 defaultEntryPoint pkg root mainFile =
   (defaultEntryPointNoFile pkg root)
-    { _entryPointModulePath = mainFile
+    { _entryPointModulePath = mainFile,
+      _entryPointMainFile = mainFile
     }
 
 defaultEntryPointNoFile :: PackageId -> Root -> EntryPoint
@@ -72,28 +109,24 @@ defaultEntryPointNoFile pkg root =
       _entryPointStdin = Nothing,
       _entryPointSomeRoot = root ^. rootSomeRoot,
       _entryPointPackageId = pkg,
+      _entryPointMainPackageId = MainPackageId pkg,
       _entryPointGenericOptions = defaultGenericOptions,
       _entryPointTarget = Nothing,
       _entryPointDebug = False,
       _entryPointUnsafe = False,
+      _entryPointNoCheck = False,
       _entryPointUnrollLimit = defaultUnrollLimit,
       _entryPointOptimizationLevel = defaultOptimizationLevel,
       _entryPointInliningDepth = defaultInliningDepth,
       _entryPointModulePath = Nothing,
+      _entryPointMainFile = Nothing,
       _entryPointSymbolPruningMode = FilterUnreachable,
       _entryPointOffline = False,
       _entryPointFieldSize = defaultFieldSize,
-      _entryPointIsabelleOnlyTypes = False
+      _entryPointIsabelleOnlyTypes = False,
+      _entryPointPipeline = Nothing,
+      _entryPointNoAnomaStdlib = False,
+      _entryPointNoNockImportDecoding = False,
+      _entryPointSHA256 = Nothing,
+      _entryPointVerify = False
     }
-
-entryPointPackageType :: Lens' EntryPoint PackageType
-entryPointPackageType = entryPointSomeRoot . someRootType
-
-defaultUnrollLimit :: Int
-defaultUnrollLimit = 140
-
-defaultOptimizationLevel :: Int
-defaultOptimizationLevel = 1
-
-defaultInliningDepth :: Int
-defaultInliningDepth = 3

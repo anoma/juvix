@@ -47,7 +47,6 @@ type Member (e :: Effect) (r :: [Effect]) = e E.:> r
 -- | First order effect handler
 type EffectHandlerFO (e :: Effect) (r :: [Effect]) =
   forall a localEs.
-  (HasCallStack, Member e localEs) =>
   e (Sem localEs) a ->
   Sem r a
 
@@ -114,7 +113,7 @@ modify' :: (Member (State s) r) => (s -> s) -> Sem r ()
 modify' = State.modify
 
 mapError :: forall a b r x. (Member (Error b) r) => (a -> b) -> Sem (Error a ': r) x -> Sem r x
-mapError f = runErrorWith (throwError . f)
+mapError f = runErrorWith (throwError_ . f)
 
 runM :: (MonadIO m) => Sem '[EmbedIO] a -> m a
 runM = liftIO . E.runEff
@@ -123,7 +122,7 @@ run :: Sem ('[] :: [Effect]) a -> a
 run = E.runPureEff
 
 throw :: (Member (Error err) r) => err -> Sem r a
-throw = throwError
+throw = throwError_
 
 runError :: Sem (Error err ': r) x -> Sem r (Either err x)
 runError = runErrorNoCallStack
@@ -234,6 +233,14 @@ reinterpretH ::
   Sem r b
 reinterpretH = E.reinterpret
 
+reinterpret' ::
+  (DispatchOf e ~ 'Dynamic) =>
+  Sem (e ': r) a ->
+  (Sem handlerEs a -> Sem r b) ->
+  EffectHandlerFO e handlerEs ->
+  Sem r b
+reinterpret' m re i = reinterpret re i m
+
 reinterpret ::
   (DispatchOf e ~ 'Dynamic) =>
   (Sem handlerEs a -> Sem r b) ->
@@ -242,7 +249,6 @@ reinterpret ::
   Sem r b
 reinterpret re i = reinterpretH re (const i)
 
--- TODO maybe think of a better name
 runTSimpleEff ::
   forall (handlerEs :: [Effect]) (localEs :: [Effect]) (r :: [Effect]) x.
   (SharedSuffix r handlerEs) =>

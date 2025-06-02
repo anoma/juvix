@@ -1,25 +1,35 @@
 module Juvix.Compiler.Tree.Translation.FromCore where
 
-import Data.HashMap.Strict qualified as HashMap
 import Juvix.Compiler.Core.Data.BinderList qualified as BL
-import Juvix.Compiler.Core.Data.Stripped.InfoTable qualified as Core
+import Juvix.Compiler.Core.Data.Stripped.Module qualified as Core
 import Juvix.Compiler.Core.Language.Stripped qualified as Core
-import Juvix.Compiler.Tree.Data.InfoTable
+import Juvix.Compiler.Tree.Data.Module
 import Juvix.Compiler.Tree.Extra.Base
 import Juvix.Compiler.Tree.Extra.Type
 import Juvix.Compiler.Tree.Language
 
 type BinderList = BL.BinderList
 
-fromCore :: Core.InfoTable -> InfoTable
-fromCore tab =
+fromCore :: Core.Module -> Module
+fromCore md@Core.Module {..} =
+  Module
+    { _moduleId = _moduleId,
+      _moduleInfoTable = fromCore' md,
+      _moduleImports = _moduleImports,
+      _moduleImportsTable = mempty,
+      _moduleSHA256 = _moduleSHA256
+    }
+
+fromCore' :: Core.Module -> InfoTable
+fromCore' md =
   InfoTable
     { _infoMainFunction = tab ^. Core.infoMain,
-      _infoFunctions = genCode tab <$> tab ^. Core.infoFunctions,
+      _infoFunctions = genCode md <$> tab ^. Core.infoFunctions,
       _infoInductives = translateInductiveInfo <$> tab ^. Core.infoInductives,
-      _infoConstrs = translateConstructorInfo <$> tab ^. Core.infoConstructors,
-      _infoFieldSize = tab ^. Core.infoFieldSize
+      _infoConstrs = translateConstructorInfo <$> tab ^. Core.infoConstructors
     }
+  where
+    tab = md ^. Core.moduleInfoTable
 
 toTreeOp :: Core.BuiltinOp -> TreeOp
 toTreeOp = \case
@@ -49,6 +59,7 @@ toTreeOp = \case
   Core.OpUInt8ToInt -> TreeUnaryOpcode (PrimUnop OpUInt8ToInt)
   Core.OpAssert -> TreeUnaryOpcode OpAssert
   -- TreeAnomaOp
+  Core.OpNockmaReify -> TreeNockmaOp NockmaOpReify
   Core.OpAnomaGet -> TreeAnomaOp OpAnomaGet
   Core.OpAnomaEncode -> TreeAnomaOp OpAnomaEncode
   Core.OpAnomaDecode -> TreeAnomaOp OpAnomaDecode
@@ -65,25 +76,36 @@ toTreeOp = \case
   Core.OpAnomaResourceDelta -> TreeAnomaOp OpAnomaResourceDelta
   Core.OpAnomaActionDelta -> TreeAnomaOp OpAnomaActionDelta
   Core.OpAnomaActionsDelta -> TreeAnomaOp OpAnomaActionsDelta
-  Core.OpAnomaProveAction -> TreeAnomaOp OpAnomaProveAction
-  Core.OpAnomaProveDelta -> TreeAnomaOp OpAnomaProveDelta
   Core.OpAnomaZeroDelta -> TreeAnomaOp OpAnomaZeroDelta
   Core.OpAnomaAddDelta -> TreeAnomaOp OpAnomaAddDelta
   Core.OpAnomaSubDelta -> TreeAnomaOp OpAnomaSubDelta
   Core.OpAnomaRandomGeneratorInit -> TreeAnomaOp OpAnomaRandomGeneratorInit
   Core.OpAnomaRandomNextBytes -> TreeAnomaOp OpAnomaRandomNextBytes
   Core.OpAnomaRandomSplit -> TreeAnomaOp OpAnomaRandomSplit
+  Core.OpAnomaIsCommitment -> TreeAnomaOp OpAnomaIsCommitment
+  Core.OpAnomaIsNullifier -> TreeAnomaOp OpAnomaIsNullifier
+  Core.OpAnomaCreateFromComplianceInputs -> TreeAnomaOp OpAnomaCreateFromComplianceInputs
+  Core.OpAnomaProveDelta -> TreeAnomaOp OpAnomaProveDelta
+  Core.OpAnomaActionCreate -> TreeAnomaOp OpAnomaActionCreate
+  Core.OpAnomaTransactionCompose -> TreeAnomaOp OpAnomaTransactionCompose
+  Core.OpAnomaSetToList -> TreeAnomaOp OpAnomaSetToList
+  Core.OpAnomaSetFromList -> TreeAnomaOp OpAnomaSetFromList
+  Core.OpAnomaKeccak256 -> TreeAnomaOp OpAnomaKeccak256
+  Core.OpAnomaSecp256k1SignCompact -> TreeAnomaOp OpAnomaSecp256k1SignCompact
+  Core.OpAnomaSecp256k1Verify -> TreeAnomaOp OpAnomaSecp256k1Verify
+  Core.OpAnomaSecp256k1PubKey -> TreeAnomaOp OpAnomaSecp256k1PubKey
   -- TreeCairoOp
   Core.OpPoseidonHash -> TreeCairoOp OpCairoPoseidon
   Core.OpEc -> TreeCairoOp OpCairoEc
   Core.OpRandomEcPoint -> TreeCairoOp OpCairoRandomEcPoint
+  Core.OpRangeCheck -> TreeCairoOp OpCairoRangeCheck
   -- TreeByteArrayOp
   Core.OpByteArrayFromListByte -> TreeByteArrayOp OpByteArrayFromListUInt8
   Core.OpByteArrayLength -> TreeByteArrayOp OpByteArrayLength
 
 -- Generate code for a single function.
-genCode :: Core.InfoTable -> Core.FunctionInfo -> FunctionInfo
-genCode infoTable fi =
+genCode :: Core.Module -> Core.FunctionInfo -> FunctionInfo
+genCode md fi =
   let argnames = map (Just . (^. Core.argumentName)) (fi ^. Core.functionArgsInfo)
       bl =
         BL.fromList . reverse $
@@ -223,6 +245,13 @@ genCode infoTable fi =
               _nodeAnomaOpcode = op,
               _nodeAnomaArgs = args
             }
+      TreeNockmaOp op ->
+        Nockma $
+          NodeNockma
+            { _nodeNockmaInfo = mempty,
+              _nodeNockmaOpcode = op,
+              _nodeNockmaArgs = args
+            }
       TreeBinaryOpcode op -> case args of
         [arg1, arg2] ->
           Binop $
@@ -268,7 +297,12 @@ genCode infoTable fi =
           { _nodeSaveInfo = mempty,
             _nodeSaveArg = arg,
             _nodeSaveBody = body,
-            _nodeSaveTempVar = TempVar (Just name) loc
+            _nodeSaveTempVar =
+              TempVar
+                { _tempVarName = Just name,
+                  _tempVarLocation = loc,
+                  _tempVarType = convertType 0 (_letItem ^. Core.letItemBinder . Core.binderType)
+                }
           }
       where
         name = _letItem ^. Core.letItemBinder . Core.binderName
@@ -350,9 +384,7 @@ genCode infoTable fi =
 
     getArgsNum :: Symbol -> Int
     getArgsNum sym =
-      fromMaybe
-        impossible
-        (HashMap.lookup sym (infoTable ^. Core.infoFunctions))
+      Core.lookupFunInfo md sym
         ^. Core.functionArgsNum
 
 -- | Be mindful that JuvixTree types are explicitly uncurried, while

@@ -12,7 +12,6 @@ import Prelude (Show (show))
 data CompileTarget
   = AppTargetNative64
   | AppTargetWasm32Wasi
-  | AppTargetVampIR
   | AppTargetCore
   | AppTargetAsm
   | AppTargetReg
@@ -27,7 +26,6 @@ instance Show CompileTarget where
   show = \case
     AppTargetWasm32Wasi -> "wasi"
     AppTargetNative64 -> "native"
-    AppTargetVampIR -> "vampir"
     AppTargetCore -> "core"
     AppTargetAsm -> "asm"
     AppTargetReg -> "reg"
@@ -69,9 +67,8 @@ compileTargetDescription = \case
   AppTargetWasm32Wasi -> "Compile to WASI (WebAssembly System Interface)"
   AppTargetAnoma -> "Compile to Anoma"
   AppTargetCairo -> "Compile to Cairo"
-  AppTargetVampIR -> "Compile to VampIR"
   AppTargetCasm -> "Compile to JuvixCasm"
-  AppTargetCore -> "Compile to VampIR"
+  AppTargetCore -> "Compile to Core"
   AppTargetAsm -> "Compile to JuvixAsm"
   AppTargetReg -> "Compile to JuvixReg"
   AppTargetTree -> "Compile to JuvixTree"
@@ -130,15 +127,7 @@ parseCompileOptions' supportedTargets parserFile = do
       ( long "nockma-pretty"
           <> help "Use names for op codes and paths in Nockma output (for target: nockma)"
       )
-  _compileUnsafe <-
-    if
-        | elem AppTargetVampIR supportedTargets ->
-            switch
-              ( long "unsafe"
-                  <> help "Disable range and error checking (for targets: vampir)"
-              )
-        | otherwise ->
-            pure False
+  _compileUnsafe <- pure False
   _compileOptimizationLevel <-
     optional
       ( option

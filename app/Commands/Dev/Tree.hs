@@ -8,11 +8,10 @@ import Commands.Dev.Tree.Options
 import Commands.Dev.Tree.Read as Read
 import Commands.Dev.Tree.Repl as Repl
 
-runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock] r) => TreeCommand -> Sem r ()
+runCommand :: forall r. (Members '[EmbedIO, App, TaggedLock, Files] r) => TreeCommand -> Sem r ()
 runCommand = \case
   Eval opts -> Eval.runCommand opts
   Compile opts -> Compile.runCommand opts
-  CompileOld {} -> impossible
   Read opts -> Read.runCommand opts
   FromAsm opts -> FromAsm.runCommand opts
   Repl opts -> Repl.runCommand opts
