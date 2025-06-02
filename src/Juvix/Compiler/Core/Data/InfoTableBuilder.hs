@@ -20,6 +20,7 @@ data InfoTableBuilder :: Effect where
   RegisterSpecialisation :: Symbol -> SpecialisationInfo -> InfoTableBuilder m ()
   RegisterIdentNode :: Symbol -> Node -> InfoTableBuilder m ()
   RegisterMain :: Symbol -> InfoTableBuilder m ()
+  RegisterExtern :: Symbol -> InfoTableBuilder m ()
   RegisterLiteralIntToNat :: Symbol -> InfoTableBuilder m ()
   RegisterLiteralIntToInt :: Symbol -> InfoTableBuilder m ()
   RemoveSymbol :: Symbol -> InfoTableBuilder m ()
@@ -147,6 +148,8 @@ runInfoTableBuilder' st = reinterpret (runState st) interp
         modify' (over (builderStateModule . moduleInfoTable . identContext) (HashMap.insert sym node))
       RegisterMain sym -> do
         modify' (set (builderStateModule . moduleInfoTable . infoMain) (Just sym))
+      RegisterExtern sym -> do
+        modify' (over (builderStateModule . moduleInfoTable . infoExterns) (sym :))
       RegisterLiteralIntToInt sym -> do
         modify' (set (builderStateModule . moduleInfoTable . infoLiteralIntToInt) (Just sym))
       RegisterLiteralIntToNat sym -> do
