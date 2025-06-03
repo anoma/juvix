@@ -98,7 +98,7 @@ noFileLoadedErr :: Repl a
 noFileLoadedErr = replError (mkAnsiText @Text "No file loaded. Load a file using the `:load FILE` command.")
 
 welcomeMsg :: (MonadIO m) => m ()
-welcomeMsg = liftIO (putStrLn [i|Juvix REPL version #{versionTag}: https://juvix.org. Run :help for help|])
+welcomeMsg = liftIO (putStrLn [i|Juvix REPL version #{preciseVersionDoc}: https://juvix.org. Run :help for help|])
 
 multilineCmd :: String
 multilineCmd = "multiline"
@@ -154,7 +154,7 @@ getReplEntryPointFromPath :: Path Abs File -> Repl EntryPoint
 getReplEntryPointFromPath = getReplEntryPoint (\r a -> runM . runTaggedLockPermissive . entryPointFromGlobalOptions r (Just a))
 
 displayVersion :: String -> Repl ()
-displayVersion _ = liftIO (putStrLn versionTag)
+displayVersion _ = liftIO (putStrLn preciseVersionDoc)
 
 replCommand :: ReplOptions -> String -> Repl ()
 replCommand opts input_ = catchAll $ do
