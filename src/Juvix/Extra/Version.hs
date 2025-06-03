@@ -10,7 +10,7 @@ import Prettyprinter.Render.Text (renderIO)
 import System.Environment qualified as E
 
 versionDir :: Path Rel Dir
-versionDir = relDir (unpack preciseVersionDoc)
+versionDir = relDir (unpack fullVersionDoc)
 
 gitInfo :: Maybe GitInfo
 gitInfo = eitherToMaybe $$tGitInfoCwdTry
@@ -26,8 +26,8 @@ numericVersionDoc :: Text
 numericVersionDoc = pack (showVersion version)
 
 -- | Numeric version plus the commit
-preciseVersionDoc :: Text
-preciseVersionDoc = pack (showVersion version) <> "-" <> commit
+fullVersionDoc :: Text
+fullVersionDoc = pack (showVersion version) <> "-" <> commit
 
 branch :: Text
 branch = projectOrUnknown giBranch
@@ -41,19 +41,19 @@ commitDate = projectOrUnknown giCommitDate
 progName :: (MonadIO m) => m Text
 progName = pack . toUpperFirst <$> liftIO E.getProgName
 
-progNameVersion :: (MonadIO m) => m Text
-progNameVersion = do
+progNameNumericVersion :: (MonadIO m) => m Text
+progNameNumericVersion = do
   pName <- progName
-  return (pName <> " version " <> preciseVersionDoc)
+  return (pName <> " version " <> numericVersionDoc)
 
-progNameVersionTag :: (MonadIO m) => m Text
-progNameVersionTag = do
-  progNameV <- progNameVersion
+progNamePreciseVersion :: (MonadIO m) => m Text
+progNamePreciseVersion = do
+  progNameV <- progNameNumericVersion
   return (progNameV <> "-" <> commit)
 
 infoVersionRepo :: (MonadIO m) => m (Doc a)
 infoVersionRepo = do
-  pNameTag <- progNameVersionTag
+  pNameTag <- progNamePreciseVersion
   return
     ( PP.pretty pNameTag
         <> line
@@ -78,3 +78,6 @@ runDisplayVersion = do
 
 runDisplayNumericVersion :: (MonadIO m) => m ()
 runDisplayNumericVersion = putStrLn numericVersionDoc
+
+runDisplayFullVersion :: (MonadIO m) => m ()
+runDisplayFullVersion = putStrLn fullVersionDoc

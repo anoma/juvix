@@ -45,7 +45,7 @@ writeVersion :: forall r. (Members '[Reader OutputRoot, Files] r) => Sem r ()
 writeVersion = do
   vf <- versionFile
   ensureDir' (parent vf)
-  writeFileEnsureLn' vf preciseVersionDoc
+  writeFileEnsureLn' vf fullVersionDoc
 
 readVersion :: (Members '[Reader OutputRoot, Files] r) => Sem r (Maybe Text)
 readVersion = do
@@ -66,5 +66,5 @@ updateFiles action = do
     shouldUpdate =
       orM
         [ not <$> (ask @OutputRoot >>= directoryExists'),
-          (Just preciseVersionDoc /=) <$> readVersion
+          (Just fullVersionDoc /=) <$> readVersion
         ]

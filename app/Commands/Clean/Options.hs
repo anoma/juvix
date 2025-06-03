@@ -17,11 +17,11 @@ parseCleanOptions = do
     switch
       ( long "global"
           <> short 'g'
-          <> help ("Remove also $XDG_CONFIG_HOME/juvix/" <> unpack preciseVersionDoc)
+          <> help ("Remove also $XDG_CONFIG_HOME/juvix/" <> unpack fullVersionDoc)
       )
   _cleanOptionsOnlyGlobal <-
     switch
       ( long "global-only"
-          <> help ("Remove only $XDG_CONFIG_HOME/juvix/" <> unpack preciseVersionDoc)
+          <> help ("Remove only $XDG_CONFIG_HOME/juvix/" <> unpack fullVersionDoc)
       )
   pure CleanOptions {..}

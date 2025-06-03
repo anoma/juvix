@@ -142,7 +142,7 @@ htmlJuvixFooter = do
                 a
                   ! Attr.href
                     (textValue ("https://github.com/anoma/juvix/commit/" <> commit))
-                  $ toHtml preciseVersionDoc
+                  $ toHtml fullVersionDoc
 
               juvixVersion :: Html
               juvixVersion =
