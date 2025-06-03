@@ -30,7 +30,7 @@ env:
   # of the anoma repository.
   ANOMA_VERSION: c8c2a385dd916a28982918fdc22da90c409e347a
   JUST_ARGS: runtimeCcArg=$CC runtimeLibtoolArg=$LIBTOOL
-  STACK_BUILD_ARGS: --pedantic -j4 --ghc-options=-j --stack-yaml=stack.yaml
+  STACK_BUILD_ARGS: --pedantic -j4 --ghc-options=-j
 
 jobs:
   pre-commit:
