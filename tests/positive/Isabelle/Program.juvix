@@ -210,11 +210,15 @@ type MessagePacket (MessageType : Type) : Type := mkMessagePacket {
   message : MessageType;
 };
 
+open MessagePacket;
+
 type EnvelopedMessage (MessageType : Type) : Type :=
   mkEnvelopedMessage {
     sender : Maybe Nat;
     packet : MessagePacket MessageType;
   };
+
+open EnvelopedMessage;
 
 type Timer (HandleType : Type): Type := mkTimer {
   time : Nat;
@@ -224,6 +228,8 @@ type Timer (HandleType : Type): Type := mkTimer {
 type Trigger (MessageType : Type) (HandleType : Type) :=
   | MessageArrived { envelope : EnvelopedMessage MessageType; }
   | Elapsed { timers : List (Timer HandleType) };
+
+open Trigger;
 
 getMessageFromTrigger : {M H : Type} -> Trigger M H -> Maybe M
       | (MessageArrived@{
