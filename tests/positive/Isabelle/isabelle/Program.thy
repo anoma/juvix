@@ -247,18 +247,6 @@ record 'MessageType MessagePacket =
   mailbox :: "nat option"
   message :: 'MessageType
 
-record 'MessageType EnvelopedMessage =
-  sender :: "nat option"
-  packet :: "'MessageType MessagePacket"
-
-record 'HandleType Timer =
-  time :: nat
-  handle :: 'HandleType
-
-datatype ('MessageType, 'HandleType) Trigger
-  = MessageArrived "'MessageType EnvelopedMessage" |
-    Elapsed "('HandleType Timer) list"
-
 fun target :: "'MessageType MessagePacket \<Rightarrow> nat" where
   "target (| MessagePacket.target = target', MessagePacket.mailbox = mailbox', MessagePacket.message = message' |) =
     target'"
@@ -271,6 +259,10 @@ fun message :: "'MessageType MessagePacket \<Rightarrow> 'MessageType" where
   "message (| MessagePacket.target = target', MessagePacket.mailbox = mailbox', MessagePacket.message = message' |) =
     message'"
 
+record 'MessageType EnvelopedMessage =
+  sender :: "nat option"
+  packet :: "'MessageType MessagePacket"
+
 fun sender :: "'MessageType EnvelopedMessage \<Rightarrow> nat option" where
   "sender (| EnvelopedMessage.sender = sender', EnvelopedMessage.packet = packet' |) =
     sender'"
@@ -279,11 +271,19 @@ fun packet :: "'MessageType EnvelopedMessage \<Rightarrow> 'MessageType MessageP
   "packet (| EnvelopedMessage.sender = sender', EnvelopedMessage.packet = packet' |) =
     packet'"
 
+record 'HandleType Timer =
+  time :: nat
+  handle :: 'HandleType
+
 fun time :: "'HandleType Timer \<Rightarrow> nat" where
   "time (| Timer.time = time', Timer.handle = handle' |) = time'"
 
 fun handle :: "'HandleType Timer \<Rightarrow> 'HandleType" where
   "handle (| Timer.time = time', Timer.handle = handle' |) = handle'"
+
+datatype ('MessageType, 'HandleType) Trigger
+  = MessageArrived "'MessageType EnvelopedMessage" |
+    Elapsed "('HandleType Timer) list"
 
 fun getMessageFromTrigger :: "('M, 'H) Trigger \<Rightarrow> 'M option" where
   "getMessageFromTrigger v_0 =
