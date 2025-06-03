@@ -37,7 +37,6 @@ import Juvix.Compiler.Core.Data.Module qualified as Core
 import Juvix.Compiler.Core.Translation.FromInternal.Data.Context qualified as Core
 import Juvix.Compiler.Internal.Translation.FromConcrete.Data.Context qualified as Internal
 import Juvix.Compiler.Internal.Translation.FromInternal.Analysis.TypeChecking.Data.Context qualified as InternalTyped
-import Juvix.Compiler.Internal.Translation.FromInternal.Data (InternalTypedResult)
 import Juvix.Compiler.Pipeline
 import Juvix.Compiler.Pipeline.Driver.Data
 import Juvix.Compiler.Pipeline.JvoCache
@@ -445,12 +444,11 @@ processRecursivelyUpTo ::
   forall a r.
   ( Members
       '[ Reader EntryPoint,
-         TopModuleNameChecker,
-         TaggedLock,
-         HighlightBuilder,
          Error JuvixError,
-         Files,
+         TopModuleNameChecker,
          PathResolver,
+         Files,
+         HighlightBuilder,
          SHA256Cache,
          ModuleInfoCache
        ]
@@ -475,20 +473,21 @@ processRecursivelyUpTo shouldRecurse upto = do
   return (res, ms)
   where
     goImport :: ImportNode -> Sem r (Maybe a)
-    goImport node = runFail $ do
-      failUnless (shouldRecurse node)
-      pkgInfo <- fromJust . HashMap.lookup (node ^. importNodePackageRoot) <$> getPackageInfos
-      let pid = pkgInfo ^. packageInfoPackageId
-      entry <- ask
-      let entry' =
-            entry
-              { _entryPointStdin = Nothing,
-                _entryPointResolverRoot = node ^. importNodePackageRoot,
-                _entryPointRoot = node ^. importNodePackageRoot,
-                _entryPointPackageId = pid,
-                _entryPointModulePath = Just (node ^. importNodeAbsFile)
-              }
-      (^. pipelineResult) <$> runReader entry' (processFileUpTo (inject upto))
+    goImport node
+      | shouldRecurse node = do
+          pkgInfo <- fromJust . HashMap.lookup (node ^. importNodePackageRoot) <$> getPackageInfos
+          let pid = pkgInfo ^. packageInfoPackageId
+          entry <- ask
+          let entry' =
+                entry
+                  { _entryPointStdin = Nothing,
+                    _entryPointResolverRoot = node ^. importNodePackageRoot,
+                    _entryPointRoot = node ^. importNodePackageRoot,
+                    _entryPointPackageId = pid,
+                    _entryPointModulePath = Just (node ^. importNodeAbsFile)
+                  }
+          (Just . (^. pipelineResult)) <$> local (const entry') (processFileUpTo upto)
+      | otherwise = return Nothing
 
 processRecursivelyUpToTyped ::
   forall r.
@@ -506,7 +505,7 @@ processRecursivelyUpToTyped ::
        ]
       r
   ) =>
-  Sem r (InternalTypedResult, [InternalTypedResult])
+  Sem r (InternalTyped.InternalTypedResult, [InternalTyped.InternalTypedResult])
 processRecursivelyUpToTyped = processRecursivelyUpTo (const True) upToInternalTyped
 
 processImport ::
