@@ -62,6 +62,17 @@ runPipelineHtmlEither entry = do
   x <- runIOEitherPipeline' entry processRecursivelyUpToTyped
   return . mapRight snd $ snd x
 
+runPipelineRecursiveEither ::
+  forall a r.
+  (Members PipelineAppEffects r) =>
+  EntryPoint ->
+  Sem (PipelineEff r) a ->
+  Sem r (Either JuvixError (a, [a]))
+runPipelineRecursiveEither entry a = do
+  x <- runIOEitherPipeline' entry $ do
+    processRecursivelyUpTo (const True) a
+  return . mapRight snd $ snd x
+
 runIOEitherHelper ::
   forall a r.
   (Members PipelineAppEffects r) =>

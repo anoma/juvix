@@ -12,22 +12,28 @@ runCommand ::
   Sem r ()
 runCommand opts = do
   let inputFile = opts ^. isabelleInputFile
-  res <- runPipeline opts inputFile upToIsabelle
-  let thy = res ^. resultTheory
-      comments = res ^. resultComments
-  outputDir <- fromAppPathDir (opts ^. isabelleOutputDir)
-  if
-      | opts ^. isabelleStdout -> do
-          renderStdOut (ppOutDefault comments thy)
-          putStrLn ""
-      | otherwise -> do
-          ensureDir outputDir
-          let file :: Path Rel File
-              file =
-                relFile
-                  ( unpack (thy ^. theoryName . namePretty)
-                      <.> isabelleFileExt
-                  )
-              absPath :: Path Abs File
-              absPath = outputDir <//> file
-          writeFileEnsureLn absPath (ppPrint comments thy <> "\n")
+  (r, rs) <- runPipelineUpTo (opts ^. isabelleNonRecursive) opts inputFile upToIsabelle
+  let pkg = r ^. resultModuleId . moduleIdPackageId
+  mapM_ (translateTyped opts pkg) (r : rs)
+
+translateTyped :: (Members AppEffects r) => IsabelleOptions -> PackageId -> Result -> Sem r ()
+translateTyped opts pkg res
+  | res ^. resultModuleId . moduleIdPackageId . packageIdName == pkg ^. packageIdName = do
+      let thy = res ^. resultTheory
+          comments = res ^. resultComments
+      outputDir <- fromAppPathDir (opts ^. isabelleOutputDir)
+      if
+          | opts ^. isabelleStdout ->
+              renderStdOutLn (ppOutDefault comments thy)
+          | otherwise -> do
+              ensureDir outputDir
+              let file :: Path Rel File
+                  file =
+                    relFile
+                      ( unpack (thy ^. theoryName . namePretty)
+                          <.> isabelleFileExt
+                      )
+                  absPath :: Path Abs File
+                  absPath = outputDir <//> file
+              writeFileEnsureLn absPath (ppPrint comments thy <> "\n")
+  | otherwise = return ()
