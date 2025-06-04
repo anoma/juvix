@@ -10,6 +10,7 @@ import Commands.Dev.Asm qualified as Asm
 import Commands.Dev.Casm qualified as Casm
 import Commands.Dev.Core qualified as Core
 import Commands.Dev.DevCompile qualified as DevCompile
+import Commands.Dev.DisplayBuildDir qualified as DisplayBuildDir
 import Commands.Dev.DisplayRoot qualified as DisplayRoot
 import Commands.Dev.Highlight qualified as Highlight
 import Commands.Dev.ImportTree qualified as ImportTree
@@ -43,6 +44,7 @@ runCommand = \case
   Casm opts -> Casm.runCommand opts
   Runtime opts -> Runtime.runCommand opts
   DisplayRoot opts -> DisplayRoot.runCommand opts
+  DisplayBuildDir opts -> DisplayBuildDir.runCommand opts
   JuvixDevRepl opts -> Repl.runCommand opts
   MigrateJuvixYaml opts -> runFilesIO $ MigrateJuvixYaml.runCommand opts
   Nockma opts -> Nockma.runCommand opts

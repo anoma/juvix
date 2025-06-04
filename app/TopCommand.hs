@@ -14,6 +14,7 @@ import Commands.Isabelle qualified as Isabelle
 import Commands.Markdown qualified as Markdown
 import Commands.Repl qualified as Repl
 import Commands.Typecheck qualified as Typecheck
+import Commands.Version qualified as Version
 import Juvix.Extra.Version
 import System.Environment qualified as E
 import TopCommand.Options
@@ -34,6 +35,7 @@ runTopCommand ::
 runTopCommand = \case
   DisplayVersion -> runDisplayVersion
   DisplayNumericVersion -> runDisplayNumericVersion
+  JuvixVersion opts -> Version.runCommand opts
   DisplayHelp -> showHelpText
   Doctor opts -> Doctor.runCommand opts
   Isabelle opts -> Isabelle.runCommand opts

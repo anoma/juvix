@@ -13,6 +13,7 @@ import Commands.Isabelle.Options
 import Commands.Markdown.Options
 import Commands.Repl.Options
 import Commands.Typecheck.Options
+import Commands.Version.Options
 import CommonOptions hiding (Doc)
 import Data.Generics.Uniplate.Data
 import GlobalOptions
@@ -20,6 +21,7 @@ import GlobalOptions
 data TopCommand
   = DisplayVersion
   | DisplayNumericVersion
+  | JuvixVersion VersionCommand
   | DisplayHelp
   | Typecheck TypecheckOptions
   | Compile CompileCommand
@@ -97,6 +99,7 @@ parseUtility =
           commandInit,
           commandRepl,
           commandFormat,
+          commandVersion,
           commandClean,
           commandDependencies,
           commandDoctor,
@@ -128,6 +131,14 @@ parseUtility =
             (JuvixRepl <$> parseRepl)
             (progDesc "Run the Juvix REPL")
         )
+
+    commandVersion :: Mod CommandFields TopCommand
+    commandVersion =
+      command "version" $
+        info
+          (JuvixVersion <$> parseVersionCommand)
+          ( progDesc "Print the Juvix version in different formats"
+          )
 
     commandFormat :: Mod CommandFields TopCommand
     commandFormat =

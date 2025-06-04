@@ -312,27 +312,27 @@ tests:
         EOF
 
         checksum=$(sha256sum Package.juvix | cut -d " " -f 1)
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         cat <<-EOF > juvix.lock.yaml
         version: 2
         checksum: $checksum
         dependencies:
-          - path: .juvix-build/$version/stdlib/
+          - path: ${relBuildDir}stdlib/
             dependencies: []
           - git:
               url: $temp/dep1
               ref: $dep1hash
               name: dep1
             dependencies:
-              - path: .juvix-build/$version/stdlib/
+              - path: ${relBuildDir}stdlib/
                 dependencies: []
               - git:
                   url: $temp/dep2
                   ref: $dep2hash
                   name: dep2
                 dependencies:
-                  - path: .juvix-build/$version/stdlib/
+                  - path: ${relBuildDir}stdlib/
                     dependencies: []
         EOF
 
@@ -574,7 +574,7 @@ tests:
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
 
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create dependency2
         mkdir $temp/dep2
@@ -632,14 +632,14 @@ tests:
 
         cat <<-EOF > juvix.lock.yaml
         dependencies:
-          - path: .juvix-build/$version/stdlib/
+          - path: ${relBuildDir}stdlib/
             dependencies: []
           - git:
               url: $temp/dep2
               ref: $dep2hash
               name: dep2
             dependencies:
-              - path: .juvix-build/$version/stdlib/
+              - path: ${relBuildDir}stdlib/
                 dependencies: []
         EOF
 

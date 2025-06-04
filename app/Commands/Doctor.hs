@@ -56,7 +56,7 @@ documentedMessage w = uncurry DocumentedMessage (first (baseUrl <>) warningInfo)
       NoWasmer -> ("could-not-find-the-wasmer-command", "Could not find the wasmer command")
 
     baseUrl :: Text
-    baseUrl = "https://docs.juvix.org/" <> V.versionDoc <> "/reference/tooling/doctor/#"
+    baseUrl = "https://docs.juvix.org/" <> V.numericVersionDoc <> "/reference/tooling/doctor/#"
 
 logDoctor :: (Member Logger r) => Text -> Sem r ()
 logDoctor = logInfo . mkAnsiText
@@ -113,7 +113,7 @@ getLatestRelease = do
 checkVersion :: (Members DoctorEff r) => Sem r ()
 checkVersion = do
   heading "Checking latest Juvix release on Github..."
-  let tagName = "v" <> V.versionDoc
+  let tagName = "v" <> V.numericVersionDoc
   response <- runFail getLatestRelease
   case response of
     Just release' -> case release' ^. githubReleaseTagName of

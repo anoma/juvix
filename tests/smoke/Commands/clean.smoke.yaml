@@ -38,7 +38,7 @@ tests:
         trap 'rm -rf -- "$temp"' EXIT
         config=$(mktemp -d)
         export XDG_CONFIG_HOME=$config
-        version=$(juvix --numeric-version)
+        version=$(juvix version numeric-commit)
         configDir="$config/juvix/$version"
         cd $temp
         cp "$baseDir/examples/milestone/HelloWorld/HelloWorld.juvix" .
