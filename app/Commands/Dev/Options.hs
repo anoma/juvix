@@ -181,7 +181,7 @@ commandDisplayBuildDir =
   command "build-dir" $
     info
       (DisplayBuildDir <$> parseBuildDir)
-      (progDesc "Show the absolute path of the build directory for the current project")
+      (progDesc "Print the absolute path of the build directory for the current project")
 
 commandShowRoot :: Mod CommandFields DevCommand
 commandShowRoot =

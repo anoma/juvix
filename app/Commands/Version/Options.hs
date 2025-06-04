@@ -23,7 +23,7 @@ parseVersionCommand' =
             "numeric"
             (info (pure VersionNumeric) (progDesc "Print the version in the form x.y.z")),
           command
-            "commit"
+            "numeric-commit"
             (info (pure VersionCommit) (progDesc "Print the version in the form x.y.z-commit"))
         ]
       )

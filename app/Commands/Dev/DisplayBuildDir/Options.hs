@@ -13,8 +13,8 @@ parseBuildDir :: Parser BuildDirOptions
 parseBuildDir = do
   _buildDirRelative <-
     switch
-      ( long "relative-path"
-          <> help "print a relative path wrt the project root"
+      ( long "relative"
+          <> help "Print the relative path wrt the project root"
       )
 
   pure BuildDirOptions {..}
