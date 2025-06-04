@@ -318,21 +318,21 @@ tests:
         version: 2
         checksum: $checksum
         dependencies:
-          - path: $relBuildDir/stdlib/
+          - path: ${relBuildDir}stdlib/
             dependencies: []
           - git:
               url: $temp/dep1
               ref: $dep1hash
               name: dep1
             dependencies:
-              - path: $relBuildDir/stdlib/
+              - path: ${relBuildDir}stdlib/
                 dependencies: []
               - git:
                   url: $temp/dep2
                   ref: $dep2hash
                   name: dep2
                 dependencies:
-                  - path: $relBuildDir/stdlib/
+                  - path: ${relBuildDir}stdlib/
                     dependencies: []
         EOF
 
@@ -632,14 +632,14 @@ tests:
 
         cat <<-EOF > juvix.lock.yaml
         dependencies:
-          - path: $relBuildDir/stdlib/
+          - path: ${relBuildDir}stdlib/
             dependencies: []
           - git:
               url: $temp/dep2
               ref: $dep2hash
               name: dep2
             dependencies:
-              - path: $relBuildDir/stdlib/
+              - path: ${relBuildDir}stdlib/
                 dependencies: []
         EOF
 

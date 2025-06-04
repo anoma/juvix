@@ -35,7 +35,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -99,7 +99,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -167,7 +167,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -209,7 +209,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -268,7 +268,7 @@ tests:
         cat <<-EOF > juvix.yaml
         name: Dep1
         dependencies:
-          - $relBuildDir/stdlib/
+          - ${relBuildDir}stdlib/
           - git:
               url: $temp/dep2
               name: dep2
@@ -289,7 +289,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib/
+          - ${relBuildDir}stdlib/
           - git:
               url: $temp/dep1
               name: dep1
@@ -303,21 +303,21 @@ tests:
         version: 2
         checksum: $checksum
         dependencies:
-          - path: $relBuildDir/stdlib/
+          - path: ${relBuildDir}stdlib/
             dependencies: []
           - git:
               url: $temp/dep1
               ref: $dep1hash
               name: dep1
             dependencies:
-              - path: $relBuildDir/stdlib/
+              - path: ${relBuildDir}stdlib/
                 dependencies: []
               - git:
                   url: $temp/dep2
                   ref: $dep2hash
                   name: dep2
                 dependencies:
-                  - path: $relBuildDir/stdlib/
+                  - path: ${relBuildDir}stdlib/
                     dependencies: []
         EOF
 
@@ -403,7 +403,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -496,7 +496,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -524,7 +524,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -596,7 +596,7 @@ tests:
         cat <<-EOF > juvix.yaml
         name: Dep1
         dependencies:
-          - $relBuildDir/stdlib/
+          - ${relBuildDir}stdlib/
           - git:
               url: $temp/dep2
               name: dep2
@@ -606,14 +606,14 @@ tests:
 
         cat <<-EOF > juvix.lock.yaml
         dependencies:
-          - path: $relBuildDir/stdlib/
+          - path: ${relBuildDir}stdlib/
             dependencies: []
           - git:
               url: $temp/dep2
               ref: $dep2hash
               name: dep2
             dependencies:
-              - path: $relBuildDir/stdlib/
+              - path: ${relBuildDir}stdlib/
                 dependencies: []
         EOF
 
@@ -630,7 +630,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib/
+          - ${relBuildDir}stdlib/
           - git:
               url: $temp/dep1
               name: dep1
@@ -704,7 +704,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -737,7 +737,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -786,7 +786,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -829,7 +829,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -872,7 +872,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -941,7 +941,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -990,7 +990,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -1137,7 +1137,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - $relBuildDir/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1

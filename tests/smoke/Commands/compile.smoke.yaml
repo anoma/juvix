@@ -104,7 +104,7 @@ tests:
 
         cp ./examples/milestone/HelloWorld/HelloWorld.juvix "$rootDir"
         touch "$rootDir/juvix.yaml"
-        echo "dependencies: [$relBuildDir/stdlib]" >> "$rootDir/juvix.yaml"
+        echo "dependencies: [${relBuildDir}stdlib]" >> "$rootDir/juvix.yaml"
 
         cd "$rootDir"
         juvix --log-level error compile native HelloWorld.juvix
