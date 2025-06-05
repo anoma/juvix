@@ -1,6 +1,6 @@
 module Juvix.Compiler.Pipeline.Loader.PathResolver.DependencyResolver where
 
-import Data.Text qualified as T
+import Data.Text qualified as Text
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Data
 import Juvix.Compiler.Pipeline.Loader.PathResolver.Error
 import Juvix.Compiler.Pipeline.Package.Dependency
@@ -75,7 +75,12 @@ runDependencyResolver = runProvider_ helper
                     }
 
               mkSafeDir :: Text -> Path Rel Dir
-              mkSafeDir = relDir . T.unpack . SHA256.digestText
+              mkSafeDir uid =
+                relDir
+                  . unpack
+                  $ Text.filter isSafeDirectoryChar (g ^. gitDependencyName)
+                    <> "-"
+                    <> SHA256.digestText uid
 
 resolveDependency ::
   (Members '[Reader ResolverEnv, DependencyResolver] r) =>
