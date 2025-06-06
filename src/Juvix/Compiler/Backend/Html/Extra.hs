@@ -141,8 +141,8 @@ htmlJuvixFooter = do
               commitInfo =
                 a
                   ! Attr.href
-                    (textValue ("https://github.com/anoma/juvix/commit/" <> shortHash))
-                  $ toHtml versionTag
+                    (textValue ("https://github.com/anoma/juvix/commit/" <> commit))
+                  $ toHtml fullVersionDoc
 
               juvixVersion :: Html
               juvixVersion =

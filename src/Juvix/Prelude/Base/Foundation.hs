@@ -341,9 +341,6 @@ freshName :: HashSet Text -> Text -> Text
 freshName names name | HashSet.member name names = freshName names (prime name)
 freshName _ name = name
 
-isValidIdentChar :: Char -> Bool
-isValidIdentChar c = c == '_' || ((isLetter c || isDigit c) && isAscii c)
-
 isFirstLetter :: String -> Bool
 isFirstLetter = \case
   h : _ -> isLetter h
@@ -694,6 +691,15 @@ infixr 2 .||.
 
 eqOn :: (Eq b) => (a -> b) -> a -> a -> Bool
 eqOn = ((==) `on`)
+
+-- | Valid Unix directory character that does not need to be escaped
+isSafeDirectoryChar :: Char -> Bool
+isSafeDirectoryChar =
+  ((isLetter .||. isDigit) .&&. isAscii)
+    .||. (`elem` ("_.-" :: [Char]))
+
+isValidIdentChar :: Char -> Bool
+isValidIdentChar = ((isLetter .||. isDigit) .&&. isAscii) .||. (`elem` ("_" :: [Char]))
 
 class CanonicalProjection a b where
   project :: a -> b

@@ -1093,7 +1093,7 @@ entryToScopedIden name e = do
                 return
                   ScopedIden
                     { _scopedIdenAlias = Just scopedName',
-                      _scopedIdenFinal = setConcrete e'
+                      _scopedIdenFinal = e'
                     }
   si <- scopedIdenSrcName getFixityAndIterator si0
   registerScopedIden False si

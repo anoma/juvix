@@ -8,7 +8,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create dependency
         mkdir $temp/dep
@@ -35,7 +35,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -72,7 +72,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create dependency
         mkdir $temp/dep
@@ -99,7 +99,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -140,7 +140,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create dependency
         mkdir $temp/dep
@@ -167,7 +167,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -209,7 +209,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -234,7 +234,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create dependency2
         mkdir $temp/dep2
@@ -268,7 +268,7 @@ tests:
         cat <<-EOF > juvix.yaml
         name: Dep1
         dependencies:
-          - .juvix-build/$version/stdlib/
+          - ${relBuildDir}stdlib/
           - git:
               url: $temp/dep2
               name: dep2
@@ -289,7 +289,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib/
+          - ${relBuildDir}stdlib/
           - git:
               url: $temp/dep1
               name: dep1
@@ -303,21 +303,21 @@ tests:
         version: 2
         checksum: $checksum
         dependencies:
-          - path: .juvix-build/$version/stdlib/
+          - path: ${relBuildDir}stdlib/
             dependencies: []
           - git:
               url: $temp/dep1
               ref: $dep1hash
               name: dep1
             dependencies:
-              - path: .juvix-build/$version/stdlib/
+              - path: ${relBuildDir}stdlib/
                 dependencies: []
               - git:
                   url: $temp/dep2
                   ref: $dep2hash
                   name: dep2
                 dependencies:
-                  - path: .juvix-build/$version/stdlib/
+                  - path: ${relBuildDir}stdlib/
                     dependencies: []
         EOF
 
@@ -376,7 +376,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create dependency
         mkdir $temp/dep
@@ -403,7 +403,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -456,7 +456,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create dependency
         mkdir $temp/dep
@@ -496,7 +496,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -524,7 +524,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -551,7 +551,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create dependency2
         mkdir $temp/dep2
@@ -596,7 +596,7 @@ tests:
         cat <<-EOF > juvix.yaml
         name: Dep1
         dependencies:
-          - .juvix-build/$version/stdlib/
+          - ${relBuildDir}stdlib/
           - git:
               url: $temp/dep2
               name: dep2
@@ -606,14 +606,14 @@ tests:
 
         cat <<-EOF > juvix.lock.yaml
         dependencies:
-          - path: .juvix-build/$version/stdlib/
+          - path: ${relBuildDir}stdlib/
             dependencies: []
           - git:
               url: $temp/dep2
               ref: $dep2hash
               name: dep2
             dependencies:
-              - path: .juvix-build/$version/stdlib/
+              - path: ${relBuildDir}stdlib/
                 dependencies: []
         EOF
 
@@ -630,7 +630,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib/
+          - ${relBuildDir}stdlib/
           - git:
               url: $temp/dep1
               name: dep1
@@ -664,7 +664,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create dependency
         mkdir $temp/dep
@@ -704,7 +704,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -737,7 +737,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -761,7 +761,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create dependency
         mkdir $temp/dep
@@ -786,7 +786,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -819,7 +819,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create project that uses dependency
         mkdir $temp/base
@@ -829,7 +829,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -862,7 +862,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create project that uses dependency
         mkdir $temp/base
@@ -872,7 +872,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -911,7 +911,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create dependency
         mkdir $temp/dep
@@ -941,7 +941,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -980,7 +980,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create project that uses dependency
         mkdir $temp/base
@@ -990,7 +990,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1
@@ -1027,7 +1027,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create dependency
         mkdir $temp/dep
@@ -1110,7 +1110,7 @@ tests:
       script: |
         temp=$(mktemp -d)
         trap 'rm -rf -- "$temp"' EXIT
-        version=$(juvix --numeric-version)
+        relBuildDir=$(juvix dev build-dir --relative)
 
         # create dependency
         mkdir $temp/dep
@@ -1137,7 +1137,7 @@ tests:
         name: HelloWorld
         main: HelloWorld.juvix
         dependencies:
-          - .juvix-build/$version/stdlib
+          - ${relBuildDir}stdlib
           - git:
               url: $temp/dep
               name: dep1

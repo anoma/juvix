@@ -17,6 +17,7 @@ import Commands.Dev.Asm.Options hiding (Compile)
 import Commands.Dev.Casm.Options
 import Commands.Dev.Core.Options
 import Commands.Dev.DevCompile.Options (DevCompileCommand, parseDevCompileCommand)
+import Commands.Dev.DisplayBuildDir.Options
 import Commands.Dev.DisplayRoot.Options
 import Commands.Dev.Highlight.Options
 import Commands.Dev.ImportTree.Options
@@ -36,6 +37,7 @@ import CommonOptions
 
 data DevCommand
   = DisplayRoot RootOptions
+  | DisplayBuildDir BuildDirOptions
   | ImportTree ImportTreeCommand
   | Latex LatexCommand
   | Highlight HighlightOptions
@@ -73,6 +75,7 @@ parseDevCommand =
           commandParse,
           commandScope,
           commandShowRoot,
+          commandDisplayBuildDir,
           commandTermination,
           commandJuvixDevRepl,
           commandMigrateJuvixYaml,
@@ -172,6 +175,13 @@ commandScope =
     info
       (Scope <$> parseScope)
       (progDesc "Parse and scope a Juvix file")
+
+commandDisplayBuildDir :: Mod CommandFields DevCommand
+commandDisplayBuildDir =
+  command "build-dir" $
+    info
+      (DisplayBuildDir <$> parseBuildDir)
+      (progDesc "Print the absolute path of the build directory for the current project")
 
 commandShowRoot :: Mod CommandFields DevCommand
 commandShowRoot =
