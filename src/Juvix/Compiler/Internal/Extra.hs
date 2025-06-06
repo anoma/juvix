@@ -123,6 +123,7 @@ genFieldProjection kind _funDefName _funDefType _funDefBuiltin _funDefArgsInfo m
   cloneFunctionDefSameName
     FunctionDef
       { _funDefTerminating = False,
+        _funDefExtern = False,
         _funDefIsInstanceCoercion =
           if
               | kind == ProjectionCoercion -> Just IsInstanceCoercionCoercion
@@ -212,6 +213,7 @@ genPatternDefs valueName pat =
       output $
         FunctionDef
           { _funDefTerminating = False,
+            _funDefExtern = False,
             _funDefIsInstanceCoercion = Nothing,
             _funDefPragmas = mempty,
             _funDefBody = body',

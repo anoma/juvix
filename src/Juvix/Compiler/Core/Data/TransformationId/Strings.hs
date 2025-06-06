@@ -53,6 +53,9 @@ strRemoveTypeArgs = "remove-type-args"
 strRemoveInductiveParams :: Text
 strRemoveInductiveParams = "remove-inductive-params"
 
+strResolveExterns :: Text
+strResolveExterns = "resolve-externs"
+
 strMoveApps :: Text
 strMoveApps = "move-apps"
 

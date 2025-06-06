@@ -2,6 +2,7 @@ module Juvix.Compiler.Core.Data.InfoTable.Base where
 
 import Juvix.Compiler.Concrete.Data.Builtins
 import Juvix.Compiler.Core.Language.Base
+import Juvix.Compiler.FFI
 
 data InfoTable' n = InfoTable
   { _identContext :: HashMap Symbol n,
@@ -13,7 +14,8 @@ data InfoTable' n = InfoTable
     _infoSpecialisations :: HashMap Symbol [SpecialisationInfo' n],
     _infoLiteralIntToNat :: Maybe Symbol,
     _infoLiteralIntToInt :: Maybe Symbol,
-    _infoBuiltins :: HashMap BuiltinPrim IdentKind
+    _infoBuiltins :: HashMap BuiltinPrim IdentKind,
+    _infoExterns :: [Symbol]
   }
   deriving stock (Generic)
 
@@ -33,7 +35,8 @@ data IdentifierInfo' n = IdentifierInfo
     _identifierIsExported :: Bool,
     _identifierBuiltin :: Maybe BuiltinFunction,
     _identifierPragmas :: Pragmas,
-    _identifierArgNames :: [Maybe Text]
+    _identifierArgNames :: [Maybe Text],
+    _identifierFFI :: [FFI]
   }
   deriving stock (Generic)
 
@@ -125,7 +128,8 @@ instance Semigroup (InfoTable' n) where
         _infoSpecialisations = t1 ^. infoSpecialisations <> t2 ^. infoSpecialisations,
         _infoLiteralIntToNat = (t1 ^. infoLiteralIntToNat) <|> (t2 ^. infoLiteralIntToNat),
         _infoLiteralIntToInt = (t1 ^. infoLiteralIntToInt) <|> (t2 ^. infoLiteralIntToInt),
-        _infoBuiltins = t1 ^. infoBuiltins <> t2 ^. infoBuiltins
+        _infoBuiltins = t1 ^. infoBuiltins <> t2 ^. infoBuiltins,
+        _infoExterns = t1 ^. infoExterns <> t2 ^. infoExterns
       }
 
 instance Monoid (InfoTable' n) where
@@ -140,5 +144,6 @@ instance Monoid (InfoTable' n) where
         _infoSpecialisations = mempty,
         _infoLiteralIntToNat = Nothing,
         _infoLiteralIntToInt = Nothing,
-        _infoBuiltins = mempty
+        _infoBuiltins = mempty,
+        _infoExterns = mempty
       }

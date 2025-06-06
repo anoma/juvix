@@ -252,6 +252,7 @@ checkBuiltinInductiveStartNode i = whenJust (i ^. inductiveBuiltin) go
       BuiltinOrd -> return ()
       BuiltinOrdering -> return ()
       BuiltinNockmaNoun -> return ()
+      BuiltinAnomaFFI -> return ()
 
     addInductiveStartNode :: Sem r ()
     addInductiveStartNode = addStartNode (i ^. inductiveName)

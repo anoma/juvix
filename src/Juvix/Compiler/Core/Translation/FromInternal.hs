@@ -277,6 +277,7 @@ goConstructor sym ctor = do
         Internal.BuiltinMkAnomaComplianceInputs -> freshTag
         Internal.BuiltinMkAnomaShieldedTransaction -> freshTag
         Internal.BuiltinMkOrd -> freshTag
+        Internal.BuiltinMkAnomaFFI -> freshTag
         Internal.BuiltinOrderingLT -> freshTag
         Internal.BuiltinOrderingGT -> freshTag
         Internal.BuiltinOrderingEQ -> freshTag
@@ -374,13 +375,16 @@ preFunctionDef f = do
             _identifierBuiltin = f ^. Internal.funDefBuiltin,
             _identifierPragmas =
               adjustPragmas' implArgs (f ^. Internal.funDefPragmas),
-            _identifierArgNames = argnames
+            _identifierArgNames = argnames,
+            _identifierFFI = []
           }
   case f ^. Internal.funDefBuiltin of
     Just b
       | isIgnoredBuiltin b -> return ()
     _ -> do
       registerIdent (mkIdentIndex (f ^. Internal.funDefName)) info
+  when (f ^. Internal.funDefExtern) $
+    registerExtern sym
   return
     PreFunctionDef
       { _preFunInternal = f,
@@ -1243,6 +1247,7 @@ goAxiomDef a = maybe goAxiomNotBuiltin builtinBody (a ^. Internal.axiomBuiltin)
                 _identifierBuiltin = Nothing,
                 _identifierPragmas = a ^. Internal.axiomPragmas,
                 _identifierArgNames = [],
+                _identifierFFI = [],
                 _identifierName
               }
       registerIdent (mkIdentIndex name) info

@@ -71,6 +71,16 @@ evalInfoTable herr tab = eval herr tab [] mainNode
     mainSym = fromJust (tab ^. infoMain)
     mainNode = fromJust (HashMap.lookup mainSym (tab ^. identContext))
 
+evalPartial :: Natural -> InfoTable -> Node -> Node
+evalPartial optFieldSize tab = removeClosures . geval eopts stderr tab []
+  where
+    eopts =
+      defaultEvalOptions
+        { _evalOptionsNoFailure = True,
+          _evalOptionsSilent = True,
+          _evalOptionsFieldSize = optFieldSize
+        }
+
 -- | `eval ctx env n` evaluates a node `n` whose all free variables point into
 -- `env`. All nodes in `ctx` must be closed. All nodes in `env` must be values.
 -- Invariant for values v: eval ctx env v = v

@@ -541,6 +541,7 @@ deriveOrd der@DerivingArgs {..} = do
   return
     Internal.FunctionDef
       { _funDefTerminating = False,
+        _funDefExtern = False,
         _funDefIsInstanceCoercion = Just Internal.IsInstanceCoercionInstance,
         _funDefPragmas = pragmas',
         _funDefArgsInfo = argsInfo,
@@ -681,6 +682,7 @@ deriveRecursiveBinaryFunction label nonSelfRec DerivingArgs {..} mkLamDef = do
   let lamDef =
         Internal.FunctionDef
           { _funDefTerminating = False,
+            _funDefExtern = False,
             _funDefIsInstanceCoercion = Nothing,
             _funDefPragmas = mempty,
             _funDefArgsInfo = [],
@@ -724,6 +726,7 @@ deriveEq der@DerivingArgs {..} = do
   return
     Internal.FunctionDef
       { _funDefTerminating = False,
+        _funDefExtern = False,
         _funDefIsInstanceCoercion = Just Internal.IsInstanceCoercionInstance,
         _funDefPragmas = pragmas',
         _funDefArgsInfo = argsInfo,
@@ -838,6 +841,7 @@ goFunctionDef def@FunctionDef {..} = do
         | isJust (def ^. functionDefInstance) = Just Internal.IsInstanceCoercionInstance
         | otherwise = Nothing
       _funDefCoercion = isJust (def ^. functionDefCoercion)
+      _funDefExtern = isJust (def ^. functionDefLhs . funLhsExtern)
       _funDefBuiltin = (^. withLocParam) <$> (def ^. functionDefBuiltin)
   _funDefType <- goDefType (def ^. functionDefLhs)
   _funDefPragmas <- goPragmas _functionDefPragmas
@@ -985,6 +989,7 @@ checkBuiltinInductive d b = localBuiltins $ case b of
   BuiltinAnomaComplianceInputs -> checkComplianceInputs d
   BuiltinAnomaShieldedTransaction -> checkShieldedTransaction d
   BuiltinNockmaNoun -> checkNockmaNoun d
+  BuiltinAnomaFFI -> checkAnomaFFI d
 
 localBuiltins :: (Members '[Reader S.InfoTable] r) => Sem (Reader BuiltinsTable ': r) a -> Sem r a
 localBuiltins m = do

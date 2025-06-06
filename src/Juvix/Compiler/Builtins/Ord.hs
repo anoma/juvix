@@ -16,7 +16,7 @@ checkOrdDef d = do
     _ -> err (eqTxt <> " should have exactly one type parameter")
   case d ^. inductiveConstructors of
     [c1] -> checkMkOrd c1
-    _ -> err (eqTxt <> " should have exactly two constructors")
+    _ -> err (eqTxt <> " should have exactly one constructor")
 
 checkMkOrd :: ConstructorDef -> Sem r ()
 checkMkOrd _ = return ()

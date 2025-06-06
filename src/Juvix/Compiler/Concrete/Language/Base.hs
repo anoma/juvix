@@ -3034,6 +3034,7 @@ data FunctionLhs (s :: Stage) = FunctionLhs
     _funLhsTerminating :: Maybe KeywordRef,
     _funLhsInstance :: Maybe KeywordRef,
     _funLhsCoercion :: Maybe KeywordRef,
+    _funLhsExtern :: Maybe KeywordRef,
     _funLhsName :: FunctionSymbolType s,
     _funLhsTypeSig :: TypeSig s,
     _funLhsIsTop :: FunctionIsTop

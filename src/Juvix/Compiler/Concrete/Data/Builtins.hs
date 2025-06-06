@@ -67,6 +67,7 @@ builtinConstructors = \case
   BuiltinOrd -> [BuiltinMkOrd]
   BuiltinOrdering -> [BuiltinOrderingLT, BuiltinOrderingEQ, BuiltinOrderingGT]
   BuiltinNockmaNoun -> [BuiltinNockmaAtom, BuiltinNockmaCell]
+  BuiltinAnomaFFI -> [BuiltinMkAnomaFFI]
 
 data BuiltinInductive
   = BuiltinNat
@@ -87,6 +88,7 @@ data BuiltinInductive
   | BuiltinAnomaComplianceInputs
   | BuiltinAnomaShieldedTransaction
   | BuiltinNockmaNoun
+  | BuiltinAnomaFFI
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Data)
 
 instance Hashable BuiltinInductive
@@ -115,6 +117,7 @@ instance Pretty BuiltinInductive where
     BuiltinAnomaComplianceInputs -> Str.anomaComplianceInputs
     BuiltinAnomaShieldedTransaction -> Str.anomaShieldedTransaction
     BuiltinNockmaNoun -> Str.nockmaNoun
+    BuiltinAnomaFFI -> Str.anomaFFI
 
 instance Pretty BuiltinConstructor where
   pretty = \case
@@ -143,6 +146,7 @@ instance Pretty BuiltinConstructor where
     BuiltinMkAnomaShieldedTransaction -> Str.anomaMkShieldedTransaction
     BuiltinMkEq -> Str.mkEq
     BuiltinMkOrd -> Str.mkOrd
+    BuiltinMkAnomaFFI -> Str.mkAnomaFFI
     BuiltinOrderingLT -> Str.lt
     BuiltinOrderingEQ -> Str.eq
     BuiltinOrderingGT -> Str.gt
@@ -163,6 +167,7 @@ data BuiltinConstructor
   | BuiltinListCons
   | BuiltinMkEq
   | BuiltinMkOrd
+  | BuiltinMkAnomaFFI
   | BuiltinMaybeNothing
   | BuiltinMaybeJust
   | BuiltinPairConstr

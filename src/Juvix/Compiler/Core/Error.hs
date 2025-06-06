@@ -1,5 +1,6 @@
 module Juvix.Compiler.Core.Error where
 
+import GHC.Show
 import Juvix.Compiler.Core.Language
 import Juvix.Compiler.Core.Pretty
 import Juvix.Parser.Error.Base
@@ -36,6 +37,9 @@ instance Pretty CoreError where
   pretty CoreError {..} = case _coreErrorNode of
     Just node -> pretty _coreErrorMsg <> colon <> space <> pretty (ppTrace node)
     Nothing -> pretty _coreErrorMsg
+
+instance Show CoreError where
+  show e = fromText (prettyText e)
 
 instance HasLoc CoreError where
   getLoc CoreError {..} = _coreErrorLoc

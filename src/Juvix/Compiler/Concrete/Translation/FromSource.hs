@@ -41,6 +41,7 @@ import Juvix.Prelude.Pretty
 data FunctionSyntaxOptions = FunctionSyntaxOptions
   { _funAllowOmitType :: Bool,
     _funAllowInstance :: Bool,
+    _funAllowExtern :: Bool,
     _funIsTop :: FunctionIsTop
   }
 
@@ -472,6 +473,7 @@ derivingInstance = do
         FunctionSyntaxOptions
           { _funAllowOmitType = False,
             _funAllowInstance = True,
+            _funAllowExtern = False,
             _funIsTop = FunctionTop
           }
   _derivingFunLhs <- functionDefinitionLhs opts Nothing
@@ -491,6 +493,7 @@ statement = P.label "<top level statement>" $ do
         FunctionSyntaxOptions
           { _funAllowInstance = True,
             _funAllowOmitType = False,
+            _funAllowExtern = True,
             _funIsTop = FunctionTop
           }
   ms <-
@@ -677,6 +680,7 @@ builtinFunctionDef = functionDefinition funSyntax . Just
       FunctionSyntaxOptions
         { _funAllowInstance = True,
           _funAllowOmitType = False,
+          _funAllowExtern = False,
           _funIsTop = FunctionTop
         }
 
@@ -1029,6 +1033,7 @@ pnamedArgumentFunctionDef = do
         FunctionSyntaxOptions
           { _funAllowOmitType = True,
             _funAllowInstance = False,
+            _funAllowExtern = False,
             _funIsTop = FunctionNotTop
           }
   fun <- functionDefinition funSyntax Nothing
@@ -1141,6 +1146,7 @@ letFunDef = do
       FunctionSyntaxOptions
         { _funAllowOmitType = True,
           _funAllowInstance = False,
+          _funAllowExtern = False,
           _funIsTop = FunctionNotTop
         }
 
@@ -1346,6 +1352,11 @@ functionDefinitionLhs ::
 functionDefinitionLhs opts _funLhsBuiltin = P.label "<function definition>" $ do
   let allowInstance = opts ^. funAllowInstance
       allowOmitType = opts ^. funAllowOmitType
+      allowExtern = opts ^. funAllowExtern
+  _funLhsExtern <- optional (kw kwExtern)
+  unless (allowExtern || isNothing _funLhsExtern) $
+    P.lift . throw . ErrExternNotAllowed . ExternNotAllowedError $
+      getLoc (fromJust _funLhsExtern)
   _funLhsTerminating <- optional (kw kwTerminating)
   _funLhsCoercion <- optional (kw kwCoercion)
   unless (allowInstance || isNothing _funLhsCoercion) $
@@ -1379,6 +1390,7 @@ functionDefinitionLhs opts _funLhsBuiltin = P.label "<function definition>" $ do
       { _funLhsInstance,
         _funLhsBuiltin,
         _funLhsCoercion,
+        _funLhsExtern,
         _funLhsName,
         _funLhsTypeSig,
         _funLhsTerminating,
@@ -1697,6 +1709,7 @@ checkNoNamedApplicationMissingAt = recoverStashes $ do
         FunctionSyntaxOptions
           { _funAllowOmitType = True,
             _funAllowInstance = False,
+            _funAllowExtern = False,
             _funIsTop = FunctionNotTop
           }
   x <-
