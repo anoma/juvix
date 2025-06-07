@@ -91,8 +91,11 @@ hang = region (P.hang 2)
 align :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
 align = region P.align
 
+indentN :: (Members '[ExactPrint] r) => Int -> Sem r () -> Sem r ()
+indentN n = region (P.indent n)
+
 indent :: (Members '[ExactPrint] r) => Sem r () -> Sem r ()
-indent = region (P.indent 2)
+indent = indentN 2
 
 flatAlt :: (Members '[ExactPrint] r) => Sem r () -> Sem r () -> Sem r ()
 flatAlt = regionAlt P.flatAlt (const id)

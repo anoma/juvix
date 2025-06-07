@@ -47,7 +47,7 @@ instance Show (AppPath f) where
 
 parseInputFilesMod :: NonEmpty FileExt -> Mod ArgumentFields (Prepath File) -> Parser (AppPath File)
 parseInputFilesMod exts' mods = do
-  let exts = NonEmpty.toList exts'
+  let exts = toList exts'
       mvars = intercalate "|" (map toMetavar exts)
       dotExts = intercalate ", " (map show exts)
       helpMsg = "Path to a " <> dotExts <> " file"
