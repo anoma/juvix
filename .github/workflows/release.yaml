@@ -22,7 +22,7 @@ jobs:
       tag: ${{ steps.tag.outputs.value }}
     steps:
       - name: checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           submodules: true
           repository: anoma/juvix
@@ -95,7 +95,7 @@ jobs:
     name: Build macOS x86_64 binary
     steps:
       - name: checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           submodules: true
           repository: anoma/juvix
@@ -147,7 +147,7 @@ jobs:
     name: Build macOS aarch64 binary
     steps:
       - name: checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
         with:
           submodules: true
           repository: anoma/juvix
