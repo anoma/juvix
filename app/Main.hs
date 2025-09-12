@@ -6,6 +6,8 @@ import Data.String.Interpolate (i)
 import GHC.Conc qualified as GHC
 import GlobalOptions
 import Juvix.Compiler.Pipeline.Root
+import Juvix.Data.Effect.Logger
+import Juvix.Data.Effect.TaggedLock
 import TopCommand
 import TopCommand.Options
 
@@ -23,13 +25,15 @@ main = do
             _loggerUseColors = not (_runAppIOArgsGlobalOptions ^. globalNoColors)
           }
   runM
-    . runTaggedLockPermissive
     . runLoggerIO loggerOpts
     . runFilesIO
     $ do
       mapM_ checkMainFile mainFile
       _runAppIOArgsRoot <- findRootAndChangeDir (containingDir <$> mainFile) mbuildDir invokeDir
-      runAppIO RunAppIOArgs {..} (runTopCommand cli)
+      -- Apply global project directory locking
+      runTaggedLock LockModeExclusive $ do
+        withTaggedLockDir (_runAppIOArgsRoot ^. rootRootDir) $ do
+          runAppIO RunAppIOArgs {..} (runTopCommand cli)
   where
     checkMainFile :: forall r b. (Members '[Logger, EmbedIO] r) => SomePath b -> Sem r ()
     checkMainFile p = unlessM (liftIO (doesSomePathExist p)) err
