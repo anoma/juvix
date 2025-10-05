@@ -1621,6 +1621,7 @@ checkInductiveDef reserved = do
   forM_ inductiveConstructors' $ \c -> do
     registerNameSignature (c ^. constructorName . S.nameId) (indDef, c)
   registerInductive @$> indDef
+  traceM "checked inductive def"
   return indDef
   where
     checkConstructorDef :: S.Symbol -> S.Symbol -> ConstructorDef 'Parsed -> Sem r (ConstructorDef 'Scoped)
@@ -1674,25 +1675,22 @@ checkInductiveDef reserved = do
             checkRecordStatement :: Reserved -> RecordStatement 'Parsed -> Sem r (RecordStatement 'Scoped)
             checkRecordStatement scopeSyntax = \case
               RecordStatementField d -> RecordStatementField <$> checkField d
-              RecordStatementSyntax s -> RecordStatementSyntax <$> (withLocalScope (putReservedInScope scopeSyntax >> (checkRecordSyntaxDef s)))
+              RecordStatementSyntax s -> RecordStatementSyntax <$> withLocalScope (putReservedInScope scopeSyntax >> checkRecordSyntaxDef s)
 
             checkField :: RecordField 'Parsed -> Sem r (RecordField 'Scoped)
             checkField RecordField {..} = do
-              doc' <- maybe (return Nothing) (checkJudoc >=> return . Just) _fieldDoc
-              -- Since we don't allow dependent types in constructor types, each
-              -- field is checked with a local scope
-              withLocalScope $ do
-                type' <- checkParseExpressionAtoms _fieldType
-                typeSig' <- checkTypeSig _fieldTypeSig
-                name' <- bindVariableSymbol _fieldName
-                return
-                  RecordField
-                    { _fieldTypeSig = typeSig',
-                      _fieldType = type',
-                      _fieldName = name',
-                      _fieldDoc = doc',
-                      ..
-                    }
+              doc' <- mapM checkJudoc _fieldDoc
+              type' <- withLocalScope (checkParseExpressionAtoms _fieldType)
+              typeSig' <- withLocalScope (checkTypeSig _fieldTypeSig)
+              name' <- bindVariableSymbol _fieldName
+              return
+                RecordField
+                  { _fieldTypeSig = typeSig',
+                    _fieldType = type',
+                    _fieldName = name',
+                    _fieldDoc = doc',
+                    ..
+                  }
 
         checkAdt :: RhsAdt 'Parsed -> Sem r (RhsAdt 'Scoped)
         checkAdt RhsAdt {..} = do
@@ -2105,22 +2103,25 @@ defineInductiveModule i =
             projections :: [Statement 'Parsed]
             projections = case run (runFail constructorAndFields) of
               Nothing -> []
-              Just (constr, fields) -> run . evalState 0 $ mapM goRecordStatement fields
+              Just (constr, fields) -> run . evalState 0 $ mapMaybeM goRecordStatement fields
                 where
-                  goRecordStatement :: RecordStatement 'Parsed -> Sem '[State Int] (Statement 'Parsed)
+                  goRecordStatement :: RecordStatement 'Parsed -> Sem '[State Int] (Maybe (Statement 'Parsed))
                   goRecordStatement = \case
-                    RecordStatementSyntax f -> return (StatementSyntax (goSyntax f))
-                    RecordStatementField f -> StatementProjectionDef <$> goField f
+                    RecordStatementSyntax f -> return (Just (StatementSyntax (goSyntax f)))
+                    RecordStatementField f -> fmap StatementProjectionDef <$> goField f
                     where
                       goSyntax :: RecordSyntaxDef 'Parsed -> (SyntaxDef 'Parsed)
                       goSyntax = \case
                         RecordSyntaxOperator d -> SyntaxOperator d
                         RecordSyntaxIterator d -> SyntaxIterator d
 
-                      goField :: RecordField 'Parsed -> Sem '[State Int] (ProjectionDef 'Parsed)
+                      goField :: RecordField 'Parsed -> Sem '[State Int] (Maybe (ProjectionDef 'Parsed))
                       goField f = do
                         idx <- popFieldIx
-                        return (mkProjection (Indexed idx f))
+                        case f ^. fieldType of
+                          ExpressionAtoms {_expressionAtoms = AtomUniverse {} :| []} -> return Nothing
+                          -- _ -> return (Just (mkProjection (Indexed idx f)))
+                          _ -> return Nothing
                         where
                           popFieldIx :: Sem '[State Int] Int
                           popFieldIx = get <* modify' @Int succ

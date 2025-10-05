@@ -76,12 +76,18 @@ newtype PragmaIsabelleIgnore = PragmaIsabelleIgnore
   }
   deriving stock (Show, Eq, Ord, Data, Generic)
 
+newtype PragmaFieldProjections = PragmaFieldProjections
+  { _pragmaFieldProjections :: Bool
+  }
+  deriving stock (Show, Eq, Ord, Data, Generic)
+
 data Pragmas = Pragmas
   { _pragmasInline :: Maybe PragmaInline,
     _pragmasUnroll :: Maybe PragmaUnroll,
     _pragmasArgNames :: Maybe PragmaArgNames,
     _pragmasPublic :: Maybe PragmaPublic,
     _pragmasFormat :: Maybe PragmaFormat,
+    _pragmasFieldProjections :: Maybe PragmaFieldProjections,
     _pragmasSpecialise :: Maybe PragmaSpecialise,
     _pragmasSpecialiseArgs :: Maybe PragmaSpecialiseArgs,
     _pragmasSpecialiseBy :: Maybe PragmaSpecialiseBy,
@@ -128,6 +134,8 @@ instance Hashable PragmaIsabelleOperator
 instance Hashable PragmaIsabelleFunction
 
 instance Hashable PragmaIsabelleIgnore
+
+instance Hashable PragmaFieldProjections
 
 instance Hashable Pragmas
 
@@ -182,6 +190,10 @@ instance NFData PragmaIsabelleFunction
 instance Serialize PragmaIsabelleIgnore
 
 instance NFData PragmaIsabelleIgnore
+
+instance NFData PragmaFieldProjections
+
+instance Serialize  PragmaFieldProjections
 
 instance Serialize Pragmas
 

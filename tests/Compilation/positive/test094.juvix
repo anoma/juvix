@@ -1,0 +1,7 @@
+-- Existential types
+module test094;
+
+type Box := mk@{
+ ty : Type;
+ x : ty;
+};

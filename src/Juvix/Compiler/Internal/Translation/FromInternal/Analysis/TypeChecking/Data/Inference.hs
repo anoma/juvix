@@ -693,16 +693,16 @@ functionDefEval ::
 functionDefEval f = do
   (params :: [FunctionParameter], ret :: Expression) <- unfoldFunType <$> strongNorm (f ^. funDefType)
   r <- runFail (goTop params (canBeUniverse ret))
-  when (isNothing r && isUniverse ret) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
+  -- when (isNothing r && isUniverse ret) (throw (ErrUnsupportedTypeFunction (UnsupportedTypeFunction f)))
   return r
   where
     strongNorm :: (Members '[Reader BuiltinsTable, ResultBuilder, NameIdGen] r) => Expression -> Sem r Expression
     strongNorm = evalState iniState . fmap (^. normalizedExpression) . strongNormalize'
 
-    isUniverse :: Expression -> Bool
-    isUniverse = \case
-      ExpressionUniverse {} -> True
-      _ -> False
+    -- isUniverse :: Expression -> Bool
+    -- isUniverse = \case
+    --   ExpressionUniverse {} -> True
+    --   _ -> False
 
     canBeUniverse :: Expression -> Bool
     canBeUniverse = \case
