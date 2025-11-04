@@ -54,6 +54,11 @@ jobs:
       - name: Generate juvix.cabal
         run: hpack
 
+      - name: Add ~/.local/bin to PATH
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Cache ormolu
         id: ormolu-cache
         uses: actions/cache@v3
@@ -65,11 +70,11 @@ jobs:
       - name: Install ormolu
         if: steps.ormolu-cache.outputs.cache-hit != 'true'
         run: |
-          curl -L https://github.com/tweag/ormolu/releases/download/0.8.0.0/ormolu-x86_64-linux.tar.gz -o ormolu.tar.gz
-          tar xzf ormolu.tar.gz
-          mkdir -p ~/.local/bin
-          mv ormolu ~/.local/bin/ormolu
-          chmod +x ~/.local/bin/ormolu
+          curl -L https://github.com/tweag/ormolu/releases/download/0.8.0.0/ormolu-x86_64-linux.zip -o ormolu.zip
+          unzip ormolu.zip
+          mkdir -p $HOME/.local/bin
+          mv ormolu $HOME/.local/bin/ormolu
+          chmod +x $HOME/.local/bin/ormolu
 
       - name: Run ormolu
         run: just format check
