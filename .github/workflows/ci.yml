@@ -44,8 +44,6 @@ jobs:
 
   ormolu:
     runs-on: ubuntu-latest
-    env:
-      STACK_RESOLVER: lts-24.18
     steps:
       - uses: actions/checkout@v3
       - uses: extractions/setup-just@v2
@@ -62,11 +60,16 @@ jobs:
         with:
           path: |
             ~/.local/bin/ormolu
-          key: ${{ runner.os }}-ormolu-${{ env.STACK_RESOLVER }}
+          key: ${{ runner.os }}-ormolu-0.8.0.0
 
       - name: Install ormolu
         if: steps.ormolu-cache.outputs.cache-hit != 'true'
-        run: stack install ormolu-0.8.0.0 --resolver=${{ env.STACK_RESOLVER }}
+        run: |
+          curl -L https://github.com/tweag/ormolu/releases/download/0.8.0.0/ormolu-x86_64-linux.tar.gz -o ormolu.tar.gz
+          tar xzf ormolu.tar.gz
+          mkdir -p ~/.local/bin
+          mv ormolu ~/.local/bin/ormolu
+          chmod +x ~/.local/bin/ormolu
 
       - name: Run ormolu
         run: just format check
