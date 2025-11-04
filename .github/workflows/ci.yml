@@ -25,7 +25,7 @@ concurrency:
 env:
   SKIP: ormolu,format-juvix-files,typecheck-juvix-examples
   CAIRO_VM_VERSION: 6c324e0d761013f38b8b743e515a65ac1a380206
-  RISC0_VM_VERSION: v1.0.1
+  RISC0_VM_VERSION: v3.0.3
   # This is the top commit hash in the branch lukasz/juvix-ci-stable
   # of the anoma repository.
   ANOMA_VERSION: c8c2a385dd916a28982918fdc22da90c409e347a
@@ -235,7 +235,7 @@ jobs:
         run: |
           curl -L https://risczero.com/install | bash
           ~/.risc0/bin/rzup install
-          ~/.risc0/bin/rzup install r0vm 1.2.6
+          ~/.risc0/bin/rzup install r0vm 3.0.3
 
       - name: Checkout CairoVM
         uses: actions/checkout@v4
