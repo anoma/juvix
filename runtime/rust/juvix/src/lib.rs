@@ -30,7 +30,7 @@ mod tests {
                     } else {
                         tmp1 = program_fib(FUN_FIB, vec![smallint_sub(args[0], make_smallint(1))]);
                         tmp2 = program_fib(FUN_FIB, vec![smallint_sub(args[0], make_smallint(2))]);
-                        break (smallint_add(tmp1, tmp2));
+                        break smallint_add(tmp1, tmp2);
                     }
                 }
                 _ => panic!("unknown function id"),
